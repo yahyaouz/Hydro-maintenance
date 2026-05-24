@@ -1,0 +1,102 @@
+{
+  "entities": {
+    "site": {
+      "title": "Site",
+      "description": "Un site minier",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nom": { "type": "string" },
+        "code": { "type": "string" }
+      },
+      "required": ["id", "nom", "code"]
+    },
+    "engin": {
+      "title": "Engin",
+      "description": "Un engin de la flotte",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "id_parc": { "type": "string" },
+        "modele": { "type": "string" },
+        "site": { "type": "string" },
+        "status": { "enum": ["EN SERVICE", "PANNE", "MAINTENANCE", "ARRÊT"] },
+        "compteur": { "type": "number" },
+        "sante": { "type": "number" },
+        "disponibilite": { "type": "number" }
+      },
+      "required": ["id", "id_parc", "modele", "site", "status", "compteur"]
+    },
+    "panne": {
+      "title": "Panne",
+      "description": "Signalement d'une panne",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "enginId": { "type": "string" },
+        "titre": { "type": "string" },
+        "priorite": { "enum": ["CRITIQUE", "ÉLEVÉ", "MOYEN", "BAS"] },
+        "status": { "enum": ["OUVERT", "EN COURS", "RÉSOLU"] },
+        "site": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "enginId", "titre", "priorite", "status", "site", "date"]
+    },
+    "piece": {
+      "title": "Pièce",
+      "description": "Pièce détachée en stock",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ref": { "type": "string" },
+        "nom": { "type": "string" },
+        "categorie": { "type": "string" },
+        "stock": { "type": "number" },
+        "min": { "type": "number" },
+        "prix": { "type": "number" },
+        "siteId": { "type": "string" }
+      },
+      "required": ["id", "ref", "nom", "stock", "min", "prix", "siteId"]
+    },
+    "user": {
+      "title": "User",
+      "description": "Profil utilisateur du système SOU-GMAO",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "siteId": { "type": "string" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "lastLogin": { "type": "string" },
+        "authProvider": { "type": "string" }
+      },
+      "required": ["uid", "displayName", "email", "role", "siteId", "active", "authProvider"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": "user",
+      "description": "Collection des profils de maintenance et d'administration"
+    },
+    "sites": {
+      "schema": "site",
+      "description": "Collection des sites miniers"
+    },
+    "engins": {
+      "schema": "engin",
+      "description": "Collection des engins de la flotte"
+    },
+    "pannes": {
+      "schema": "panne",
+      "description": "Collection des pannes signalées"
+    },
+    "pieces": {
+      "schema": "piece",
+      "description": "Collection du stock de pièces"
+    }
+  }
+}
