@@ -1,0 +1,462 @@
+import { db, auth } from '@/lib/firebase';
+import { 
+  collection, 
+  doc, 
+  addDoc, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  getDoc, 
+  getDocs,
+  query,
+  where,
+  Timestamp,
+  orderBy,
+  limit,
+  startAfter,
+  DocumentSnapshot,
+  writeBatch,
+  runTransaction
+} from 'firebase/firestore';
+import { 
+  ENGIN_STATUS, 
+  WORKORDER_STATUS, 
+  PRIORITY_LEVELS, 
+  OfflineAction 
+} from '../types';
+
+// ==================================================================== 
+// THE HARDENED ERROR HANDLING SYSTEM (Objective 3 of Firebase Skill)
+// ====================================================================
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid || null,
+      email: auth.currentUser?.email || null,
+      emailVerified: auth.currentUser?.emailVerified || null,
+      isAnonymous: auth.currentUser?.isAnonymous || null,
+      tenantId: auth.currentUser?.tenantId || null,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Hardened Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+// ==================================================================== 
+// Adapters to map between Firestore raw docs and application records
+// ====================================================================
+export const firestoreAdapters = {
+  // Maps engine doc standardizing to normalized 'enginId'
+  normalizeEngin: (docId: string, data: any) => ({
+    enginId: docId,
+    id: docId,
+    code: data.code || docId,
+    name: data.name || '',
+    type: data.type || '',
+    status: (data.status as ENGIN_STATUS) || ENGIN_STATUS.DISPONIBLE,
+    siteId: data.siteId || 'SMI',
+    hours: Number(data.hours || 0),
+    latestFuelLevel: Number(data.latestFuelLevel || 100),
+    lastInspectionDate: data.lastInspectionDate || '',
+    updatedAt: data.updatedAt ? (data.updatedAt.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt) : null,
+    deleted: data.deleted === true
+  }),
+
+  // Maps work order (BT) standardizing to 'workOrderId'
+  normalizeWorkOrder: (docId: string, data: any) => ({
+    workOrderId: docId,
+    id: docId,
+    title: data.title || '',
+    machineCode: data.machineCode || data.enginId || '',
+    enginId: data.enginId || data.machineCode || '',
+    severity: (data.severity as PRIORITY_LEVELS) || PRIORITY_LEVELS.MINEUR,
+    status: (data.status as WORKORDER_STATUS) || WORKORDER_STATUS.OUVERT,
+    assignedTech: data.assignedTech || '',
+    creationDate: data.creationDate || '',
+    createdBy: data.createdBy || '',
+    durationHours: Number(data.durationHours || 0),
+    costEst: Number(data.costEst || 0),
+    history: Array.isArray(data.history) ? data.history : [],
+    idempotencyKey: data.idempotencyKey || null,
+    updatedAt: data.updatedAt ? (data.updatedAt.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt) : null,
+    deleted: data.deleted === true,
+    replacedParts: Array.isArray(data.replacedParts) ? data.replacedParts : [],
+    checklist: Array.isArray(data.checklist) ? data.checklist : []
+  }),
+
+  // Maps anomaly or reported panne to normalized 'panneId'
+  normalizeAnomalie: (docId: string, data: any) => ({
+    panneId: docId,
+    id: docId,
+    title: data.title || '',
+    machineCode: data.machineCode || data.enginId || '',
+    enginId: data.enginId || data.machineCode || '',
+    reportedBy: data.reportedBy || '',
+    reportedDate: data.reportedDate || '',
+    severity: (data.severity as PRIORITY_LEVELS) || PRIORITY_LEVELS.MINEUR,
+    status: data.status || 'OUVERT',
+    resolvedDate: data.resolvedDate || '',
+    idempotencyKey: data.idempotencyKey || null,
+    updatedAt: data.updatedAt ? (data.updatedAt.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt) : null,
+    deleted: data.deleted === true
+  })
+};
+
+// ==================================================================== 
+// Centralized, Decoupled Database & Firestore Execution State-Machine
+// ====================================================================
+export const dbService = {
+  // Engins collection operations
+  engines: {
+    async fetchAll(siteId: string) {
+      const collRef = collection(db, 'engins');
+      try {
+        const q = siteId === 'TOUS' 
+          ? query(collRef, where('deleted', '!=', true)) 
+          : query(collRef, where('siteId', '==', siteId), where('deleted', '!=', true));
+        
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => firestoreAdapters.normalizeEngin(doc.id, doc.data()));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.LIST, 'engins');
+        return [];
+      }
+    },
+
+    async fetchPage(siteId: string, limitNum: number = 30, lastVisibleDoc?: DocumentSnapshot) {
+      const collRef = collection(db, 'engins');
+      try {
+        const constraints: any[] = [where('deleted', '!=', true)];
+        if (siteId !== 'TOUS') {
+          constraints.push(where('siteId', '==', siteId));
+        }
+        constraints.push(orderBy('updatedAt', 'desc'));
+        if (lastVisibleDoc) {
+          constraints.push(startAfter(lastVisibleDoc));
+        }
+        constraints.push(limit(limitNum));
+
+        const q = query(collRef, ...constraints);
+        const snapshot = await getDocs(q);
+        const items = snapshot.docs.map(doc => firestoreAdapters.normalizeEngin(doc.id, doc.data()));
+        return {
+          items,
+          lastDoc: snapshot.docs[snapshot.docs.length - 1] || null
+        };
+      } catch (err) {
+        handleFirestoreError(err, OperationType.LIST, 'engins_paginated');
+        return { items: [], lastDoc: null };
+      }
+    },
+    
+    async get(id: string) {
+      try {
+        const ref = doc(db, 'engins', id);
+        const res = await getDoc(ref);
+        return res.exists() ? firestoreAdapters.normalizeEngin(res.id, res.data()) : null;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.GET, `engins/${id}`);
+        return null;
+      }
+    },
+
+    async updateStatus(id: string, status: ENGIN_STATUS) {
+      const ref = doc(db, 'engins', id);
+      try {
+        await updateDoc(ref, { 
+          status: status,
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `engins/${id}`);
+      }
+    },
+
+    async setHoursAndFuel(id: string, hours: number, fuel: number) {
+      const ref = doc(db, 'engins', id);
+      try {
+        await updateDoc(ref, {
+          hours: Number(hours),
+          latestFuelLevel: Number(fuel),
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `engins/${id}`);
+      }
+    }
+  },
+
+  // WorkOrders / BT collection operations
+  workOrders: {
+    async fetchAll(siteId: string) {
+      const collRef = collection(db, 'workorders');
+      try {
+        const q = siteId === 'TOUS' 
+          ? query(collRef, where('deleted', '!=', true)) 
+          : query(collRef, where('siteId', '==', siteId), where('deleted', '!=', true));
+        
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => firestoreAdapters.normalizeWorkOrder(doc.id, doc.data()));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.LIST, 'workorders');
+        return [];
+      }
+    },
+
+    async fetchPage(siteId: string, limitNum: number = 35, lastVisibleDoc?: DocumentSnapshot) {
+      const collRef = collection(db, 'workorders');
+      try {
+        const constraints: any[] = [where('deleted', '!=', true)];
+        if (siteId !== 'TOUS') {
+          constraints.push(where('siteId', '==', siteId));
+        }
+        constraints.push(orderBy('updatedAt', 'desc'));
+        if (lastVisibleDoc) {
+          constraints.push(startAfter(lastVisibleDoc));
+        }
+        constraints.push(limit(limitNum));
+
+        const q = query(collRef, ...constraints);
+        const snapshot = await getDocs(q);
+        const items = snapshot.docs.map(doc => firestoreAdapters.normalizeWorkOrder(doc.id, doc.data()));
+        return {
+          items,
+          lastDoc: snapshot.docs[snapshot.docs.length - 1] || null
+        };
+      } catch (err) {
+        handleFirestoreError(err, OperationType.LIST, 'workorders_paginated');
+        return { items: [], lastDoc: null };
+      }
+    },
+
+    async create(workOrder: any, idempotencyKey: string) {
+      try {
+        if (idempotencyKey) {
+          const q = query(collection(db, 'workorders'), where('idempotencyKey', '==', idempotencyKey));
+          const dupSnapshot = await getDocs(q);
+          if (!dupSnapshot.empty) {
+            console.warn("🔧 dbService.workOrders: Duplication détectée (idempotencyKey existe). Skip creation.");
+            return dupSnapshot.docs[0].id;
+          }
+        }
+
+        const collRef = collection(db, 'workorders');
+        const payload = {
+          ...workOrder,
+          deleted: false,
+          idempotencyKey: idempotencyKey || `bt_${Math.random().toString(36).substring(2, 9)}`,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        };
+        const addedDoc = await addDoc(collRef, payload);
+        return addedDoc.id;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, 'workorders');
+        return '';
+      }
+    },
+
+    async updateStatus(id: string, status: WORKORDER_STATUS, historyItem?: any) {
+      const ref = doc(db, 'workorders', id);
+      const pathForWrite = `workorders/${id}`;
+      try {
+        const updatePayload: any = { 
+          status: status,
+          updatedAt: Timestamp.now() 
+        };
+        
+        if (historyItem) {
+          updatePayload.history = historyItem;
+        }
+        
+        await updateDoc(ref, updatePayload);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, pathForWrite);
+      }
+    },
+
+    // Transactional flow which updates the workorder status and increments hours atomically
+    async transitionStatusWithTransaction(orderId: string, status: WORKORDER_STATUS, changePayload: any, incrementHours?: { eId: string, hoursToAdd: number }) {
+      const orderRef = doc(db, 'workorders', orderId);
+      const path = `workorders/${orderId}`;
+      try {
+        await runTransaction(db, async (transaction) => {
+          const orderSnap = await transaction.get(orderRef);
+          if (!orderSnap.exists()) {
+            throw new Error("Le Bon de Travail n'existe pas.");
+          }
+          
+          const orderData = orderSnap.data();
+          if (orderData.status === 'CLOS') {
+            throw new Error("Modification interdite : le BT est CLOS.");
+          }
+          
+          transaction.update(orderRef, {
+            ...changePayload,
+            status,
+            updatedAt: Timestamp.now()
+          });
+          
+          if (incrementHours && incrementHours.eId) {
+            const engineRef = doc(db, 'engins', incrementHours.eId);
+            const engineSnap = await transaction.get(engineRef);
+            if (engineSnap.exists()) {
+              const currentHours = Number(engineSnap.data().hours || 0);
+              transaction.update(engineRef, {
+                hours: currentHours + Number(incrementHours.hoursToAdd),
+                updatedAt: Timestamp.now()
+              });
+            }
+          }
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, path);
+      }
+    },
+
+    // Batched write strategy for closing multiple workorders simultaneously
+    async batchUpdateStatus(ids: string[], status: WORKORDER_STATUS) {
+      const batchRef = writeBatch(db);
+      try {
+        for (const id of ids) {
+          const ref = doc(db, 'workorders', id);
+          batchRef.update(ref, {
+            status,
+            updatedAt: Timestamp.now()
+          });
+        }
+        await batchRef.commit();
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, 'workorders_batch');
+      }
+    },
+
+    // Soft delete implementation for compliant audits
+    async delete(id: string) {
+      const ref = doc(db, 'workorders', id);
+      try {
+        await updateDoc(ref, {
+          deleted: true,
+          deletedAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `workorders/${id}`);
+      }
+    }
+  },
+
+  // Audit trailing collection
+  auditLogs: {
+    async create(log: any) {
+      const collRef = collection(db, 'auditLogs');
+      try {
+        const payload = {
+          ...log,
+          timestamp: log.timestamp || Timestamp.now(),
+          deleted: false
+        };
+        const ref = await addDoc(collRef, payload);
+        return ref.id;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, 'auditLogs');
+        return '';
+      }
+    }
+  },
+
+  // Offline action log syncing & replay structures
+  offlineQueue: {
+    async replayAction(action: OfflineAction) {
+      console.log(`Replaying offline local action with idempotencyKey ${action.idempotencyKey}:`, action);
+      
+      switch (action.actionType) {
+        case 'DECLARE_STOP': {
+          const { machineCode, stop } = action.payload;
+          const id = machineCode;
+          const ref = doc(db, 'engins', id);
+          try {
+            await updateDoc(ref, {
+              status: ENGIN_STATUS.EN_PANNE,
+              lastStopReason: stop.reason || 'Saignement/Panne signalée hors-ligne',
+              updatedAt: Timestamp.now()
+            });
+          } catch (err) {
+            handleFirestoreError(err, OperationType.WRITE, `engins/${id}`);
+          }
+          break;
+        }
+
+        case 'REMETTRE_EN_SERVICE': {
+          const { machineCode } = action.payload;
+          const ref = doc(db, 'engins', machineCode);
+          try {
+            await updateDoc(ref, {
+              status: ENGIN_STATUS.DISPONIBLE,
+              updatedAt: Timestamp.now()
+            });
+          } catch (err) {
+            handleFirestoreError(err, OperationType.WRITE, `engins/${machineCode}`);
+          }
+          break;
+        }
+
+        case 'CREATE_BT': {
+          const newBT = action.payload;
+          await dbService.workOrders.create(newBT, action.idempotencyKey || '');
+          break;
+        }
+
+        case 'PILOT_FEEDBACK': {
+          const fbRef = collection(db, 'feedbacks');
+          try {
+            await addDoc(fbRef, {
+              ...action.payload,
+              idempotencyKey: action.idempotencyKey,
+              createdAt: Timestamp.now()
+            });
+          } catch (err) {
+            handleFirestoreError(err, OperationType.WRITE, 'feedbacks');
+          }
+          break;
+        }
+
+        default:
+          console.warn(`Type d'action offline inconnu ou non supporté : ${action.actionType}`);
+      }
+    }
+  }
+};
