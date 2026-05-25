@@ -14,6 +14,8 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+// @ts-ignore
+import hydroImage from "@/assets/images/HYDRO MAINTENANCE.jpg";
 
 // Site mappings 
 const SITES_LIST = [
@@ -26,6 +28,17 @@ const SITES_LIST = [
 ];
 
 export function LoginPage() {
+  console.log("REAL IMPORTED FILE:", hydroImage);
+  console.log("LOGIN DEBUG ACTIVE");
+
+  // Anti-fallback verification & image tracing
+  React.useEffect(() => {
+    console.log("REAL IMPORTED FILE:", hydroImage);
+    if (!hydroImage) {
+      console.error("ERREUR FATALE : L'image de login HYDRO MAINTENANCE.jpg est introuvable !");
+    }
+  }, []);
+
   const setUser = useAuthStore((state) => state.setUser);
   const { theme, setTheme } = useAuthStore();
   
@@ -322,152 +335,208 @@ export function LoginPage() {
           --ink-mid:   #2c3e50;
           --muted:     #7f8c8d;
           --border:    rgba(255,255,255,0.12);
-          --panel-w:   520px;
+          --panel-w:   550px;
+        }
+
+        .wrap {
+          display: flex;
+          width: 100vw;
+          min-height: 100vh;
+          overflow: hidden;
+          position: relative;
+          background-color: #ffffff; /* Eliminates high-DPI subpixel wrapper background gaps */
         }
 
         /* ── SPLIT LAYOUT ──────────────────────────────────────── */
         .panel-img {
-          background-color: #f7f7f5;
+          background: linear-gradient(to right, #f7f6f2 55%, #ffffff 92%) !important; /* Smooth underlying base fade */
           border-right: none;
           flex: 1;
           position: relative;
           overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
-        .panel-img__photo {
-          position: absolute; inset: 0;
-          background-image: url("/src/assets/images/hydromines_login_1779567701828.png");
-          background-size: cover;
-          background-position: center center;
-          filter: contrast(1.02) brightness(0.98);
-          transform: scale(1.01);
-          transition: transform 8s ease;
-        }
-        .panel-img__photo:hover { transform: scale(1.04); }
 
-        /* Overlay de dégradation progressif 4 directions (Edge Fading) */
-        .panel-img__overlay {
-          position: absolute; inset: 0;
-          z-index: 1;
-          background:
-            /* TOP : fade léger vers #f7f7f5 */
-            linear-gradient(to bottom, #f7f7f5 0%, rgba(247,247,245,0.85) 12%, rgba(247,247,245,0) 28%),
-            /* LEFT : fade blanc doux vers le background principal */
-            linear-gradient(to right, #ffffff 0%, rgba(255,255,255,0.7) 10%, rgba(255,255,255,0) 30%),
-            /* RIGHT : fade transparent vers la zone login */
-            linear-gradient(to left, #ffffff 0%, rgba(255,255,255,0.92) 20%, rgba(255,255,255,0.4) 45%, rgba(255,255,255,0) 80%),
-            /* BOTTOM : fade gris clair/blanc industriel */
-            linear-gradient(to top, #ffffff 0%, rgba(248,250,252,0.85) 15%, rgba(248,250,252,0) 40%);
-          pointer-events: none;
-        }
-        .panel-img__overlay-left {
-          position: absolute; inset: 0;
-          z-index: 1;
-          background: linear-gradient(to right, rgba(255,255,255,0.18) 0%, transparent 30%);
+        /* 4K Precision Source Image Treatment */
+        .panel-img__photo-main {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: center 46%;
+          display: block;
+          opacity: 0.94;
+          mix-blend-mode: multiply;
+          filter: contrast(0.96) brightness(1.02) saturate(0.88);
+          z-index: 2;
+          transition: opacity 0.5s ease;
           pointer-events: none;
         }
 
-        /* Branding bas-gauche */
+        /* Ambient high-tech blueprint mesh (minimalist & soft) */
+        .panel-img__grid-mesh {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          background-image: radial-gradient(rgba(148, 163, 184, 0.015) 1px, transparent 1px);
+          background-size: 36px 36px;
+          pointer-events: none;
+        }
+
+        /* Cinematic Atmospheric White Diffusion Overlay and Edge Fading */
+        .panel-img__cinematic-overlay {
+          position: absolute;
+          inset: 0;
+          z-index: 4;
+          background: 
+            /* Multi-step right transition mask curve stacked TOP to perfectly blend the image into pure white with zero visible separation */
+            linear-gradient(to right, rgba(247, 246, 242, 0) 24%, rgba(247, 246, 242, 0.22) 44%, rgba(247, 246, 242, 0.7) 64%, rgba(255, 255, 255, 0.92) 84%, #ffffff 96%, #ffffff 100%),
+            /* Soft radial light bloom direct from the optical center of the gears & chains */
+            radial-gradient(circle at 52% 46%, rgba(247, 246, 242, 0) 18%, rgba(247, 246, 242, 0.22) 42%, rgba(247, 246, 242, 0.82) 72%, #f7f6f2 95%),
+            /* Sophisticated linear fades for top and bottom screen margins to prevent rectangular cropping */
+            linear-gradient(to top, #f7f6f2 0%, rgba(247, 246, 242, 0.8) 10%, rgba(247, 246, 242, 0.3) 22%, transparent 35%, transparent 68%, rgba(247, 246, 242, 0.7) 84%, #f7f6f2 100%),
+            /* Soft left window limit fade */
+            linear-gradient(to left, rgba(247, 246, 242, 0) 75%, rgba(247, 246, 242, 0.6) 94%, #f7f6f2 100%);
+          pointer-events: none;
+        }
+
+        /* Gentle Luxe Showroom Light Leaks - Volumetric and Depth-calibrated aperture layers */
+        .panel-img__light-glow {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          z-index: 3;
+        }
+        .light-glow__core {
+          position: absolute;
+          top: 6%; left: 8%;
+          width: 84vw; height: 84vh;
+          background: radial-gradient(circle at 48% 44%, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.25) 50%, rgba(247, 246, 242, 0) 80%);
+          filter: blur(110px);
+          opacity: 0.95;
+        }
+        .light-glow__aperture {
+          position: absolute;
+          top: 15%; left: 12%;
+          width: 72vw; height: 72vh;
+          background: radial-gradient(circle at 52% 48%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.1) 40%, rgba(247, 246, 242, 0) 70%);
+          filter: blur(80px);
+          opacity: 0.75;
+        }
+
+        /* Floating Premium Editorial Brand Block - Industrial OS Style */
         .panel-img__brand {
           position: absolute;
-          bottom: 48px; left: 48px;
-          z-index: 2;
+          bottom: 135px; left: 96px;
+          z-index: 10;
+          background: transparent;
+          max-width: 480px;
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          pointer-events: none;
         }
         .panel-img__brand .brand-tag {
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.58rem;
+          font-size: 0.65rem;
           letter-spacing: 4px;
           text-transform: uppercase;
-          color: rgba(13,27,42,0.75);
-          margin-bottom: 10px;
-          text-shadow: none;
+          color: #7f8c8d;
+          font-weight: 600;
+          margin-bottom: 12px;
         }
         .panel-img__brand h2 {
           font-family: 'Syne', sans-serif;
-          font-size: clamp(1.6rem, 2.2vw, 2.4rem);
+          font-size: clamp(1.8rem, 2.3vw, 2.5rem);
           font-weight: 800;
-          color: #fff;
-          line-height: 1.15;
-          letter-spacing: -0.5px;
-          max-width: 380px;
-          text-shadow: 0 2px 12px rgba(13,27,42,0.55), 0 1px 3px rgba(13,27,42,0.4);
+          color: #0d1b2a;
+          line-height: 1.25;
+          letter-spacing: -1.2px;
+          text-shadow: 
+            0 0 10px rgba(255, 255, 255, 0.95), 
+            0 0 25px rgba(255, 255, 255, 0.8), 
+            0 0 45px rgba(255, 255, 255, 0.45), 
+            0 1px 2px rgba(255, 255, 255, 0.95), 
+            0 8px 24px rgba(13, 27, 42, 0.06);
         }
         .panel-img__brand h2 em {
           font-style: normal;
-          color: #4FC3F7;
+          color: #1a9fd4;
         }
         .panel-img__brand .brand-sub {
           margin-top: 14px;
-          font-size: 0.82rem;
-          color: rgba(13,27,42,0.72);
+          font-size: 0.86rem;
+          color: #555c65;
           line-height: 1.6;
-          max-width: 340px;
           font-weight: 400;
+          max-width: 440px;
         }
 
-        /* Badges statut */
+        /* Glass HUD badging */
         .status-bar {
           position: absolute;
-          top: 36px; left: 40px;
-          z-index: 2;
+          top: 96px; left: 96px;
+          z-index: 10;
           display: flex;
-          gap: 10px;
+          gap: 12px;
         }
         .status-chip {
           display: flex;
           align-items: center;
-          gap: 6px;
-          padding: 5px 12px;
-          border-radius: 20px;
-          background: rgba(13,27,42,0.72);
-          backdrop-filter: blur(8px);
-          border: 1px solid rgba(255,255,255,0.12);
+          gap: 8px;
+          padding: 6px 14px;
+          border-radius: 30px;
+          background: rgba(255, 255, 255, 0.52);
+          backdrop-filter: blur(36px) saturate(180%);
+          border: 1px solid rgba(255, 255, 255, 0.7);
+          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.01);
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.52rem;
+          font-size: 0.55rem;
           letter-spacing: 1.5px;
           text-transform: uppercase;
-          color: rgba(255,255,255,0.92);
+          color: #334155;
+          font-weight: 600;
         }
         .status-chip .dot {
-          width: 5px; height: 5px;
+          width: 6px; height: 6px;
           border-radius: 50%;
-          background: #2ecc71;
-          box-shadow: 0 0 6px #2ecc71;
-          animation: blink 2.4s infinite;
+          background: #10b981;
+          box-shadow: 0 0 8px #10b981;
+          animation: blink 2.5s infinite;
         }
         @keyframes blink {
           0%,100% { opacity:1; } 50% { opacity:0.3; }
         }
 
-        /* Sites en bas du panel image */
+        /* Sites en bas du panel image as floating glass chips */
         .sites-strip {
           position: absolute;
-          bottom: 0; left: 0; right: 0;
-          z-index: 2;
+          bottom: 96px; right: 96px;
+          z-index: 10;
           display: flex;
-          gap: 0;
-          border-top: 1px solid rgba(13,27,42,0.1);
-          background: rgba(255,255,255,0.55);
-          backdrop-filter: blur(8px);
+          gap: 8px;
+          pointer-events: none;
         }
         .site-chip {
-          flex: 1;
-          padding: 10px 0;
+          padding: 6px 14px;
           text-align: center;
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.48rem;
-          letter-spacing: 2px;
+          font-size: 0.55rem;
+          letter-spacing: 1.5px;
           text-transform: uppercase;
-          color: rgba(13,27,42,0.6);
-          border-right: 1px solid rgba(255,255,255,0.07);
-          transition: color 0.3s, background 0.3s;
+          color: #64748b;
+          border: 1px solid rgba(255, 255, 255, 0.55);
+          background: rgba(255, 255, 255, 0.52);
+          backdrop-filter: blur(36px) saturate(180%);
+          border-radius: 8px;
+          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.01);
+          transition: all 0.3s;
         }
-        .site-chip:last-child { border-right: none; }
         .site-chip:hover {
           color: #1a9fd4;
-          background: rgba(79,195,247,0.1);
+          background: rgba(255,255,255,0.9);
         }
 
-        /* ── RIGHT — FORM PANEL ────────────────────────────────── */
+                /* ── RIGHT — FORM PANEL ────────────────────────────────── */
         .panel-form {
           border-left: none;
           width: var(--panel-w);
@@ -477,7 +546,7 @@ export function LoginPage() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 56px 52px;
+          padding: 56px 90px 56px 42px;
           position: relative;
           overflow: hidden;
         }
@@ -614,9 +683,10 @@ export function LoginPage() {
         /* Security badge */
         .security-block {
           padding: 14px 16px;
-          border: 1px solid #e9ecef;
+          border: 1px solid rgba(13, 27, 42, 0.03);
           border-radius: 10px;
-          background: #f8fafc;
+          background: #ffffff;
+          box-shadow: 0 4px 20px rgba(13, 27, 42, 0.02);
         }
         .sec-header {
           display: flex;
@@ -651,7 +721,7 @@ export function LoginPage() {
           align-items: center;
           gap: 8px;
           padding-top: 10px;
-          border-top: 1px solid #e2e8f0;
+          border-top: 1px solid rgba(13, 27, 42, 0.05);
           font-family: 'JetBrains Mono', monospace;
           font-size: 0.48rem;
           letter-spacing: 1px;
@@ -676,7 +746,7 @@ export function LoginPage() {
           font-size: 0.48rem;
           letter-spacing: 2px;
           text-transform: uppercase;
-          color: #cbd5e1;
+          color: #7f8c8d;
         }
 
         /* ── RESPONSIVE ────────────────────────────────────────── */
@@ -751,28 +821,31 @@ export function LoginPage() {
         }
       ` }} />
 
-      {/* Connection Mode Live Floating Indicator */}
-      <div className="absolute top-4 right-4 z-[55] flex items-center gap-2 bg-white/80 dark:bg-slate-900/90 border border-slate-205 dark:border-slate-800 rounded-full px-4 py-1.5 text-[10px] font-mono shadow-sm">
-        {isOnline ? (
-          <>
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-emerald-600 dark:text-emerald-400 font-extrabold uppercase">SURFACE CONNECTÉE</span>
-            <Wifi className="h-3.5 w-3.5 text-emerald-500" />
-          </>
-        ) : (
-          <>
-            <span className="h-2 w-2 rounded-full bg-amber-500 animate-bounce" />
-            <span className="text-amber-500 font-extrabold uppercase">AUTONOME HORS-LIGNE</span>
-            <WifiOff className="h-3.5 w-3.5 text-amber-500" />
-          </>
-        )}
-      </div>
-
       {/* LEFT — IMAGE PANEL */}
       <div className="panel-img">
-        <div className="panel-img__photo"></div>
-        <div className="panel-img__overlay"></div>
-        <div className="panel-img__overlay-left"></div>
+        {/* Architectural grid mesh and showroom lighting light-leaks */}
+        <div className="panel-img__grid-mesh" />
+        <div className="panel-img__light-glow">
+          <div className="light-glow__core" />
+          <div className="light-glow__aperture" />
+        </div>
+
+        <img
+          src={hydroImage}
+          alt="REAL PROVIDED IMAGE"
+          referrerPolicy="no-referrer"
+          className="panel-img__photo-main"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            background: "transparent",
+            display: "block"
+          }}
+        />
+
+        {/* Soft edge fade & high-key white vignette diffusion */}
+        <div className="panel-img__cinematic-overlay" />
 
         <div className="status-bar">
           <div className="status-chip"><span className="dot"></span>Système opérationnel</div>
@@ -781,10 +854,9 @@ export function LoginPage() {
 
         <div className="panel-img__brand">
           <div className="brand-tag">Plateforme de supervision</div>
-          <h2>Maintenance<br /><em>préventive</em> &amp;<br />corrective</h2>
+          <h2>Maintenance <br /><em>préventive</em> &amp;<br />corrective</h2>
           <p className="brand-sub">
-            Gestion centralisée des interventions, suivi des pannes
-            et pilotage de la performance des engins miniers en temps réel.
+            L'intelligence opérationnelle au service de la résilience industrielle : orchestration en temps réel des flux physiques, diagnostic prédictif des actifs critiques et pilotage unifié de la performance opérationnelle.
           </p>
         </div>
 
@@ -1052,7 +1124,7 @@ export function LoginPage() {
         </div>
 
         <div className="form-footer">
-          HYDROMINES 2026 — TOUS DROITS RÉSERVÉS &nbsp;·&nbsp; v1.0 Suivi Maintenance
+          <span style={{ color: "#3a9fd4", fontWeight: 700 }}>HYDRO</span><span style={{ color: "#9c1a1a", fontWeight: 700 }}>MINES</span> 2026 — TOUS DROITS RÉSERVÉS &nbsp;·&nbsp; v1.0 Suivi Maintenance
         </div>
       </div>
 
