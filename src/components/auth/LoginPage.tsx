@@ -14,7 +14,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { LoginParticlesBackground } from "./LoginParticlesBackground";
+import { HydrominesLogo } from "./HydrominesLogo";
 // @ts-ignore
 import hydroImage from "@/assets/images/HYDRO MAINTENANCE.jpg";
 
@@ -57,6 +57,7 @@ export function LoginPage() {
   const [formRole, setFormRole] = React.useState<string>("");
 
   const [cachedUsersList, setCachedUsersList] = React.useState<User[]>([]);
+  const [isViewerHovered, setIsViewerHovered] = React.useState(false);
 
   // Monitor cache and load previously authenticated profiles on mount
   React.useEffect(() => {
@@ -607,9 +608,11 @@ export function LoginPage() {
           margin-bottom: 10px;
           display: flex;
           align-items: center;
+          justify-content: center;
           gap: 8px;
         }
-        .form-eyebrow::before {
+        .form-eyebrow::before,
+        .form-eyebrow::after {
           content: '';
           display: inline-block;
           width: 20px; height: 1.5px;
@@ -623,6 +626,7 @@ export function LoginPage() {
           letter-spacing: -0.5px;
           line-height: 1.15;
           margin-bottom: 10px;
+          text-align: center;
         }
         .form-title span { color: #C0392B; }
         .form-desc {
@@ -631,6 +635,7 @@ export function LoginPage() {
           line-height: 1.65;
           margin-bottom: 36px;
           font-weight: 300;
+          text-align: center;
         }
 
         /* Google button */
@@ -688,10 +693,15 @@ export function LoginPage() {
           border-radius: 10px;
           background: #ffffff;
           box-shadow: 0 4px 20px rgba(13, 27, 42, 0.02);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
         }
         .sec-header {
           display: flex;
           align-items: center;
+          justify-content: center;
           gap: 8px;
           margin-bottom: 8px;
         }
@@ -720,6 +730,7 @@ export function LoginPage() {
         .sec-footer {
           display: flex;
           align-items: center;
+          justify-content: center;
           gap: 8px;
           padding-top: 10px;
           border-top: 1px solid rgba(13, 27, 42, 0.05);
@@ -872,17 +883,14 @@ export function LoginPage() {
 
       {/* RIGHT — FORM PANEL */}
       <div className="panel-form">
-        <LoginParticlesBackground />
         <div className="form-inner">
 
           {/* Logo block with animate system */}
-          <div className="logo-block">
-            <div className="relative overflow-hidden rounded-xl bg-slate-50 dark:bg-slate-900 p-2 border border-slate-200 dark:border-slate-800 shadow-sm" style={{ width: "44px", height: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Cpu className="h-6 w-6 text-[#4a90d9] animate-pulse" />
-            </div>
-            <div className="logo-text">
+          <div className="logo-block flex flex-col items-center justify-center text-center gap-3 w-full" style={{ marginBottom: "28px" }}>
+            <HydrominesLogo size={60} className="transform transition-transform hover:scale-105" />
+            <div className="logo-text text-center">
               <div className="logo-name"><span className="h">HYDRO</span><span className="m">MINES</span></div>
-              <div className="logo-tagline">Maintenance engins &amp; équipements</div>
+              <div className="logo-tagline" style={{ letterSpacing: "1.2px", fontSize: "0.56rem" }}>Mines &middot; Eau &middot; Environnement</div>
             </div>
           </div>
 
@@ -958,18 +966,23 @@ export function LoginPage() {
                     setUser(viewerUser);
                     toast.success("👁️ Entré en mode Viewer : Consultation en lecture seule.");
                   }}
-                  className="btn-google text-slate-700 bg-white font-bold"
+                  onMouseEnter={() => setIsViewerHovered(true)}
+                  onMouseLeave={() => setIsViewerHovered(false)}
+                  className="w-full h-12 flex items-center justify-center gap-3 px-6 py-3 rounded-xl font-extrabold uppercase tracking-wider text-xs border-2 select-none cursor-pointer focus:outline-none transition-all duration-300"
                   style={{ 
-                    background: "transparent", 
-                    color: "var(--ink)", 
-                    border: "1px solid #cbd5e1", 
-                    boxShadow: "none", 
+                    backgroundColor: "#ffffff", 
+                    borderColor: isViewerHovered ? "#0ea5e9" : "#cbd5e1", 
+                    color: isViewerHovered ? "#0ea5e9" : "#475569", 
+                    boxShadow: isViewerHovered 
+                      ? "0 10px 20px -5px rgba(14, 165, 233, 0.22), 0 4px 6px -2px rgba(14, 165, 233, 0.12)" 
+                      : "0 1px 3px rgba(0, 0, 0, 0.05)", 
+                    transform: isViewerHovered ? "translateY(-2px)" : "none",
                     marginTop: "-10px", 
                     marginBottom: "28px" 
                   }}
                 >
-                  <Shield className="h-5 w-5 text-sky-500 animate-pulse" />
-                  <span>ENTRER EN MODE VIEWER (LECTURE SEULE)</span>
+                  <Shield className={`h-5 w-5 transition-transform duration-300 ${isViewerHovered ? 'text-sky-500 scale-110 rotate-3' : 'text-slate-400'}`} />
+                  <span className="font-extrabold" style={{ letterSpacing: "0.05em" }}>ENTRER EN MODE VIEWER (LECTURE SEULE)</span>
                 </button>
               </div>
 
@@ -1001,7 +1014,7 @@ export function LoginPage() {
                           key={p.uid}
                           onClick={() => handleOfflineRescueLogin(p)}
                           type="button"
-                          className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-left truncate text-[10px] text-slate-700 font-bold transition-all"
+                          className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-center truncate text-[10px] text-slate-700 font-bold transition-all w-full flex items-center justify-center"
                         >
                           {p.displayName.split(" ")[0]} ({p.siteId})
                         </button>
