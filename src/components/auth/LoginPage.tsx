@@ -14,6 +14,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { LoginParticlesBackground } from "./LoginParticlesBackground";
 // @ts-ignore
 import hydroImage from "@/assets/images/HYDRO MAINTENANCE.jpg";
 
@@ -871,6 +872,7 @@ export function LoginPage() {
 
       {/* RIGHT — FORM PANEL */}
       <div className="panel-form">
+        <LoginParticlesBackground />
         <div className="form-inner">
 
           {/* Logo block with animate system */}
