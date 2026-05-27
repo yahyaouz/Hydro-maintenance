@@ -1,6 +1,6 @@
 {
   "name": "HYDROMINES Maintenance",
   "description": "Plateforme intelligente de gestion de maintenance minière multi-sites avec suivi des engins, maintenance préventive, gestion des pannes, analyses IA et rapports consolidés.",
-  "requestFramePermissions": ["camera"],
+  "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -15,9 +15,9 @@ import {
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { HydrominesLogo } from "./HydrominesLogo";
-// @ts-ignore
-import hydroImage from "@/assets/images/HYDRO MAINTENANCE.jpg";
 
+// @ts-ignore
+import mining_login_bg from "@/assets/images/yellow_mining_login_bg_1779870484752.png";
 // Site mappings 
 const SITES_LIST = [
   { id: "SMI", label: "SMI (Imiter)" },
@@ -29,16 +29,7 @@ const SITES_LIST = [
 ];
 
 export function LoginPage() {
-  console.log("REAL IMPORTED FILE:", hydroImage);
   console.log("LOGIN DEBUG ACTIVE");
-
-  // Anti-fallback verification & image tracing
-  React.useEffect(() => {
-    console.log("REAL IMPORTED FILE:", hydroImage);
-    if (!hydroImage) {
-      console.error("ERREUR FATALE : L'image de login HYDRO MAINTENANCE.jpg est introuvable !");
-    }
-  }, []);
 
   const setUser = useAuthStore((state) => state.setUser);
   const { theme, setTheme } = useAuthStore();
@@ -334,232 +325,88 @@ export function LoginPage() {
           --red:       #C0392B;
           --red-dim:   #922b21;
           --ink:       #0d1b2a;
-          --ink-mid:   #2c3e50;
+          --ink-mid:   --ink;
           --muted:     #7f8c8d;
           --border:    rgba(255,255,255,0.12);
-          --panel-w:   550px;
         }
 
         .wrap {
           display: flex;
+          flex-direction: row;
+          align-items: stretch;
           width: 100vw;
-          min-height: 100vh;
+          height: 100vh;
           overflow: hidden;
           position: relative;
-          background-color: #ffffff; /* Eliminates high-DPI subpixel wrapper background gaps */
+          background-color: #ffffff;
         }
 
-        /* ── SPLIT LAYOUT ──────────────────────────────────────── */
+        /* ── IMAGE PANEL (100% BACKGROUND LAYER) ─────────────────── */
         .panel-img {
-          background: linear-gradient(to right, #f7f6f2 55%, #ffffff 92%) !important; /* Smooth underlying base fade */
-          border-right: none;
-          flex: 1;
-          position: relative;
-          overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          z-index: 1;
+          background-color: #ffffff;
         }
-
-        /* 4K Precision Source Image Treatment */
-        .panel-img__photo-main {
+        .panel-img__photo {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          object-position: center 46%;
+          object-position: center;
           display: block;
-          opacity: 0.94;
-          mix-blend-mode: multiply;
-          filter: contrast(0.96) brightness(1.02) saturate(0.88);
-          z-index: 2;
-          transition: opacity 0.5s ease;
-          pointer-events: none;
+          opacity: 0.98;
         }
-
-        /* Ambient high-tech blueprint mesh (minimalist & soft) */
-        .panel-img__grid-mesh {
+        /* Extrêmement lisse gradient pour effacer complètement la ligne de démarcation */
+        .panel-img__overlay {
           position: absolute;
           inset: 0;
-          z-index: 1;
-          background-image: radial-gradient(rgba(148, 163, 184, 0.015) 1px, transparent 1px);
-          background-size: 36px 36px;
+          background: linear-gradient(
+            to right, 
+            rgba(255, 255, 255, 0) 0%, 
+            rgba(255, 255, 255, 0) 38%, 
+            rgba(255, 255, 255, 0.15) 52%, 
+            rgba(255, 255, 255, 0.45) 66%, 
+            rgba(255, 255, 255, 0.82) 76%, 
+            rgba(255, 255, 255, 0.98) 84%, 
+            #ffffff 89%, 
+            #ffffff 100%
+          );
           pointer-events: none;
         }
-
-        /* Cinematic Atmospheric White Diffusion Overlay and Edge Fading */
-        .panel-img__cinematic-overlay {
+        .panel-img__overlay-ambient {
           position: absolute;
           inset: 0;
-          z-index: 4;
-          background: 
-            /* Multi-step right transition mask curve stacked TOP to perfectly blend the image into pure white with zero visible separation */
-            linear-gradient(to right, rgba(247, 246, 242, 0) 24%, rgba(247, 246, 242, 0.22) 44%, rgba(247, 246, 242, 0.7) 64%, rgba(255, 255, 255, 0.92) 84%, #ffffff 96%, #ffffff 100%),
-            /* Soft radial light bloom direct from the optical center of the gears & chains */
-            radial-gradient(circle at 52% 46%, rgba(247, 246, 242, 0) 18%, rgba(247, 246, 242, 0.22) 42%, rgba(247, 246, 242, 0.82) 72%, #f7f6f2 95%),
-            /* Sophisticated linear fades for top and bottom screen margins to prevent rectangular cropping */
-            linear-gradient(to top, #f7f6f2 0%, rgba(247, 246, 242, 0.8) 10%, rgba(247, 246, 242, 0.3) 22%, transparent 35%, transparent 68%, rgba(247, 246, 242, 0.7) 84%, #f7f6f2 100%),
-            /* Soft left window limit fade */
-            linear-gradient(to left, rgba(247, 246, 242, 0) 75%, rgba(247, 246, 242, 0.6) 94%, #f7f6f2 100%);
+          background: linear-gradient(180deg, rgba(13,27,42,0.1) 0%, transparent 45%, rgba(13,27,42,0.3) 100%);
           pointer-events: none;
         }
 
-        /* Gentle Luxe Showroom Light Leaks - Volumetric and Depth-calibrated aperture layers */
-        .panel-img__light-glow {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          z-index: 3;
-        }
-        .light-glow__core {
-          position: absolute;
-          top: 6%; left: 8%;
-          width: 84vw; height: 84vh;
-          background: radial-gradient(circle at 48% 44%, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.25) 50%, rgba(247, 246, 242, 0) 80%);
-          filter: blur(110px);
-          opacity: 0.95;
-        }
-        .light-glow__aperture {
-          position: absolute;
-          top: 15%; left: 12%;
-          width: 72vw; height: 72vh;
-          background: radial-gradient(circle at 52% 48%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.1) 40%, rgba(247, 246, 242, 0) 70%);
-          filter: blur(80px);
-          opacity: 0.75;
-        }
-
-        /* Floating Premium Editorial Brand Block - Industrial OS Style */
-        .panel-img__brand {
-          position: absolute;
-          bottom: 135px; left: 96px;
-          z-index: 10;
-          background: transparent;
-          max-width: 480px;
-          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-          pointer-events: none;
-        }
-        .panel-img__brand .brand-tag {
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 0.65rem;
-          letter-spacing: 4px;
-          text-transform: uppercase;
-          color: #7f8c8d;
-          font-weight: 600;
-          margin-bottom: 12px;
-        }
-        .panel-img__brand h2 {
-          font-family: 'Syne', sans-serif;
-          font-size: clamp(1.8rem, 2.3vw, 2.5rem);
-          font-weight: 800;
-          color: #0d1b2a;
-          line-height: 1.25;
-          letter-spacing: -1.2px;
-          text-shadow: 
-            0 0 10px rgba(255, 255, 255, 0.95), 
-            0 0 25px rgba(255, 255, 255, 0.8), 
-            0 0 45px rgba(255, 255, 255, 0.45), 
-            0 1px 2px rgba(255, 255, 255, 0.95), 
-            0 8px 24px rgba(13, 27, 42, 0.06);
-        }
-        .panel-img__brand h2 em {
-          font-style: normal;
-          color: #1a9fd4;
-        }
-        .panel-img__brand .brand-sub {
-          margin-top: 14px;
-          font-size: 0.86rem;
-          color: #555c65;
-          line-height: 1.6;
-          font-weight: 400;
-          max-width: 440px;
-        }
-
-        /* Glass HUD badging */
-        .status-bar {
-          position: absolute;
-          top: 96px; left: 96px;
-          z-index: 10;
-          display: flex;
-          gap: 12px;
-        }
-        .status-chip {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 6px 14px;
-          border-radius: 30px;
-          background: rgba(255, 255, 255, 0.52);
-          backdrop-filter: blur(36px) saturate(180%);
-          border: 1px solid rgba(255, 255, 255, 0.7);
-          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.01);
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 0.55rem;
-          letter-spacing: 1.5px;
-          text-transform: uppercase;
-          color: #334155;
-          font-weight: 600;
-        }
-        .status-chip .dot {
-          width: 6px; height: 6px;
-          border-radius: 50%;
-          background: #10b981;
-          box-shadow: 0 0 8px #10b981;
-          animation: blink 2.5s infinite;
-        }
-        @keyframes blink {
-          0%,100% { opacity:1; } 50% { opacity:0.3; }
-        }
-
-        /* Sites en bas du panel image as floating glass chips */
-        .sites-strip {
-          position: absolute;
-          bottom: 96px; right: 96px;
-          z-index: 10;
-          display: flex;
-          gap: 8px;
-          pointer-events: none;
-        }
-        .site-chip {
-          padding: 6px 14px;
-          text-align: center;
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 0.55rem;
-          letter-spacing: 1.5px;
-          text-transform: uppercase;
-          color: #64748b;
-          border: 1px solid rgba(255, 255, 255, 0.55);
-          background: rgba(255, 255, 255, 0.52);
-          backdrop-filter: blur(36px) saturate(180%);
-          border-radius: 8px;
-          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.01);
-          transition: all 0.3s;
-        }
-        .site-chip:hover {
-          color: #1a9fd4;
-          background: rgba(255,255,255,0.9);
-        }
-
-                /* ── RIGHT — FORM PANEL ────────────────────────────────── */
+        /* ── FORM PANEL (OVERLAID ON THE RIGHT) ──────────────────── */
         .panel-form {
-          border-left: none;
-          width: var(--panel-w);
-          flex-shrink: 0;
-          background: #ffffff !important;
+          position: absolute;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          width: 22%;
+          min-width: 410px;
+          z-index: 2;
+          background: transparent !important;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 56px 90px 56px 42px;
-          position: relative;
-          overflow: hidden;
+          padding: 44px 32px;
+          overflow-y: auto;
         }
 
-        /* Accent line top */
+        /* Accent line top spanning the whole top of form space without visual boundary */
         .panel-form::before {
           content: '';
           position: absolute;
           top: 0; left: 0; right: 0;
           height: 3px;
-          background: linear-gradient(90deg, #4FC3F7, #C0392B);
+          background: linear-gradient(90deg, rgba(26, 159, 212, 0) 0%, #1a9fd4 50%, #C0392B 100%);
         }
 
         .form-inner {
@@ -762,27 +609,67 @@ export function LoginPage() {
         }
 
         /* ── RESPONSIVE ────────────────────────────────────────── */
+        @media (max-width: 1280px) {
+          .panel-form {
+            width: 28%;
+            min-width: 390px;
+          }
+          .panel-img__overlay {
+            background: linear-gradient(
+              to right, 
+              rgba(255, 255, 255, 0) 0%, 
+              rgba(255, 255, 255, 0) 30%, 
+              rgba(255, 255, 255, 0.15) 45%, 
+              rgba(255, 255, 255, 0.58) 58%, 
+              rgba(255, 255, 255, 0.8) 68%, 
+              rgba(255, 255, 255, 0.98) 78%, 
+              #ffffff 83%, 
+              #ffffff 100%
+            );
+          }
+        }
         @media (max-width: 960px) {
-          .wrap { flex-direction: column; overflow-y: auto; }
+          .wrap { 
+            flex-direction: column; 
+            overflow-y: auto; 
+            align-items: stretch;
+            height: auto;
+            min-height: 100vh;
+          }
           .panel-img {
-            border-right: none;
+            position: relative;
+            inset: auto;
+            width: 100%;
             height: 42vh;
-            flex: none;
+          }
+          .panel-img__overlay {
+            background: linear-gradient(
+              to bottom, 
+              rgba(255, 255, 255, 0) 0%, 
+              rgba(255, 255, 255, 0.2) 40%, 
+              rgba(255, 255, 255, 0.7) 70%, 
+              rgba(255, 255, 255, 0.95) 90%, 
+              #ffffff 100%
+            );
           }
           .panel-form {
-            border-left: none;
+            position: relative;
+            inset: auto;
             width: 100%;
+            min-width: 0;
             min-height: 58vh;
             padding: 40px 32px;
+            background: #ffffff !important;
           }
-          .panel-img__brand { bottom: 36px; left: 28px; }
-          .panel-img__brand h2 { font-size: 1.5rem; }
+          .panel-form::before {
+            background: linear-gradient(90deg, #1a9fd4, #C0392B);
+          }
         }
         @media (max-width: 480px) {
           .panel-form {
-            border-left: none; padding: 32px 22px; }
+            padding: 32px 20px; 
+          }
           .form-title { font-size: 1.5rem; }
-          :root { --panel-w: 100%; }
         }
 
         /* Fade-in animation */
@@ -833,55 +720,48 @@ export function LoginPage() {
         }
       ` }} />
 
-      {/* LEFT — IMAGE PANEL */}
+      {/* LEFT — IMAGE PANEL (80%) */}
       <div className="panel-img">
-        {/* Architectural grid mesh and showroom lighting light-leaks */}
-        <div className="panel-img__grid-mesh" />
-        <div className="panel-img__light-glow">
-          <div className="light-glow__core" />
-          <div className="light-glow__aperture" />
-        </div>
-
         <img
-          src={hydroImage}
-          alt="REAL PROVIDED IMAGE"
+          src={mining_login_bg}
+          alt="Heavy Underground Mining Equipment Maintenance Workshop"
           referrerPolicy="no-referrer"
-          className="panel-img__photo-main"
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            background: "transparent",
-            display: "block"
-          }}
+          className="panel-img__photo"
         />
+        {/* Cinematic blend elements */}
+        <div className="panel-img__overlay" />
+        <div className="panel-img__overlay-ambient" />
 
-        {/* Soft edge fade & high-key white vignette diffusion */}
-        <div className="panel-img__cinematic-overlay" />
-
-        <div className="status-bar">
-          <div className="status-chip"><span className="dot"></span>Système opérationnel</div>
-          <div className="status-chip"><span className="dot"></span>5 sites connectés</div>
+        {/* Floating status badges with beautiful backdrop frames */}
+        <div className="absolute top-8 left-8 z-10 hidden md:flex gap-3">
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-950/45 backdrop-blur-md border border-white/10 text-[9px] font-mono tracking-widest text-emerald-400 font-bold uppercase shadow-lg">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            SITES SUPÉRIEURS ET SOUTERRAINS CONNECTÉS
+          </div>
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-950/45 backdrop-blur-md border border-white/10 text-[9px] font-mono tracking-widest text-sky-400 font-bold uppercase shadow-lg">
+            <Activity className="h-3 w-3 animate-pulse text-sky-405" />
+            SUPERVISION MAÎTRE : 5 SITES ACTIFS
+          </div>
         </div>
 
-        <div className="panel-img__brand">
-          <div className="brand-tag">Plateforme de supervision</div>
-          <h2>Maintenance <br /><em>préventive</em> &amp;<br />corrective</h2>
-          <p className="brand-sub">
-            L'intelligence opérationnelle au service de la résilience industrielle : orchestration en temps réel des flux physiques, diagnostic prédictif des actifs critiques et pilotage unifié de la performance opérationnelle.
+        {/* Floating information block at the bottom of the image for full cinematic effect */}
+        <div className="absolute bottom-16 left-16 z-10 max-w-xl hidden lg:block text-left p-6 rounded-2xl bg-slate-950/40 backdrop-blur-md border border-white/10 shadow-2xl">
+          <div className="font-mono text-[10px] tracking-[4px] uppercase text-sky-400 font-bold mb-3 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+            PLATEFORME DE SUPERVISION NUMÉRIQUE
+          </div>
+          <h2 className="text-3xl font-extrabold tracking-tight text-white leading-tight mb-1 uppercase">
+            Maintenance <span className="text-sky-400">préventive</span> <br />
+            <span className="text-sky-400 font-black">&amp; corrective</span> des engins
+          </h2>
+          <div className="h-[1px] w-20 bg-gradient-to-r from-sky-400 to-transparent my-3" />
+          <p className="text-xs text-slate-200 leading-relaxed font-light mt-2 max-w-sm">
+            Orchestration en temps réel des actifs physiques, diagnostics avancés des pannes souterraines, de la SMI à Bou-Azzer.
           </p>
-        </div>
-
-        <div className="sites-strip">
-          <div className="site-chip">SMI</div>
-          <div className="site-chip">Oumejrane</div>
-          <div className="site-chip">Koudia</div>
-          <div className="site-chip">Ouansimi</div>
-          <div className="site-chip">Bou-Azzer</div>
         </div>
       </div>
 
-      {/* RIGHT — FORM PANEL */}
+      {/* RIGHT — FORM PANEL (20%) */}
       <div className="panel-form">
         <div className="form-inner">
 
