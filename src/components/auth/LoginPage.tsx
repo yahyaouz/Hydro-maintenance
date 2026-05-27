@@ -365,12 +365,12 @@ export function LoginPage() {
           background: linear-gradient(
             to right, 
             rgba(255, 255, 255, 0) 0%, 
-            rgba(255, 255, 255, 0) 38%, 
-            rgba(255, 255, 255, 0.15) 52%, 
-            rgba(255, 255, 255, 0.45) 66%, 
-            rgba(255, 255, 255, 0.82) 76%, 
-            rgba(255, 255, 255, 0.98) 84%, 
-            #ffffff 89%, 
+            rgba(255, 255, 255, 0) 48%, 
+            rgba(255, 255, 255, 0.08) 58%, 
+            rgba(255, 255, 255, 0.35) 68%, 
+            rgba(255, 255, 255, 0.72) 76%, 
+            rgba(255, 255, 255, 0.94) 82%, 
+            #ffffff 86%, 
             #ffffff 100%
           );
           pointer-events: none;
@@ -618,12 +618,12 @@ export function LoginPage() {
             background: linear-gradient(
               to right, 
               rgba(255, 255, 255, 0) 0%, 
-              rgba(255, 255, 255, 0) 30%, 
-              rgba(255, 255, 255, 0.15) 45%, 
-              rgba(255, 255, 255, 0.58) 58%, 
-              rgba(255, 255, 255, 0.8) 68%, 
-              rgba(255, 255, 255, 0.98) 78%, 
-              #ffffff 83%, 
+              rgba(255, 255, 255, 0) 40%, 
+              rgba(255, 255, 255, 0.1) 50%, 
+              rgba(255, 255, 255, 0.45) 60%, 
+              rgba(255, 255, 255, 0.82) 68%, 
+              rgba(255, 255, 255, 0.98) 74%, 
+              #ffffff 80%, 
               #ffffff 100%
             );
           }
