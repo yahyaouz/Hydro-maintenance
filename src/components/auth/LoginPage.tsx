@@ -49,6 +49,7 @@ export function LoginPage() {
 
   const [cachedUsersList, setCachedUsersList] = React.useState<User[]>([]);
   const [isViewerHovered, setIsViewerHovered] = React.useState(false);
+  const [showViewerPending, setShowViewerPending] = React.useState(false);
 
   // Monitor cache and load previously authenticated profiles on mount
   React.useEffect(() => {
@@ -774,7 +775,57 @@ export function LoginPage() {
             </div>
           </div>
 
-          {authMode !== "ONBOARDING" ? (
+          {showViewerPending ? (
+            /* VIEWER BLOCKED VIEW */
+            <div className="space-y-6 text-left animate-fade-in" style={{ animation: "fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both" }}>
+              <div className="space-y-2 text-center" style={{ marginBottom: "24px" }}>
+                <div className="inline-flex h-12 w-12 items-center justify-center bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-xl mb-1">
+                  <ShieldAlert className="h-6 w-6 animate-pulse" />
+                </div>
+                <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 m-0">
+                  Accès Restreint
+                </h3>
+                <p className="text-[10px] text-slate-500 font-mono tracking-wider uppercase m-0">
+                  Mode Consultation désactivé
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/60 shadow-inner">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-[10px] font-mono font-black text-slate-600 uppercase tracking-widest">Hydromines Maintenance</span>
+                  <span className="text-xs font-mono font-black text-amber-600 animate-pulse bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">5% PRÊT</span>
+                </div>
+                
+                {/* Custom high-fidelity progress bar showing 5% */}
+                <div className="relative w-full h-2.5 bg-slate-200 rounded-full overflow-hidden mb-3">
+                  <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#1a9fd4] to-[#C0392B] rounded-full transition-all duration-1000" style={{ width: "5%" }} />
+                </div>
+                
+                <p className="text-xs text-slate-705 leading-relaxed font-semibold m-0">
+                  Le système de gestion de maintenance assistée par ordinateur <strong className="text-slate-900 font-black">Hydromines Maintenance</strong> n'est pas prêt. Il est actuellement à <strong className="text-amber-600 text-[13px] font-mono font-black">5%</strong> de son implémentation opérationnelle globale, et bientôt à 100%.
+                </p>
+                
+                <p className="text-xs text-slate-500 leading-relaxed font-normal mt-3 pt-3 border-t border-slate-200/60 m-0">
+                  Pour des raisons de développement et de cybersécurité des chantiers souterrains, l'accès en mode <strong className="text-slate-800 font-bold">VIEWER</strong> sera officiellement ouvert lorsque le système aura atteint un avancement minimum de <strong className="text-sky-600 font-mono font-black">70%</strong>.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowViewerPending(false)}
+                className="w-full h-12 flex items-center justify-center gap-3 px-6 py-3 rounded-xl font-extrabold uppercase tracking-widest text-[11px] bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/10 transition-all duration-300 transform active:scale-95"
+              >
+                <RefreshCw className="h-4 w-4 text-sky-400 rotate-0 hover:rotate-180 transition-transform duration-500" style={{ animation: "none" }} />
+                <span>REVENIR à la page login</span>
+              </button>
+
+              <div className="pt-2 text-center">
+                <p className="text-[10px] text-slate-400 font-medium leading-relaxed m-0 italic">
+                  Veuillez utiliser un compte d'agent agréé pour vous authentifier à la plateforme.
+                </p>
+              </div>
+            </div>
+          ) : authMode !== "ONBOARDING" ? (
             <>
               <div className="form-eyebrow">Accès sécurisé</div>
               <h1 className="form-title">Espace<br /><span>Maintenance</span></h1>
@@ -835,16 +886,8 @@ export function LoginPage() {
                   type="button"
                   disabled={isLoading}
                   onClick={() => {
-                    const viewerUser: User = {
-                      uid: "viewer-session-" + Math.random().toString(36).substr(2, 9),
-                      displayName: "HYDROMINES VIEWER",
-                      email: "viewer@hydromines.com",
-                      role: "VIEWER",
-                      siteId: "SMI",
-                      active: true
-                    };
-                    setUser(viewerUser);
-                    toast.success("👁️ Entré en mode Viewer : Consultation en lecture seule.");
+                    setShowViewerPending(true);
+                    toast.warning("🔒 Mode Viewer restreint : système en cours de déploiement (5%).");
                   }}
                   onMouseEnter={() => setIsViewerHovered(true)}
                   onMouseLeave={() => setIsViewerHovered(false)}
