@@ -17,7 +17,7 @@ import { auth, db } from "@/lib/firebase";
 import { HydrominesLogo } from "./HydrominesLogo";
 
 // @ts-ignore
-import mining_login_bg from "@/assets/images/yellow_mining_login_bg_1779870484752.png";
+import mining_login_bg from "@/assets/images/hydromines_enhanced_daylight_workshop_bg_1779983164497.png";
 // Site mappings 
 const SITES_LIST = [
   { id: "SMI", label: "SMI (Imiter)" },
@@ -757,7 +757,7 @@ export function LoginPage() {
           </h2>
           <div className="h-[1px] w-20 bg-gradient-to-r from-sky-400 to-transparent my-3" />
           <p className="text-xs text-slate-200 leading-relaxed font-light mt-2 max-w-sm">
-            Orchestration en temps réel des actifs physiques, diagnostics avancés des pannes souterraines, de la SMI à Bou-Azzer.
+            Plateforme de supervision maintenance dédiée aux opérations minières souterraines Hydromines.
           </p>
         </div>
       </div>

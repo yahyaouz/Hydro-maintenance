@@ -16,7 +16,8 @@ import {
   startAfter,
   DocumentSnapshot,
   writeBatch,
-  runTransaction
+  runTransaction,
+  onSnapshot
 } from 'firebase/firestore';
 import { 
   ENGIN_STATUS, 
@@ -394,6 +395,207 @@ export const dbService = {
       } catch (err) {
         handleFirestoreError(err, OperationType.CREATE, 'auditLogs');
         return '';
+      }
+    }
+  },
+
+  // Global LOTO Locks (HSE High-Safety Critical Verifications)
+  lotoLocks: {
+    async createOrUpdateLock(lockId: string, payload: {
+      machineCode: string;
+      lotoLocked: boolean;
+      lotoOwner: string;
+      lotoStartedAt: string;
+      lotoReleasedAt: string | null;
+      lotoWorkOrderId: string;
+      lotoSupervisorValidation: boolean;
+      lotoDetails: string;
+      siteId: string;
+    }) {
+      const lockRef = doc(db, 'lotoLocks', lockId);
+      try {
+        await setDoc(lockRef, {
+          ...payload,
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `lotoLocks/${lockId}`);
+      }
+    },
+
+    async releaseLock(lockId: string, payload: {
+      lotoReleasedAt: string;
+      lotoDetails: string;
+      siteId: string;
+    }) {
+      const lockRef = doc(db, 'lotoLocks', lockId);
+      try {
+        await updateDoc(lockRef, {
+          lotoLocked: false,
+          lotoReleasedAt: payload.lotoReleasedAt,
+          lotoDetails: payload.lotoDetails,
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `lotoLocks/${lockId}`);
+      }
+    },
+
+    onSyncLocks(siteId: string, onUpdate: (locks: Record<string, { statutLOTO: "ACTIF" | "INACTIF"; lotoDetails?: string; details?: any }>) => void) {
+      const collRef = collection(db, 'lotoLocks');
+      const q = siteId === 'TOUS' 
+        ? query(collRef) 
+        : query(collRef, where('siteId', '==', siteId));
+      
+      return onSnapshot(q, (snapshot) => {
+        const locksMap: Record<string, any> = {};
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          locksMap[doc.id] = {
+            statutLOTO: data.lotoLocked ? "ACTIF" : "INACTIF",
+            lotoDetails: data.lotoLocked ? (data.lotoDetails || `🔐 CADENASSÉ par ${data.lotoOwner}`) : "",
+            details: data
+          };
+        });
+        onUpdate(locksMap);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, 'lotoLocks_sync');
+      });
+    },
+
+    async fetchLocks(siteId: string) {
+      const collRef = collection(db, 'lotoLocks');
+      try {
+        const q = siteId === 'TOUS'
+          ? query(collRef)
+          : query(collRef, where('siteId', '==', siteId));
+        const snapshot = await getDocs(q);
+        const locksMap: Record<string, any> = {};
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          locksMap[doc.id] = {
+            statutLOTO: data.lotoLocked ? "ACTIF" : "INACTIF",
+            lotoDetails: data.lotoLocked ? (data.lotoDetails || `🔐 CADENASSÉ par ${data.lotoOwner}`) : "",
+            details: data
+          };
+        });
+        return locksMap;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.LIST, 'lotoLocks');
+        return {};
+      }
+    }
+  },
+
+  // Demandes d'Intervention (DI) sub-system (Objective 1 & 2)
+  demandesIntervention: {
+    async create(di: any) {
+      const collRef = doc(db, 'demandesIntervention', di.id);
+      try {
+        await setDoc(collRef, {
+          ...di,
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, `demandesIntervention/${di.id}`);
+      }
+    },
+
+    async updateStatus(diId: string, status: string, comment?: string, convertedToOtId?: string) {
+      const ref = doc(db, 'demandesIntervention', diId);
+      try {
+        const updates: Record<string, any> = { status, updatedAt: Timestamp.now() };
+        if (comment !== undefined) updates.comment = comment;
+        if (convertedToOtId !== undefined) updates.convertedToOtId = convertedToOtId;
+        await updateDoc(ref, updates);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `demandesIntervention/${diId}`);
+      }
+    },
+
+    onSyncDIs(siteId: string, onUpdate: (dis: any[]) => void) {
+      const collRef = collection(db, 'demandesIntervention');
+      const q = siteId === 'TOUS' 
+        ? query(collRef) 
+        : query(collRef, where('siteId', '==', siteId));
+      
+      return onSnapshot(q, (snapshot) => {
+        const dis: any[] = [];
+        snapshot.forEach((doc) => {
+          dis.push(doc.data());
+        });
+        onUpdate(dis);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, 'demandesIntervention_sync');
+      });
+    },
+
+    async fetchDIs(siteId: string) {
+      const collRef = collection(db, 'demandesIntervention');
+      try {
+        const q = siteId === 'TOUS'
+          ? query(collRef)
+          : query(collRef, where('siteId', '==', siteId));
+        const snapshot = await getDocs(q);
+        const dis: any[] = [];
+        snapshot.forEach((doc) => {
+          dis.push(doc.data());
+        });
+        return dis;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.LIST, 'demandesIntervention');
+        return [];
+      }
+    }
+  },
+
+  // Rapports de Fin d'Intervention (RFI) sub-system (Objective 4 & 5)
+  rapportsFinIntervention: {
+    async create(rfi: any) {
+      const collRef = doc(db, 'rapportsFinIntervention', rfi.id);
+      try {
+        await setDoc(collRef, {
+          ...rfi,
+          createdAt: rfi.createdAt || new Date().toISOString(),
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, `rapportsFinIntervention/${rfi.id}`);
+      }
+    },
+
+    onSyncRFIs(siteId: string, onUpdate: (rfis: any[]) => void) {
+      const collRef = collection(db, 'rapportsFinIntervention');
+      const q = siteId === 'TOUS' 
+        ? query(collRef) 
+        : query(collRef, where('siteId', '==', siteId));
+      
+      return onSnapshot(q, (snapshot) => {
+        const rfis: any[] = [];
+        snapshot.forEach((doc) => {
+          rfis.push(doc.data());
+        });
+        onUpdate(rfis);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, 'rapportsFinIntervention_sync');
+      });
+    },
+
+    async fetchRFIs(siteId: string) {
+      const collRef = collection(db, 'rapportsFinIntervention');
+      try {
+        const q = siteId === 'TOUS'
+          ? query(collRef)
+          : query(collRef, where('siteId', '==', siteId));
+        const snapshot = await getDocs(q);
+        const rfis: any[] = [];
+        snapshot.forEach((doc) => {
+          rfis.push(doc.data());
+        });
+        return rfis;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.LIST, 'rapportsFinIntervention');
+        return [];
       }
     }
   },

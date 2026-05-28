@@ -20,18 +20,30 @@ const getInitialTheme = (): 'light' | 'dark' => {
   }
 };
 
+const getInitialDensity = (): 'compact' | 'standard' | 'large' => {
+  try {
+    const raw = localStorage.getItem('sg_density');
+    return (raw === 'large' ? 'large' : raw === 'standard' ? 'standard' : 'compact');
+  } catch {
+    return 'compact';
+  }
+};
+
 const initialUser = getInitialUser();
 const initialTheme = getInitialTheme();
+const initialDensity = getInitialDensity();
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   activeSite: SiteID;
   theme: 'light' | 'dark';
+  density: 'compact' | 'standard' | 'large';
   isRestrictedModalOpen: boolean;
   setUser: (user: User | null) => void;
   setActiveSite: (siteId: SiteID) => void;
   setTheme: (theme: 'light' | 'dark') => void;
+  setDensity: (density: 'compact' | 'standard' | 'large') => void;
   openRestrictedModal: () => void;
   closeRestrictedModal: () => void;
   logout: () => void;
@@ -42,6 +54,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: !!initialUser,
   activeSite: initialUser?.role === 'ADMIN' || initialUser?.role === 'DIRECTION' ? 'TOUS' : (initialUser?.siteId || 'SMI'),
   theme: initialTheme,
+  density: initialDensity,
   isRestrictedModalOpen: false,
   setUser: (user) => {
     if (user) {
@@ -73,6 +86,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       document.documentElement.classList.remove('dark');
     }
     set({ theme });
+  },
+  setDensity: (density) => {
+    try {
+      localStorage.setItem('sg_density', density);
+    } catch (e) {
+      console.error(e);
+    }
+    set({ density });
   },
   openRestrictedModal: () => set({ isRestrictedModalOpen: true }),
   closeRestrictedModal: () => set({ isRestrictedModalOpen: false }),

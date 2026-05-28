@@ -175,6 +175,17 @@ export function InspectionModule() {
   const handleSubmitInspection = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Check if machine is locked globally in localStorage LOTO
+    const lotoDataStr = localStorage.getItem("sg_safety_loto_statuses");
+    if (lotoDataStr) {
+      const safetyLotoStatuses = JSON.parse(lotoDataStr);
+      const isLotoActive = safetyLotoStatuses[selectedEngin]?.statutLOTO === "ACTIF";
+      if (isLotoActive) {
+        toast.error(`🚨 ALERTE LOTO - BLOCAGE ABSOLU : L'engin ${selectedEngin} est sous consignation active. Tout essai ou inspection est interdit.`);
+        return;
+      }
+    }
+
     const selectedEnginObj = ENGINS_DEMO.find(e => e.id === selectedEngin);
     if (!selectedEnginObj) return;
 

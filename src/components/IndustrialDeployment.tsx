@@ -19,6 +19,8 @@ import {
   UnifiedAuditLog 
 } from "../services/maintenanceRules";
 import { SiteID } from "../types";
+import { dbService } from "../services/firestoreService";
+import { GmaoCockpit } from "./GmaoCockpit";
 
 // 1. Core Data Structures & Types
 export interface MachineDowntime {
@@ -54,7 +56,7 @@ export interface WorkOrderBT {
   title: string;
   category: string;
   severity: "critique" | "majeur" | "mineur";
-  status: "OUVERT" | "EN_COURS" | "PIÈCES_ATTRIBUÉES" | "RÉSOLU" | "CLOS";
+  status: "OUVERT" | "PLANIFIÉ" | "EN_COURS" | "PIÈCES_ATTRIBUÉES" | "RÉSOLU" | "SUSPENDU" | "TEST" | "CLOS" | "ATTENTE_PIÈCES";
   assignedTech: string;
   creationDate: string;
   checklist: Array<{ task: string; done: boolean }>;
@@ -66,6 +68,46 @@ export interface WorkOrderBT {
   }>;
   replacedParts: Array<{ name: string; qty: number; costUSD: number }>;
   siteId: SiteID; // Added for multi-site isolation
+  diId?: string; // Linked DI
+  durationPlannedHours?: number;
+  durationRealHours?: number;
+  notes?: string;
+  isMachineStopped?: boolean;
+  lotoRequired?: boolean;
+  priority?: "HAUTE" | "MOYENNE" | "BASSE";
+}
+
+export interface DemandeInterventionDI {
+  id: string;
+  machineCode: string;
+  siteId: SiteID;
+  zone: string;
+  symptom: string;
+  severity: "critique" | "majeur" | "mineur";
+  urgency: "bloquant" | "urgent" | "normal" | "faible";
+  createdAt: string;
+  createdBy: string;
+  createdByRole: string;
+  status: "NOUVELLE" | "EN_ANALYSE" | "ACCEPTÉE" | "REJETÉE" | "CONVERTIE_OT";
+  convertedToOtId?: string;
+  comment?: string;
+}
+
+export interface RapportFinInterventionRFI {
+  id: string;
+  workOrderId: string;
+  machineCode: string;
+  rootCause: string;
+  subSystem: string;
+  component: string;
+  remedyAction: string;
+  replacedParts: Array<{ name: string; qty: number; costUSD: number }>;
+  durationRealHours: number;
+  techValidation: boolean;
+  supervisorValidation: boolean;
+  createdAt: string;
+  signedBy: string;
+  siteId: SiteID;
 }
 
 export interface HandoverReport {
@@ -164,6 +206,11 @@ export const REAL_PROFILES: UserProfile[] = [
 export default function IndustrialDeployment() {
   // Navigation Tabs with focus on speed
   const [activeTab, setActiveTab] = useState<string>("engins");
+  const [lotoTargetWo, setLotoTargetWo] = useState<any | null>(null);
+  const [lotoStep1, setLotoStep1] = useState(false);
+  const [lotoStep2, setLotoStep2] = useState(false);
+  const [lotoStep3, setLotoStep3] = useState(false);
+  const [lotoCertifier, setLotoCertifier] = useState("");
   const [highContrast, setHighContrast] = useState<boolean>(false);
   const [activeRole, setActiveRole] = useState<"SECRETAIRE" | "MECANICIEN" | "RESPONSABLE_CHANTIER" | "RESPONSABLE_MAINTENANCE" | "DIRECTION" | "ADMIN">("RESPONSABLE_MAINTENANCE");
   const [searchQuery, setSearchQuery] = useState("");
@@ -334,6 +381,12 @@ export default function IndustrialDeployment() {
       isOffline
     );
     setAuditLogs(prev => [log, ...prev]);
+
+    // Async push to central cloud database (Objective 5)
+    dbService.auditLogs.create({
+      ...log,
+      timestamp: new Date().toISOString()
+    }).catch(e => console.error("Failed to sync audit log to Firestore:", e));
   };
 
   // --- Offline Mode State ---
@@ -664,6 +717,105 @@ export default function IndustrialDeployment() {
     ];
   });
 
+  const [safetyLotoStatuses, setSafetyLotoStatuses] = useState<Record<string, { statutLOTO: "ACTIF" | "INACTIF"; lotoDetails?: string }>>(() => {
+    const saved = localStorage.getItem("sg_safety_loto_statuses");
+    if (saved) return JSON.parse(saved);
+    return {
+      "ST7-02": { statutLOTO: "ACTIF", lotoDetails: "🔐 CADENASSÉ par Consigne Électrique d'Arrivée #LOTO-9010 (Chargeurs batteries)" }
+    };
+  });
+
+  // Real-time synchronization of LOTO locks (Centralized Source of Truth - Objective 1 & 4)
+  useEffect(() => {
+    const unsubscribe = dbService.lotoLocks.onSyncLocks(selectedSiteFilter, (locks) => {
+      setSafetyLotoStatuses(prev => {
+        const merged = { ...prev, ...locks };
+        // Back up to localStorage cache in case of disconnect (Objective 3)
+        localStorage.setItem("sg_safety_loto_statuses", JSON.stringify(merged));
+        return merged;
+      });
+    });
+    return () => unsubscribe();
+  }, [selectedSiteFilter]);
+
+  useEffect(() => {
+    localStorage.setItem("sg_safety_loto_statuses", JSON.stringify(safetyLotoStatuses));
+  }, [safetyLotoStatuses]);
+
+  const [demandesIntervention, setDemandesIntervention] = useState<DemandeInterventionDI[]>(() => {
+    const saved = localStorage.getItem("sg_demandes_intervention");
+    if (saved) return JSON.parse(saved);
+    return [
+      {
+        id: "DI-2026-0001",
+        machineCode: "ST7-01",
+        siteId: "SMI",
+        zone: "Galerie Nord - Niveau -150",
+        symptom: "Forte vibration au niveau de la transmission de translation hydraulique",
+        severity: "majeur",
+        urgency: "urgent",
+        createdAt: "2026-05-27T10:15:00Z",
+        createdBy: "Z. Alami",
+        createdByRole: "OPÉRATEUR",
+        status: "NOUVELLE"
+      },
+      {
+        id: "DI-2026-0002",
+        machineCode: "DUMP-04",
+        siteId: "SMI",
+        zone: "Rampe Principale - Niveau -200",
+        symptom: "Surchauffe moteur hydraulique lors du franchissement de rampe",
+        severity: "critique",
+        urgency: "bloquant",
+        createdAt: "2026-05-27T11:45:00Z",
+        createdBy: "M. El Idrissi",
+        createdByRole: "MÉCANICIEN",
+        status: "EN_ANALYSE"
+      }
+    ];
+  });
+
+  const [rfis, setRfis] = useState<RapportFinInterventionRFI[]>(() => {
+    const saved = localStorage.getItem("sg_rfis");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("sg_demandes_intervention", JSON.stringify(demandesIntervention));
+  }, [demandesIntervention]);
+
+  useEffect(() => {
+    localStorage.setItem("sg_rfis", JSON.stringify(rfis));
+  }, [rfis]);
+
+  // Real-time synchronization of Demandes d'Intervention (DI) (Objective 1, 4 & 5)
+  useEffect(() => {
+    const unsubscribe = dbService.demandesIntervention.onSyncDIs(selectedSiteFilter, (dis) => {
+      setDemandesIntervention(prev => {
+        const map = new Map(prev.map(item => [item.id, item]));
+        dis.forEach(d => map.set(d.id, d));
+        const merged = Array.from(map.values());
+        localStorage.setItem("sg_demandes_intervention", JSON.stringify(merged));
+        return merged;
+      });
+    });
+    return () => unsubscribe();
+  }, [selectedSiteFilter]);
+
+  // Real-time synchronization of Rapports de Fin d'Intervention (RFI) (Objective 4 & 5)
+  useEffect(() => {
+    const unsubscribe = dbService.rapportsFinIntervention.onSyncRFIs(selectedSiteFilter, (rfisSync) => {
+      setRfis(prev => {
+        const map = new Map(prev.map(item => [item.id, item]));
+        rfisSync.forEach(r => map.set(r.id, r));
+        const merged = Array.from(map.values());
+        localStorage.setItem("sg_rfis", JSON.stringify(merged));
+        return merged;
+      });
+    });
+    return () => unsubscribe();
+  }, [selectedSiteFilter]);
+
   const [workOrders, setWorkOrders] = useState<WorkOrderBT[]>(() => {
     const saved = localStorage.getItem("sg_work_orders");
     if (saved) return JSON.parse(saved);
@@ -752,6 +904,32 @@ export default function IndustrialDeployment() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>("15:30:20");
   const [hubSubTab, setHubSubTab] = useState<"maintenance" | "carburant" | "magasin" | "securite" | "timeline">("maintenance");
+  const [gmaoSubTab, setGmaoSubTab] = useState<"di" | "ot" | "rfi">("di");
+
+  // DI creation states
+  const [newDiMachine, setNewDiMachine] = useState<string>("");
+  const [newDiZone, setNewDiZone] = useState<string>("");
+  const [newDiSymptom, setNewDiSymptom] = useState<string>("");
+  const [newDiSeverity, setNewDiSeverity] = useState<"critique" | "majeur" | "mineur">("majeur");
+  const [newDiUrgency, setNewDiUrgency] = useState<"bloquant" | "urgent" | "normal" | "faible">("normal");
+
+  // conversion states
+  const [diToConvert, setDiToConvert] = useState<DemandeInterventionDI | null>(null);
+  const [convertTitle, setConvertTitle] = useState<string>("");
+  const [convertTech, setConvertTech] = useState<string>("M. El Idrissi");
+  const [convertDuration, setConvertDuration] = useState<number>(2);
+  const [convertLotoRequired, setConvertLotoRequired] = useState<boolean>(false);
+  const [convertPriority, setConvertPriority] = useState<"HAUTE" | "MOYENNE" | "BASSE">("MOYENNE");
+  const [convertIsMachineStopped, setConvertIsMachineStopped] = useState<boolean>(true);
+
+  // RFI creation states
+  const [rfiTargetWo, setRfiTargetWo] = useState<WorkOrderBT | null>(null);
+  const [rfiRootCause, setRfiRootCause] = useState<string>("");
+  const [rfiSubSystem, setRfiSubSystem] = useState<string>("HYDRAULIQUE");
+  const [rfiComponent, setRfiComponent] = useState<string>("Durite haute pression");
+  const [rfiRemedyAction, setRfiRemedyAction] = useState<string>("");
+  const [rfiDuration, setRfiDuration] = useState<number>(2);
+  const [rfiPartsList, setRfiPartsList] = useState<Array<{ name: string; qty: number; costUSD: number }>>([]);
 
   const handleManualSync = () => {
     setIsSyncing(true);
@@ -976,11 +1154,84 @@ export default function IndustrialDeployment() {
       incidents: [] as any[],
       restrictions: "Règles standard de circulation d'usine et de galeries souterraines",
       statutLOTO: "INACTIF" as const,
+      lotoDetails: "",
       anomaliesHseOuvertes: [] as any[]
     }
   };
 
-  const currentMachineAppData = hydrominesAppsData[selectedMachine.code] || defaultMachineAppData;
+  const isMachineLockedByLoto = (machineCode: string): boolean => {
+    const staticApp = hydrominesAppsData[machineCode];
+    const lotoStatus = safetyLotoStatuses[machineCode]?.statutLOTO || staticApp?.securite?.statutLOTO;
+    if (lotoStatus === "ACTIF") {
+      return true;
+    }
+    const activeLotoWO = workOrders && Array.isArray(workOrders) ? workOrders.some(wo => 
+      wo.machineCode === machineCode && 
+      wo.status !== "CLOS" && 
+      wo.status !== "RÉSOLU" && 
+      (
+        wo.actionsHistory?.some((h: any) => 
+          h.role === "CONSIGNATAIRE LOTO" || 
+          h.action?.includes("LOTO") || 
+          h.action?.includes("consignation") || 
+          h.action?.includes("Consignation")
+        ) ||
+        wo.checklist?.some((chk: any) => chk.task?.includes("LOTO") && chk.done)
+      )
+    ) : false;
+    return activeLotoWO;
+  };
+
+  const isMachineLockedByLotoForOtherWos = (machineCode: string, currentWoId: string): boolean => {
+    const staticApp = hydrominesAppsData[machineCode];
+    const lotoStatus = safetyLotoStatuses[machineCode]?.statutLOTO || staticApp?.securite?.statutLOTO;
+    if (lotoStatus === "ACTIF") {
+      const activeLotoWOsOfThisMachine = workOrders && Array.isArray(workOrders) ? workOrders.filter(wo =>
+        wo.machineCode === machineCode &&
+        wo.status !== "CLOS" && 
+        wo.status !== "RÉSOLU" && 
+        (
+          wo.actionsHistory?.some((h: any) => 
+            h.role === "CONSIGNATAIRE LOTO" || 
+            h.action?.includes("LOTO") || 
+            h.action?.includes("consignation") || 
+            h.action?.includes("Consignation")
+          ) ||
+          wo.checklist?.some((chk: any) => chk.task?.includes("LOTO") && chk.done)
+        )
+      ) : [];
+      if (activeLotoWOsOfThisMachine.length > 0) {
+        return !activeLotoWOsOfThisMachine.some(wo => wo.id === currentWoId);
+      }
+      return true; 
+    }
+    const anotherLotoWO = workOrders && Array.isArray(workOrders) ? workOrders.some(wo => 
+      wo.machineCode === machineCode && 
+      wo.id !== currentWoId &&
+      wo.status !== "CLOS" && 
+      wo.status !== "RÉSOLU" && 
+      (
+        wo.actionsHistory?.some((h: any) => 
+          h.role === "CONSIGNATAIRE LOTO" || 
+          h.action?.includes("LOTO") || 
+          h.action?.includes("consignation") || 
+          h.action?.includes("Consignation")
+        ) ||
+        wo.checklist?.some((chk: any) => chk.task?.includes("LOTO") && chk.done)
+      )
+    ) : false;
+    return anotherLotoWO;
+  };
+
+  const rawMachineAppData = hydrominesAppsData[selectedMachine.code] || defaultMachineAppData;
+  const currentMachineAppData = {
+    ...rawMachineAppData,
+    securite: {
+      ...rawMachineAppData.securite,
+      statutLOTO: safetyLotoStatuses[selectedMachine.code]?.statutLOTO || rawMachineAppData.securite.statutLOTO,
+      lotoDetails: safetyLotoStatuses[selectedMachine.code]?.lotoDetails || rawMachineAppData.securite.lotoDetails
+    }
+  };
 
   // Dynamic Stop Form State
   const [stopReason, setStopReason] = useState("");
@@ -1099,6 +1350,11 @@ export default function IndustrialDeployment() {
   const handleDeclareStop = (e: React.FormEvent) => {
     e.preventDefault();
     verifyAndExecute("declare_stop", () => {
+      if (isMachineLockedByLoto(selectedMachineCode)) {
+        toast.error(`🚨 CONSIGNATION LOTO EN COURS : L'engin ${selectedMachineCode} est sous consignation réglementaire active. Tout enregistrement d'arrêt ou d'action opérationnelle est verrouillé.`);
+        return;
+      }
+
       if (!stopReason.trim()) {
         toast.error("Veuillez préciser la cause de l'arrêt.");
         return;
@@ -1145,6 +1401,11 @@ export default function IndustrialDeployment() {
   const handleRemettreEnService = (e: React.FormEvent) => {
     e.preventDefault();
     verifyAndExecute("remedy_stop", () => {
+      if (isMachineLockedByLoto(selectedMachineCode)) {
+        toast.error(`🚨 CONSIGNATION LOTO EN COURS : Cet engin possède un verrou LOTO actif. Vous devez obligatoirement lever le cadenas de consignation LOTO sur le Bon de Travail actif pour libérer l'engin.`);
+        return;
+      }
+
       if (!remedyActionStr.trim()) {
         toast.error("Veuillez renseigner l'action corrective effectuée.");
         return;
@@ -1223,10 +1484,206 @@ export default function IndustrialDeployment() {
     }, "Remettre un engin en service");
   };
 
+  // ==========================================
+  // GMAO DI -> OT -> RFI Workflow Handlers
+  // ==========================================
+  
+  // 1. Submit Demande d'Intervention (DI)
+  const handleCreateDI = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDiMachine) {
+      toast.error("Veuillez sélectionner un équipement !");
+      return;
+    }
+    const diId = `DI-2026-0${demandesIntervention.length + 101}`;
+    const newDI: DemandeInterventionDI = {
+      id: diId,
+      machineCode: newDiMachine,
+      siteId: currentUser.siteId || selectedSiteFilter || "SMI",
+      zone: newDiZone || "Galerie Principale",
+      symptom: newDiSymptom,
+      severity: newDiSeverity,
+      urgency: newDiUrgency,
+      createdAt: new Date().toISOString(),
+      createdBy: currentUser.name,
+      createdByRole: currentUser.role,
+      status: "NOUVELLE"
+    };
+
+    setDemandesIntervention(prev => [newDI, ...prev]);
+    
+    // Sync to Firestore
+    dbService.demandesIntervention.create(newDI)
+      .then(() => toast.success(`📊 Demande d'Intervention ${diId} postée avec succès !`))
+      .catch((err) => console.error("Firestore DI sync error:", err));
+
+    addAuditLog(`Création Demande d'Intervention ${diId} pour ${newDiMachine}`, "WORK_ORDER", diId, undefined, "OUVERT");
+
+    // Reset form
+    setNewDiSymptom("");
+    setNewDiZone("");
+  };
+
+  // 2. Update DI Status (Accept / Reject)
+  const handleUpdateDIStatus = (diId: string, status: "EN_ANALYSE" | "ACCEPTÉE" | "REJETÉE" | "CONVERTIE_OT", comment?: string) => {
+    setDemandesIntervention(prev => prev.map(di => {
+      if (di.id === diId) {
+        return { ...di, status, comment };
+      }
+      return di;
+    }));
+
+    dbService.demandesIntervention.updateStatus(diId, status, comment)
+      .then(() => toast.success(`Statut de la DI ${diId} modifié`))
+      .catch((err) => console.error(err));
+
+    addAuditLog(`DI ${diId} passée au statut ${status}${comment ? ' ('+comment+')' : ''}`, "WORK_ORDER", diId);
+  };
+
+  // 3. Convert Demande d'Intervention to Ordre de Travail (OT)
+  const handleConvertDiToOt = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!diToConvert) return;
+
+    verifyAndExecute("quick_bt", () => {
+      const newBTId = `BT-2026-0${workOrders.length + 101}`;
+      const newBT: WorkOrderBT = {
+        id: newBTId,
+        machineCode: diToConvert.machineCode,
+        title: convertTitle || `Intervention suite à DI ${diToConvert.id}: ${diToConvert.symptom}`,
+        category: diToConvert.severity === "critique" ? "HYDRAULIQUE" : diToConvert.severity === "majeur" ? "MOTEUR" : "TRANSMISSION",
+        severity: diToConvert.severity,
+        status: "PLANIFIÉ",
+        assignedTech: convertTech,
+        creationDate: new Date().toISOString().split('T')[0],
+        checklist: [
+          { task: `Évaluer diagnostics d'urgence suite à DI #${diToConvert.id}`, done: false },
+          { task: "Consignation de sécurité LOTO requise", done: convertLotoRequired },
+          { task: "Valider tests de charge post-intervention", done: false }
+        ],
+        actionsHistory: [
+          { 
+            timestamp: new Date().toISOString().replace("T", " ").substring(0, 16), 
+            role: currentUser.role, 
+            action: `DI #${diToConvert.id} validée et convertie en OT #${newBTId}`, 
+            user: currentUser.name 
+          }
+        ],
+        replacedParts: [],
+        siteId: diToConvert.siteId || currentUser.siteId || selectedSiteFilter || "SMI",
+        diId: diToConvert.id,
+        durationPlannedHours: convertDuration,
+        priority: convertPriority,
+        isMachineStopped: convertIsMachineStopped,
+        lotoRequired: convertLotoRequired,
+        notes: `Héritage DI #${diToConvert.id} - Zone mine : ${diToConvert.zone}. Déclarant : ${diToConvert.createdBy} (${diToConvert.createdByRole}).`
+      };
+
+      setWorkOrders(prev => [newBT, ...prev]);
+
+      // Update parent DI status
+      handleUpdateDIStatus(diToConvert.id, "CONVERTIE_OT", `Ref OT: ${newBTId}`);
+      dbService.demandesIntervention.updateStatus(diToConvert.id, "CONVERTIE_OT", `Ref OT: ${newBTId}`, newBTId);
+
+      // Create OT in firestore
+      dbService.workOrders.create(newBT, newBTId)
+        .then(() => toast.success(`💼 Ordre de Travail ${newBTId} créé avec filiation !`))
+        .catch(err => console.error(err));
+
+      addAuditLog(`DI ${diToConvert.id} convertie en OT ${newBTId} (${diToConvert.machineCode})`, "WORK_ORDER", newBTId);
+      setDiToConvert(null);
+    }, "Convertir une DI en Ordre de Travail");
+  };
+
+  // 4. Submit Rapport de Fin d'Intervention (RFI)
+  const handleCreateRFI = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rfiTargetWo) {
+      toast.error("Veuillez sélectionner un Ordre de Travail (OT) !");
+      return;
+    }
+    if (!rfiRootCause || !rfiRemedyAction) {
+      toast.error("Veuillez renseigner la cause racine et l'action corrective !");
+      return;
+    }
+
+    const rfiId = `RFI-2026-0${rfis.length + 101}`;
+    const newRFI: RapportFinInterventionRFI = {
+      id: rfiId,
+      workOrderId: rfiTargetWo.id,
+      machineCode: rfiTargetWo.machineCode,
+      rootCause: rfiRootCause,
+      subSystem: rfiSubSystem,
+      component: rfiComponent,
+      remedyAction: rfiRemedyAction,
+      replacedParts: rfiPartsList,
+      durationRealHours: rfiDuration,
+      techValidation: true,
+      supervisorValidation: currentUser.role === "RESPONSABLE_MAINTENANCE" || currentUser.role === "ADMIN",
+      createdAt: new Date().toISOString(),
+      signedBy: currentUser.name,
+      siteId: rfiTargetWo.siteId || currentUser.siteId || selectedSiteFilter || "SMI"
+    };
+
+    setRfis(prev => [newRFI, ...prev]);
+
+    // Update BT status to RÉSOLU and add metrics information
+    setWorkOrders(prev => prev.map(w => {
+      if (w.id === rfiTargetWo.id) {
+        return {
+          ...w,
+          status: "RÉSOLU",
+          durationRealHours: rfiDuration,
+          replacedParts: rfiPartsList.length > 0 ? rfiPartsList : w.replacedParts,
+          notes: `${w.notes || ""}\n[RFI Rédigé] Cause racine: ${rfiRootCause}. Action corrective: ${rfiRemedyAction}. Temps réel: ${rfiDuration}h.`
+        };
+      }
+      return w;
+    }));
+
+    // Unlock LOTO if needed
+    if (rfiTargetWo.machineCode) {
+      dbService.lotoLocks.releaseLock(rfiTargetWo.machineCode, {
+        lotoReleasedAt: new Date().toISOString(),
+        lotoDetails: "",
+        siteId: rfiTargetWo.siteId || "SMI"
+      });
+
+      setSafetyLotoStatuses(prev => ({
+        ...prev,
+        [rfiTargetWo.machineCode]: {
+          statutLOTO: "INACTIF",
+          lotoDetails: ""
+        }
+      }));
+    }
+
+    // Sync to Firestore
+    dbService.rapportsFinIntervention.create(newRFI)
+      .then(() => {
+        toast.success(`🎉 Rapport de Fin d'Intervention ${rfiId} enregistré ! OT #${rfiTargetWo.id} réglé au statut RÉSOLU.`);
+      })
+      .catch(err => console.error("RFI sync error:", err));
+
+    addAuditLog(`Rapport Fin d'Intervention RFI ${rfiId} déposé pour OT ${rfiTargetWo.id}`, "SÉCURITÉ", rfiTargetWo.machineCode, "ACTIF", "INACTIF");
+
+    // Reset RFI states
+    setRfiTargetWo(null);
+    setRfiRootCause("");
+    setRfiRemedyAction("");
+    setRfiPartsList([]);
+    setGmaoSubTab("ot"); // Switch attention to OTs
+  };
+
   // Create Work Order
   const handleCreateBT = (e: React.FormEvent) => {
     e.preventDefault();
     verifyAndExecute("quick_bt", () => {
+      if (isMachineLockedByLoto(newBtMachine)) {
+        toast.error(`🚨 CONSIGNATION LOTO EN COURS : L'engin ${newBtMachine} fait l'objet d'un cadenassage LOTO actif. La création de tout nouveau Bon de Travail additionnel est bloquée.`);
+        return;
+      }
+
       // Hardened Data validation (Requirement 1)
       const valResult = MaintenanceValidator.validateWorkOrder(newBtTitle, newBtMachine, newBtCategory);
       if (!valResult.isValid) {
@@ -1312,8 +1769,34 @@ export default function IndustrialDeployment() {
           // Only RESPONSABLE_MAINTENANCE and ADMIN can CLOSE a work order.
           // Secrétaire and Mécanologue cannot close a BT.
           if (activeRole === "RESPONSABLE_MAINTENANCE" || activeRole === "ADMIN") {
+            const linkedRfi = rfis.find(r => r.workOrderId === wo.id);
+            if (!linkedRfi) {
+              toast.error(`⚠️ RAPPORT DE FIN D'INTERVENTION (RFI) MANQUANT : Vous devez obligatoirement rédiger et valider le RFI pour le BT ${wo.id} avant sa clôture réglementaire.`);
+              setRfiTargetWo(wo);
+              setRfiRootCause("");
+              setRfiRemedyAction("");
+              setGmaoSubTab("rfi");
+              setActiveTab("bt");
+              return wo;
+            }
             nextStatus = "CLOS";
             toast.success(`🎉 Le BT ${wo.id} a été CLOS et archivé par le Responsable Maintenance !`);
+
+            // Lift LOTO lock on machine in Firestore (Objective 1, 4 & 5)
+            dbService.lotoLocks.releaseLock(wo.machineCode, {
+              lotoReleasedAt: new Date().toISOString(),
+              lotoDetails: "",
+              siteId: wo.siteId || "SMI"
+            });
+
+            setSafetyLotoStatuses(prev => ({
+              ...prev,
+              [wo.machineCode]: {
+                statutLOTO: "INACTIF",
+                lotoDetails: ""
+              }
+            }));
+            addAuditLog(`Retrait de cadenas de sécurité LOTO lors de la clôture du BT ${wo.id} par ${currentUser.name}`, "SÉCURITÉ", wo.machineCode, "ACTIF", "INACTIF");
 
             // Closing a BT automatically closes the related active downtime.
             setMachines(prevMachines => prevMachines.map(m => {
@@ -4149,73 +4632,113 @@ export default function IndustrialDeployment() {
                         <TableCell className="text-right py-3.5 px-3.5">
                           {wo.status !== "CLOS" && wo.status !== "RÉSOLU" && (
                             <div className="flex items-center justify-end gap-2.5">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  verifyAndExecute("start_bt", () => {
-                                    setWorkOrders(prev => prev.map(w => {
-                                      if (w.id === wo.id) {
-                                        return { ...w, status: "EN_COURS" };
-                                      }
-                                      return w;
-                                    }));
-                                    setMachines(prev => prev.map(m => {
-                                      if (m.code === wo.machineCode) {
-                                        return { ...m, status: "EN MAINTENANCE" as const };
-                                      }
-                                      return m;
-                                    }));
-                                    toast.info(`Ticket ${wo.id} basculé EN COURS.`);
-                                    addAuditLog(`Démarrage intervention sur BT ${wo.id} (${wo.machineCode})`, "MAINTENANCE");
-                                  }, "Démarrer un Bon de Travail");
-                                }}
-                                className="h-11 text-[11px] px-3 font-bold border-slate-700 text-slate-300 hover:bg-slate-800"
-                              >
-                                Démarrer
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  verifyAndExecute("resolve_bt", () => {
-                                    setWorkOrders(prev => prev.map(w => {
-                                      if (w.id === wo.id) {
-                                        return { ...w, status: "RÉSOLU" };
-                                      }
-                                      return w;
-                                    }));
-                                    setMachines(prev => prev.map(m => {
-                                      if (m.code === wo.machineCode) {
-                                        return {
-                                          ...m,
-                                          status: "DISPONIBLE" as const,
-                                          activeDowntimeId: undefined,
-                                          downtimes: m.downtimes.map(d => {
-                                            if (d.id === m.activeDowntimeId || !d.endHour) {
-                                              return {
-                                                ...d,
-                                                endHour: new Date().toISOString().replace("T", " ").substring(0, 16),
-                                                durationMinutes: d.startHour ? Math.max(30, Math.round((Date.now() - new Date(d.startHour).getTime()) / (1000 * 60))) : 45,
-                                                remedyAction: "Résolution validée par Mécanicien",
-                                                isAwaitingParts: false,
-                                                isAwaitingMechanic: false,
-                                                isAwaitingProduction: false
-                                              };
+                              {isMachineLockedByLotoForOtherWos(wo.machineCode, wo.id) ? (
+                                <Badge className="bg-red-950 text-rose-400 border border-red-900/60 rounded px-2.5 py-1.5 text-[10.5px] font-mono tracking-wider font-extrabold uppercase animate-pulse flex items-center gap-1">
+                                  🔒 BLOQUÉ : LOTO ACTIF
+                                </Badge>
+                              ) : (
+                                <>
+                                  {wo.status === "OUVERT" ? (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        setLotoTargetWo(wo);
+                                        setLotoStep1(false);
+                                        setLotoStep2(false);
+                                        setLotoStep3(false);
+                                        setLotoCertifier(currentUser ? currentUser.name : "");
+                                        toast.warning("🔒 PROTOCOLE LOTO OBLIGATOIRE : Veuillez d'abord valider la consignation de l'engin.", { duration: 5000 });
+                                      }}
+                                      className="h-11 text-[11.5px] px-3.5 font-bold bg-amber-600 dark:bg-amber-700 hover:bg-amber-700 hover:text-white text-white flex items-center gap-1 border-0"
+                                    >
+                                      🔐 Consignation LOTO
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        verifyAndExecute("start_bt", () => {
+                                          setWorkOrders(prev => prev.map(w => {
+                                            if (w.id === wo.id) {
+                                              return { ...w, status: "EN_COURS" };
                                             }
-                                            return d;
-                                          })
-                                        };
-                                      }
-                                      return m;
-                                    }));
-                                    toast.success(`Succès: Anomalie ${wo.id} résolue avec succès !`);
-                                    addAuditLog(`Résolution validée pour BT ${wo.id} (${wo.machineCode})`, "MAINTENANCE");
-                                  }, "Résoudre un Bon de Travail");
-                                }}
-                                className="h-11 text-[11px] px-3 bg-emerald-600 hover:bg-emerald-700 text-slate-950 font-black"
-                              >
-                                Résoudre ✅
-                              </Button>
+                                            return w;
+                                          }));
+                                          setMachines(prev => prev.map(m => {
+                                            if (m.code === wo.machineCode) {
+                                              return { ...m, status: "EN MAINTENANCE" as const };
+                                            }
+                                            return m;
+                                          }));
+                                          toast.info(`Ticket ${wo.id} basculé EN COURS.`);
+                                          addAuditLog(`Démarrage intervention sur BT ${wo.id} (${wo.machineCode})`, "MAINTENANCE");
+                                        }, "Démarrer un Bon de Travail");
+                                      }}
+                                      className="h-11 text-[11px] px-3 font-bold border-slate-700 text-slate-300 hover:bg-slate-800"
+                                    >
+                                      Démarrer
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      verifyAndExecute("resolve_bt", () => {
+                                        setWorkOrders(prev => prev.map(w => {
+                                          if (w.id === wo.id) {
+                                            return { ...w, status: "RÉSOLU" };
+                                          }
+                                          return w;
+                                        }));
+                                        // Release LOTO on this machine in Firestore (Objective 1, 4 & 5)
+                                        dbService.lotoLocks.releaseLock(wo.machineCode, {
+                                          lotoReleasedAt: new Date().toISOString(),
+                                          lotoDetails: "",
+                                          siteId: wo.siteId || "SMI"
+                                        });
+
+                                        setSafetyLotoStatuses(prev => ({
+                                          ...prev,
+                                          [wo.machineCode]: {
+                                            statutLOTO: "INACTIF",
+                                            lotoDetails: ""
+                                          }
+                                        }));
+                                        addAuditLog(`Dépôt cadenas LOTO levé lors de la résolution du BT ${wo.id} par ${currentUser.name}`, "SÉCURITÉ", wo.machineCode, "ACTIF", "INACTIF");
+                                        setMachines(prev => prev.map(m => {
+                                          if (m.code === wo.machineCode) {
+                                            return {
+                                              ...m,
+                                              status: "DISPONIBLE" as const,
+                                              activeDowntimeId: undefined,
+                                              downtimes: m.downtimes.map(d => {
+                                                if (d.id === m.activeDowntimeId || !d.endHour) {
+                                                  return {
+                                                    ...d,
+                                                    endHour: new Date().toISOString().replace("T", " ").substring(0, 16),
+                                                    durationMinutes: d.startHour ? Math.max(30, Math.round((Date.now() - new Date(d.startHour).getTime()) / (1000 * 60))) : 45,
+                                                    remedyAction: "Résolution validée par Mécanicien",
+                                                    isAwaitingParts: false,
+                                                    isAwaitingMechanic: false,
+                                                    isAwaitingProduction: false
+                                                  };
+                                                }
+                                                return d;
+                                              })
+                                            };
+                                          }
+                                          return m;
+                                        }));
+                                        toast.success(`Succès: Anomalie ${wo.id} résolue avec succès et verrou LOTO levé !`);
+                                        addAuditLog(`Résolution validée pour BT ${wo.id} (${wo.machineCode})`, "MAINTENANCE");
+                                      }, "Résoudre un Bon de Travail");
+                                    }}
+                                    className="h-11 text-[11px] px-3 bg-emerald-600 hover:bg-emerald-700 text-slate-950 font-black"
+                                  >
+                                    Résoudre ✅
+                                  </Button>
+                                </>
+                              )}
                             </div>
                           )}
                         </TableCell>
@@ -5092,6 +5615,25 @@ Nombre de BT Actifs Backlog: ${workOrders.filter(w => w.status !== "CLOS").lengt
       {/* TABS CONTENT 3 : WORK ORDERS & HIERARCHICAL VALIDATIONS (Action 6) */}
       {/* ==================================================================== */}
       {activeTab === "bt" && (
+        <GmaoCockpit
+          demandesIntervention={demandesIntervention}
+          setDemandesIntervention={setDemandesIntervention}
+          rfis={rfis}
+          setRfis={setRfis}
+          workOrders={workOrders}
+          setWorkOrders={setWorkOrders}
+          machines={machines}
+          setMachines={setMachines}
+          currentUser={currentUser}
+          selectedSiteFilter={selectedSiteFilter}
+          addAuditLog={addAuditLog}
+          safetyLotoStatuses={safetyLotoStatuses}
+          setSafetyLotoStatuses={setSafetyLotoStatuses}
+          handleSignBT={handleSignBT}
+          handleDeleteBT={handleDeleteBT}
+        />
+      )}
+      {false && activeTab === "bt" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           
           {/* Create BT Column with SMART ASSISTANT */}
@@ -6642,6 +7184,169 @@ Nombre de BT Actifs Backlog: ${workOrders.filter(w => w.status !== "CLOS").lengt
                 📠 Imprimer (Papier d mecano)
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* MANDATORY LOTO SAFETY CHECKLIST OVERLAY (Priority 6) */}
+      {/* ==================================================================== */}
+      {lotoTargetWo && (
+        <div className="fixed inset-0 z-50 bg-slate-950/90 flex items-center justify-center p-4 text-left">
+          <div className="bg-[#0b111e] text-slate-100 rounded border border-red-500/30 max-w-lg w-full p-6 shadow-2xl flex flex-col space-y-4">
+            <div className="flex items-center justify-between border-b border-red-500/20 pb-3">
+              <span className="text-xs font-mono font-black text-rose-500 tracking-widest uppercase flex items-center gap-1.5 animate-pulse">
+                🔒 CONSIGNATION DE SÉCURITÉ MANDATOIRE LOTO
+              </span>
+              <button 
+                onClick={() => setLotoTargetWo(null)}
+                className="text-slate-400 hover:text-slate-100 text-[10px] font-bold font-mono px-2 py-0.5 rounded border border-slate-800 hover:bg-slate-900"
+              >
+                [ FERMER / INVALIDE ]
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Bon de Travail ciblé :</span>
+              <p className="text-xs font-mono text-white bg-slate-950 p-2 border border-slate-900 rounded">
+                <strong>ID:</strong> {lotoTargetWo.id} &bull; <strong>Engin:</strong> {lotoTargetWo.machineCode} &bull; <strong>Secteur:</strong> {lotoTargetWo.siteId}
+              </p>
+            </div>
+
+            <div className="p-3 bg-red-500/5 dark:bg-rose-950/20 border border-red-500/20 rounded text-xs space-y-2 leading-relaxed font-mono">
+              <p className="text-red-400 font-extrabold text-[1001px] uppercase">🚨 AVIS D'ISOLEMENT D'ÉNERGIE OBLIGATOIRE (NORMES OSHA SOU-3) :</p>
+              <p className="text-[10.5px] text-slate-350 leading-snug">
+                L'isolement total de l'engin est requis avant toute approche mécanique. Vous devez impérativement exécuter, cadenasser et valider les étapes ci-dessous.
+              </p>
+            </div>
+
+            <div className="space-y-2.5 font-mono text-xs">
+              
+              <div className="flex items-start gap-3 bg-slate-950 p-2.5 rounded border border-slate-900">
+                <input 
+                  type="checkbox" 
+                  checked={lotoStep1} 
+                  onChange={(e) => setLotoStep1(e.target.checked)}
+                  id="loto-chk-1"
+                  className="mt-0.5 h-4 w-4 bg-[#080d16] border-slate-800 rounded text-emerald-500 focus:ring-rose-500"
+                />
+                <label htmlFor="loto-chk-1" className="cursor-pointer select-none text-slate-300 leading-snug">
+                  <strong className="text-white block text-[10px] uppercase">1. Isolation Hydraulique & Dépressurisation</strong>
+                  Arrêt des pompes, dépressurisation complète des accumulateurs d'huile de l'engin.
+                </label>
+              </div>
+
+              <div className="flex items-start gap-3 bg-slate-950 p-2.5 rounded border border-slate-900">
+                <input 
+                  type="checkbox" 
+                  checked={lotoStep2} 
+                  onChange={(e) => setLotoStep2(e.target.checked)}
+                  id="loto-chk-2"
+                  className="mt-0.5 h-4 w-4 bg-[#080d16] border-slate-800 rounded text-emerald-500 focus:ring-rose-500"
+                />
+                <label htmlFor="loto-chk-2" className="cursor-pointer select-none text-slate-300 leading-snug">
+                  <strong className="text-white block text-[10px] uppercase">2. Verrouillage Électrique & Coupe-Circuit</strong>
+                  Déconnexion physique du sectionneur électrique d'alimentation générale. Coupe-circuit en position fermée.
+                </label>
+              </div>
+
+              <div className="flex items-start gap-3 bg-slate-950 p-2.5 rounded border border-slate-900">
+                <input 
+                  type="checkbox" 
+                  checked={lotoStep3} 
+                  onChange={(e) => setLotoStep3(e.target.checked)}
+                  id="loto-chk-3"
+                  className="mt-0.5 h-4 w-4 bg-[#080d16] border-slate-800 rounded text-emerald-500 focus:ring-rose-500"
+                />
+                <label htmlFor="loto-chk-3" className="cursor-pointer select-none text-slate-300 leading-snug">
+                  <strong className="text-white block text-[10px] uppercase">3. Cadenassage & Balisage Visuel</strong>
+                  Apposition du cadenas rouge nominatif d'atelier et étiquette de signalisation "DÉFENSE DE DÉMARRER".
+                </label>
+              </div>
+
+              <div className="space-y-1 mt-2">
+                <label className="text-[10px] text-slate-400 block uppercase font-bold">Nom complet du consignataire qualifié LOTO :</label>
+                <input 
+                  type="text" 
+                  value={lotoCertifier} 
+                  onChange={(e) => setLotoCertifier(e.target.value)}
+                  placeholder="EX: MUSTAPHA EL IDRISSI"
+                  className="w-full bg-slate-950 text-white outline-none border border-slate-850 p-2 rounded text-xs focus:border-rose-500"
+                />
+              </div>
+
+            </div>
+
+            <div className="flex justify-between items-center gap-2 border-t border-slate-900 pt-3">
+              <span className="text-[9px] text-slate-400 leading-tight">Autorisation : {lotoCertifier ? "SIGNÉ" : "ATTENTE SIGNATURE"}</span>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setLotoTargetWo(null)}
+                  className="text-xs font-mono border-slate-800 hover:bg-slate-900 text-slate-400"
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  disabled={!lotoStep1 || !lotoStep2 || !lotoStep3 || !lotoCertifier.trim()}
+                  onClick={() => {
+                    verifyAndExecute("start_bt", () => {
+                      setWorkOrders(prev => prev.map(w => {
+                        if (w.id === lotoTargetWo.id) {
+                          return {
+                            ...w,
+                            status: "EN_COURS",
+                            actionsHistory: [
+                              ...w.actionsHistory,
+                              { 
+                                timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16), 
+                                role: "CONSIGNATAIRE LOTO", 
+                                action: "Certification LOTO Validée : Isolation d'énergie verrouillée.", 
+                                user: lotoCertifier 
+                              }
+                            ]
+                          };
+                        }
+                        return w;
+                      }));
+                      setMachines(prev => prev.map(m => {
+                        if (m.code === lotoTargetWo.machineCode) {
+                          return { ...m, status: "EN MAINTENANCE" as const };
+                        }
+                        return m;
+                      }));
+                      // Back up state in Firestore for real-time central audit and multi-device sync (Objective 1, 4 & 5)
+                      dbService.lotoLocks.createOrUpdateLock(lotoTargetWo.machineCode, {
+                        machineCode: lotoTargetWo.machineCode,
+                        lotoLocked: true,
+                        lotoOwner: lotoCertifier,
+                        lotoStartedAt: new Date().toISOString(),
+                        lotoReleasedAt: null,
+                        lotoWorkOrderId: lotoTargetWo.id,
+                        lotoSupervisorValidation: true,
+                        lotoDetails: `🔐 CADENASSÉ par ${lotoCertifier} (Réf #${lotoTargetWo.id} - En cours)`,
+                        siteId: lotoTargetWo.siteId || selectedSiteFilter || "SMI"
+                      });
+
+                      setSafetyLotoStatuses(prev => ({
+                        ...prev,
+                        [lotoTargetWo.machineCode]: {
+                          statutLOTO: "ACTIF",
+                          lotoDetails: `🔐 CADENASSÉ par ${lotoCertifier} (Réf #${lotoTargetWo.id} - En cours)`
+                        }
+                      }));
+                      toast.success(`🔐 Consignation validée ! Le BT ${lotoTargetWo.id} est maintenant EN COURS.`);
+                      addAuditLog(`Consignation d'énergie LOTO approuvée pour BT ${lotoTargetWo.id} par ${lotoCertifier}`, "SÉCURITÉ", lotoTargetWo.machineCode, "INACTIF", "ACTIF");
+                      setLotoTargetWo(null);
+                    }, "Consigner et Démarrer un Bon de Travail");
+                  }}
+                  className={`font-mono text-xs text-white ${(!lotoStep1 || !lotoStep2 || !lotoStep3 || !lotoCertifier.trim()) ? "bg-slate-900 cursor-not-allowed text-slate-500 border border-slate-800" : "bg-emerald-700 hover:bg-emerald-650 hover:text-white"}`}
+                >
+                  🔑 Certifier LOTO & Démarrer
+                </Button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}

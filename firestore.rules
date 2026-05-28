@@ -31,6 +31,12 @@ service cloud.firestore {
       );
     }
 
+    // Server-Side HSE Validation: Checks if the machine has an active LOTO lock in database
+    function isMachineLotoLocked(machineCode) {
+      return exists(/databases/$(database)/documents/lotoLocks/$(machineCode)) && 
+             get(/databases/$(database)/documents/lotoLocks/$(machineCode)).data.lotoLocked == true;
+    }
+
     match /users/{userId} {
       // Allow viewers and registered agents to read the profiles directory
       allow read: if true;
@@ -54,17 +60,36 @@ service cloud.firestore {
 
     match /engins/{enginId} {
       allow read: if true;
-      // Protect against dirty overwriting during simultaneous offline updates
+      // Protect against dirty overwriting and enforce global LOTO lock rules on server-side
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
-        !exists(/databases/$(database)/documents/engins/$(enginId)) || 
-        request.resource.data.updatedAt >= resource.data.updatedAt || 
+        (!isMachineLotoLocked(enginId) && (
+          !exists(/databases/$(database)/documents/engins/$(enginId)) || 
+          request.resource.data.updatedAt >= resource.data.updatedAt
+        )) || 
         isRole('ADMIN')
       );
     }
 
     match /workorders/{orderId} {
       allow read: if true;
-      // Standard rules for technicians to change state and admin to create
+      // Prevent creating workorders for locked machines unless admin override
+      allow create: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
+        !isMachineLotoLocked(request.resource.data.machineCode) || isRole('ADMIN')
+      );
+      // Validate that only the workorder responsible for LOTO lock or non-locked ones can be modified
+      allow update: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
+        (isRole('CHEF_QUART') || isRole('MECANICIEN') || isRole('ADMIN')) && (
+          !isMachineLotoLocked(resource.data.machineCode) || 
+          orderId == get(/databases/$(database)/documents/lotoLocks/$(resource.data.machineCode)).data.lotoWorkOrderId ||
+          isRole('ADMIN')
+        )
+      );
+      allow delete: if isSignedIn() && isRole('ADMIN');
+    }
+
+    match /lotoLocks/{lockId} {
+      allow read: if true;
+      // Authorized maintenance crews can engage, approve or release LOTO locks
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
         isRole('CHEF_QUART') || isRole('MECANICIEN') || isRole('ADMIN')
       );
@@ -80,6 +105,18 @@ service cloud.firestore {
     match /pieces/{pieceId} {
       allow read: if true;
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && isRole('CHEF_QUART');
+    }
+
+    match /demandesIntervention/{diId} {
+      allow read: if true;
+      allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
+    }
+
+    match /rapportsFinIntervention/{rfiId} {
+      allow read: if true;
+      allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
+        isRole('MECANICIEN') || isRole('CHEF_QUART') || isRole('ADMIN')
+      );
     }
 
     match /feedbacks/{feedbackId} {

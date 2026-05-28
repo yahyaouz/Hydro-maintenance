@@ -75,6 +75,68 @@
         "authProvider": { "type": "string" }
       },
       "required": ["uid", "displayName", "email", "role", "siteId", "active", "authProvider"]
+    },
+    "lotoLock": {
+      "title": "LotoLock",
+      "description": "État de consignation LOTO d'un engin ou machine de la flotte",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "machineCode": { "type": "string" },
+        "lotoLocked": { "type": "boolean" },
+        "lotoOwner": { "type": "string" },
+        "lotoStartedAt": { "type": "string" },
+        "lotoReleasedAt": { "type": "string" },
+        "lotoWorkOrderId": { "type": "string" },
+        "lotoSupervisorValidation": { "type": "boolean" },
+        "lotoDetails": { "type": "string" },
+        "siteId": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "machineCode", "lotoLocked", "siteId"]
+    },
+    "demandeIntervention": {
+      "title": "DemandeIntervention",
+      "description": "Demande d'Intervention (DI) émise par l'exploitation ou production",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "machineCode": { "type": "string" },
+        "siteId": { "type": "string" },
+        "zone": { "type": "string" },
+        "symptom": { "type": "string" },
+        "severity": { "type": "string" },
+        "urgency": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdByRole": { "type": "string" },
+        "status": { "type": "string" },
+        "convertedToOtId": { "type": "string" },
+        "comment": { "type": "string" }
+      },
+      "required": ["id", "machineCode", "siteId", "symptom", "createdAt", "createdBy", "status"]
+    },
+    "rapportFinIntervention": {
+      "title": "RapportFinIntervention",
+      "description": "Rapport de Fin d'Intervention (RFI) obligatoire avant clôture OT",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "workOrderId": { "type": "string" },
+        "machineCode": { "type": "string" },
+        "rootCause": { "type": "string" },
+        "subSystem": { "type": "string" },
+        "component": { "type": "string" },
+        "remedyAction": { "type": "string" },
+        "replacedParts": { "type": "array" },
+        "durationRealHours": { "type": "number" },
+        "techValidation": { "type": "boolean" },
+        "supervisorValidation": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "signedBy": { "type": "string" },
+        "siteId": { "type": "string" }
+      },
+      "required": ["id", "workOrderId", "machineCode", "rootCause", "remedyAction", "durationRealHours", "siteId"]
     }
   },
   "firestore": {
@@ -97,6 +159,18 @@
     "pieces": {
       "schema": "piece",
       "description": "Collection du stock de pièces"
+    },
+    "lotoLocks": {
+      "schema": "lotoLock",
+      "description": "Collection de verrouillage/consignation LOTO globale des machines"
+    },
+    "demandesIntervention": {
+      "schema": "demandeIntervention",
+      "description": "Collection des Demandes d'Intervention (DI) GMAO"
+    },
+    "rapportsFinIntervention": {
+      "schema": "rapportFinIntervention",
+      "description": "Collection des Rapports de Fin d'Intervention (RFI) GMAO"
     }
   }
 }

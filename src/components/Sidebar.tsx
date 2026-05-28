@@ -54,7 +54,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeTab, setActiveTab, className }: SidebarProps) {
-  const { user, setUser, logout, activeSite, setActiveSite, theme, setTheme } = useAuthStore();
+  const { user, setUser, logout, activeSite, setActiveSite, theme, setTheme, density, setDensity } = useAuthStore();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
 
   const navGroups = [
@@ -265,6 +265,29 @@ export function Sidebar({ activeTab, setActiveTab, className }: SidebarProps) {
 
       {/* FOOTER FIXE */}
       <div className="p-2.5 border-t shrink-0 bg-slate-50/5 dark:bg-slate-950/20 dark:border-slate-800 mt-auto space-y-2">
+        {/* Density Toggler */}
+        {!isCollapsed && (
+          <div className="px-0.5 space-y-1 pb-1.5 border-b border-slate-100 dark:border-slate-800/60">
+            <span className="text-[7.5px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-1">DENSITÉ GMAO</span>
+            <div className="grid grid-cols-3 gap-1">
+              {(['compact', 'standard', 'large'] as const).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setDensity(d)}
+                  className={cn(
+                    "h-6 rounded text-[8px] font-black uppercase tracking-wide transition-all border cursor-pointer",
+                    density === d
+                      ? "bg-hydro text-slate-950 border-hydro font-black"
+                      : "bg-white dark:bg-[#121929] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-850 hover:bg-slate-50 dark:hover:bg-slate-900"
+                  )}
+                >
+                  {d === 'compact' ? 'COMPACT' : d === 'standard' ? 'STD' : 'LARGE'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Modern Theme Toggler */}
         <div className={cn("flex", isCollapsed ? "justify-center" : "px-0.5")}>
           <Button 

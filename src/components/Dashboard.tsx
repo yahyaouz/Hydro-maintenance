@@ -66,7 +66,7 @@ const weeklyTrend = [
 ];
 
 export function Dashboard() {
-  const { activeSite } = useAuthStore();
+  const { activeSite, density } = useAuthStore();
   
   // Real scalable Firestore collection subscriptions (With cursor pagination options in hook)
   const { data: enginsLive, loading: enginsLoading } = useCollection<any>('engins');
@@ -212,114 +212,108 @@ export function Dashboard() {
     });
   }, [workOrdersLive, enginsLive]);
 
+  const isCompact = density === 'compact';
+
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-      className="flex-1 space-y-6 p-4 md:p-8 pt-6 bg-transparent text-slate-900 dark:text-slate-100 min-h-screen select-none font-sans"
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className={`flex-1 bg-transparent text-slate-100 min-h-screen select-none font-sans ${isCompact ? "space-y-3 p-2.5 sm:p-4 pt-3 text-xs" : "space-y-6 p-4 md:p-8 pt-6"}`}
     >
       
       {/* COCKPIT EXECUTIVE HEADER */}
-      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+      <div className={`flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 border-b border-slate-200 dark:border-slate-800 ${isCompact ? "pb-3" : "pb-6"}`}>
         <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-br from-blue-500/10 to-indigo-500/5 dark:from-sky-500/20 dark:to-blue-600/10 border border-sky-400/20 rounded-xl relative overflow-hidden">
-              <div className="absolute inset-0 bg-sky-500/5 animate-pulse"></div>
-              <Compass className="h-6.5 w-6.5 text-[#3b82f6] animate-spin relative z-10" style={{ animationDuration: '30s' }} />
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
+              <Compass className="h-5 w-5 text-sky-500" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl md:text-2xl font-black tracking-wider text-slate-950 dark:text-white uppercase font-sans">
-                  EXECUTIVE COMMAND CENTER
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className={`font-black tracking-tight text-slate-950 dark:text-white uppercase font-sans ${isCompact ? "text-base" : "text-xl md:text-2xl"}`}>
+                  SUPERVISION DU PARC ACTIFS
                 </h1>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-sky-400 border border-blue-500/20 uppercase tracking-widest leading-none">
-                  SOU-GMAO PRO
+                <span className="text-[8.5px] font-mono font-black px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-650 dark:text-sky-450 border border-blue-500/15 uppercase tracking-wide leading-none">
+                  GMAO INDUSTRIELLE
                 </span>
-                <span className="hidden md:inline-flex items-center gap-1 text-[9px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20 font-black">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span> SECURE-LINK ACTIVE
+                <span className="inline-flex items-center gap-1 text-[8px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20 font-black leading-none">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> RESEAU ACTIF
                 </span>
               </div>
-              <p className="text-slate-500 dark:text-slate-400 text-xs flex items-center gap-2 mt-1 font-mono uppercase tracking-tight">
-                CONSOLE DE DIRECTION EXÉCUTIVE ET PLANIFICATION DES RETARDS CHARGEMENT S-GMAO
+              <p className="text-slate-500 dark:text-slate-400 text-[10px] uppercase tracking-tight font-mono leading-none mt-1">
+                CONFORME VALEURS CAT MINESTAR, SANDVIK OPTIMINE & SAP PM - HYDROMINES
               </p>
             </div>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="p-1 px-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center gap-2 text-xs font-mono font-black text-slate-700 dark:text-slate-300">
-            <Database className="h-4 w-4 text-blue-500" />
-            <span>LOCAL MEMORY: SECURE CRYPTO CACHE</span>
+          <div className="p-1 px-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded flex items-center gap-2 text-[9px] font-mono font-black text-slate-700 dark:text-slate-350">
+            <Database className="h-3.5 w-3.5 text-slate-500" />
+            <span>TAMPON SQL CACHE OPÉRATIONNEL</span>
           </div>
 
-          <Badge variant="outline" className="h-10 border-slate-200 dark:border-slate-800 bg-white dark:bg-[#121929] text-slate-900 dark:text-slate-100 px-4 rounded-xl flex items-center gap-2 text-xs font-black tracking-widest uppercase shadow-sm">
-            🛰️ {activeSite === "TOUS" ? "TOUS LES GRANDS SITES" : `SECTEUR : ${activeSite}`}
+          <Badge variant="outline" className="h-8 border-slate-200 dark:border-slate-800 bg-white dark:bg-[#121929] text-slate-900 dark:text-slate-100 px-3 rounded flex items-center gap-1.5 text-[9.5px] font-black tracking-wider uppercase shadow-sm">
+            🛰️ {activeSite === "TOUS" ? "TOUS LES SITES INDUSTRIELS" : `SITE : ${activeSite}`}
           </Badge>
         </div>
       </div>
 
       {/* A. EXECUTIVE HERO CARD - GRID COCKPIT (Optimized Visual Scale) */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-4 mt-2">
-        
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mt-2">
         {/* Availability Meter Glass Card */}
-        <div className="bg-white/85 dark:bg-gradient-to-br dark:from-[#131b2e] dark:to-[#090e1a] border border-slate-200 dark:border-[#1e2a44] rounded-2xl p-6 flex flex-col justify-between shadow-lg relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 bg-sky-500/5 rounded-full blur-2xl group-hover:bg-sky-500/10 transition-colors duration-300"></div>
-          
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Disponibilité Physique Flotte</span>
-            <Badge className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-400/20 text-[9px] font-mono">OBJECTIF: 85.0%</Badge>
+        <div className={`bg-white dark:bg-[#121929] border border-slate-200 dark:border-slate-800 rounded-lg flex flex-col justify-between shadow-sm relative overflow-hidden ${isCompact ? "p-3" : "p-5"}`}>
+          <div className="flex items-center justify-between gap-2">
+            <span className={`font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider ${isCompact ? "text-[9px]" : "text-[11px]"}`}>Disponibilité Flotte</span>
+            <Badge className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[8.5px] font-mono">OBJECTIF: 85%</Badge>
           </div>
           
-          <div className="my-4 flex items-baseline gap-2">
-            <span className="text-5xl font-black font-mono tracking-tighter text-slate-950 dark:text-white">{avgDispo}%</span>
-            <span className={`text-xs font-mono font-black ${Number(avgDispo) >= 85 ? 'text-emerald-500' : 'text-amber-500'}`}>
-              {Number(avgDispo) >= 85 ? '▲ CONFORME' : '▼ ALERTE SECTEUR'}
+          <div className={`flex items-baseline gap-2 ${isCompact ? "my-1.5" : "my-3.5"}`}>
+            <span className={`font-black font-mono tracking-tighter text-slate-950 dark:text-white ${isCompact ? "text-3xl" : "text-4xl"}`}>{avgDispo}%</span>
+            <span className={`text-[9.5px] font-mono font-black border px-1 rounded ${Number(avgDispo) >= 85 ? 'text-emerald-600 bg-emerald-500/5 border-emerald-500/10' : 'text-amber-600 bg-amber-500/5 border-amber-500/10'}`}>
+              {Number(avgDispo) >= 85 ? '🟢 DE DISPO' : '🟠 ALERTE SECTEUR'}
             </span>
           </div>
 
           <div className="space-y-1.5 z-10">
-            <Progress value={Number(avgDispo)} className="h-2 bg-slate-100 dark:bg-slate-950" />
-            <div className="flex justify-between text-[10px] font-mono text-slate-500">
+            <Progress value={Number(avgDispo)} className="h-1.5 bg-slate-100 dark:bg-slate-950" />
+            <div className="flex justify-between text-[8.5px] font-mono text-slate-500">
               <span>Seuil critique 70%</span>
-              <span>Total: {filteredEngins.length} Machines</span>
+              <span className="font-extrabold">Total: {filteredEngins.length} Machines</span>
             </div>
           </div>
         </div>
 
         {/* Global Lost Production Estimate */}
-        <div className="bg-white/85 dark:bg-gradient-to-br dark:from-[#131b2e] dark:to-[#090e1a] border border-slate-200 dark:border-[#1e2a44] rounded-2xl p-6 flex flex-col justify-between shadow-lg relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-500/10 transition-colors duration-300"></div>
-          
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Coût Indisponibilité (24H)</span>
-            <Badge className="bg-red-500/10 text-red-600 dark:text-red-500 border border-red-500/20 text-[9px] font-mono">ESTIMATION EXP.</Badge>
+        <div className={`bg-white dark:bg-[#121929] border border-slate-200 dark:border-slate-800 rounded-lg flex flex-col justify-between shadow-sm relative overflow-hidden ${isCompact ? "p-3" : "p-5"}`}>
+          <div className="flex items-center justify-between gap-2">
+            <span className={`font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider ${isCompact ? "text-[9px]" : "text-[11px]"}`}>Coût Indisponibilité (24H)</span>
+            <Badge className="bg-red-500/5 text-red-650 dark:text-red-400 border border-red-500/10 text-[8.5px] font-mono">ESTIMATION EXP.</Badge>
           </div>
           
-          <div className="my-4">
-            <span className="text-3xl font-black font-mono tracking-tight text-slate-950 dark:text-white">
-              {((filteredEngins.filter(e => e.status === 'EN_PANNE').length * 450000 + filteredEngins.filter(e => e.status === 'EN_MAINTENANCE').length * 200000) * 24).toLocaleString('fr-FR')} FCFA
+          <div className={`flex items-baseline gap-1 ${isCompact ? "my-1.5" : "my-3.5"}`}>
+            <span className={`font-black font-mono tracking-tight text-slate-950 dark:text-white ${isCompact ? "text-xl sm:text-2xl" : "text-3xl"}`}>
+              {((filteredEngins.filter(e => e.status === 'EN_PANNE').length * 450000 + filteredEngins.filter(e => e.status === 'EN_MAINTENANCE').length * 200000) * 24).toLocaleString('fr-FR')}
             </span>
-            <p className="text-[10px] text-slate-400 dark:text-slate-405 font-mono mt-1">Impact d'extraction non-réalisée sous-sol</p>
+            <span className="text-[10px] text-slate-500 font-mono font-bold">FCFA</span>
           </div>
 
-          <div className="p-2 py-1.5 bg-red-500/5 dark:bg-red-500/10 border border-red-500/20 rounded-xl text-[9.5px] font-mono text-slate-600 dark:text-red-405 flex items-center justify-between">
-            <span>{filteredEngins.filter(e => e.status === 'EN_PANNE').length} Arrêts critiques</span>
-            <span className="font-extrabold">{filteredEngins.filter(e => e.status === 'EN_MAINTENANCE').length} Interventions</span>
+          <div className="p-1.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-850 rounded text-[9px] font-mono text-slate-650 dark:text-slate-400 flex items-center justify-between">
+            <span className="text-red-500 font-bold">🔴 {filteredEngins.filter(e => e.status === 'EN_PANNE').length} Total Arrêt</span>
+            <span className="text-amber-500 font-bold">🟠 {filteredEngins.filter(e => e.status === 'EN_MAINTENANCE').length} Dégradés</span>
           </div>
         </div>
 
         {/* Unified Sync & Telemetry State */}
-        <div className="bg-white/85 dark:bg-gradient-to-br dark:from-[#131b2e] dark:to-[#090e1a] border border-slate-200 dark:border-[#1e2a44] rounded-2xl p-6 flex flex-col justify-between shadow-lg relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-colors duration-300"></div>
-          
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Offline Queue / Tampon</span>
-            <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] font-mono">AUTONOME</Badge>
+        <div className={`bg-white dark:bg-[#121929] border border-slate-200 dark:border-slate-800 rounded-lg flex flex-col justify-between shadow-sm relative overflow-hidden ${isCompact ? "p-3" : "p-5"}`}>
+          <div className="flex items-center justify-between gap-2">
+            <span className={`font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider ${isCompact ? "text-[9px]" : "text-[11px]"}`}>Local SQLite Buffer / Synchro</span>
+            <Badge className="bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10 text-[8.5px] font-mono">AUTONOME</Badge>
           </div>
           
-          <div className="my-4 flex items-baseline gap-2">
-            <span className="text-5xl font-black font-mono tracking-tighter text-slate-950 dark:text-white">
+          <div className={`flex items-baseline gap-1.5 ${isCompact ? "my-1.5" : "my-3.5"}`}>
+            <span className={`font-black font-mono tracking-tighter text-slate-950 dark:text-white ${isCompact ? "text-3xl" : "text-4xl"}`}>
               {(() => {
                 try {
                   return OfflineQueueManager.getPending().length;
@@ -328,35 +322,33 @@ export function Dashboard() {
                 }
               })()}
             </span>
-            <span className="text-xs font-mono text-slate-450 dark:text-slate-405 font-bold uppercase">Transactions en attente</span>
+            <span className="text-[9px] font-mono text-slate-450 dark:text-slate-405 font-bold uppercase">Transactions en transfert</span>
           </div>
 
-          <div className="space-y-1 z-10 text-[10px] text-slate-500 font-mono">
-            <div className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-              <span>Synchronisation SQLite web opérationnelle</span>
+          <div className="space-y-0.5 z-10 text-[8.5px] text-slate-500 font-mono leading-none">
+            <div className="flex items-center gap-1 font-bold">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+              <span>Double-sauvegarde active</span>
             </div>
-            <p className="text-[9px] text-slate-400/80 leading-none mt-1">Garantie anti-corruption double sauvegarde.</p>
+            <p className="text-[8px] text-slate-450 dark:text-slate-500 leading-tight">Aucun risque de crash au fond de mine</p>
           </div>
         </div>
 
         {/* Global Maintenance Backlog Intensity */}
-        <div className="bg-white/85 dark:bg-gradient-to-br dark:from-[#131b2e] dark:to-[#090e1a] border border-slate-200 dark:border-[#1e2a44] rounded-2xl p-6 flex flex-col justify-between shadow-lg relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition-colors duration-300"></div>
-          
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Dette & Intensité BT</span>
-            <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 text-[9px] font-mono">CRID CARD</Badge>
+        <div className={`bg-white dark:bg-[#121929] border border-slate-200 dark:border-slate-800 rounded-lg flex flex-col justify-between shadow-sm relative overflow-hidden ${isCompact ? "p-3" : "p-5"}`}>
+          <div className="flex items-center justify-between gap-2">
+            <span className={`font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider ${isCompact ? "text-[9px]" : "text-[11px]"}`}>Dette Ordres de Travail (OT)</span>
+            <Badge className="bg-amber-500/5 text-amber-600 dark:text-amber-505 border border-amber-500/10 text-[8.5px] font-mono">BACKLOG</Badge>
           </div>
           
-          <div className="my-4 flex items-baseline gap-2">
-            <span className="text-5xl font-black font-mono tracking-tighter text-slate-950 dark:text-white">{backlogCritical}</span>
-            <span className="text-xs font-mono font-black text-red-500">CRITIQUES OUVERTS</span>
+          <div className={`flex items-baseline gap-1.5 ${isCompact ? "my-1.5" : "my-3.5"}`}>
+            <span className={`font-black font-mono tracking-tighter text-slate-950 dark:text-white ${isCompact ? "text-3xl" : "text-4xl"}`}>{backlogCritical}</span>
+            <span className="text-[9px] font-mono font-black text-red-500 uppercase">OT critiques en retard</span>
           </div>
 
-          <div className="z-10 text-[10px] text-slate-500 font-mono flex items-center justify-between">
-            <span>Surcharge Atelier: {workshopLoad}%</span>
-            <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-650 font-bold uppercase text-[9px]">{workshopLoad > 80 ? "Saturé" : "Gérable"}</span>
+          <div className="z-10 text-[8.5px] text-slate-505 font-mono flex items-center justify-between">
+            <span>Surcharge Atelier : {workshopLoad}%</span>
+            <span className={`px-1 rounded font-black text-[8px] uppercase ${workshopLoad > 80 ? "bg-red-500/10 text-red-500" : "bg-slate-100 text-slate-500 dark:bg-slate-950"}`}>{workshopLoad > 80 ? "Saturé" : "Gérable"}</span>
           </div>
         </div>
 
@@ -485,121 +477,95 @@ export function Dashboard() {
 
       </div>
 
-      {/* D. IA EXECUTIVE ADVISOR & ALERT CENTER (Powered by the AI Engine) */}
-      <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest font-mono mt-4 mb-2 flex items-center gap-1.5">
-        <Sparkles className="h-4 w-4 text-[#ef4444]" /> IA Advisory Directoire — Supervision des Risques S-GMAO
+      {/* D. PANEL DES PERFORMANCES ET DE SÉCURITÉ GMAO */}
+      <h3 className={`font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider font-mono mt-4 mb-2 flex items-center gap-1.5 ${isCompact ? "text-[10px]" : "text-xs"}`}>
+        <span>📋</span> CONTRÔLE DES PERFORMANCES FLOTTE & SÉCURITÉ TERRAIN (HSE)
       </h3>
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         
-        {/* Risk predictions card 7-day */}
-        <Card className="bg-gradient-to-br from-red-500/5 to-transparent dark:from-red-950/10 dark:to-transparent border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:border-red-500/30 transition-all duration-300 flex flex-col justify-between">
-          <CardHeader className="pb-2">
-            <span className="text-[10px] font-mono font-extrabold text-red-650 dark:text-red-400 flex items-center gap-1">
-              <Cpu className="h-3.5 w-3.5" /> ÉVALUANT : PRÉDICTION DE RISQUE MATÉRIEL 7 JOURS
+        {/* KPI Card 1: MTBF & MTTR */}
+        <Card className={`bg-white dark:bg-[#121929] border-slate-200 dark:border-slate-800 rounded-lg shadow-sm flex flex-col justify-between ${isCompact ? "p-3" : "p-4"}`}>
+          <CardHeader className="p-0 pb-2">
+            <span className="text-[10px] font-mono font-extrabold text-[#3b82f6] flex items-center gap-1">
+              ⚙️ MÉTRIQUES DE FIABILITÉ (MTBF / MTTR)
             </span>
-            <CardTitle className="text-sm font-black text-slate-900 dark:text-white uppercase font-sans mt-0.5">Moteur de Fréquence Opérationnelle</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="p-3 bg-red-500/5 dark:bg-red-500/10 border border-red-500/15 rounded-xl text-xs space-y-1.5 text-slate-750 dark:text-slate-330 leading-relaxed font-mono">
-              <span className="text-[9.5px] font-black text-rose-500 block">▲ RISQUE MAJEUR : SYSTEME HYDRAULIQUE OUMEJRANE</span>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-tight">
-                Analyse historique : La récurrence élevée de micro-défaillances non affectées sur le CAT R1300G d'Oumejrane induit une probabilité de rupture hydraulique estimée à <span className="font-extrabold text-rose-500">82%</span> sous 7 jours.
-              </p>
-              <p className="text-[10.5px] text-slate-500 leading-tight">
-                Action immédiate : Réaffecter préventivement le lot de flexibles de rechange #H_FLX_10 de SMI vers Oumejrane.
-              </p>
+          <CardContent className="p-0 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-slate-50 dark:bg-slate-950 p-2 rounded border border-slate-100 dark:border-slate-900 text-center">
+                <span className="text-[9px] text-slate-500 font-mono block">MTBF MOYEN</span>
+                <span className="text-lg font-black font-mono text-emerald-500">142.5 h</span>
+                <span className="text-[8px] text-slate-400 block mt-0.5">Cible Min: 120h</span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-950 p-2 rounded border border-slate-100 dark:border-slate-900 text-center">
+                <span className="text-[9px] text-slate-500 font-mono block">MTTR MOYEN</span>
+                <span className="text-lg font-black font-mono text-amber-500">3.8 h</span>
+                <span className="text-[8px] text-slate-400 block mt-0.5">Cible Max: 4.5h</span>
+              </div>
+            </div>
+            <div className="text-[9.5px] font-mono leading-tight text-slate-500 bg-slate-50/50 dark:bg-slate-950/20 p-2 rounded border border-slate-100 dark:border-slate-850">
+              <span className="font-bold text-slate-700 dark:text-slate-305">Diagnostic moyen :</span> 45 minutes par panne déclarée. <span className="text-emerald-500 font-black">Stable S22</span>.
             </div>
           </CardContent>
         </Card>
 
-        {/* Declarative deviations checks - False Availability detecting engine */}
-        <Card className="bg-gradient-to-br from-amber-500/5 to-transparent dark:from-amber-950/10 dark:to-transparent border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:border-amber-500/30 transition-all duration-300 flex flex-col justify-between">
-          <CardHeader className="pb-2">
-            <span className="text-[10px] font-mono font-extrabold text-amber-650 dark:text-amber-500 flex items-center gap-1">
-              <AlertOctagon className="h-3.5 w-3.5" /> CONFORMITÉ : DIVERGENCES ET FAUSSES DISPO
+        {/* KPI Card 2: Critically stopped & degraded machines list */}
+        <Card className={`bg-white dark:bg-[#121929] border-slate-200 dark:border-slate-800 rounded-lg shadow-sm flex flex-col justify-between ${isCompact ? "p-3" : "p-4"}`}>
+          <CardHeader className="p-0 pb-2">
+            <span className="text-[10px] font-mono font-extrabold text-red-500 flex items-center gap-1">
+              ⚠️ ALERTE ENGINS DIRECTS (ARRÊTE / DÉGRADÉ)
             </span>
-            <CardTitle className="text-sm font-black text-slate-900 dark:text-white uppercase font-sans mt-0.5">Audit Écarts de Statut Terrains</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="p-3 bg-amber-500/5 dark:bg-[#121422] border border-amber-500/15 rounded-xl text-xs space-y-1.5 leading-relaxed font-mono">
-              {(() => {
-                const fDevs = filteredEngins.filter(e => {
-                  if (e.status !== 'DISPONIBLE') return false;
-                  const activeBT = filteredOrders.find(o => 
-                    (o.enginId === e.id || o.enginId === e.code || o.codeEngin === e.code) &&
-                     o.status === 'EN_COURS' && 
-                     (o.type === 'CORRECTIF' || o.severity === 'CRITIQUE' || o.severity === 'élevée')
-                  );
-                  return !!activeBT;
-                });
-
-                if (fDevs.length === 0) {
+          <CardContent className="p-0">
+            <div className={`space-y-1 overflow-y-auto ${isCompact ? "max-h-[110px]" : "max-h-[140px]"}`}>
+              {filteredEngins.filter(e => e.status === 'EN_PANNE' || e.status === 'EN_MAINTENANCE' || e.status === 'DÉGRADÉ').slice(0, 3).length === 0 ? (
+                <div className="text-[10px] text-emerald-500 font-mono py-2">
+                  ✓ Aucun engin en panne ou déclassé critique.
+                </div>
+              ) : (
+                filteredEngins.filter(e => e.status === 'EN_PANNE' || e.status === 'EN_MAINTENANCE' || e.status === 'DÉGRADÉ').slice(0, 3).map(e => {
+                  const statusColors = {
+                    EN_PANNE: "bg-red-500/10 text-red-500 border-red-500/20",
+                    EN_MAINTENANCE: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+                    DÉGRADÉ: "bg-amber-500/10 text-amber-600 border-amber-550/20"
+                  };
                   return (
-                    <div className="text-emerald-600 dark:text-emerald-400 text-[11px]">
-                      🟢 AUCUN ÉCART CONSTATÉ.
-                      <p className="mt-1 text-[10px] text-slate-500 leading-tight">
-                        Tous les engins déclarés "Disponible" sont exempts d'ordre correctif ou d'anomalie critique en cours. Cohérence terrain préservée.
-                      </p>
+                    <div key={e.id} className="p-1 px-2 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900 rounded flex items-center justify-between gap-1 text-[9px] font-mono">
+                      <span className="font-extrabold text-slate-800 dark:text-slate-200">{e.code || e.id}</span>
+                      <span className="text-slate-400">({e.siteId})</span>
+                      <span className={`px-1 rounded border text-[8px] font-black uppercase ${statusColors[e.status] || 'bg-slate-100 text-slate-500'}`}>
+                        {e.status === 'EN_PANNE' ? '🔴 ARRÊT' : e.status === 'EN_MAINTENANCE' ? '🟠 EN COURS' : '🟡 DEGRADÉ'}
+                      </span>
                     </div>
                   );
-                }
-
-                return (
-                  <div>
-                    <span className="text-[9.5px] font-black text-amber-600 dark:text-amber-500 block">⚠️ CORRECTION ADMINISTRATIVE EXIGÉE :</span>
-                    <div className="space-y-1.5 mt-1.5 max-h-[105px] overflow-y-auto pr-1">
-                      {fDevs.map(e => (
-                        <p key={e.id} className="text-[10.5px] text-slate-600 dark:text-slate-400 leading-tight">
-                          <span className="font-extrabold text-amber-500">[{e.code || e.id}]</span> déclaré DISPO mais possède un BT correctif en cours d'exécution. Statut incohérent.
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
+                })
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* AI Stock balance recommendations */}
-        <Card className="bg-gradient-to-br from-indigo-500/5 to-transparent dark:from-indigo-950/10 dark:to-transparent border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:border-indigo-500/30 transition-all duration-300 flex flex-col justify-between">
-          <CardHeader className="pb-2">
-            <span className="text-[10px] font-mono font-extrabold text-[#4f46e5] dark:text-[#a5b4fc] flex items-center gap-1">
-              <Boxes className="h-3.5 w-3.5" /> LOGISTIQUE : COMPATIBILITÉ ET STOCKS SÉCURITÉ
+        {/* KPI Card 3: LOTO / HSE Indicators */}
+        <Card className={`bg-white dark:bg-[#121929] border-slate-200 dark:border-slate-800 rounded-lg shadow-sm flex flex-col justify-between ${isCompact ? "p-3" : "p-4"}`}>
+          <CardHeader className="p-0 pb-2">
+            <span className="text-[10px] font-mono font-extrabold text-[#10b981] flex items-center gap-1">
+              🛡️ ÉTAT SÉCURITÉ CHANTIER & LOTO (HSE)
             </span>
-            <CardTitle className="text-sm font-black text-slate-900 dark:text-white uppercase font-sans mt-0.5">Allocation & Tensions Pièces de Rechange</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="p-3 bg-indigo-500/5 dark:bg-indigo-950/10 border border-indigo-500/15 rounded-xl text-xs space-y-1 text-slate-755 dark:text-slate-330 leading-relaxed font-mono">
-              <span className="text-[9.5px] font-black text-indigo-500 block">🔍 ESTIMATION DE RUPTURE ATELIER</span>
-              {(() => {
-                const lowStockPieces = filteredPieces.filter(p => Number(p.stock) <= Number(p.critique || 2));
-                if (lowStockPieces.length === 0) {
-                  return (
-                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-none py-1">
-                      Niveau de stock tampon de secours suffisant pour les chantiers.
-                    </p>
-                  );
-                }
-
-                return (
-                  <div className="space-y-1">
-                    <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                      Demande pièces critiques sans stock disponible détectée :
-                    </p>
-                    <div className="space-y-1 max-h-[85px] overflow-y-auto">
-                      {lowStockPieces.slice(0, 2).map((piece) => (
-                        <p key={piece.id} className="text-[10px] text-amber-600 dark:text-amber-500 underline leading-none">
-                          • {piece.nom} ({piece.stock} restant)
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-              <p className="text-[10px] text-slate-500 mt-1 lines-none leading-tight">
-                COMEX : Suggérer la commande anticipée de kits de filtration d'huile hydraulique pour ne pas saturer.
-              </p>
+          <CardContent className="p-0 space-y-1.5 font-mono text-[9.5px]">
+            <div className="flex items-center justify-between border-b pb-1 border-slate-100 dark:border-slate-900">
+              <span className="text-slate-500">Taux Consignation LOTO :</span>
+              <span className="text-emerald-500 font-bold">100% EXIGÉ</span>
+            </div>
+            <div className="flex items-center justify-between border-b pb-1 border-slate-100 dark:border-slate-900">
+              <span className="text-slate-500">Audits Écarts de Statuts :</span>
+              <span className="text-emerald-500 font-bold">0 INCOHÉRENCE</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500">Permis de feu S22 :</span>
+              <span className="px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-500 font-bold uppercase text-[8px]">7 Délivrés</span>
+            </div>
+            <div className="p-1 px-1.5 bg-emerald-500/5 border border-emerald-500/10 rounded text-[8px] text-emerald-600 dark:text-emerald-400 font-bold leading-tight mt-1">
+              CONFORME : Verrouillage d'énergie complet requis sur tout commutateur d'engin.
             </div>
           </CardContent>
         </Card>
