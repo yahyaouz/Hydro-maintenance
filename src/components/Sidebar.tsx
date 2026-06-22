@@ -133,20 +133,18 @@ export function Sidebar({ activeTab, setActiveTab, className }: SidebarProps) {
 
   return (
     <div className={cn(
-      "relative flex flex-col h-screen border-r bg-card transition-all duration-300 shrink-0 select-none",
+      "relative flex flex-col h-screen border-r border-gray-100 bg-white transition-all duration-300 ease-in-out shrink-0 select-none",
       isCollapsed ? "w-16" : "w-60",
-      user?.role === "ADMIN" && activeTab === "inspection" ? "bg-slate-950 border-red-900/30 text-white" : "bg-white dark:bg-[#111726] text-slate-900 dark:text-slate-100 dark:border-slate-850",
       className
     )}>
       {/* HEADER FIXE */}
       <div className={cn(
-        "flex items-center justify-between px-3 py-3 border-b shrink-0",
-        user?.role === "ADMIN" && activeTab === "inspection" && "border-red-900/20 bg-red-950/10"
+        "flex items-center justify-between px-3 py-3 border-b border-gray-100 shrink-0 bg-white"
       )}>
         {!isCollapsed && (
           <div className="font-sans font-black text-lg tracking-tighter flex items-center gap-1.5 leading-none">
-            <span className={user?.role === "ADMIN" && activeTab === "inspection" ? "text-red-500" : "text-hydro"}>HYDRO</span>
-            <span className={user?.role === "ADMIN" && activeTab === "inspection" ? "text-slate-400" : "text-mines"}>MINES</span>
+            <span className="text-[#00BFFF] font-black">HYDRO</span>
+            <span className="text-[#9E1A1A] font-black">MINES</span>
             
             {/* Real network state indicator badge */}
             <div className="ml-1.5 flex items-center">
@@ -165,35 +163,35 @@ export function Sidebar({ activeTab, setActiveTab, className }: SidebarProps) {
           variant="ghost" 
           size="icon" 
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className={cn("h-8 w-8 ml-auto hover:bg-slate-100 dark:hover:bg-slate-800", user?.role === "ADMIN" && activeTab === "inspection" && "hover:bg-red-950/30 text-slate-300")}
+          className="h-8 w-8 ml-auto hover:bg-sky-50/50 text-slate-700 transition-colors duration-200"
         >
           {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
       </div>
 
       {/* COMPACT LOCATION & STATUS */}
-      <div className="px-3 py-2.5 border-b shrink-0 bg-slate-50/15 dark:bg-slate-950/20">
+      <div className="px-3 py-2.5 border-b border-gray-100 shrink-0 bg-white">
         {!isCollapsed && (
            <div className="space-y-2">
               <div className="flex items-center gap-2">
                  {user?.role === "ADMIN" && (
-                   <span className="bg-red-600 text-[8.5px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded text-white leading-none">IT ADMIN</span>
+                   <span className="bg-[#9E1A1A] text-[8.5px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded text-white leading-none">IT ADMIN</span>
                  )}
                  {user?.role === "RESPONSABLE_CHANTIER" && (
-                   <span className="text-slate-500 text-[8.5px] font-black uppercase px-1.5 py-0.5 border border-slate-200 dark:border-slate-850 rounded bg-white dark:bg-card leading-none">Lecture seule</span>
+                   <span className="text-slate-500 text-[8.5px] font-black uppercase px-1.5 py-0.5 border border-gray-100 rounded bg-white leading-none">Lecture seule</span>
                  )}
                  {user?.role === "RESPONSABLE_MAINTENANCE" && (
-                   <span className="bg-sky-600 text-[8.5px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded text-white leading-none">MAINT SUP</span>
+                   <span className="bg-[#00BFFF] text-[8.5px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded text-white leading-none">MAINT SUP</span>
                  )}
               </div>
               
               <div className="space-y-0.5">
-                <p className="text-[8.5px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 flex items-center gap-1">
-                  <Flag className="h-2 w-2 text-hydro" /> Localisation
+                <p className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-1">
+                  <Flag className="h-2 w-2 text-[#00BFFF]" /> Localisation
                 </p>
                 {["ADMIN", "DIRECTION"].includes(user?.role || "") ? (
                   <Select value={activeSite} onValueChange={(v) => setActiveSite(v as SiteID)}>
-                    <SelectTrigger className="h-8.5 text-[11px] font-bold border-slate-200 dark:border-slate-800 bg-white dark:bg-card hover:bg-slate-50 transition-colors py-1">
+                    <SelectTrigger className="h-8.5 text-[11px] font-bold border-gray-100 bg-white hover:bg-sky-50/20 transition-colors py-1">
                       <SelectValue placeholder="Choisir un site" />
                     </SelectTrigger>
                     <SelectContent>
@@ -204,8 +202,8 @@ export function Sidebar({ activeTab, setActiveTab, className }: SidebarProps) {
                     </SelectContent>
                   </Select>
                 ) : (
-                  <div className="px-2 py-1 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-md">
-                     <span className="text-[10px] font-black text-slate-800 dark:text-slate-200 uppercase">{user?.siteId}</span>
+                  <div className="px-2 py-1 bg-white border border-gray-100 rounded-md">
+                     <span className="text-[10px] font-black text-slate-800 uppercase">{user?.siteId}</span>
                   </div>
                 )}
               </div>
@@ -214,7 +212,7 @@ export function Sidebar({ activeTab, setActiveTab, className }: SidebarProps) {
       </div>
 
       {/* ZONE SCROLLABLE INTELLIGENTE */}
-      <div className="flex-1 scroll-industrial overflow-y-auto px-1 py-2 space-y-2.5">
+      <div className="flex-1 scroll-industrial overflow-y-auto px-1 py-2 space-y-2.5 bg-white">
         <nav className="flex flex-col gap-2.5">
           {navGroups.map((group) => {
             const filteredItems = group.items.filter(item => user && item.roles.includes(user.role));
@@ -223,7 +221,7 @@ export function Sidebar({ activeTab, setActiveTab, className }: SidebarProps) {
             return (
               <div key={group.title} className="space-y-0.5">
                 {!isCollapsed && (
-                  <h3 className="text-[8px] font-black text-slate-400 dark:text-slate-500 tracking-wider px-2 uppercase opacity-85">
+                  <h3 className="text-[8px] font-black text-slate-400 tracking-wider px-2 uppercase opacity-85">
                     {group.title}
                   </h3>
                 )}
@@ -231,27 +229,25 @@ export function Sidebar({ activeTab, setActiveTab, className }: SidebarProps) {
                   {filteredItems.map((item) => (
                     <Button
                       key={item.id}
-                      variant={activeTab === item.id ? "secondary" : "ghost"}
+                      variant="ghost"
                       className={cn(
                         "justify-start gap-2.5 px-2.5 relative group overflow-hidden h-11 w-full text-left transition-all rounded-md touch-manipulation",
                         activeTab === item.id 
-                          ? "bg-slate-100 dark:bg-slate-900 font-bold text-slate-900 dark:text-white border border-slate-200/60 dark:border-slate-800 shadow-sm" 
-                          : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-950/40",
-                        user?.role === "ADMIN" && activeTab === "inspection" && item.id === "inspection" && "bg-red-750 text-white border-none hover:bg-red-700 hover:text-white"
+                          ? "bg-sky-50/30 text-[#00BFFF] font-bold border border-gray-100/50 shadow-xs" 
+                          : "text-slate-600 hover:text-[#00BFFF] hover:bg-sky-50/50"
                       )}
                       onClick={() => setActiveTab(item.id)}
                     >
                       <item.icon className={cn(
                         "h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-105",
-                        activeTab === item.id && !item.color ? "text-hydro" : "",
-                        item.color || ""
+                        activeTab === item.id ? "text-[#00BFFF]" : "text-slate-500"
                       )} />
                       {!isCollapsed && <span className="text-[10px] font-black tracking-tight uppercase">{item.label}</span>}
-                      {activeTab === item.id && !isCollapsed && (
+                      {activeTab === item.id && (
                         <motion.div 
                           layoutId="activeSideIndicator"
                           transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                          className="absolute right-0 top-0 bottom-0 w-1 bg-hydro rounded-l-full" 
+                          className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#00BFFF] rounded-r-md" 
                         />
                       )}
                     </Button>
@@ -264,11 +260,11 @@ export function Sidebar({ activeTab, setActiveTab, className }: SidebarProps) {
       </div>
 
       {/* FOOTER FIXE */}
-      <div className="p-2.5 border-t shrink-0 bg-slate-50/5 dark:bg-slate-950/20 dark:border-slate-800 mt-auto space-y-2">
+      <div className="p-2.5 border-t border-gray-100 shrink-0 bg-white mt-auto space-y-2">
         {/* Density Toggler */}
         {!isCollapsed && (
-          <div className="px-0.5 space-y-1 pb-1.5 border-b border-slate-100 dark:border-slate-800/60">
-            <span className="text-[7.5px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-1">DENSITÉ GMAO</span>
+          <div className="px-0.5 space-y-1 pb-1.5 border-b border-gray-100">
+            <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest block mb-1">DENSITÉ GMAO</span>
             <div className="grid grid-cols-3 gap-1">
               {(['compact', 'standard', 'large'] as const).map((d) => (
                 <button
@@ -277,8 +273,8 @@ export function Sidebar({ activeTab, setActiveTab, className }: SidebarProps) {
                   className={cn(
                     "h-6 rounded text-[8px] font-black uppercase tracking-wide transition-all border cursor-pointer",
                     density === d
-                      ? "bg-hydro text-slate-950 border-hydro font-black"
-                      : "bg-white dark:bg-[#121929] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-850 hover:bg-slate-50 dark:hover:bg-slate-900"
+                      ? "bg-[#00BFFF] text-white border-[#00BFFF] font-black"
+                      : "bg-white text-slate-600 border-gray-100 hover:bg-sky-50/50"
                   )}
                 >
                   {d === 'compact' ? 'COMPACT' : d === 'standard' ? 'STD' : 'LARGE'}
@@ -294,12 +290,12 @@ export function Sidebar({ activeTab, setActiveTab, className }: SidebarProps) {
             variant="outline" 
             size={isCollapsed ? "icon" : "sm"} 
             className={cn(
-              "w-full text-left justify-start gap-2 text-[8px] font-black uppercase tracking-widest h-8 text-slate-600 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800",
+              "w-full text-left justify-start gap-2 text-[8px] font-black uppercase tracking-widest h-8 text-slate-600 hover:bg-sky-50/50 border-gray-100",
               isCollapsed && "justify-center"
             )}
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
           >
-            {theme === 'light' ? <Moon className="h-3.5 w-3.5 text-slate-500" /> : <Sun className="h-3.5 w-3.5 text-amber-400" />}
+            {theme === 'light' ? <Moon className="h-3.5 w-3.5 text-slate-500" /> : <Sun className="h-3.5 w-3.5 text-amber-500 animate-pulse" />}
             {!isCollapsed && (
               <span>MODE {theme === 'light' ? 'SOMBRE' : 'CLAIR'}</span>
             )}
@@ -310,14 +306,14 @@ export function Sidebar({ activeTab, setActiveTab, className }: SidebarProps) {
           "flex items-center gap-2",
           isCollapsed ? "justify-center" : "px-0.5"
         )}>
-          <Avatar className="h-8 w-8 border border-slate-200 dark:border-slate-700 shadow-sm shrink-0">
-            <AvatarFallback className="bg-slate-105 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-[9px] font-black">
+          <Avatar className="h-8 w-8 border border-gray-100 shadow-xs shrink-0">
+            <AvatarFallback className="bg-slate-50 text-slate-900 text-[9px] font-black">
               {user?.displayName?.split(" ").map(n => n[0]).join("") || "HM"}
             </AvatarFallback>
           </Avatar>
           {!isCollapsed && (
             <div className="flex flex-col flex-1 overflow-hidden leading-tight">
-              <span className="text-[10px] font-black truncate text-slate-900 dark:text-slate-100">{user?.displayName}</span>
+              <span className="text-[10px] font-black truncate text-slate-900">{user?.displayName}</span>
               <span className="text-[7.5px] text-muted-foreground uppercase font-black tracking-widest truncate">{user?.role?.replace(/_/g, ' ')}</span>
             </div>
           )}
@@ -326,7 +322,7 @@ export function Sidebar({ activeTab, setActiveTab, className }: SidebarProps) {
           <Button 
             variant="outline" 
             size="sm" 
-            className="w-full justify-start text-[8px] font-black uppercase tracking-widest h-8 border-slate-200 dark:border-slate-800 hover:text-red-650 dark:text-slate-300 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20"
+            className="w-full justify-start text-[8px] font-black uppercase tracking-widest h-8 border-gray-100 hover:text-[#9E1A1A] hover:border-red-100 hover:bg-red-50/50 text-slate-600"
             onClick={() => logout()}
           >
             <LogOut className="h-3 w-3 mr-1" />

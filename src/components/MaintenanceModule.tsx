@@ -400,21 +400,21 @@ export function MaintenanceModule() {
   };
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 bg-[#0b0f19] text-slate-100 min-h-screen select-none font-sans">
+    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 bg-white text-slate-900 min-h-screen select-none font-sans">
       
       {/* HEADER COCKPIT */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-100 pb-5">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-              <CalendarDays className="h-6 w-6 text-emerald-400 animate-pulse" />
+              <CalendarDays className="h-6 w-6 text-emerald-500 animate-pulse" />
             </div>
             <div>
-              <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2 uppercase">
+              <h2 className="text-xl font-black tracking-tight text-slate-900 flex items-center gap-2 uppercase">
                 DISCIPLINE ET RIGUEUR PRÉVENTIVE SOU-GMAO
               </h2>
-              <p className="text-slate-400 text-xs flex items-center gap-1.5 mt-0.5 font-mono">
-                Cible de performance : <span className="text-emerald-400 font-bold">70% de préventif dirigé</span> • Site : {activeSite === 'TOUS' ? 'Tous les ateliers' : `Atelier ${activeSite}`}
+              <p className="text-slate-500 text-xs flex items-center gap-1.5 mt-0.5 font-mono">
+                Cible de performance : <span className="text-emerald-600 font-bold">70% de préventif dirigé</span> • Site : {activeSite === 'TOUS' ? 'Tous les ateliers' : `Atelier ${activeSite}`}
               </p>
             </div>
           </div>
@@ -425,69 +425,69 @@ export function MaintenanceModule() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         
         {/* COMPLIANCE THERMOMETER */}
-        <Card className="bg-[#131b2e] border-slate-800 rounded-xl animate-fade-in text-white">
+        <Card className="bg-white border border-gray-100 rounded-xl animate-fade-in text-slate-950 shadow-sm">
           <CardHeader className="py-3 pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-[10px] uppercase font-black tracking-widest text-[#5facff]">Ratio Préventif</CardTitle>
-            <TrendingUp className="h-4 w-4 text-[#5facff]" />
+            <CardTitle className="text-[10px] uppercase font-black tracking-widest text-[#00BFFF]">Ratio Préventif</CardTitle>
+            <TrendingUp className="h-4 w-4 text-[#00BFFF]" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black font-mono text-emerald-450">{statistics.preventiveRatio}%</div>
-            <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-tight font-semibold">Objectif : 70% de cible GMAO</p>
-            <Progress value={statistics.preventiveRatio} className="h-1.5 mt-2 bg-slate-900" />
+            <div className="text-3xl font-black font-mono text-emerald-600">{statistics.preventiveRatio}%</div>
+            <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-tight font-semibold">Objectif : 70% de cible GMAO</p>
+            <Progress value={statistics.preventiveRatio} className="h-1.5 mt-2 bg-slate-100" />
           </CardContent>
         </Card>
 
         {/* OVERDUE ALERTS CARD */}
         <Card className={cn(
-          "bg-[#131b2e] border-slate-800 rounded-xl border-l-4 text-white",
-          statistics.overdueCount > 0 ? "border-l-red-500" : "border-l-slate-800"
+          "bg-white border border-gray-100 rounded-xl border-l-4 text-slate-950 shadow-sm",
+          statistics.overdueCount > 0 ? "border-l-[#9E1A1A]" : "border-l-gray-100"
         )}>
           <CardHeader className="py-3 pb-2 flex flex-row items-center justify-between font-mono">
-            <CardTitle className="text-[10px] uppercase font-black tracking-widest text-slate-400 font-mono">Échéances Imminentes</CardTitle>
-            <ShieldAlert className="h-4.5 w-4.5 text-red-500" />
+            <CardTitle className="text-[10px] uppercase font-black tracking-widest text-slate-500 font-mono">Échéances Imminentes</CardTitle>
+            <ShieldAlert className="h-4.5 w-4.5 text-[#9E1A1A]" />
           </CardHeader>
           <CardContent>
             <div className={cn(
               "text-3xl font-black font-mono",
-              statistics.overdueCount > 0 ? "text-red-500 animate-pulse" : "text-white"
+              statistics.overdueCount > 0 ? "text-[#9E1A1A] animate-pulse" : "text-slate-950"
             )}>{statistics.overdueCount < 10 ? `0${statistics.overdueCount}` : statistics.overdueCount}</div>
-            <p className="text-[10px] text-slate-400 mt-1 uppercase font-semibold">Échéances critiques (&lt;10 heures)</p>
+            <p className="text-[10px] text-slate-500 mt-1 uppercase font-semibold">Échéances critiques (&lt;10 heures)</p>
           </CardContent>
         </Card>
 
         {/* COMPLIANCE SUMMARY (MAINTENANCE DEBT SCORE) */}
         <Card className={cn(
-          "bg-[#131b2e] border-slate-800 rounded-xl border-l-4 text-white",
+          "bg-white border border-gray-100 rounded-xl border-l-4 text-slate-950 shadow-sm",
           advancedMetrics.debtScore < 80 ? "border-l-amber-500" : "border-l-emerald-500"
         )}>
           <CardHeader className="py-3 pb-2 flex flex-row items-center justify-between font-mono">
-            <CardTitle className="text-[10px] uppercase font-black tracking-widest text-slate-400 font-mono">Score Dette de Maintenance</CardTitle>
+            <CardTitle className="text-[10px] uppercase font-black tracking-widest text-slate-500 font-mono">Score Dette de Maintenance</CardTitle>
             <Sliders className="h-4 w-4 text-[#4A90D9]" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black font-mono text-white">{Math.round(advancedMetrics.debtScore)}%</div>
-            <p className="text-[10px] text-slate-400 mt-1 uppercase font-semibold text-xs">Retard cumulé: {advancedMetrics.totalOverdueHoursSum} h</p>
+            <div className="text-3xl font-black font-mono text-slate-950">{Math.round(advancedMetrics.debtScore)}%</div>
+            <p className="text-[10px] text-slate-500 mt-1 uppercase font-semibold text-xs">Retard cumulé: {advancedMetrics.totalOverdueHoursSum} h</p>
           </CardContent>
         </Card>
 
         {/* EXTREME PREVENTIVE RIGOUR: OMISSIONS AND LUBRICATIONS */}
         <Card className={cn(
-          "bg-[#131b2e] border-slate-800 rounded-xl border-l-4 text-white",
-          (advancedMetrics.gOmissions + advancedMetrics.sOmissions) > 0 ? "border-l-red-500" : "border-l-emerald-500"
+          "bg-white border border-gray-100 rounded-xl border-l-4 text-slate-950 shadow-sm",
+          (advancedMetrics.gOmissions + advancedMetrics.sOmissions) > 0 ? "border-l-[#9E1A1A]" : "border-l-emerald-500"
         )}>
           <CardHeader className="py-3 pb-2 flex flex-row items-center justify-between font-mono">
-            <CardTitle className="text-[10px] uppercase font-black tracking-widest text-slate-400 font-mono">Omissions de Rigueur</CardTitle>
-            <CheckCircle className="h-4 w-4 text-emerald-400" />
+            <CardTitle className="text-[10px] uppercase font-black tracking-widest text-slate-500 font-mono">Omissions de Rigueur</CardTitle>
+            <CheckCircle className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-black uppercase text-slate-150 font-mono flex items-center gap-2">
+            <div className="text-lg font-black uppercase text-slate-900 font-mono flex items-center gap-2">
               {(advancedMetrics.gOmissions + advancedMetrics.sOmissions) > 0 ? (
-                <span className="text-red-500 animate-pulse">⚠️ SOUFF: {advancedMetrics.sOmissions} | GRAIS: {advancedMetrics.gOmissions}</span>
+                <span className="text-[#9E1A1A] animate-pulse">⚠️ SOUFF: {advancedMetrics.sOmissions} | GRAIS: {advancedMetrics.gOmissions}</span>
               ) : (
-                <span className="text-emerald-450">AUCUN OUBLI RAS</span>
+                <span className="text-emerald-600">AUCUN OUBLI RAS</span>
               )}
             </div>
-            <p className="text-[9.5px] text-slate-405 mt-1.5 leading-relaxed truncate font-semibold uppercase">Omissions soufflage filtre & graissage</p>
+            <p className="text-[9.5px] text-slate-500 mt-1.5 leading-relaxed truncate font-semibold uppercase">Omissions soufflage filtre & graissage</p>
           </CardContent>
         </Card>
       </div>
@@ -496,15 +496,15 @@ export function MaintenanceModule() {
       <div className="grid gap-6 lg:grid-cols-12 items-start">
         
         {/* LEFT COLUMN: GLOVE-FRIENDLY MANDATORY <30 SECONDS MICRO-CHECKLIST (LG:COL-SPAN-5) */}
-        <Card className="lg:col-span-12 xl:col-span-5 bg-[#131b2e] border-slate-800 rounded-xl shadow-xl overflow-hidden border-2 border-[#4A90D9]/20">
-          <CardHeader className="bg-slate-900/60 border-b border-slate-801">
+        <Card className="lg:col-span-12 xl:col-span-5 bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+          <CardHeader className="bg-[#9E1A1A] text-white border-b border-red-900 py-4">
             <div className="flex items-center gap-2">
-              <Sliders className="h-5 w-5 text-[#4A90D9]" />
+              <Sliders className="h-5 w-5 text-white animate-pulse" />
               <div>
                 <CardTitle className="text-sm font-black text-white uppercase tracking-wider">
                   Fiche de Rigueur Souterraine (Micro-30 Sec)
                 </CardTitle>
-                <CardDescription className="text-slate-400 text-[10.5px]">
+                <CardDescription className="text-red-100 text-[10.5px]">
                   Boutons géants pour gants de protection. Saisie clavier bannie.
                 </CardDescription>
               </div>
@@ -515,7 +515,7 @@ export function MaintenanceModule() {
               
               {/* MACHINE CHOSEN */}
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">1. Sélection de l'engin souterrain</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono">1. Sélection de l'engin souterrain</label>
                 <div className="grid grid-cols-3 gap-1.5">
                   {siteEngins.slice(0, 9).map((m, idx) => {
                     const engineIdRef = m.enginId || m.id || `engin-${idx}`;
@@ -526,8 +526,8 @@ export function MaintenanceModule() {
                         className={cn(
                           "h-12 border rounded-lg flex flex-col justify-center items-center cursor-pointer transition-all active:scale-95 text-center px-1 font-bold",
                           selectedChecklistMachine === engineIdRef 
-                            ? "bg-[#4A90D9] text-slate-900 border-[#4a90d9]" 
-                            : "bg-[#0d1424] text-slate-300 border-slate-800 hover:border-slate-700"
+                            ? "bg-[#00BFFF] text-white border-[#00BFFF]" 
+                            : "bg-slate-50 text-slate-700 border-gray-200 hover:bg-slate-200"
                         )}
                       >
                         <span className="text-[10px] block truncate font-black">{engineIdRef}</span>
@@ -540,7 +540,7 @@ export function MaintenanceModule() {
 
               {/* TASK TYPE CHOSEN */}
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-405 uppercase tracking-widest font-mono">2. Type d'entretien effectué</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono">2. Type d'entretien effectué</label>
                 <div className="grid grid-cols-4 gap-1.5">
                   {(["VIDANGE", "SOUFFLAGE", "GRAISSAGE", "INSPECTION"] as const).map((t) => (
                     <div 
@@ -549,8 +549,8 @@ export function MaintenanceModule() {
                       className={cn(
                         "h-12 border rounded-lg flex flex-col justify-center items-center cursor-pointer transition-all text-center px-1 font-bold font-sans",
                         activeTaskType === t 
-                          ? "bg-slate-100 text-slate-930 border-white" 
-                          : "bg-[#0d1424] text-slate-400 border-slate-800 hover:border-slate-700"
+                          ? "bg-[#9E1A1A] text-white border-[#9E1A1A]" 
+                          : "bg-slate-50 text-slate-600 border-gray-200 hover:bg-slate-200"
                       )}
                     >
                       <span className="text-[9.5px] font-black tracking-tighter block leading-none uppercase">{t}</span>
@@ -561,19 +561,19 @@ export function MaintenanceModule() {
 
               {/* GLOVE-FRIENDLY DOUBLE TOGGLES ON/OFF (CLICK TOUCH PLATES) */}
               {activeTaskType && (
-                <div className="space-y-3.5 bg-[#0d1424] p-3 rounded-xl border border-slate-800 my-4">
-                  <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest font-mono border-b border-slate-800 pb-1.5">3. Validation physique terrain</h4>
+                <div className="space-y-3.5 bg-slate-50 p-3 rounded-xl border border-gray-200 my-4">
+                  <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-widest font-mono border-b border-gray-200 pb-1.5">3. Validation physique terrain</h4>
                   
                   {/* COMPONENT 1: FILTER BLOWN */}
                   <div 
                     onClick={() => setCbFilterBlown(!cbFilterBlown)}
                     className={cn(
                       "h-12 px-3 border rounded-lg flex items-center justify-between cursor-pointer transition-all select-none",
-                      cbFilterBlown ? "bg-[#10b981]/10 border-[#10b981]/40 text-emerald-400" : "bg-slate-900/40 border-slate-800 text-slate-400"
+                      cbFilterBlown ? "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold" : "bg-slate-100 border-gray-200 text-slate-505"
                     )}
                   >
-                    <span className="text-[10.5px] font-bold uppercase">Cartouches d'Air Soufflées</span>
-                    <Badge className={cbFilterBlown ? "bg-[#10b981] text-slate-900" : "bg-slate-800 text-slate-400"}>
+                    <span className="text-[10.5px] font-bold uppercase text-slate-705">Cartouches d'Air Soufflées</span>
+                    <Badge className={cbFilterBlown ? "bg-emerald-600 text-white font-bold" : "bg-slate-205 text-slate-405 font-bold"}>
                       {cbFilterBlown ? "SOUFFLÉ ✅" : "NÉGLIGÉ"}
                     </Badge>
                   </div>
@@ -583,11 +583,11 @@ export function MaintenanceModule() {
                     onClick={() => setCbOilChecked(!cbOilChecked)}
                     className={cn(
                       "h-12 px-3 border rounded-lg flex items-center justify-between cursor-pointer transition-all select-none",
-                      cbOilChecked ? "bg-[#10b981]/10 border-[#10b981]/40 text-emerald-400" : "bg-slate-900/40 border-slate-800 text-slate-400"
+                      cbOilChecked ? "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold" : "bg-slate-100 border-gray-200 text-slate-505"
                     )}
                   >
-                    <span className="text-[10.5px] font-bold uppercase">Niveau d'huile fait (SAE40)</span>
-                    <Badge className={cbOilChecked ? "bg-[#10b981] text-slate-900" : "bg-slate-800 text-slate-400"}>
+                    <span className="text-[10.5px] font-bold uppercase text-slate-705">Niveau d'huile fait (SAE40)</span>
+                    <Badge className={cbOilChecked ? "bg-emerald-600 text-white font-bold" : "bg-slate-205 text-slate-405 font-bold"}>
                       {cbOilChecked ? "AJUSTÉ" : "NON REMPLI"}
                     </Badge>
                   </div>
@@ -597,11 +597,11 @@ export function MaintenanceModule() {
                     onClick={() => setCbHydraulicLeak(!cbHydraulicLeak)}
                     className={cn(
                       "h-12 px-3 border rounded-lg flex items-center justify-between cursor-pointer transition-all select-none",
-                      cbHydraulicLeak ? "bg-red-950/20 border-red-900/30 text-red-400" : "bg-[#10b981]/10 border-[#10b981]/20 text-emerald-400"
+                      cbHydraulicLeak ? "bg-rose-50 border-rose-200 text-red-700 font-bold" : "bg-emerald-50/40 border-emerald-100 text-emerald-600"
                     )}
                   >
-                    <span className="text-[10.5px] font-bold uppercase">Fuite Hydraulique Observée ?</span>
-                    <Badge className={cbHydraulicLeak ? "bg-red-650 text-white" : "bg-[#10b981]/25 text-emerald-450"}>
+                    <span className="text-[10.5px] font-bold uppercase text-slate-705">Fuite Hydraulique Observée ?</span>
+                    <Badge className={cbHydraulicLeak ? "bg-[#9E1A1A] text-white font-heavy" : "bg-emerald-200 text-emerald-800 font-bold"}>
                       {cbHydraulicLeak ? "⚠️ FUITE PRESENTE" : "R-A-S"}
                     </Badge>
                   </div>
@@ -611,11 +611,11 @@ export function MaintenanceModule() {
                     onClick={() => setCbFlexibleInspected(!cbFlexibleInspected)}
                     className={cn(
                       "h-12 px-3 border rounded-lg flex items-center justify-between cursor-pointer transition-all select-none",
-                      cbFlexibleInspected ? "bg-[#10b981]/10 border-[#10b981]/40 text-emerald-400" : "bg-slate-900/40 border-slate-800 text-slate-400"
+                      cbFlexibleInspected ? "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold" : "bg-slate-100 border-gray-200 text-slate-505"
                     )}
                   >
-                    <span className="text-[10.5px] font-bold uppercase">Joint-Raccord Flexibles OK</span>
-                    <Badge className={cbFlexibleInspected ? "bg-[#10b981] text-slate-900" : "bg-slate-800 text-slate-400"}>
+                    <span className="text-[10.5px] font-bold uppercase text-slate-705">Joint-Raccord Flexibles OK</span>
+                    <Badge className={cbFlexibleInspected ? "bg-emerald-600 text-white font-bold" : "bg-slate-205 text-slate-405 font-bold"}>
                       {cbFlexibleInspected ? "CONFORME" : "À SURVEILLER"}
                     </Badge>
                   </div>
@@ -625,11 +625,11 @@ export function MaintenanceModule() {
                     onClick={() => setCbGreasingCompleted(!cbGreasingCompleted)}
                     className={cn(
                       "h-12 px-3 border rounded-lg flex items-center justify-between cursor-pointer transition-all select-none",
-                      cbGreasingCompleted ? "bg-[#10b981]/10 border-[#10b981]/40 text-emerald-400" : "bg-slate-900/40 border-slate-800 text-slate-400"
+                      cbGreasingCompleted ? "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold" : "bg-slate-100 border-gray-200 text-slate-505"
                     )}
                   >
-                    <span className="text-[10.5px] font-bold uppercase">Graissage Quotidien Bourré</span>
-                    <Badge className={cbGreasingCompleted ? "bg-[#10b981] text-slate-900" : "bg-slate-800 text-slate-400"}>
+                    <span className="text-[10.5px] font-bold uppercase text-slate-705">Graissage Quotidien Bourré</span>
+                    <Badge className={cbGreasingCompleted ? "bg-emerald-600 text-white font-bold" : "bg-slate-205 text-slate-405 font-bold"}>
                       {cbGreasingCompleted ? "GRAISSÉ ✅" : "IMPÉRATIF"}
                     </Badge>
                   </div>
@@ -643,8 +643,8 @@ export function MaintenanceModule() {
                 className={cn(
                   "w-full h-14 rounded-xl text-xs uppercase font-black tracking-widest transition-all duration-150 active:scale-95 flex items-center justify-center gap-2 border-none cursor-pointer",
                   (!selectedChecklistMachine || !activeTaskType) 
-                    ? "bg-slate-800 text-slate-500 cursor-not-allowed" 
-                    : "bg-[#4A90D9] text-slate-900 hover:bg-[#3572b2] hover:text-white"
+                    ? "bg-slate-100 text-slate-400 border border-gray-200 cursor-not-allowed" 
+                    : "bg-[#9E1A1A] text-white hover:bg-red-800 font-heavy shadow-lg transition-colors"
                 )}
               >
                 <CheckCircle className="h-4.5 w-4.5" /> VALIDER FICHE TERRAIN (30 SEC)
@@ -654,28 +654,28 @@ export function MaintenanceModule() {
         </Card>
 
         {/* FLEET CLINICAL HEALTH SCORES MODULE */}
-        <Card className="lg:col-span-12 xl:col-span-5 bg-[#131b2e] border-slate-800 rounded-xl shadow-xl overflow-hidden mt-0">
-          <CardHeader className="bg-slate-900/40 border-b border-slate-801 py-3">
+        <Card className="lg:col-span-12 xl:col-span-5 bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden mt-0">
+          <CardHeader className="bg-[#00BFFF] text-white border-b border-sky-200 py-3">
             <div className="flex items-center gap-2">
-              <Gauge className="h-5 w-5 text-emerald-400" />
+              <Gauge className="h-5 w-5 text-white animate-pulse" />
               <div>
                 <CardTitle className="text-xs font-black text-white uppercase tracking-wider">
                   Dossiers de Santé Préventive de la Flotte
                 </CardTitle>
-                <CardDescription className="text-slate-400 text-[10px]">
+                <CardDescription className="text-sky-50 text-[10px]">
                   Score clinique pondéré calculé sur les pannes récentes & échéances expirées.
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-4 px-3 pb-3">
+          <CardContent className="pt-4 px-3 pb-3 bg-white">
             <div className="space-y-2.5 max-h-[340px] overflow-y-auto scroll-industrial pr-1">
               {fleetHealth.map((item) => (
-                <div key={item.id} className="p-2.5 rounded-lg bg-[#0d1424] border border-slate-850 flex items-center justify-between text-xs transition-all hover:border-slate-800">
+                <div key={item.id} className="p-2.5 rounded-lg bg-slate-50 border border-gray-150 flex items-center justify-between text-xs transition-all hover:border-sky-200">
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-[9px] text-[#4A90D9] font-black">{item.id}</span>
-                      <span className="text-[9.5px] uppercase font-bold text-slate-400">({item.type})</span>
+                      <span className="font-mono text-[9px] text-[#00BFFF] font-black">{item.id}</span>
+                      <span className="text-[9.5px] uppercase font-bold text-slate-600">({item.type})</span>
                     </div>
                     <p className="text-[10px] text-slate-500 font-mono m-0">{item.hours} heures déclarées</p>
                   </div>
@@ -684,18 +684,18 @@ export function MaintenanceModule() {
                     <div className="text-right">
                       <span className={cn(
                         "font-black font-mono text-xs",
-                        item.healthScore >= 80 ? "text-emerald-400" :
-                        item.healthScore >= 55 ? "text-amber-400" : "text-red-550"
+                        item.healthScore >= 80 ? "text-emerald-600" :
+                        item.healthScore >= 55 ? "text-amber-600" : "text-[#9E1A1A]"
                       )}>
                         {item.healthScore}%
                       </span>
                     </div>
-                    <div className="w-16 bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-900">
+                    <div className="w-16 bg-slate-200 rounded-full h-1.5 overflow-hidden border border-slate-300">
                       <div 
                         className={cn(
                           "h-full rounded-full",
                           item.healthScore >= 80 ? "bg-emerald-500" :
-                          item.healthScore >= 55 ? "bg-amber-500" : "bg-red-500"
+                          item.healthScore >= 55 ? "bg-amber-500" : "bg-[#9E1A1A]"
                         )}
                         style={{ width: `${item.healthScore}%` }}
                       />
@@ -723,7 +723,7 @@ export function MaintenanceModule() {
                         <span className="text-slate-400 uppercase text-[8px]">Retards:</span>
                         <span className="text-red-400 font-extrabold">{rank.overdueCount} actions</span>
                         {rank.maxDelay > 0 && (
-                          <span className="text-slate-500">(-{rank.maxDelay}h)</span>
+                          <span className="text-slate-400 font-medium">(-{rank.maxDelay}h)</span>
                         )}
                       </div>
                     </div>
@@ -738,27 +738,27 @@ export function MaintenanceModule() {
         <div className="lg:col-span-12 xl:col-span-7 space-y-4">
           
           {/* SCHEDULE PANEL */}
-          <Card className="bg-[#131b2e] border-slate-800 rounded-xl shadow-xl">
-            <CardHeader className="py-4 border-b border-slate-800/80 flex flex-row items-center justify-between">
+          <Card className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+            <CardHeader className="py-4 bg-[#00BFFF] text-white flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-sm font-black text-white uppercase tracking-wider">
                   Moteur de Planification Préventif SOU-GMAO
                 </CardTitle>
-                <CardDescription className="text-slate-400 text-xs">
+                <CardDescription className="text-sky-50 text-xs">
                   Proportion d'heures de service cumulées avant arrêt préventif réglementaire prescrit.
                 </CardDescription>
               </div>
             </CardHeader>
-            <CardContent className="pt-4 p-0">
-              <div className="divide-y divide-slate-800/60 max-h-[480px] overflow-y-auto scroll-industrial">
+            <CardContent className="pt-4 p-0 bg-white">
+              <div className="divide-y divide-gray-100 max-h-[480px] overflow-y-auto scroll-industrial">
                 {currentSchedules.map((item) => (
-                  <div key={item.id} className="p-4 hover:bg-slate-900/10 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+                  <div key={item.id} className="p-4 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
                     <div className="flex items-start gap-3">
                       <div className={cn(
                         "h-10 w-10 shrink-0 rounded-lg flex items-center justify-center border",
-                        item.type === 'VIDANGE' ? 'bg-amber-950/40 border-amber-900/20 text-amber-500' :
-                        item.type === 'SOUFFLAGE' ? 'bg-blue-950/40 border-blue-900/20 text-blue-400' :
-                        item.type === 'GRAISSAGE' ? 'bg-emerald-950/40 border-emerald-900/20 text-emerald-500' : 'bg-slate-900 border-slate-800 text-slate-400'
+                        item.type === 'VIDANGE' ? 'bg-amber-50 border-amber-100 text-amber-600' :
+                        item.type === 'SOUFFLAGE' ? 'bg-sky-50 border-sky-100 text-sky-500' :
+                        item.type === 'GRAISSAGE' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-100 border-gray-200 text-slate-500'
                       )}>
                         {item.type === 'VIDANGE' ? <Droplet className="h-5 w-5" /> : 
                          item.type === 'GRAISSAGE' ? <Wrench className="h-5 w-5" /> : <Settings className="h-5 w-5" />}
@@ -766,27 +766,27 @@ export function MaintenanceModule() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-[10px] text-slate-400 font-semibold">{item.id}</span>
-                          <span className="font-black text-white uppercase tracking-wider">{item.machineId}</span>
+                          <span className="font-black text-slate-900 uppercase tracking-wider">{item.machineId}</span>
                           <Badge className={cn(
                             "text-[8.5px] uppercase font-bold",
-                            item.priority === 'critique' ? "bg-red-950 text-red-400 border border-red-900/30" : "bg-slate-800 text-slate-450"
+                            item.priority === 'critique' ? "bg-red-50 text-red-700 border border-red-100" : "bg-slate-100 text-slate-600"
                           )}>{item.priority}</Badge>
                         </div>
-                        <p className="font-bold text-slate-300 uppercase">{item.label}</p>
+                        <p className="font-bold text-slate-800 uppercase">{item.label}</p>
                         <p className="text-[10px] text-slate-500 font-mono">Dernier entretien accompli le {item.lastDoneDate}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-4 justify-between sm:justify-start">
                       <div className="text-right">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase block">Intervalle</span>
-                        <span className="font-mono text-xs font-bold text-slate-300">{item.intervalHours}h</span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Intervalle</span>
+                        <span className="font-mono text-xs font-bold text-slate-700">{item.intervalHours}h</span>
                       </div>
                       <div className="text-right min-w-[70px]">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase block font-mono">Échéance</span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase block font-mono">Échéance</span>
                         <span className={cn(
                           "font-mono font-black text-sm",
-                          item.dueHours <= 10 ? "text-red-500 animate-pulse" : "text-white"
+                          item.dueHours <= 10 ? "text-[#9E1A1A] animate-pulse" : "text-slate-800"
                         )}>{item.dueHours}h</span>
                       </div>
                       <div className="shrink-0">
@@ -794,12 +794,12 @@ export function MaintenanceModule() {
                           <Button 
                             size="sm"
                             onClick={() => handleLaunchScheduled(item.id, item.machineId)}
-                            className="bg-slate-800 border-slate-705 text-white font-bold h-9 text-[10px] uppercase tracking-wider px-3 hover:bg-slate-700 font-mono"
+                            className="bg-slate-900 text-white font-bold h-9 text-[10px] uppercase tracking-wider px-3 hover:bg-slate-800 font-mono"
                           >
                             Prescrire
                           </Button>
                         ) : (
-                          <Badge className="bg-emerald-950 text-emerald-400 border border-emerald-900/30 font-bold uppercase text-[9px] h-9 px-3 flex items-center justify-center rounded-lg">
+                          <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold uppercase text-[9px] h-9 px-3 flex items-center justify-center rounded-lg">
                             EN ATELIER
                           </Badge>
                         )}
@@ -812,11 +812,11 @@ export function MaintenanceModule() {
           </Card>
 
           {/* MANUAL PREVENTIVE SCHEDULING BUILDER */}
-          <Card className="bg-[#131b2e] border-slate-800 rounded-xl shadow-xl">
-            <CardHeader className="py-3 border-b border-slate-850">
+          <Card className="bg-white border border-gray-100 rounded-xl shadow-sm">
+            <CardHeader className="py-3 border-b border-gray-100 bg-slate-50">
               <div className="flex items-center gap-2">
-                <Calendar className="h-4.5 w-4.5 text-[#5facff]" />
-                <CardTitle className="text-xs font-black text-white uppercase tracking-wider">
+                <Calendar className="h-4.5 w-4.5 text-[#00BFFF]" />
+                <CardTitle className="text-xs font-black text-slate-800 uppercase tracking-wider">
                   Planifier un Nouvel Entretien Préventif
                 </CardTitle>
               </div>
@@ -826,12 +826,12 @@ export function MaintenanceModule() {
                 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-405 uppercase font-mono">1. Code de l'engin</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase font-mono">1. Code de l'engin</label>
                     <select
                       value={formMachineId}
                       onChange={(e) => setFormMachineId(e.target.value)}
                       required
-                      className="w-full h-10 px-3 bg-[#0d1424] border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#4A90D9]"
+                      className="w-full h-10 px-3 bg-slate-50 border border-gray-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:ring-1 focus:ring-[#00BFFF]"
                     >
                       <option value="">-- Sélectionner --</option>
                       {siteEngins.map(e => {
@@ -844,11 +844,11 @@ export function MaintenanceModule() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-405 uppercase font-mono">2. Type d'entretien</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase font-mono">2. Type d'entretien</label>
                     <select
                       value={formType}
                       onChange={(e) => setFormType(e.target.value as any)}
-                      className="w-full h-10 px-3 bg-[#0d1424] border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#4A90D9]"
+                      className="w-full h-10 px-3 bg-slate-50 border border-gray-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:ring-1 focus:ring-[#00BFFF]"
                     >
                       <option value="VIDANGE">Vidange Complète (Huile)</option>
                       <option value="SOUFFLAGE">Soufflage des Filtres</option>
@@ -860,7 +860,7 @@ export function MaintenanceModule() {
 
                 <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-405 uppercase font-mono">3. Intervalle (Heures)</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase font-mono">3. Intervalle (Heures)</label>
                     <input
                       type="number"
                       value={formInterval}
@@ -869,12 +869,12 @@ export function MaintenanceModule() {
                         setFormInterval(val);
                         setFormDueHours(Math.max(1, val - formCurrentHours));
                       }}
-                      className="w-full h-10 px-3 bg-[#0d1424] border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#4A90D9]"
+                      className="w-full h-10 px-3 bg-slate-50 border border-gray-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:ring-1 focus:ring-[#00BFFF]"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-405 uppercase font-mono">4. Compteur Actuel</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase font-mono">4. Compteur Actuel</label>
                     <input
                       type="number"
                       value={formCurrentHours}
@@ -883,17 +883,17 @@ export function MaintenanceModule() {
                         setFormCurrentHours(val);
                         setFormDueHours(Math.max(1, formInterval - val));
                       }}
-                      className="w-full h-10 px-3 bg-[#0d1424] border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#4A90D9]"
+                      className="w-full h-10 px-3 bg-slate-50 border border-gray-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:ring-1 focus:ring-[#00BFFF]"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-405 uppercase font-mono">5. Échéance Restante</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase font-mono">5. Échéance Restante</label>
                     <input
                       type="number"
                       value={formDueHours}
                       onChange={(e) => setFormDueHours(Math.max(1, Number(e.target.value)))}
-                      className="w-full h-10 px-3 bg-[#0d1424] border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#4A90D9]"
+                      className="w-full h-10 px-3 bg-slate-50 border border-gray-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:ring-1 focus:ring-[#00BFFF]"
                     />
                   </div>
                 </div>
@@ -901,7 +901,7 @@ export function MaintenanceModule() {
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs uppercase font-black font-sans tracking-wider transition-colors active:scale-95 cursor-pointer border-none"
+                    className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs uppercase font-black font-sans tracking-wide transition-colors active:scale-95 cursor-pointer border-none"
                   >
                     Enregistrer la Planification
                   </button>
@@ -911,9 +911,9 @@ export function MaintenanceModule() {
           </Card>
 
           {/* DUAL KPIS CHART PREVENTIVE VS CORRECTIVE VOLUMES */}
-          <Card className="bg-[#131b2e] border-slate-800 shadow-xl rounded-xl">
-            <CardHeader className="py-4 border-b border-slate-850 pb-3">
-              <CardTitle className="text-xs font-black text-white uppercase tracking-wider">
+          <Card className="bg-white border border-gray-100 shadow-sm rounded-xl">
+            <CardHeader className="py-4 border-b border-gray-150 pb-3 bg-slate-50">
+              <CardTitle className="text-xs font-black text-slate-800 uppercase tracking-wider">
                 Volume d'Intervention : Discipline Préventive vs Correctif Souterrain
               </CardTitle>
             </CardHeader>
@@ -921,25 +921,25 @@ export function MaintenanceModule() {
               <div className="flex-1 w-full min-h-[160px] flex items-center">
                 <ResponsiveContainer width="100%" height={160}>
                   <BarChart data={statistics.chartData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#10192e" horizontal={false} />
-                    <XAxis type="number" stroke="#5facff" fontSize={10} hide />
-                    <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={10} width={130} tickLine={false} axisLine={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                    <XAxis type="number" stroke="#94a3b8" fontSize={10} hide />
+                    <YAxis dataKey="name" type="category" stroke="#475569" fontSize={10} width={130} tickLine={false} axisLine={false} />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#131b2e', border: '1px solid #1e293b', borderRadius: '8px' }}
-                      itemStyle={{ fontSize: '11px', color: '#ffffff' }}
+                      contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px' }}
+                      itemStyle={{ fontSize: '11px', color: '#1e293b' }}
                     />
-                    <Bar dataKey="valeur" radius={[0, 4, 4, 0]} barSize={14} />
+                    <Bar dataKey="valeur" radius={[0, 4, 4, 0]} barSize={14} fill="#00BFFF" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <div className="shrink-0 flex md:flex-col gap-4 text-center justify-center md:items-end w-full md:w-36 border-t md:border-t-0 md:border-l border-slate-800/85 pt-4 md:pt-0 md:pl-4">
+              <div className="shrink-0 flex md:flex-col gap-4 text-center justify-center md:items-end w-full md:w-36 border-t md:border-t-0 md:border-l border-gray-150 pt-4 md:pt-0 md:pl-4">
                 <div className="text-center md:text-right">
-                  <span className="text-[10px] text-slate-450 uppercase block font-bold font-mono">Total de Bons</span>
-                  <span className="text-2xl font-black font-mono text-white">{statistics.totalBTs}</span>
+                  <span className="text-[10px] text-slate-500 uppercase block font-bold font-mono">Total de Bons</span>
+                  <span className="text-2xl font-black font-mono text-slate-805">{statistics.totalBTs}</span>
                 </div>
                 <div className="text-center md:text-right">
-                  <span className="text-[10px] text-[#ef4444] uppercase block font-bold font-mono">Urgents subis</span>
-                  <span className="text-2xl font-black font-mono text-red-405">{statistics.correctiveCount}</span>
+                  <span className="text-[10px] text-[#9E1A1A] uppercase block font-bold font-mono">Urgents subis</span>
+                  <span className="text-2xl font-black font-mono text-[#9E1A1A]">{statistics.correctiveCount}</span>
                 </div>
               </div>
             </CardContent>

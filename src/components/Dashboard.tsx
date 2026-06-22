@@ -219,29 +219,29 @@ export function Dashboard() {
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className={`flex-1 bg-transparent text-slate-100 min-h-screen select-none font-sans ${isCompact ? "space-y-3 p-2.5 sm:p-4 pt-3 text-xs" : "space-y-6 p-4 md:p-8 pt-6"}`}
+      className={`flex-1 bg-white text-slate-900 min-h-screen select-none font-sans ${isCompact ? "space-y-3 p-2.5 sm:p-4 pt-3 text-xs" : "space-y-6 p-4 md:p-8 pt-6"}`}
     >
       
       {/* COCKPIT EXECUTIVE HEADER */}
-      <div className={`flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 border-b border-slate-200 dark:border-slate-800 ${isCompact ? "pb-3" : "pb-6"}`}>
+      <div className={`flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 border-b border-gray-100 ${isCompact ? "pb-3" : "pb-6"}`}>
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
+            <div className="p-2 bg-slate-50 border border-gray-100 rounded-lg shrink-0">
               <Compass className="h-5 w-5 text-sky-500" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className={`font-black tracking-tight text-slate-950 dark:text-white uppercase font-sans ${isCompact ? "text-base" : "text-xl md:text-2xl"}`}>
+                <h1 className={`font-black tracking-tight text-slate-950 uppercase font-sans ${isCompact ? "text-base" : "text-xl md:text-2xl"}`}>
                   SUPERVISION DU PARC ACTIFS
                 </h1>
-                <span className="text-[8.5px] font-mono font-black px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-650 dark:text-sky-450 border border-blue-500/15 uppercase tracking-wide leading-none">
+                <span className="text-[8.5px] font-mono font-black px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-650 border border-blue-500/15 uppercase tracking-wide leading-none">
                   GMAO INDUSTRIELLE
                 </span>
-                <span className="inline-flex items-center gap-1 text-[8px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20 font-black leading-none">
+                <span className="inline-flex items-center gap-1 text-[8px] font-mono bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-250 font-black leading-none">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> RESEAU ACTIF
                 </span>
               </div>
-              <p className="text-slate-500 dark:text-slate-400 text-[10px] uppercase tracking-tight font-mono leading-none mt-1">
+              <p className="text-slate-500 text-[10px] uppercase tracking-tight font-mono leading-none mt-1">
                 CONFORME VALEURS CAT MINESTAR, SANDVIK OPTIMINE & SAP PM - HYDROMINES
               </p>
             </div>
@@ -249,12 +249,12 @@ export function Dashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="p-1 px-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded flex items-center gap-2 text-[9px] font-mono font-black text-slate-700 dark:text-slate-350">
+          <div className="p-1 px-2.5 bg-slate-50 border border-gray-100 rounded flex items-center gap-2 text-[9px] font-mono font-black text-slate-755">
             <Database className="h-3.5 w-3.5 text-slate-500" />
             <span>TAMPON SQL CACHE OPÉRATIONNEL</span>
           </div>
 
-          <Badge variant="outline" className="h-8 border-slate-200 dark:border-slate-800 bg-white dark:bg-[#121929] text-slate-900 dark:text-slate-100 px-3 rounded flex items-center gap-1.5 text-[9.5px] font-black tracking-wider uppercase shadow-sm">
+          <Badge variant="outline" className="h-8 border-gray-100 bg-white text-slate-905 px-3 rounded flex items-center gap-1.5 text-[9.5px] font-black tracking-wider uppercase shadow-sm">
             🛰️ {activeSite === "TOUS" ? "TOUS LES SITES INDUSTRIELS" : `SITE : ${activeSite}`}
           </Badge>
         </div>

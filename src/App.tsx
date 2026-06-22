@@ -336,50 +336,59 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-background text-slate-900 dark:bg-slate-950 dark:text-slate-100 overflow-hidden font-sans relative">
+    <div className="flex h-screen bg-white text-slate-900 overflow-hidden font-sans relative">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Futurized command header */}
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-white dark:bg-[#0b0f19] px-6 border-slate-200 dark:border-slate-800 shadow-sm shrink-0">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden bg-white">
+        {/* Centered Master Branding Header */}
+        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-white px-6 border-gray-100 shrink-0 relative">
           <div className="flex items-center gap-4">
-            <h1 className="text-xs font-black uppercase tracking-widest text-[#1e293b] dark:text-[#f8fafc] font-sans">
+            <h1 className="text-xs font-black uppercase tracking-widest text-[#0F172A] font-sans">
               {getTabTitle()}
             </h1>
             <div className="flex gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400 bg-sky-500/10 border border-sky-500/20">
+              <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider text-[#00BFFF] bg-sky-50 border border-sky-100">
                 Site: {activeSite === 'TOUS' ? 'TOUS SITES' : activeSite}
               </span>
               {offlineActionCount > 0 && (
-                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 animate-pulse">
+                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-100 animate-pulse">
                   🔄 Fil d'attente: {offlineActionCount} Actions
                 </span>
               )}
             </div>
           </div>
 
+          {/* Centered title demanded in ETAPE 3 */}
+          <div className="hidden lg:flex items-center justify-center gap-1.5 absolute left-1/2 -translate-x-1/2 transform">
+            <span className="text-xs tracking-wider text-[#0F172A] font-black uppercase">ESPACE TECHNIQUE</span>
+            <span className="text-xs tracking-wider text-[#B8860B] font-extrabold uppercase">MAINTENANCE</span>
+            <span className="text-slate-350 mx-1">|</span>
+            <span className="text-[#00BFFF] font-black uppercase">HYDRO</span>
+            <span className="text-[#9E1A1A] font-black uppercase -ml-1">MINES</span>
+          </div>
+
           {/* Connected telemetry widgetry */}
           <div className="flex items-center gap-3">
             {/* Real Network Status Pin */}
             <div className={cn(
-              "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-mono font-black border uppercase transition-all shadow-inner",
+              "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-mono font-black border uppercase transition-all shadow-xs",
               networkOnline 
-                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
-                : "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
+                : "bg-rose-50 text-[#9E1A1A] border-rose-100"
             )}>
-              <Activity className={cn("h-3.5 w-3.5", networkOnline ? "text-emerald-500 animate-pulse" : "text-rose-500 animate-bounce")} />
+              <Activity className={cn("h-3.5 w-3.5", networkOnline ? "text-emerald-500 animate-pulse" : "text-[#9E1A1A] animate-bounce")} />
               <span>{networkOnline ? "Réseau Souterrain OK" : "Atelier Hors-ligne"}</span>
             </div>
 
             {/* Notification trigger bell */}
             <button 
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-gray-100 bg-white text-slate-700 hover:bg-sky-50/50 transition-all cursor-pointer"
               aria-label="Alerts button"
             >
               <Bell className={cn("h-4 w-4", unreadCount > 0 && "animate-bounce text-amber-500")} />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[8px] font-black text-white ring-2 ring-white dark:ring-[#0b0f19]">
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#9E1A1A] text-[8px] font-black text-white ring-2 ring-white">
                   {unreadCount}
                 </span>
               )}
@@ -388,8 +397,7 @@ export default function App() {
         </header>
 
         {/* Scrolling content container */}
-        <div className="flex-1 overflow-y-auto relative bg-slate-50/40 dark:bg-[#070b12]">
-          <IndustrialBackdrop />
+        <div className="flex-1 overflow-y-auto relative bg-white">
           <div className="relative z-10 w-full h-full p-6">
             <React.Suspense fallback={<IndustrialSkeleton />}>
               {activeTab === "dashboard" && <Dashboard />}
