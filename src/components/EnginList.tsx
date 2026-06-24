@@ -47,6 +47,7 @@ export const ENGIN_SPECS: Record<string, { godet: string; reservoir: string; tra
 
 export const PERF_SPECS: Record<string, { pression: string; debitFreq: string; poids: string; usage: string }> = {
   "MONTABERT T23": { pression: "160 bar", debitFreq: "23 L/min", poids: "23 kg", usage: "Boulonnage et perçage galeries" },
+  "MONTABERT T28": { pression: "160 bar", debitFreq: "28 L/min", poids: "28 kg", usage: "Forage lourd et galeries dures" },
   "EPIROC COP 1638": { pression: "200 bar", debitFreq: "60 Hz", poids: "28 kg", usage: "Perçage souterrain" },
   "EPIROC COP 1838": { pression: "220 bar", debitFreq: "55 Hz", poids: "34 kg", usage: "Perçage longues couronnes" },
 };
@@ -104,7 +105,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
   const [vlKm, setVlKm] = React.useState<number>(0);
 
   // Sub-category Perforateur
-  const [perfModel, setPerfModel] = React.useState<"MONTABERT T23" | "EPIROC COP 1638" | "EPIROC COP 1838">("MONTABERT T23");
+  const [perfModel, setPerfModel] = React.useState<"MONTABERT T23" | "MONTABERT T28" | "EPIROC COP 1638" | "EPIROC COP 1838">("MONTABERT T23");
   const [perfAssocie, setPerfAssocie] = React.useState("");
 
   // Edit states for ADMIN role
@@ -998,6 +999,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                         onChange={(e) => setPerfModel(e.target.value as any)}
                       >
                         <option value="MONTABERT T23">MONTABERT T23 (23 kg)</option>
+                        <option value="MONTABERT T28">MONTABERT T28 (28 kg)</option>
                         <option value="EPIROC COP 1638">EPIROC COP 1638 (28 kg)</option>
                         <option value="EPIROC COP 1838">EPIROC COP 1838 (34 kg)</option>
                       </select>
@@ -1186,6 +1188,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                         onChange={(e) => setEditType(e.target.value)}
                       >
                         <option value="MONTABERT T23">MONTABERT T23 (23 kg)</option>
+                        <option value="MONTABERT T28">MONTABERT T28 (28 kg)</option>
                         <option value="EPIROC COP 1638">EPIROC COP 1638 (28 kg)</option>
                         <option value="EPIROC COP 1838">EPIROC COP 1838 (34 kg)</option>
                       </select>

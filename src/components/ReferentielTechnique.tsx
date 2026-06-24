@@ -6,6 +6,9 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
 import { HydrominesLogo } from "./auth/HydrominesLogo";
+import { ReferentielST7 } from "./ReferentielST7";
+import { ReferentielT23 } from "./ReferentielT23";
+import { ReferentielT28 } from "./ReferentielT28";
 
 // --- Types ---
 interface MenuItem {
@@ -32,7 +35,7 @@ interface GraissagePoint {
 
 export function ReferentielTechnique() {
   const { user } = useAuthStore();
-  const [activeEngin, setActiveEngin] = React.useState("ST2G");
+  const [activeEngin, setActiveEngin] = React.useState("ST7");
   const [activeSection, setActiveSection] = React.useState("identite");
 
   // Interactive UI states
@@ -40,6 +43,18 @@ export function ReferentielTechnique() {
   const [hoveredTooltip, setHoveredTooltip] = React.useState<string | null>(null);
   const [selectedPoint, setSelectedPoint] = React.useState<GraissagePoint | null>(null);
   const [openAccordions, setOpenAccordions] = React.useState<Record<string, boolean>>({});
+
+  if (activeEngin === "ST7") {
+    return <ReferentielST7 onSelectEngin={setActiveEngin} />;
+  }
+
+  if (activeEngin === "T23") {
+    return <ReferentielT23 onSelectEngin={setActiveEngin} />;
+  }
+
+  if (activeEngin === "T28") {
+    return <ReferentielT28 onSelectEngin={setActiveEngin} />;
+  }
 
   const toggleAccordion = (id: string) => {
     setOpenAccordions(prev => ({ ...prev, [id]: !prev[id] }));
@@ -303,9 +318,19 @@ export function ReferentielTechnique() {
       <div className="w-full lg:absolute lg:top-0 lg:left-0 lg:right-0 bg-white border-b border-slate-100 p-4 shrink-0 flex items-center justify-between z-30">
         <div className="flex items-center gap-3">
           <button
+            onClick={() => setActiveEngin("ST7")}
+            className={cn(
+              "h-10 px-5 rounded-lg font-black text-xs uppercase tracking-wider transition-all cursor-pointer",
+              activeEngin === "ST7" ? "bg-amber-500 text-white shadow-xs" : "bg-white border border-slate-200 text-slate-500 hover:text-amber-600"
+            )}
+          >
+            Epiroc ST7
+          </button>
+          
+          <button
             onClick={() => setActiveEngin("ST2G")}
             className={cn(
-              "h-10 px-5 rounded-lg font-black text-xs uppercase tracking-wider transition-all",
+              "h-10 px-5 rounded-lg font-black text-xs uppercase tracking-wider transition-all cursor-pointer",
               activeEngin === "ST2G" ? "bg-amber-500 text-white shadow-xs" : "bg-white border border-slate-200 text-slate-500 hover:text-amber-600"
             )}
           >
@@ -321,14 +346,24 @@ export function ReferentielTechnique() {
           >
             Scooptram ST2D
           </button>
-          <button disabled className="h-10 px-5 rounded-lg font-black text-xs uppercase tracking-wider bg-slate-50 border border-slate-100 text-slate-350 cursor-not-allowed">
-            Montabert T23 (Bientôt)
+          <button
+            onClick={() => setActiveEngin("T23")}
+            className={cn(
+              "h-10 px-5 rounded-lg font-black text-xs uppercase tracking-wider transition-all cursor-pointer",
+              activeEngin === "T23" ? "bg-amber-500 text-white shadow-xs" : "bg-white border border-slate-200 text-slate-500 hover:text-amber-600"
+            )}
+          >
+            Montabert T23
           </button>
-        </div>
-        
-        <div className="hidden md:flex items-center gap-2 text-[10px] font-mono text-slate-400 font-bold uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          Régulateur centralisé de documentation
+          <button
+            onClick={() => setActiveEngin("T28")}
+            className={cn(
+              "h-10 px-5 rounded-lg font-black text-xs uppercase tracking-wider transition-all cursor-pointer",
+              activeEngin === "T28" ? "bg-amber-500 text-white shadow-xs" : "bg-white border border-slate-200 text-slate-500 hover:text-amber-600"
+            )}
+          >
+            Montabert T28
+          </button>
         </div>
       </div>
 
