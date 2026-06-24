@@ -1,11 +1,33 @@
 import * as React from "react";
+// @ts-ignore
+import hydrominesLogo from "@/assets/images/hydromines_logo.jpg";
 
 interface HydrominesLogoProps {
   className?: string;
   size?: number;
+  variant?: "icon" | "full";
 }
 
-export function HydrominesLogo({ className = "", size = 64 }: HydrominesLogoProps) {
+export function HydrominesLogo({ className = "", size = 64, variant = "icon" }: HydrominesLogoProps) {
+  if (variant === "full") {
+    return (
+      <div
+        className={`relative flex items-center justify-center select-none ${className}`}
+        style={{
+          width: `${size}px`,
+          height: `${size}px`,
+        }}
+      >
+        <img
+          src={hydrominesLogo}
+          alt="Hydromines Brand Logo"
+          className="w-full h-full object-contain"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+    );
+  }
+
   // Center of the arch: (50, 50)
   // Inner radius: 26, Outer radius: 40
   // Left pillar column goes from x=10 to x=24 (width 14)
@@ -113,7 +135,7 @@ export function HydrominesLogo({ className = "", size = 64 }: HydrominesLogoProp
         {/* Green landscape hill / ground flow within the inner space of the arch */}
         {/* Bounds of left-right column inner spaces is (24) to (76). We draw a gorgeous curved lawn */}
         <path
-          d="M 24.3 62 C 38 56.5, 62 55, 75.7 62 L 75.7 87.5 L 24.3 87.5 Z"
+          d="M 6 75 C 28 66, 72 66, 94 75 L 94 88 L 6 88 Z"
           fill="#65A134" // Vibrant corporate green
           className="transition-all duration-200"
         />

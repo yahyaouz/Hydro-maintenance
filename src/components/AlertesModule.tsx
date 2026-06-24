@@ -10,6 +10,7 @@ import {
   Clock
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,21 +40,15 @@ const alertesData: Alerte[] = [
 
 export function AlertesModule() {
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Bell className="h-8 w-8 text-hydro" /> Centre d'Alertes
-          </h2>
-          <p className="text-muted-foreground">Notifications et anomalies système</p>
-        </div>
-        <div className="flex gap-2">
-           <Button variant="outline" size="sm">Tout marquer comme lu</Button>
-           <Button variant="ghost" size="icon">
-              <Filter className="h-4 w-4" />
-           </Button>
-        </div>
-      </div>
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 animate-fade-in">
+      <PageBanner
+        icon={Bell}
+        badgeLabel="Sécurité de l'Exploitation"
+        title="Centre d'Alertes"
+        subtitle="Notifications en temps réel et anomalies système critiques"
+      >
+        <Button variant="outline" size="sm" className="cursor-pointer">Tout marquer comme lu</Button>
+      </PageBanner>
 
       <div className="space-y-2">
         {alertesData.map((a) => (

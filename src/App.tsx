@@ -18,6 +18,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
 import { LoginPage } from "@/components/auth/LoginPage";
+import { ReferentielTechnique } from "@/components/ReferentielTechnique";
 import { IndustrialBackdrop } from "@/components/IndustrialBackdrop";
 import { RestrictedActionModal } from "@/components/RestrictedActionModal";
 import { startViewerTrackingSession, trackViewerPageTransition } from "@/services/viewerTracking";
@@ -414,6 +415,7 @@ export default function App() {
               {activeTab === "inspection" && <InspectionModule />}
               {activeTab === "monde" && <MondeMaintenance />}
               {activeTab === "admin" && <AdminUserManagement />}
+              {activeTab === "referentiel" && <ReferentielTechnique />}
               
               {/* MECANICIENS MODULE VIEWS */}
               {activeTab === "mecaniciens" && <MecaniciensModule view="list" />}
@@ -421,7 +423,7 @@ export default function App() {
               {activeTab === "interventions" && <MecaniciensModule view="interventions" />}
               {activeTab === "saisies" && <MecaniciensModule view="saisies" />}
               
-              {!["dashboard", "engins", "pannes", "heures", "vision_ia", "maintenance", "alertes", "pneus", "carburant", "stock", "rapports", "mecaniciens", "ma_fiche", "interventions", "saisies", "declaration_panne", "import_gasoil", "inspection", "monde", "admin"].includes(activeTab) && (
+              {!["dashboard", "engins", "referentiel", "pannes", "heures", "vision_ia", "maintenance", "alertes", "pneus", "carburant", "stock", "rapports", "mecaniciens", "ma_fiche", "interventions", "saisies", "declaration_panne", "import_gasoil", "inspection", "monde", "admin"].includes(activeTab) && (
                 <div className="flex items-center justify-center h-full text-muted-foreground bg-white dark:bg-slate-900">
                   Module {activeTab} en cours d'implémentation...
                 </div>

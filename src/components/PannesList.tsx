@@ -12,6 +12,7 @@ import {
   Play
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -103,29 +104,29 @@ export function PannesList() {
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 bg-[#f8fafc] dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 min-h-screen select-none">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-black tracking-tight uppercase text-slate-950 dark:text-white flex items-center gap-2">
-            <AlertTriangle className="h-6 w-6 text-red-650" /> Gestion des Pannes Terrains
-          </h2>
-          <p className="text-slate-600 dark:text-slate-400 text-sm">Suivi temps réel des anomalies d'engins, diagnostics et statuts d'ateliers</p>
-        </div>
+      <PageBanner
+        icon={AlertTriangle}
+        badgeLabel="Sûreté Opérationnelle"
+        title="Suivi des Pannes"
+        subtitle="Suivi temps réel des pannes, diagnostics et interventions d'ateliers"
+        siteLabel={activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
+      >
         {canDeclarePanne ? (
           <Button 
-            className="bg-red-600 hover:bg-red-700 dark:bg-red-650 dark:hover:bg-red-700 text-white shadow-lg h-12 font-black uppercase tracking-wider no-double-tap-zoom px-5 rounded-xl block"
+            className="bg-amber-500 hover:bg-amber-600 text-white shadow-md font-bold h-11 uppercase px-4 rounded-xl cursor-pointer"
             onClick={() => setIsDeclareOpen(true)}
           >
-            <AlertTriangle className="mr-2 h-4.5 w-4.5 inline-block -mt-0.5" /> DÉCLARER UNE PANNE
+            <AlertTriangle className="mr-2 h-4 w-4 inline-block -mt-0.5" /> DÉCLARER UNE PANNE
           </Button>
         ) : (
           <div className="flex flex-col items-end gap-1">
-            <Button disabled className="bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed h-12 rounded-xl">
+            <Button disabled className="bg-slate-105 text-slate-400 cursor-not-allowed h-11 rounded-xl">
               <AlertTriangle className="mr-2 h-4 w-4" /> DÉCLARER UNE PANNE
             </Button>
-            <span className="text-[9px] text-slate-500 dark:text-slate-500 font-mono uppercase tracking-widest">Lecture seule</span>
+            <span className="text-[9px] text-[#9E1A1A] font-bold uppercase font-mono">Lecture seule</span>
           </div>
         )}
-      </div>
+      </PageBanner>
 
       {/* SEARCH AND FILTERS LAYER */}
       <div className="grid gap-4 md:grid-cols-4 bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">

@@ -107,6 +107,26 @@ service cloud.firestore {
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && isRole('CHEF_QUART');
     }
 
+    match /maintenances/{maintenanceId} {
+      allow read: if true;
+      allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
+        isRole('MECANICIEN') || isRole('CHEF_QUART') || isRole('ADMIN')
+      );
+    }
+
+    match /pneus/{pneuId} {
+      allow read: if true;
+      allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
+        isRole('MECANICIEN') || isRole('CHEF_QUART') || isRole('ADMIN')
+      );
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && isRole('ADMIN');
+    }
+
     match /demandesIntervention/{diId} {
       allow read: if true;
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');

@@ -51,6 +51,7 @@ import {
   Eye
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PageBanner } from "@/components/ui/PageBanner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -920,26 +921,17 @@ export function MondeMaintenance() {
       "flex-1 space-y-4 p-4 md:p-8 pt-6 min-h-screen transition-all duration-300",
       mobileRetroMode 
         ? "bg-black text-amber-500 font-mono select-none" 
-        : "bg-slate-900 text-slate-100 font-sans"
+        : "bg-white text-slate-900 font-sans"
     )}>
       
-      {/* 1. OFF-LINE & ENTERPRISE HEADER CONSOLE */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Cpu className="h-7 w-7 text-emerald-400 animate-pulse" />
-            <h2 className="text-2xl font-black tracking-tight uppercase italic text-white">
-              CATERPILLAR MINESTAR OPTIMINE CORES
-            </h2>
-          </div>
-          <p className="text-slate-400 text-xs font-mono">
-            Underground Real-Time Operational Intelligence Node v4.9 (African Mines Integrated Command)
-          </p>
-        </div>
-
-        {/* Dynamic Sync Mode and Roles Switcher */}
-        <div className="flex flex-wrap items-center gap-3">
-          
+      <PageBanner
+        icon={Database}
+        badgeLabel="Optimisation & Double Numérique"
+        title="Jumeau Numérique & JOR"
+        subtitle="Real-time operational intelligence, mechanical biography et analyses prédictives Weibull"
+        siteLabel={activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
+      >
+        <div className="flex flex-wrap items-center gap-2">
           {/* Mobile Souterrain high contrast trigger */}
           <Button 
             onClick={() => {
@@ -947,12 +939,7 @@ export function MondeMaintenance() {
               toast.info(mobileRetroMode ? "Interface d'atelier standard rétablie" : "Mode Souterrain Mobile Rétro Activé (Contraste Élevé)");
             }} 
             variant="outline" 
-            className={cn(
-              "text-xs font-mono font-bold h-9 border-2 px-3",
-              mobileRetroMode 
-                ? "bg-amber-500 text-slate-950 border-amber-400 hover:bg-amber-600 font-black animate-pulse" 
-                : "bg-slate-950 text-amber-500 border-slate-800 hover:bg-slate-900"
-            )}
+            className="text-xs font-bold h-9 px-3 cursor-pointer"
           >
             📱 {mobileRetroMode ? "SENSORS RETREIVE ON" : "MOBILE UX MODE"}
           </Button>
@@ -962,46 +949,35 @@ export function MondeMaintenance() {
             onClick={handleToggleOffline} 
             variant="outline" 
             className={cn(
-              "text-xs font-mono font-bold h-9 border-2 px-3",
-              offlineMode 
-                ? "bg-amber-600/20 text-amber-400 border-amber-500 hover:bg-amber-600/30 animate-pulse" 
-                : "bg-slate-950 text-emerald-400 border-emerald-600 hover:bg-slate-900"
+              "text-xs font-bold h-9 px-3 cursor-pointer",
+              offlineMode ? "bg-amber-100 text-amber-800 border-amber-300" : "text-emerald-600 border-emerald-300"
             )}
           >
-            {offlineMode ? (
-              <>
-                <WifiOff className="h-4 w-4 mr-1.5 text-amber-400" /> UNDERGROUND OFFLINE
-              </>
-            ) : (
-              <>
-                <Wifi className="h-4 w-4 mr-1.5 text-emerald-400" /> SURFACE WIRELESS ACTIVE
-              </>
-            )}
+            {offlineMode ? "📴 UNDERGROUND OFFLINE" : "📶 SURFACE WIRELESS"}
           </Button>
 
           {/* Role selector dropdown simulating Active User Auth context */}
-          <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1">
-            <UserCheck className="h-3.5 w-3.5 text-sky-400" />
-            <span className="text-[10px] font-mono text-slate-400 mr-1">RÔLE ACTIF:</span>
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+            <span className="text-[10px] font-mono text-slate-500 mr-1 font-bold">RÔLE ACTIF:</span>
             <select
-              className="bg-transparent border-none text-xs text-sky-400 font-bold focus:ring-0 outline-none cursor-pointer"
+              className="bg-transparent border-none text-xs text-amber-600 font-bold focus:ring-0 outline-none cursor-pointer"
               value={activeRole}
               onChange={(e) => {
                 setActiveRole(e.target.value as EnterpriseRole);
                 toast.success(`Badge Identitaire reconfiguré : Mode ${e.target.value}`);
               }}
             >
-              <option value="SUPERVISEUR">Superviseur Production 👑</option>
-              <option value="MECANICIEN">Mécanicien Souterrain 🔧</option>
-              <option value="FIABILITE">Ingénieur Fiabilité 📊</option>
-              <option value="MAGASIN">Magasinier (Pièces) 📦</option>
-              <option value="HSE">Directeur HSE 🛡️</option>
-              <option value="PLANIFICATEUR">Planificateur PM 📅</option>
-              <option value="DIRECTION">Directeur Général (COMEX) 💰</option>
+              <option value="SUPERVISEUR">Superviseur Production</option>
+              <option value="MECANICIEN">Mécanicien Souterrain</option>
+              <option value="FIABILITE">Ingénieur Fiabilité</option>
+              <option value="MAGASIN">Magasinier</option>
+              <option value="HSE">Directeur HSE</option>
+              <option value="PLANIFICATEUR">Planificateur PM</option>
+              <option value="DIRECTION">Directeur Général</option>
             </select>
           </div>
         </div>
-      </div>
+      </PageBanner>
 
       {/* 2. LIVE PRODUCTION LOSS & CRITICALITY DASHBOARD STRIP */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -24,6 +24,7 @@ import {
   Check
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -210,6 +211,7 @@ export function MecaniciensModule({ view = "list" }: { view?: "list" | "fiche" |
 
 function MecaniciensList({ filteredMecaniciens, onSelect }: { filteredMecaniciens: Mechanic[], onSelect: (m: Mechanic) => void }) {
   const [searchTerm, setSearchTerm] = React.useState("");
+  const { activeSite } = useAuthStore();
 
   const displayMecaniciens = filteredMecaniciens.filter(m => {
     const query = searchTerm.toLowerCase().trim();
@@ -224,15 +226,17 @@ function MecaniciensList({ filteredMecaniciens, onSelect }: { filteredMecanicien
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight uppercase italic text-slate-900">Performance Équipes</h2>
-          <p className="text-muted-foreground text-sm">Suivi des scores et activités des mécaniciens</p>
-        </div>
-        <Button className="bg-hydro">
+      <PageBanner
+        icon={Users}
+        badgeLabel="Ressources Humaines & Compétences"
+        title="Performance Équipes"
+        subtitle="Suivi opérationnel des scores de rapidité, qualité de service et activités des mécaniciens"
+        siteLabel={activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
+      >
+        <Button className="bg-amber-500 hover:bg-amber-600 text-white font-bold h-10 shadow-md cursor-pointer text-xs">
           <Plus className="mr-2 h-4 w-4" /> Ajouter Mécanicien
         </Button>
-      </div>
+      </PageBanner>
 
       <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-sm">

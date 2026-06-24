@@ -767,12 +767,8 @@ export function LoginPage() {
         <div className="form-inner">
 
           {/* Logo block with animate system */}
-          <div className="logo-block flex flex-col items-center justify-center text-center gap-3 w-full" style={{ marginBottom: "28px" }}>
-            <HydrominesLogo size={60} className="transform transition-transform hover:scale-105" />
-            <div className="logo-text text-center">
-              <div className="logo-name"><span className="h">HYDRO</span><span className="m">MINES</span></div>
-              <div className="logo-tagline" style={{ letterSpacing: "1.2px", fontSize: "0.56rem" }}>Mines &middot; Eau &middot; Environnement</div>
-            </div>
+          <div className="logo-block flex flex-col items-center justify-center text-center gap-1 w-full" style={{ marginBottom: "28px" }}>
+            <HydrominesLogo size={130} variant="full" className="transform transition-transform hover:scale-105" />
           </div>
 
           {showViewerPending ? (

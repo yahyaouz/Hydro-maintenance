@@ -15,6 +15,7 @@ import {
   Activity
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -64,42 +65,32 @@ export function StockPieces() {
   const outOfStock = filteredPieces.filter(p => p.stock <= 0).length;
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 bg-[#f8fafc] dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 min-h-screen select-none">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-black tracking-tight uppercase text-slate-950 dark:text-white flex items-center gap-2">
-            <Package className="h-6 w-6 text-blue-600 dark:text-[#4A90D9]" /> PIÈCES ET STOCK RECHARGE
-          </h2>
-          <p className="text-slate-600 dark:text-slate-400 text-sm">Contrôle de l'inventaire en temps réel et approvisionnements</p>
+    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
+      <PageBanner
+        icon={Package}
+        badgeLabel="Inventaire & Approvisionnement"
+        title="Pièces & Stock"
+        subtitle="Contrôle de l'inventaire de rechange en temps réel et planification des flux de recharges"
+        siteLabel={activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
+      >
+        <div className="flex gap-2">
+          <Button variant="outline" className="h-10 border-slate-200 font-bold text-xs cursor-pointer">
+            <History className="mr-2 h-4 w-4" /> HISTORIQUE
+          </Button>
+          <Button 
+            className="bg-amber-500 hover:bg-amber-600 text-white font-bold h-10 shadow-md cursor-pointer text-xs"
+            onClick={() => {
+              if (!canManageStock) {
+                toast.error("Accès réservé Maintenance / Admin");
+                return;
+              }
+              toast.success("Entrée de stock initialisée avec succès.");
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" /> ENTRÉE STOCK
+          </Button>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <div className="flex gap-3">
-            <Button variant="outline" className="h-12 border-slate-200 dark:border-slate-800 dark:bg-[#131b2e] dark:hover:bg-slate-800 hover:bg-slate-100 font-bold text-xs uppercase tracking-widest no-double-tap-zoom px-5">
-              <History className="mr-2 h-4 w-4" /> HISTORIQUE
-            </Button>
-            <Button 
-              className={cn(
-                "font-bold h-12 uppercase tracking-widest transition-all no-double-tap-zoom px-5",
-                canManageStock 
-                  ? "bg-blue-600 dark:bg-[#4A90D9] text-white dark:text-slate-900 shadow-lg hover:bg-blue-700 dark:hover:bg-[#3572b2]" 
-                  : "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed"
-              )}
-              onClick={() => {
-                if (!canManageStock) {
-                  toast.error("Accès réservé Maintenance / Admin");
-                  return;
-                }
-                toast.success("Entrée de stock initialisée avec succès.");
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" /> ENTRÉE STOCK
-            </Button>
-          </div>
-          {!canManageStock && (
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Accès réservé Maintenance / Admin</span>
-          )}
-        </div>
-      </div>
+      </PageBanner>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-white dark:bg-[#131b2e] border-slate-200 dark:border-slate-800 shadow-sm border-l-4 border-l-blue-500 hover:shadow-md transition-all">

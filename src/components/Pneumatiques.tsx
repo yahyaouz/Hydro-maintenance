@@ -16,6 +16,7 @@ import {
   Filter
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -58,18 +59,20 @@ export function Pneumatiques() {
   const canEdit = user?.role === "ADMIN" || user?.role === "RESPONSABLE_MAINTENANCE" || user?.role === "MECANICIEN";
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 bg-slate-50/30">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight uppercase italic text-slate-900">Gestion Pneumatiques</h2>
-          <p className="text-muted-foreground text-sm">Suivi thermique, pressions et calcul TKPH</p>
-        </div>
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <PageBanner
+        icon={Disc}
+        badgeLabel="Sécurité Matériel & Trains"
+        title="Gestion Pneumatiques"
+        subtitle="Suivi thermique, pressions atmosphériques sous-sol et calcul TKPH"
+        siteLabel={activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
+      >
         {canEdit && (
-          <Button className="bg-hydro shadow-lg shadow-hydro/20 font-bold h-10">
+          <Button className="bg-amber-500 hover:bg-amber-600 text-white font-bold h-10 shadow-md cursor-pointer">
             <Plus className="mr-2 h-4 w-4" /> ENREGISTRER UN PNEU
           </Button>
         )}
-      </div>
+      </PageBanner>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-slate-200 shadow-sm overflow-hidden">

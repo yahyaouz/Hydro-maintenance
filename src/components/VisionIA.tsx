@@ -35,6 +35,7 @@ import {
   Hammer
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -743,49 +744,33 @@ export function VisionIA() {
   }, [currentMachines, catastrophicMachines, falseAvailabilityList, disciplineScores, currentBTs]);
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 bg-[#f8fafc] dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 min-h-screen select-none font-sans">
-      
-      {/* HEADER SECTION WITH MODERN COCKPIT ACTIONS */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 bg-blue-500/10 dark:p-2.5 dark:bg-blue-500/10 border border-blue-500/20 rounded-xl">
-              <BrainCircuit className="h-6 w-6 text-[#1D4ED8] dark:text-[#4A90D9] animate-pulse" />
-            </div>
-            <div>
-              <h2 className="text-xl font-black tracking-tight text-slate-950 dark:text-white flex items-center gap-2 uppercase">
-                SUPERVISION COGNITIVE ET FIABILITÉ FLOTTE SOUTERRAINE
-              </h2>
-              <p className="text-slate-600 dark:text-slate-400 text-xs flex items-center gap-1.5 mt-0.5 font-mono">
-                <span className="flex h-2 w-2 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                Algorithmes prédictifs SOU-GMAO Pro • {activeSite === 'TOUS' ? 'Vision Flotte Continentale' : `Chantiers actifs ${activeSite}`}
-              </p>
-            </div>
-          </div>
-        </div>
-        
+    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 bg-[#f8fafc] text-slate-900 min-h-screen select-none font-sans">
+      <PageBanner
+        icon={BrainCircuit}
+        badgeLabel="Supervision IA & Fiabilité"
+        title="Vision IA Souterraine"
+        subtitle="Algorithmes décisionnels et analyses cognitives prédictives de la flotte de production"
+        siteLabel={activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
+      >
         <div className="flex flex-wrap items-center gap-2">
           {lastScanTime && (
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-1 pr-2">
+            <span className="text-[10px] text-slate-500 font-mono">
               Dernier scan : {lastScanTime}
             </span>
           )}
           <Button 
             onClick={handleCognitiveScan}
             disabled={isScanning}
-            className="bg-[#1D4ED8] dark:bg-[#4A90D9] hover:bg-blue-700 dark:hover:bg-[#3572b2] text-white dark:text-slate-900 font-bold shadow-lg h-12 px-5 text-xs font-black uppercase tracking-wider rounded-xl border-none transition-all"
+            className="bg-amber-500 hover:bg-amber-600 text-white font-bold h-10 px-4 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer"
           >
             {isScanning ? (
-              <><RotateCw className="mr-2 h-4 w-4 animate-spin" /> Recalcul matriciel...</>
+              <><RotateCw className="mr-2 h-4 w-4 animate-spin" /> Recalcul...</>
             ) : (
-              <><Zap className="mr-1.5 h-4 w-4 fill-current text-amber-300" /> RAFFINER LES LOGS SOU-GMAO</>
+              <><Zap className="mr-1 h-4 w-4 fill-current text-[#ffd700]" /> RAFFINER LES LOGS</>
             )}
           </Button>
         </div>
-      </div>
+      </PageBanner>
 
       {/* SCANNING CORRELATION PROGRESS */}
       {isScanning && (

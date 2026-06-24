@@ -37,6 +37,7 @@ import {
   Compass
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -405,39 +406,30 @@ export function Rapports() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in font-sans pb-16">
-      
-      {/* COCKPIT BANNER HEADER (Silent and elegant) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono tracking-widest text-[#4A90D9] uppercase font-bold">MINING INTEGRITY SUITE</span>
-            <Badge className="bg-emerald-950 text-emerald-400 border-none rounded text-[9px] font-bold">EDITION PRO SOU-GMAO</Badge>
-          </div>
-          <h2 className="text-xl font-black text-slate-100 uppercase tracking-tight font-sans">
-            CENTRE DE GOUVERNANCE SOU-GMAO PRO
-          </h2>
-          <p className="text-xs text-slate-400 font-sans uppercase">
-            Traçabilité réglementaire, mechanical biography, et analyses décisionnelles exécutives.
-          </p>
-        </div>
-        
+    <div className="space-y-6 animate-fade-in font-sans pb-16 text-slate-900">
+      <PageBanner
+        icon={BarChart3}
+        badgeLabel="Centre de Gouvernance"
+        title="Rapports & Décisionnel"
+        subtitle="Traçabilité réglementaire, mechanical biography, audits de performance et analyses décisionnelles"
+        siteLabel={activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
+      >
         <div className="flex gap-2">
           <Button 
             variant="outline"
             onClick={handlePrintCommand}
-            className="border-slate-850 hover:border-slate-750 text-slate-300 bg-[#0c121e] hover:bg-slate-900 h-10 px-4 text-xs font-bold uppercase tracking-wider rounded-xl transition-all"
+            className="h-10 px-4 text-xs font-bold uppercase tracking-wider hover:bg-slate-50 cursor-pointer"
           >
-            <Printer className="mr-1.5 h-4 w-4" /> IMPRIMER BILAN EXÉCUTIF
+            <Printer className="mr-1.5 h-4 w-4" /> IMPRIMER
           </Button>
           <Button 
             onClick={handleExportCSV}
-            className="bg-[#4A90D9] hover:bg-[#3d7fca] text-slate-950 font-extrabold shadow-lg h-10 px-4 text-xs font-black uppercase tracking-wider rounded-xl transition-all border-none hover:scale-[1.01]"
+            className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold shadow-md h-10 px-4 text-xs uppercase tracking-wider cursor-pointer"
           >
-            <FileSpreadsheet className="mr-1.5 h-4 w-4 text-slate-950" /> AUDIT EXCEL (CSV)
+            <FileSpreadsheet className="mr-1.5 h-4 w-4" /> AUDIT (CSV)
           </Button>
         </div>
-      </div>
+      </PageBanner>
 
       {/* COGNITIVE HIGH-FI MULTI-PANEL NAVIGATION */}
       <div className="flex flex-wrap gap-1 bg-[#0b0f19] p-1.5 rounded-xl border border-slate-800 shadow-sm grow-0">

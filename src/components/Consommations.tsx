@@ -17,6 +17,7 @@ import {
   Cylinder
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -58,21 +59,23 @@ export function Consommations() {
   const totalConsumption = filteredFuelData.reduce((acc, curr) => acc + curr.consumption, 0);
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 bg-slate-50/30">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight uppercase italic text-slate-900">Carburant & Huiles</h2>
-          <p className="text-muted-foreground text-sm">Gestion des fluides et efficacité énergétique</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" className="h-10 border-slate-200 font-bold text-xs">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <PageBanner
+        icon={Fuel}
+        badgeLabel="Efficacité Énergétique & Fluides"
+        title="Carburant & Huiles"
+        subtitle="Gestion analytique des fluides de production, stocks volants et ravitaillement"
+        siteLabel={activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
+      >
+        <div className="flex gap-2">
+          <Button variant="outline" className="h-10 border-slate-200 font-bold text-xs cursor-pointer">
             <Download className="mr-2 h-4 w-4" /> EXPORT CSV
           </Button>
-          <Button className="bg-hydro shadow-lg shadow-hydro/20 font-bold h-10">
+          <Button className="bg-amber-500 hover:bg-amber-600 text-white font-bold h-10 shadow-md cursor-pointer">
             <Plus className="mr-2 h-4 w-4" /> SAISIE GAZOLINE
           </Button>
         </div>
-      </div>
+      </PageBanner>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-slate-200 shadow-sm">

@@ -14,6 +14,7 @@ import {
   Info
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -87,19 +88,13 @@ export function HeuresTravail() {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight uppercase italic text-slate-900">Heures de Travail</h2>
-          <p className="text-muted-foreground text-sm">
-            {isSecretary ? "Saisie journalière et suivi des postes" : "Consultation et validation des heures"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-           <Badge variant="outline" className="bg-hydro/5 text-hydro border-hydro/20">
-              SITE: {activeSite === "TOUS" ? "TOUS LES SITES" : activeSite}
-           </Badge>
-        </div>
-      </div>
+      <PageBanner
+        icon={Clock}
+        badgeLabel="Temps & Fonctionnement"
+        title="Heures de Travail"
+        subtitle={isSecretary ? "Saisie journalière et suivi des postes" : "Consultation et validation des heures d'engins"}
+        siteLabel={activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
+      />
 
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="lg:col-span-7 space-y-6">

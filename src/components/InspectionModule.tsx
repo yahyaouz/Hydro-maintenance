@@ -25,6 +25,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -322,40 +323,36 @@ export function InspectionModule() {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      {/* Upper header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-200">
-        <div>
-          <h2 className="text-3xl font-black tracking-tight uppercase italic text-slate-900 flex items-center gap-3">
-            <ShieldAlert className="h-8 w-8 text-red-600" /> Mode Inspection Pro
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            Fiches de contrôle digitales Prise de Poste (HSE, Freins, Ansul, HP Hydraulique)
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageBanner
+        icon={ShieldAlert}
+        badgeLabel="Contrôle Réglementaire & Sécurité"
+        title="Mode Inspection Pro"
+        subtitle="Fiches digitales de prise de poste obligatoires (HSE, Freins, Ansul, HP Hydraulique)"
+        siteLabel={activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
+      >
+        <div className="flex items-center gap-1.5 flex-wrap">
           <Button 
-            variant={activeSubTab === "dashboard" ? "secondary" : "ghost"}
+            variant={activeSubTab === "dashboard" ? "secondary" : "outline"}
             onClick={() => setActiveSubTab("dashboard")}
-            className="text-xs font-bold uppercase tracking-wider h-11"
+            className="text-xs font-bold uppercase tracking-wider h-10 cursor-pointer"
           >
             <Gauge className="mr-1.5 h-4 w-4" /> Cockpit HSE
           </Button>
           <Button 
-            variant={activeSubTab === "new" ? "secondary" : "ghost"}
-            onClick={() => setActiveSubTab("new")}
-            className="text-xs font-bold uppercase tracking-wider h-11 bg-red-600 text-white hover:bg-red-700"
-          >
-            <Plus className="mr-1.5 h-4 w-4" /> Nouvelle Fiche
-          </Button>
-          <Button 
-            variant={activeSubTab === "reg" ? "secondary" : "ghost"}
+            variant={activeSubTab === "reg" ? "secondary" : "outline"}
             onClick={() => setActiveSubTab("reg")}
-            className="text-xs font-bold uppercase tracking-wider h-11"
+            className="text-xs font-bold uppercase tracking-wider h-10 cursor-pointer"
           >
             <FileSpreadsheet className="mr-1.5 h-4 w-4" /> Defect Book ({filteredAnomalies.length})
           </Button>
+          <Button 
+            onClick={() => setActiveSubTab("new")}
+            className="text-xs font-bold uppercase tracking-wider h-10 bg-amber-500 hover:bg-amber-600 text-white shadow-sm cursor-pointer whitespace-nowrap"
+          >
+            <Plus className="mr-1.5 h-4 w-4" /> Nouvelle Fiche
+          </Button>
         </div>
-      </div>
+      </PageBanner>
 
       {/* SUB TAB: DASHBOARD */}
       {activeSubTab === "dashboard" && (

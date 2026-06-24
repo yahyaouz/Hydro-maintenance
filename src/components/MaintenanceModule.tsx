@@ -23,6 +23,7 @@ import {
   Gauge
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -401,25 +402,13 @@ export function MaintenanceModule() {
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 bg-white text-slate-900 min-h-screen select-none font-sans">
-      
-      {/* HEADER COCKPIT */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-100 pb-5">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-              <CalendarDays className="h-6 w-6 text-emerald-500 animate-pulse" />
-            </div>
-            <div>
-              <h2 className="text-xl font-black tracking-tight text-slate-900 flex items-center gap-2 uppercase">
-                DISCIPLINE ET RIGUEUR PRÉVENTIVE SOU-GMAO
-              </h2>
-              <p className="text-slate-500 text-xs flex items-center gap-1.5 mt-0.5 font-mono">
-                Cible de performance : <span className="text-emerald-600 font-bold">70% de préventif dirigé</span> • Site : {activeSite === 'TOUS' ? 'Tous les ateliers' : `Atelier ${activeSite}`}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageBanner
+        icon={Wrench}
+        badgeLabel="Planification & Performance"
+        title="Maintenance Préventive"
+        subtitle="Discipline, rigueur préventive SOU-GMAO et suivi des échéances d'entretien"
+        siteLabel={activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
+      />
 
       {/* CORE KPI SUMMARY GRID */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -29,6 +29,7 @@ import {
   Eye
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/lib/store";
@@ -163,27 +164,18 @@ export function AdminUserManagement() {
   });
 
   return (
-    <div className="p-6 space-y-6 bg-[#0c1220] min-h-screen text-slate-100 font-sans">
-      
-      {/* Title block */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-[#4FC3F7]" />
-            <h2 className="text-xl font-black uppercase tracking-wider text-white">
-              Gestionnaire d'Habilitations SOU-GMAO
-            </h2>
-          </div>
-          <p className="text-xs text-slate-400">
-            Console d'administration de la sécurité pour les sites d'extraction et les ateliers d'Hydromines.
-          </p>
+    <div className="p-6 space-y-6 bg-white min-h-screen text-slate-900 font-sans">
+      <PageBanner
+        icon={Shield}
+        badgeLabel="Habilitations & Sécurité"
+        title="Contrôle des Accès"
+        subtitle="Habilitation des accès pour les équipes de production, de maintenance et d'administration"
+      >
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl text-xs font-mono">
+          <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+          <span className="text-amber-600 font-bold uppercase">Supervision Live : {users.length} Comptes</span>
         </div>
-
-        <div className="flex items-center gap-2 bg-[#090e18] border border-slate-800 px-3.5 py-1.5 rounded-xl text-xs font-mono">
-          <span className="h-2 w-2 rounded-full bg-[#4FC3F7] animate-pulse" />
-          <span className="text-[#4FC3F7] font-bold uppercase">Supervision Live : {users.length} Comptes</span>
-        </div>
-      </div>
+      </PageBanner>
 
       {/* Navigation sub-tabs inside Administration - Visible Only to Admin */}
       {user?.role === "ADMIN" && (

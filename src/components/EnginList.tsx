@@ -2,18 +2,22 @@ import * as React from "react";
 import { 
   Search, 
   Plus, 
-  MoreHorizontal, 
-  Filter, 
-  ArrowUpDown, 
-  Truck as TruckIcon,
   ChevronRight,
   History,
   Activity,
-  Droplet,
-  Disc,
-  FileText,
   Cpu,
-  X
+  X,
+  Truck,
+  Car,
+  Hammer,
+  RotateCw,
+  Wrench,
+  AlertTriangle,
+  Info,
+  Disc,
+  ClipboardList,
+  Pencil,
+  Trash2
 } from "lucide-react";
 import { 
   Card, 
@@ -26,19 +30,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuthStore } from "@/lib/store";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
+import { useCollection } from "@/hooks/useCollection";
+import { PageBanner } from "@/components/ui/PageBanner";
+import { CarnetSante } from "@/components/CarnetSante";
+
+// Specs mappings for the three categories
+export const ENGIN_SPECS: Record<string, { godet: string; reservoir: string; transmission: string; hauteur: string }> = {
+  ST2G: { godet: "3,0 t", reservoir: "130 L", transmission: "Hydrostatique", hauteur: "1,85 m" },
+  ST2D: { godet: "3,6 t", reservoir: "145 L", transmission: "Hydrostatique", hauteur: "1,90 m" },
+  ST7:  { godet: "7,0 t", reservoir: "280 L", transmission: "Hydrostatique", hauteur: "2,20 m" },
+};
+
+export const PERF_SPECS: Record<string, { pression: string; debitFreq: string; poids: string; usage: string }> = {
+  "MONTABERT T23": { pression: "160 bar", debitFreq: "23 L/min", poids: "23 kg", usage: "Boulonnage et perçage galeries" },
+  "EPIROC COP 1638": { pression: "200 bar", debitFreq: "60 Hz", poids: "28 kg", usage: "Perçage souterrain" },
+  "EPIROC COP 1838": { pression: "220 bar", debitFreq: "55 Hz", poids: "34 kg", usage: "Perçage longues couronnes" },
+};
+
+export const VEHI_SPECS: Record<string, { type: string; usage: string; carburant: string; traction: string }> = {
+  HILUX: { type: "Toyota Hilux", usage: "Liaison + Transport Équipe", carburant: "Gasoil", traction: "4x4" },
+  DUSTER: { type: "Dacia Duster", usage: "Supervision Terrain", carburant: "Gasoil", traction: "4x4" },
+  MASTER: { type: "Renault Master (minibus)", usage: "Transport Équipe", carburant: "Gasoil", traction: "2x4 / Traction" },
+};
+
+const SITES = ["SMI", "OUMEJRANE", "KOUDIA", "OUANSIMI", "BOU-AZZER"];
 
 interface Engin {
   id: string;
@@ -52,361 +71,985 @@ interface Engin {
   dispo: number;
 }
 
-const engins: Engin[] = [
-  { id: "1", matricule: "M-045", type: "ST2G", marque: "Sandvik", modele: "T-800", site: "Site Nord", statut: "actif", heures: 4520, dispo: 92 },
-  { id: "2", matricule: "S-012", type: "ST7", marque: "Epiroc", modele: "MT", site: "Site Sud", statut: "maintenance", heures: 1200, dispo: 0 },
-  { id: "3", matricule: "D-004", type: "Dacia Duster", marque: "Renault", modele: "4x4", site: "Siège", statut: "actif", heures: 32000, dispo: 98 },
-  { id: "4", matricule: "H-001", type: "Hilux", marque: "Toyota", modele: "Vigo", site: "Site Nord", statut: "panne", heures: 85000, dispo: 0 },
-  { id: "5", matricule: "P-002", type: "ST2D", marque: "Sandvik", modele: "X-200", site: "Site Ouest", statut: "actif", heures: 2100, dispo: 85 },
-];
+interface EnginListProps {
+  onOpenCarnet?: (engin: any) => void;
+}
 
-import { useCollection } from "@/hooks/useCollection";
-
-export function EnginList() {
-  const [selectedEngin, setSelectedEngin] = React.useState<any | null>(null);
+export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
   const { user, activeSite } = useAuthStore();
   const canAddEngin = ["ADMIN", "SECRETAIRE", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER"].includes(user?.role || "");
-  
-  const { data: engins, loading } = useCollection<any>('engins');
 
-  // Search & Modal States
+  // Load equipements from Firestore
+  const { data: allEquipements, loading } = useCollection<any>("engins");
+
+  // State
+  const [activeTab, setActiveTab] = React.useState<"LHD" | "VL" | "PERFORATEUR" | "CARNET">("LHD");
+  const [carnetEnginId, setCarnetEnginId] = React.useState<string | null>(null);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isSubmitLoading, setIsSubmitLoading] = React.useState(false);
 
-  // Form States
+  // Form states inside modal
+  const [category, setCategory] = React.useState<"LHD" | "VL" | "PERFORATEUR">("LHD");
   const [newMatricule, setNewMatricule] = React.useState("");
-  const [newType, setNewType] = React.useState("ST2G");
-  const [newMarque, setNewMarque] = React.useState("");
-  const [newModele, setNewModele] = React.useState("");
-  const [newSite, setNewSite] = React.useState<string>(activeSite === "TOUS" ? "SMI" : activeSite);
-  const [newHeures, setNewHeures] = React.useState<number>(0);
-  const [newStatut, setNewStatut] = React.useState<"actif" | "maintenance" | "panne" | "hors service" | "arrêté">("actif");
+  const [newSite, setNewSite] = React.useState("SMI");
+  const [newStatut, setNewStatut] = React.useState<"actif" | "maintenance" | "panne" | "hors service">("actif");
 
-  const filteredEngins = React.useMemo(() => {
-    return engins.filter(e => {
-      const siteMatch = activeSite === "TOUS" || e.site.toUpperCase().includes(activeSite.toUpperCase());
-      const query = searchTerm.toLowerCase().trim();
-      if (!query) return siteMatch;
+  // Sub-category LHD
+  const [lhdType, setLhdType] = React.useState<"ST2G" | "ST2D" | "ST7">("ST2G");
+  const [lhdHeures, setLhdHeures] = React.useState<number>(0);
 
-      const matriculeMatch = (e.matricule || "").toLowerCase().includes(query);
-      const typeMatch = (e.type || "").toLowerCase().includes(query);
-      const marqueMatch = (e.marque || "").toLowerCase().includes(query);
-      const modeleMatch = (e.modele || "").toLowerCase().includes(query);
+  // Sub-category VL
+  const [vlType, setVlType] = React.useState<"Hilux" | "Duster" | "Master">("Hilux");
+  const [vlKm, setVlKm] = React.useState<number>(0);
 
-      return siteMatch && (matriculeMatch || typeMatch || marqueMatch || modeleMatch);
-    });
-  }, [engins, activeSite, searchTerm]);
+  // Sub-category Perforateur
+  const [perfModel, setPerfModel] = React.useState<"MONTABERT T23" | "EPIROC COP 1638" | "EPIROC COP 1838">("MONTABERT T23");
+  const [perfAssocie, setPerfAssocie] = React.useState("");
 
-  const handleAddEngin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Edit states for ADMIN role
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [editingEquip, setEditingEquip] = React.useState<any | null>(null);
+  const [editMatricule, setEditMatricule] = React.useState("");
+  const [editSite, setEditSite] = React.useState("SMI");
+  const [editStatut, setEditStatut] = React.useState<"actif" | "maintenance" | "panne" | "hors service">("actif");
+  const [editType, setEditType] = React.useState("");
+  const [editHeures, setEditHeures] = React.useState<number>(0);
+  const [editAssocie, setEditAssocie] = React.useState("");
 
-    if (!newMatricule.trim()) {
-      toast.error("Le matricule est obligatoire.");
-      return;
+  // Delete states for ADMIN role
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<any | null>(null);
+
+  const handleStartEdit = (equip: any) => {
+    setEditingEquip(equip);
+    setEditMatricule(equip.matricule || "");
+    setEditSite(equip.site || equip.siteId || "SMI");
+    setEditStatut(equip.statut || "actif");
+    setEditType(equip.type || "");
+    setEditHeures(equip.heures || equip.km || 0);
+    setEditAssocie(equip.associe || "");
+    setIsEditModalOpen(true);
+  };
+
+  const handleStartDelete = (equip: any) => {
+    setDeleteTarget(equip);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const docRef = doc(db, "engins", deleteTarget.id);
+      await deleteDoc(docRef);
+      toast.success(`Équipement ${deleteTarget.matricule} supprimé définitivement !`);
+      setIsDeleteModalOpen(false);
+      setDeleteTarget(null);
+    } catch (err) {
+      console.error("Error deleting equipment:", err);
+      toast.error("Erreur lors de la suppression de l'équipement.");
     }
-    if (!newMarque.trim()) {
-      toast.error("La marque est obligatoire.");
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEquip) return;
+    if (!editMatricule.trim()) {
+      toast.error("Le code/matricule est obligatoire.");
       return;
     }
 
     setIsSubmitLoading(true);
 
     try {
-      const initialDispo = newStatut === "actif" ? 100 : 0;
-      await addDoc(collection(db, "engins"), {
-        matricule: newMatricule.toUpperCase().trim(),
-        type: newType,
-        marque: newMarque.trim(),
-        modele: newModele.trim() || "N/A",
-        site: newSite,
-        heures: Number(newHeures) || 0,
-        statut: newStatut,
-        dispo: initialDispo
-      });
-
-      toast.success(`L'engin ${newMatricule.toUpperCase()} a été ajouté au parc de véhicules avec succès !`);
+      const docRef = doc(db, "engins", editingEquip.id);
       
-      // Reset fields
-      setNewMatricule("");
-      setNewMarque("");
-      setNewModele("");
-      setNewHeures(0);
-      setNewStatut("actif");
-      setIsAddModalOpen(false);
+      let updatedData: any = {
+        matricule: editMatricule.toUpperCase().trim(),
+        site: editSite,
+        siteId: editSite,
+        statut: editStatut,
+        dispo: editStatut === "actif" ? 100 : 0,
+        type: editType,
+        updatedAt: new Date().toISOString()
+      };
+
+      if (editingEquip.categorie === "LHD") {
+        const specs = ENGIN_SPECS[editType] || ENGIN_SPECS.ST2G;
+        updatedData.heures = Number(editHeures) || 0;
+        updatedData.specs = {
+          godet: specs.godet,
+          reservoir: specs.reservoir,
+          transmission: specs.transmission,
+          hauteur: specs.hauteur
+        };
+      } else if (editingEquip.categorie === "VL") {
+        let brand = "Toyota";
+        if (editType === "Duster") brand = "Dacia";
+        if (editType === "Master") brand = "Renault";
+        const specs = VEHI_SPECS[editType.toUpperCase()] || VEHI_SPECS.HILUX;
+
+        updatedData.marque = brand;
+        updatedData.heures = Number(editHeures) || 0;
+        updatedData.km = Number(editHeures) || 0;
+        updatedData.specs = {
+          usage: specs.usage,
+          carburant: specs.carburant,
+          traction: specs.traction
+        };
+      } else if (editingEquip.categorie === "PERFORATEUR") {
+        let brand = "EPIROC";
+        if (editType.includes("MONTABERT")) brand = "MONTABERT";
+        const specs = PERF_SPECS[editType] || PERF_SPECS["MONTABERT T23"];
+
+        updatedData.marque = brand;
+        updatedData.serie = editMatricule.toUpperCase().trim();
+        updatedData.associe = editAssocie.trim() ? editAssocie.toUpperCase().trim() : "";
+        updatedData.specs = {
+          pression: specs.pression,
+          debitFreq: specs.debitFreq,
+          poids: specs.poids,
+          usage: specs.usage
+        };
+      }
+
+      await updateDoc(docRef, updatedData);
+      toast.success(`Équipement ${editMatricule.toUpperCase()} mis à jour avec succès !`);
+      setIsEditModalOpen(false);
+      setEditingEquip(null);
     } catch (err: any) {
-      console.error("Error adding engin: ", err);
-      toast.error("Erreur lors de l'enregistrement de l'engin.");
+      console.error("Error saving edits:", err);
+      toast.error("Erreur lors de la mise à jour de l'équipement.");
     } finally {
       setIsSubmitLoading(false);
     }
   };
 
-  const getStatutBadge = (statut: string) => {
-    switch (statut) {
-      case "actif": return <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[10px] font-bold px-2 py-0">Actif</Badge>;
-      case "maintenance": return <Badge className="bg-amber-50 text-amber-600 border-amber-100 text-[10px] font-bold px-2 py-0">Maintenance</Badge>;
-      case "panne": return <Badge variant="destructive" className="text-[10px] font-bold px-2 py-0">Panne</Badge>;
-      case "hors service": return <Badge variant="secondary" className="text-[10px] font-bold px-2 py-0">Hors Service</Badge>;
-      default: return <Badge variant="outline" className="text-[10px] font-bold px-2 py-0">Arrêté</Badge>;
+  // Sync modal site with active global site if activeSite is not TOUS
+  React.useEffect(() => {
+    if (activeSite && activeSite !== "TOUS") {
+      setNewSite(activeSite);
+    } else {
+      setNewSite("SMI");
+    }
+  }, [activeSite]);
+
+  // Handle modal submit
+  const handleAddEquipment = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!newMatricule.trim()) {
+      toast.error("Le code/matricule est obligatoire.");
+      return;
+    }
+
+    setIsSubmitLoading(true);
+
+    try {
+      let docData: any = {
+        matricule: newMatricule.toUpperCase().trim(),
+        site: newSite,
+        siteId: newSite,
+        statut: newStatut,
+        dispo: newStatut === "actif" ? 100 : 0,
+        categorie: category,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        deleted: false
+      };
+
+      if (category === "LHD") {
+        const specs = ENGIN_SPECS[lhdType];
+        docData.type = lhdType;
+        docData.marque = "EPIROC";
+        docData.heures = Number(lhdHeures) || 0;
+        docData.specs = {
+          godet: specs.godet,
+          reservoir: specs.reservoir,
+          transmission: specs.transmission,
+          hauteur: specs.hauteur
+        };
+      } else if (category === "VL") {
+        let brand = "Toyota";
+        if (vlType === "Duster") brand = "Dacia";
+        if (vlType === "Master") brand = "Renault";
+        const specs = VEHI_SPECS[vlType.toUpperCase()] || VEHI_SPECS.HILUX;
+
+        docData.type = vlType;
+        docData.marque = brand;
+        docData.heures = Number(vlKm) || 0;
+        docData.km = Number(vlKm) || 0;
+        docData.specs = {
+          usage: specs.usage,
+          carburant: specs.carburant,
+          traction: specs.traction
+        };
+      } else if (category === "PERFORATEUR") {
+        let brand = "EPIROC";
+        if (perfModel.includes("MONTABERT")) brand = "MONTABERT";
+        const specs = PERF_SPECS[perfModel] || PERF_SPECS["MONTABERT T23"];
+
+        docData.type = perfModel;
+        docData.marque = brand;
+        docData.serie = newMatricule.toUpperCase().trim();
+        docData.associe = perfAssocie.trim() ? perfAssocie.toUpperCase().trim() : "";
+        docData.specs = {
+          pression: specs.pression,
+          debitFreq: specs.debitFreq,
+          poids: specs.poids,
+          usage: specs.usage
+        };
+      }
+
+      await addDoc(collection(db, "engins"), docData);
+      toast.success(`Équipement ${newMatricule.toUpperCase()} ajouté avec succès !`);
+
+      // Reset
+      setNewMatricule("");
+      setLhdHeures(0);
+      setVlKm(0);
+      setPerfAssocie("");
+      setNewStatut("actif");
+      setIsAddModalOpen(false);
+    } catch (err: any) {
+      console.error("Error adding equipment:", err);
+      toast.error("Erreur lors de l'enregistrement de l'équipement.");
+    } finally {
+      setIsSubmitLoading(false);
     }
   };
 
-  if (selectedEngin) {
-    return <EnginDetail engin={selectedEngin} onBack={() => setSelectedEngin(null)} />;
-  }
+  // Declare extreme failure (panne)
+  const handleDeclarePanne = async (id: string, matricule: string) => {
+    try {
+      const docRef = doc(db, "engins", id);
+      await updateDoc(docRef, { statut: "panne", dispo: 0 });
+      toast.success(`Panne déclarée avec succès pour l'équipement ${matricule}.`);
+    } catch (err) {
+      console.error("Error declaring panne:", err);
+      toast.error("Erreur lors de la déclaration de la panne.");
+    }
+  };
+
+  // Helper utility for statuses styling
+  const getRefinedStatusBadge = (statut: string) => {
+    const norm = (statut || "").toLowerCase();
+    if (norm === "actif") {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          Actif
+        </span>
+      );
+    }
+    if (norm === "maintenance") {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+          Maintenance
+        </span>
+      );
+    }
+    if (norm === "panne") {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          En Panne
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-550 border border-slate-200">
+        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+        Hors Service
+      </span>
+    );
+  };
+
+  // Memoized filters
+  const filteredEquipements = React.useMemo(() => {
+    return (allEquipements || []).filter((e) => {
+      // 1. Site Match
+      let siteMatch = true;
+      if (activeSite && activeSite !== "TOUS") {
+        const eSite = (e.siteId || e.site || "").toUpperCase();
+        siteMatch = eSite === activeSite.toUpperCase();
+      }
+
+      // 2. Category Match
+      const eCat = e.categorie || "LHD";
+      const catMatch = eCat === activeTab;
+
+      // 3. Search Match
+      const query = searchTerm.toLowerCase().trim();
+      const searchMatch = !query || 
+        (e.matricule || "").toLowerCase().includes(query) ||
+        (e.type || "").toLowerCase().includes(query) ||
+        (e.marque || "").toLowerCase().includes(query) ||
+        (e.site || "").toLowerCase().includes(query);
+
+      return siteMatch && catMatch && searchMatch;
+    });
+  }, [allEquipements, activeSite, activeTab, searchTerm]);
+
+  // Tab specs list
+  const tabItems = [
+    { id: "LHD" as const, label: "ENGINS LHD", icon: Truck },
+    { id: "VL" as const, label: "VÉHICULES LÉGERS", icon: Car },
+    { id: "PERFORATEUR" as const, label: "PERFORATEURS", icon: Hammer },
+    { id: "CARNET" as const, label: "CARNET DE SANTÉ", icon: ClipboardList },
+  ];
+
+  // Specific spec getters mapping for VL & PERF
+  const getVehiSpec = (model: string) => {
+    const norm = (model || "").toUpperCase();
+    if (norm.includes("HILUX")) return VEHI_SPECS.HILUX;
+    if (norm.includes("DUSTER")) return VEHI_SPECS.DUSTER;
+    if (norm.includes("MASTER")) return VEHI_SPECS.MASTER;
+    return { type: model || "Véhicule Léger", usage: "Liaison & Services", carburant: "Gasoil", traction: "4x4" };
+  };
+
+  const getPerfSpec = (model: string) => {
+    const norm = (model || "").toUpperCase();
+    if (norm.includes("T23") || norm.includes("MONTABERT")) return PERF_SPECS["MONTABERT T23"];
+    if (norm.includes("1638")) return PERF_SPECS["EPIROC COP 1638"];
+    if (norm.includes("1838")) return PERF_SPECS["EPIROC COP 1838"];
+    return { pression: "N/A", debitFreq: "N/A", poids: "N/A", usage: "Perforateur" };
+  };
+
+  const isCarnetActive = typeof onOpenCarnet === "function";
+
+  const handleOpenCarnetLocal = (equip: any) => {
+    setCarnetEnginId(equip.id || equip.matricule);
+    setActiveTab("CARNET");
+    if (onOpenCarnet) {
+      onOpenCarnet(equip);
+    }
+  };
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight uppercase italic text-slate-900">Parc Engins</h2>
-          <p className="text-muted-foreground text-sm">Gestion des actifs miniers et véhicules</p>
-        </div>
-        {canAddEngin ? (
-          <Button 
-            className="bg-hydro shadow-lg shadow-hydro/20 font-bold h-10 tracking-wider hover:bg-hydro/90"
-            onClick={() => {
-              setIsAddModalOpen(true);
-              setNewSite(activeSite === "TOUS" ? "SMI" : activeSite);
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" /> AJOUTER ENGIN
-          </Button>
-        ) : (
-          <div className="flex flex-col items-end gap-1">
-            <Button disabled className="bg-slate-200 text-slate-400 cursor-not-allowed h-10 font-bold">
-              <Plus className="mr-2 h-4 w-4" /> AJOUTER ENGIN
+    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 select-none bg-white text-slate-900 font-sans min-h-screen">
+      
+      {/* 1. Page Banner - Hide when Carnet de Sante is active */}
+      {activeTab !== "CARNET" && (
+        <PageBanner
+          icon={Truck}
+          badgeLabel="Parc Équipements — 5 Chantiers Miniers"
+          title="État de la Flotte"
+          subtitle="Surveillance opérationnelle des engins, véhicules et perforateurs souterrains"
+          siteLabel={activeSite === "TOUS" ? "TOUS LES SITES" : activeSite}
+        >
+          {canAddEngin ? (
+            <Button 
+              className="bg-amber-500 hover:bg-amber-600 text-white shadow-md font-bold h-11 uppercase px-4 rounded-xl cursor-pointer"
+              onClick={() => setIsAddModalOpen(true)}
+            >
+              <Plus className="mr-1.5 h-4 w-4" /> Ajouter Équipement
             </Button>
-            <span className="text-[10px] text-slate-400 font-mono">Accès réservé Secrétaire/Chantiers/Maintenance</span>
-          </div>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input 
-            placeholder="Rechercher matricule, type..." 
-            className="pl-9 h-10 border-slate-200" 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        {searchTerm && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setSearchTerm("")}
-            className="text-xs text-slate-400 p-2 h-10 hover:text-slate-900"
-          >
-            Effacer
-          </Button>
-        )}
-        <Button variant="outline" size="icon" className="h-10 w-10 border-slate-200">
-           <Filter className="h-4 w-4 text-slate-500" />
-        </Button>
-        <div className="ml-auto">
-           <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-bold">
-              {filteredEngins.length} MACHINE(S)
-           </Badge>
-        </div>
-      </div>
-
-      <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
-        <div className="grid grid-cols-6 p-4 border-b border-slate-100 bg-slate-50/50 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-          <div className="col-span-2">Matricule / Type</div>
-          <div>Site</div>
-          <div>Heures</div>
-          <div>Statut</div>
-          <div className="text-right">Actions</div>
-        </div>
-        <ScrollArea className="h-[calc(100vh-320px)]">
-           {filteredEngins.map((engin) => (
-             <div 
-               key={engin.id} 
-               className="grid grid-cols-6 p-4 border-b border-slate-55 items-center hover:bg-slate-50/80 cursor-pointer transition-colors"
-               onClick={() => setSelectedEngin(engin)}
-             >
-                <div className="col-span-2 flex items-center gap-3">
-                   <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-hydro/10 group-hover:text-hydro transition-colors">
-                      <TruckIcon className="h-5 w-5" />
-                   </div>
-                   <div>
-                     <p className="font-bold text-slate-800">{engin.matricule}</p>
-                     <p className="text-[10px] text-slate-400 font-medium uppercase">{engin.marque} {engin.type}</p>
-                   </div>
-                </div>
-                <div className="text-xs font-bold text-slate-600">{engin.site}</div>
-                <div className="text-xs font-mono font-bold text-slate-500">{engin.heures} h</div>
-                <div>{getStatutBadge(engin.statut)}</div>
-                <div className="text-right">
-                   <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900" onClick={(e) => { e.stopPropagation(); setSelectedEngin(engin); }}>
-                      <MoreHorizontal className="h-4 w-4" />
-                   </Button>
-                </div>
-             </div>
-           ))}
-           {filteredEngins.length === 0 && (
-             <div className="p-12 text-center text-muted-foreground italic text-sm">
-                Aucun engin trouvé pour ce site.
-             </div>
-           )}
-        </ScrollArea>
-      </div>
-
-      {/* ============================================== */}
-      {/* MODAL : AJOUTER ENGIN (HYDRO-MINES COMPLIANT) */}
-      {/* ============================================== */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            
-            {/* Modal Header */}
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-lg bg-hydro/10 flex items-center justify-center text-hydro">
-                    <TruckIcon className="h-4 w-4" />
-                  </div>
-                  <span>AJOUTER UN NOUVEL ENGIN</span>
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">Enregistrement d'un nouvel équipement d'extraction ou d’analyse</p>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setIsAddModalOpen(false)}
-                className="h-8 w-8 hover:bg-slate-200 rounded-full"
-              >
-                <X className="h-4 w-4 text-slate-500" />
+          ) : (
+            <div className="flex flex-col items-end gap-1">
+              <Button disabled className="bg-slate-100 text-slate-400 cursor-not-allowed h-11 px-4 rounded-xl">
+                <Plus className="mr-1.5 h-4 w-4" /> Ajouter Équipement
               </Button>
+              <span className="text-[9px] text-[#9E1A1A] font-bold uppercase font-mono">Lecture seule</span>
+            </div>
+          )}
+        </PageBanner>
+      )}
+
+      {/* 2. Custom horizontal tabs - styled like Suivi Magasinier */}
+      <div className="flex flex-wrap gap-2 justify-center border-b border-slate-100 pb-3">
+        {tabItems.map((item) => {
+          const IconComponent = item.icon;
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-150 cursor-pointer ${
+                isActive
+                  ? "bg-amber-50 text-amber-700 border border-amber-500/15 shadow-sm"
+                  : "text-slate-500 hover:text-amber-600 hover:bg-slate-50"
+              }`}
+            >
+              <IconComponent className="w-4 h-4 text-amber-600" />
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === "CARNET" ? (
+        <CarnetSante enginId={carnetEnginId} allEngins={allEquipements || []} />
+      ) : (
+        <>
+          {/* 3. Search and Counter layer */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border border-slate-200 rounded-xl bg-white shadow-sm">
+            <div className="relative w-full sm:max-w-md">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Rechercher par matricule, type, marque, site..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 h-10 border-slate-200 focus-visible:ring-amber-500 text-xs font-medium"
+              />
+            </div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 leading-none whitespace-nowrap">
+              📋 {filteredEquipements.length} Équipement(s) trouvé(s)
+            </div>
+          </div>
+
+      {/* 4. Equipment Grid layout */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <RotateCw className="h-8 w-8 animate-spin text-amber-500" />
+          <p className="text-xs font-bold font-mono text-slate-500 uppercase tracking-widest">
+            Chargement de la flotte...
+          </p>
+        </div>
+      ) : filteredEquipements.length === 0 ? (
+        <div className="text-center py-24 border border-dashed border-slate-200 rounded-2xl bg-white space-y-2">
+          <p className="text-slate-400 text-sm font-semibold uppercase tracking-wider">Aucun équipement disponible</p>
+          <p className="text-xs text-slate-400">Essayez de modifier vos critères de recherche ou de site.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          
+          {/* LHD Grid Render */}
+          {activeTab === "LHD" && filteredEquipements.map((equip) => {
+            const spec = ENGIN_SPECS[equip.type as string] || ENGIN_SPECS.ST2G;
+            const isPanne = equip.statut === "panne";
+            const borderCol = isPanne ? "border-rose-200" : equip.statut === "maintenance" ? "border-amber-200" : "border-slate-200/80";
+            const glowCol = isPanne ? "hover:border-rose-455 hover:shadow-rose-50" : equip.statut === "maintenance" ? "hover:border-amber-455 hover:shadow-amber-50" : "hover:border-amber-500/30 hover:shadow-amber-50/50";
+            return (
+              <Card key={equip.id} className={`border ${borderCol} bg-white ${glowCol} hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden flex flex-col justify-between group`}>
+                <div className="p-5 space-y-4">
+                  
+                  {/* Header metadata */}
+                  <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3 mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-extrabold text-slate-900 tracking-tight font-mono">{equip.matricule}</span>
+                      <Badge className="bg-amber-100/50 hover:bg-amber-100/70 text-amber-900 border-none text-[9px] font-black uppercase tracking-wider px-2 py-0.5">{equip.site}</Badge>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {getRefinedStatusBadge(equip.statut)}
+
+                      {/* Admin Controls */}
+                      {user?.role === "ADMIN" && (
+                        <div className="flex items-center gap-1 border-l border-slate-200 pl-2 ml-1">
+                          <button
+                            onClick={() => handleStartEdit(equip)}
+                            className="p-1 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                            title="Modifier l'équipement"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleStartDelete(equip)}
+                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Supprimer définitivement"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Brand info */}
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">{equip.marque || "EPIROC"}</p>
+                    <p className="text-sm text-slate-800 font-black uppercase tracking-wide">
+                      {equip.type || "LHD"} • Chargeuse Mine
+                    </p>
+                  </div>
+
+                  {/* Feature badges */}
+                  <div className="grid grid-cols-3 gap-2 pt-1">
+                    <div className="bg-slate-50 border border-slate-100 p-2 rounded-xl flex flex-col text-center">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">🪣 Godet</span>
+                      <span className="text-[11px] text-slate-800 font-extrabold font-mono mt-0.5">{spec.godet}</span>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 p-2 rounded-xl flex flex-col text-center">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">⛽ Réservoir</span>
+                      <span className="text-[11px] text-slate-800 font-extrabold font-mono mt-0.5">{spec.reservoir}</span>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 p-2 rounded-xl flex flex-col text-center">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">⏱️ Heures</span>
+                      <span className="text-[11px] text-amber-700 font-black font-mono mt-0.5">{equip.heures || 0} h</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer contextual actions */}
+                <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between gap-3 mt-auto">
+                  <button
+                    onClick={() => handleOpenCarnetLocal(equip)}
+                    className="text-xs font-black uppercase tracking-wider text-amber-700 hover:text-amber-800 flex items-center gap-1 transition-all cursor-pointer"
+                  >
+                    Carnet de Santé →
+                  </button>
+                  <button
+                    disabled={isPanne}
+                    onClick={() => handleDeclarePanne(equip.id, equip.matricule)}
+                    className={`text-xs font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all duration-155 ${
+                      isPanne
+                        ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                        : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100/55 cursor-pointer shadow-sm"
+                    }`}
+                  >
+                    {isPanne ? "En Panne" : "Déclarer Panne"}
+                  </button>
+                </div>
+              </Card>
+            );
+          })}
+
+          {/* Véhicules Légers Grid Render */}
+          {activeTab === "VL" && filteredEquipements.map((equip) => {
+            const spec = getVehiSpec(equip.type);
+            const isPanne = equip.statut === "panne";
+            const kmReading = equip.heures ? `${equip.heures} km` : (equip.km ? `${equip.km} km` : "0 km");
+            const borderCol = isPanne ? "border-rose-200" : equip.statut === "maintenance" ? "border-amber-200" : "border-slate-200/80";
+            const glowCol = isPanne ? "hover:border-rose-455 hover:shadow-rose-50" : equip.statut === "maintenance" ? "hover:border-amber-455 hover:shadow-amber-50" : "hover:border-amber-500/30 hover:shadow-amber-50/50";
+            return (
+              <Card key={equip.id} className={`border ${borderCol} bg-white ${glowCol} hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden flex flex-col justify-between group`}>
+                <div className="p-5 space-y-4">
+                  
+                  {/* Header metadata */}
+                  <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3 mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-extrabold text-slate-900 tracking-tight font-mono">{equip.matricule}</span>
+                      <Badge className="bg-amber-100/50 hover:bg-amber-100/70 text-amber-900 border-none text-[9px] font-black uppercase tracking-wider px-2 py-0.5">{equip.site}</Badge>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {getRefinedStatusBadge(equip.statut)}
+
+                      {/* Admin Controls */}
+                      {user?.role === "ADMIN" && (
+                        <div className="flex items-center gap-1 border-l border-slate-200 pl-2 ml-1">
+                          <button
+                            onClick={() => handleStartEdit(equip)}
+                            className="p-1 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                            title="Modifier l'équipement"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleStartDelete(equip)}
+                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Supprimer définitivement"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Brand & Type */}
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">{equip.marque || "TOYOTA"}</p>
+                    <p className="text-sm text-slate-800 font-black uppercase tracking-wide">
+                      {spec.type}
+                    </p>
+                    <p className="text-[10px] text-slate-500 font-semibold tracking-wider mt-0.5 leading-none bg-slate-100 py-1 px-1.5 w-fit rounded">
+                      📋 Usage: {spec.usage}
+                    </p>
+                  </div>
+
+                  {/* Feature badges */}
+                  <div className="grid grid-cols-3 gap-2 pt-1">
+                    <div className="bg-slate-50 border border-slate-100 p-2 rounded-xl flex flex-col text-center">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">🚜 Traction</span>
+                      <span className="text-[11px] text-slate-800 font-extrabold font-mono mt-0.5">{spec.traction}</span>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 p-2 rounded-xl flex flex-col text-center">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">⛽ Carburant</span>
+                      <span className="text-[11px] text-slate-800 font-extrabold font-mono mt-0.5">{spec.carburant}</span>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 p-2 rounded-xl flex flex-col text-center">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">⏱️ Distance</span>
+                      <span className="text-[11px] text-amber-700 font-black font-mono mt-0.5">{kmReading}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer actions */}
+                <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between gap-3 mt-auto">
+                  <button
+                    onClick={() => handleOpenCarnetLocal(equip)}
+                    className="text-xs font-black uppercase tracking-wider text-amber-700 hover:text-amber-800 flex items-center gap-1 transition-all cursor-pointer"
+                  >
+                    Carnet de Santé →
+                  </button>
+                  <button
+                    disabled={isPanne}
+                    onClick={() => handleDeclarePanne(equip.id, equip.matricule)}
+                    className={`text-xs font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all duration-155 ${
+                      isPanne
+                        ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                        : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100/55 cursor-pointer shadow-sm"
+                    }`}
+                  >
+                    {isPanne ? "En Panne" : "Déclarer Panne"}
+                  </button>
+                </div>
+              </Card>
+            );
+          })}
+
+          {/* Perforateurs Grid Render */}
+          {activeTab === "PERFORATEUR" && filteredEquipements.map((equip) => {
+            const spec = getPerfSpec(equip.type);
+            const isPanne = equip.statut === "panne";
+            const serieNo = equip.serie || equip.matricule || "N/A";
+            const borderCol = isPanne ? "border-rose-200" : equip.statut === "maintenance" ? "border-amber-200" : "border-slate-200/80";
+            const glowCol = isPanne ? "hover:border-rose-455 hover:shadow-rose-50" : equip.statut === "maintenance" ? "hover:border-amber-455 hover:shadow-amber-50" : "hover:border-amber-500/30 hover:shadow-amber-50/50";
+            return (
+              <Card key={equip.id} className={`border ${borderCol} bg-white ${glowCol} hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden flex flex-col justify-between group`}>
+                <div className="p-5 space-y-4">
+                  
+                  {/* Header metadata */}
+                  <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3 mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-extrabold text-slate-900 tracking-tight font-mono">{equip.matricule}</span>
+                      <Badge className="bg-amber-100/50 hover:bg-amber-100/70 text-amber-900 border-none text-[9px] font-black uppercase tracking-wider px-2 py-0.5">{equip.site}</Badge>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {getRefinedStatusBadge(equip.statut)}
+
+                      {/* Admin Controls */}
+                      {user?.role === "ADMIN" && (
+                        <div className="flex items-center gap-1 border-l border-slate-200 pl-2 ml-1">
+                          <button
+                            onClick={() => handleStartEdit(equip)}
+                            className="p-1 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                            title="Modifier l'équipement"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleStartDelete(equip)}
+                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Supprimer définitivement"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Type */}
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">{equip.marque || "EPIROC"}</p>
+                    <p className="text-sm text-slate-800 font-black uppercase tracking-wide">
+                      {equip.type || "MONTABERT T23"}
+                    </p>
+                    {equip.associe ? (
+                      <p className="text-[9.5px] text-[#b8860b] font-bold uppercase tracking-wider mt-1.5 font-mono bg-amber-50/50 w-fit px-2 py-0.5 rounded border border-amber-200/20 shadow-sm">
+                        🔗 Engin Associé: {equip.associe}
+                      </p>
+                    ) : (
+                      <p className="text-[9.5px] text-slate-400 font-semibold tracking-wider mt-1.5">
+                        ⚪ Aucun engin hôte associé
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Feature badges */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="bg-slate-50 border border-slate-100 p-2.5 rounded-xl flex flex-col">
+                      <span className="text-[9.5px] text-slate-400 font-bold uppercase tracking-wider">💨 Pression</span>
+                      <span className="text-[11px] text-slate-800 font-extrabold font-mono mt-0.5">{spec.pression}</span>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 p-2.5 rounded-xl flex flex-col">
+                      <span className="text-[9.5px] text-slate-400 font-bold uppercase tracking-wider">📊 Débit & Freq</span>
+                      <span className="text-[11px] text-slate-800 font-extrabold font-mono mt-0.5">{spec.debitFreq}</span>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 p-2.5 rounded-xl flex flex-col">
+                      <span className="text-[9.5px] text-slate-400 font-bold uppercase tracking-wider">⚖️ Poids</span>
+                      <span className="text-[11px] text-slate-800 font-extrabold font-mono mt-0.5">{spec.poids}</span>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 p-2.5 rounded-xl flex flex-col">
+                      <span className="text-[9.5px] text-slate-400 font-bold uppercase tracking-wider">🔢 S/N Série</span>
+                      <span className="text-[11px] text-amber-700 font-black font-mono mt-0.5 truncate">{serieNo}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer action */}
+                <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between gap-3 mt-auto">
+                  <button
+                    onClick={() => handleOpenCarnetLocal(equip)}
+                    className="text-xs font-black uppercase tracking-wider text-amber-700 hover:text-amber-800 flex items-center gap-1 transition-all cursor-pointer"
+                  >
+                    Carnet de Santé →
+                  </button>
+                  <button
+                    disabled={isPanne}
+                    onClick={() => handleDeclarePanne(equip.id, equip.matricule)}
+                    className={`text-xs font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all duration-155 ${
+                      isPanne
+                        ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                        : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100/55 cursor-pointer shadow-sm"
+                    }`}
+                  >
+                    {isPanne ? "En Panne" : "Déclarer Panne"}
+                  </button>
+                </div>
+              </Card>
+            );
+          })}
+
+        </div>
+      )}
+        </>
+      )}
+
+      {/* 5. ADD EQUIPMENT MODAL (Polished, category-driven layout) */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            
+            {/* Modal header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
+              <div className="space-y-0.5">
+                <h3 className="text-lg font-black uppercase tracking-tight text-slate-950 flex items-center gap-1.5">
+                  <Truck className="h-5 w-5 text-amber-500" /> Ajouter un Équipement
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">Enregistrement réglementaire de l'actif opérationnel</p>
+              </div>
+              <button 
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            {/* Modal Body / Form */}
-            <form onSubmit={handleAddEngin} className="flex-1 overflow-y-auto p-6 space-y-4">
+            {/* Modal Form */}
+            <form onSubmit={handleAddEquipment} className="space-y-5">
               
+              {/* Category picker */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">
+                  Catégorie de Matériel *
+                </label>
+                <select
+                  className="w-full bg-white border border-slate-200 h-10 px-3 rounded-xl text-xs text-slate-800 font-bold focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-550 cursor-pointer"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as any)}
+                >
+                  <option value="LHD">Chargeuse Souterraine (LHD)</option>
+                  <option value="VL">Véhicule Léger (VL)</option>
+                  <option value="PERFORATEUR">Perforateur de Galerie</option>
+                </select>
+              </div>
+
+              {/* Shared parameters layer */}
               <div className="grid grid-cols-2 gap-4">
-                {/* Matricule Code */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block select-none uppercase tracking-wide">
-                    Matricule / Code Engin *
+                
+                {/* Matricule code */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">
+                    Code / Matricule *
                   </label>
                   <Input 
-                    placeholder="Ex: ST7-14, D-008" 
-                    className="h-11 border-slate-300 focus-visible:ring-hydro text-slate-800 font-semibold"
+                    placeholder="Ex: ST7-01, H-124"
+                    className="h-10 border-slate-200 text-xs font-bold focus-visible:ring-amber-500 uppercase font-mono"
                     value={newMatricule}
                     onChange={(e) => setNewMatricule(e.target.value)}
                     required
                   />
                 </div>
 
-                {/* Type selection */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block select-none uppercase tracking-wide">
-                    Type d'Engin *
+                {/* Site picker */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">
+                    Chantier / Site *
                   </label>
                   <select
-                    className="w-full bg-white border border-slate-300 h-11 px-3 rounded-md text-sm text-slate-800 font-medium focus:border-hydro focus:outline-none focus:ring-1 focus:ring-hydro"
-                    value={newType}
-                    onChange={(e) => setNewType(e.target.value)}
-                  >
-                    <option value="ST2G">ST2G (Chargeuse Souterrain)</option>
-                    <option value="ST7">ST7 (Scraper Mine)</option>
-                    <option value="ST2D">ST2D (Foreuse Electrique)</option>
-                    <option value="Hilux">Toyota Hilux (Liaison)</option>
-                    <option value="Duster">Dacia Duster (Supervision)</option>
-                    <option value="Loader">Caterpillar Loader (Surface)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Marque */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block select-none uppercase tracking-wide">
-                    Marque *
-                  </label>
-                  <Input 
-                    placeholder="Ex: Sandvik, Epiroc, Toyota" 
-                    className="h-11 border-slate-300 focus-visible:ring-hydro"
-                    value={newMarque}
-                    onChange={(e) => setNewMarque(e.target.value)}
-                    required
-                  />
-                </div>
-
-                {/* Modele */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block select-none uppercase tracking-wide">
-                    Modèle / Série
-                  </label>
-                  <Input 
-                    placeholder="Ex: T-800, Vigo, MT" 
-                    className="h-11 border-slate-300 focus-visible:ring-hydro"
-                    value={newModele}
-                    onChange={(e) => setNewModele(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Site assignment */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block select-none uppercase tracking-wide">
-                    Affectation Site *
-                  </label>
-                  <select
-                    className="w-full bg-white border border-slate-300 h-11 px-3 rounded-md text-sm text-slate-800 font-medium focus:border-hydro focus:outline-none focus:ring-1 focus:ring-hydro"
+                    className="w-full bg-white border border-slate-200 h-10 px-3 rounded-xl text-xs text-slate-800 font-bold focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-550 cursor-pointer"
                     value={newSite}
                     onChange={(e) => setNewSite(e.target.value)}
                   >
-                    <option value="SMI">SMI (Mine Centrale)</option>
-                    <option value="KOUDIA">Koudia (Site Sud)</option>
-                    <option value="Site Nord">Site Nord</option>
-                    <option value="Site Sud">Site Sud</option>
-                    <option value="Site Ouest">Site Ouest</option>
-                    <option value="Siège">Siège Casablanca</option>
+                    {SITES.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
                   </select>
                 </div>
 
-                {/* Compteur horaire */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block select-none uppercase tracking-wide">
-                    Heures Compteur Initial *
-                  </label>
-                  <Input 
-                    type="number"
-                    min="0"
-                    placeholder="0" 
-                    className="h-11 border-slate-300 focus-visible:ring-hydro font-mono"
-                    value={newHeures || ""}
-                    onChange={(e) => setNewHeures(Math.max(0, parseInt(e.target.value) || 0))}
-                    required
-                  />
-                </div>
               </div>
 
-              {/* Statut initial */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block select-none uppercase tracking-wide">
+              {/* Dynamic Sub-Category parameter lists */}
+              
+              {/* Category 1: LHD Specific */}
+              {category === "LHD" && (
+                <div className="p-4 bg-amber-50/30 border border-amber-200/20 rounded-xl space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    
+                    {/* LHD models selector */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold text-slate-755 uppercase tracking-widest">
+                        Modèle (EPIROC) *
+                      </label>
+                      <select
+                        className="w-full bg-white border border-slate-200 h-10 px-3 rounded-xl text-xs text-slate-800 font-bold focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-550 cursor-pointer"
+                        value={lhdType}
+                        onChange={(e) => setLhdType(e.target.value as any)}
+                      >
+                        <option value="ST2G">ST2G (Bucket 3.0t)</option>
+                        <option value="ST2D">ST2D (Bucket 3.6t)</option>
+                        <option value="ST7">ST7 (Bucket 7.0t)</option>
+                      </select>
+                    </div>
+
+                    {/* Engine Hours */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold text-slate-755 uppercase tracking-widest font-mono">
+                        Heures Compteur *
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        className="h-10 border-slate-200 text-xs font-bold focus-visible:ring-amber-550 font-mono"
+                        value={lhdHeures || ""}
+                        onChange={(e) => setLhdHeures(Math.max(0, Number(e.target.value) || 0))}
+                        required
+                      />
+                    </div>
+
+                  </div>
+
+                  {/* Read-only specs pre-filled banner */}
+                  <div className="grid grid-cols-2 gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-white/70 p-3 rounded-lg border border-slate-100">
+                    <div>🪣 Godet: <span className="text-amber-800 font-extrabold font-mono">{ENGIN_SPECS[lhdType].godet}</span></div>
+                    <div>⛽ Réservoir: <span className="text-amber-800 font-extrabold font-mono">{ENGIN_SPECS[lhdType].reservoir}</span></div>
+                    <div>⚙️ Trans: <span className="text-slate-700 font-mono">{ENGIN_SPECS[lhdType].transmission}</span></div>
+                    <div>📏 Hauteur Max: <span className="text-slate-700 font-mono">{ENGIN_SPECS[lhdType].hauteur}</span></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Category 2: VL (Véhicule Léger) Specific */}
+              {category === "VL" && (
+                <div className="p-4 bg-amber-50/30 border border-amber-200/20 rounded-xl space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    
+                    {/* Models selection */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold text-slate-755 uppercase tracking-widest">
+                        Modèle Véhicule *
+                      </label>
+                      <select
+                        className="w-full bg-white border border-slate-200 h-10 px-3 rounded-xl text-xs text-slate-800 font-bold focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-550 cursor-pointer"
+                        value={vlType}
+                        onChange={(e) => setVlType(e.target.value as any)}
+                      >
+                        <option value="Hilux">Toyota Hilux (4x4)</option>
+                        <option value="Duster">Dacia Duster (Supervision)</option>
+                        <option value="Master">Renault Master (Minibus)</option>
+                      </select>
+                    </div>
+
+                    {/* Kilometers reading */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold text-slate-755 uppercase tracking-widest font-mono">
+                        Kilométrage *
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="0 km"
+                        className="h-10 border-slate-200 text-xs font-bold focus-visible:ring-amber-555 font-mono"
+                        value={vlKm || ""}
+                        onChange={(e) => setVlKm(Math.max(0, Number(e.target.value) || 0))}
+                        required
+                      />
+                    </div>
+
+                  </div>
+
+                  {/* Read-only specs pre-filled banner */}
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-white/70 p-3 rounded-lg border border-slate-100 flex flex-col gap-1.5">
+                    <div>🚗 Modèle Recommandé : <span className="text-amber-800 font-extrabold font-mono">{VEHI_SPECS[vlType.toUpperCase()]?.type}</span></div>
+                    <div>🛡️ Usage Habituel : <span className="text-slate-700 font-mono">{VEHI_SPECS[vlType.toUpperCase()]?.usage}</span></div>
+                    <div>⚡ Traction : <span className="text-slate-700 font-extrabold font-mono">{VEHI_SPECS[vlType.toUpperCase()]?.traction}</span></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Category 3: Perforateur Specific */}
+              {category === "PERFORATEUR" && (
+                <div className="p-4 bg-amber-50/30 border border-amber-200/20 rounded-xl space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    
+                    {/* Models selection */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold text-slate-755 uppercase tracking-widest">
+                        Modèle de Foreuse *
+                      </label>
+                      <select
+                        className="w-full bg-white border border-slate-200 h-10 px-3 rounded-xl text-xs text-slate-800 font-bold focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-550 cursor-pointer"
+                        value={perfModel}
+                        onChange={(e) => setPerfModel(e.target.value as any)}
+                      >
+                        <option value="MONTABERT T23">MONTABERT T23 (23 kg)</option>
+                        <option value="EPIROC COP 1638">EPIROC COP 1638 (28 kg)</option>
+                        <option value="EPIROC COP 1838">EPIROC COP 1838 (34 kg)</option>
+                      </select>
+                    </div>
+
+                    {/* Associated engin code */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold text-slate-755 uppercase tracking-widest font-mono">
+                        Engin Associé (Opt.)
+                      </label>
+                      <Input
+                        placeholder="Ex: ST7-02"
+                        className="h-10 border-slate-200 text-xs font-bold focus-visible:ring-amber-555 font-mono uppercase"
+                        value={perfAssocie}
+                        onChange={(e) => setPerfAssocie(e.target.value)}
+                      />
+                    </div>
+
+                  </div>
+
+                  {/* Read-only specs banner */}
+                  <div className="grid grid-cols-2 gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-white/70 p-3 rounded-lg border border-slate-100">
+                    <div>💨 Pression d'exercice: <span className="text-amber-800 font-extrabold font-mono">{PERF_SPECS[perfModel]?.pression}</span></div>
+                    <div>📊 Débit/Fréquence: <span className="text-amber-800 font-extrabold font-mono">{PERF_SPECS[perfModel]?.debitFreq}</span></div>
+                    <div>⚖️ Poids unitaire: <span className="text-slate-700 font-mono">{PERF_SPECS[perfModel]?.poids}</span></div>
+                    <div className="col-span-2 text-slate-700 normal-case leading-tight italic">
+                      🎯 Usage: {PERF_SPECS[perfModel]?.usage}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Operational status picker */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">
                   Statut Opérationnel Initial *
                 </label>
                 <div className="grid grid-cols-2 gap-2 mt-1">
                   {[
-                    { val: "actif", label: "🟢 Actif / En Service" },
-                    { val: "maintenance", label: "🟡 En Maintenance" },
-                    { val: "panne", label: "🔴 En Panne d'Urgence" },
-                    { val: "hors service", label: "⚪ Hors service" }
+                    { val: "actif", label: "🟢 En service / Actif" },
+                    { val: "maintenance", label: "🟡 Planifié / Maintenance" },
+                    { val: "panne", label: "🔴 Diagnostic / En Panne" },
+                    { val: "hors service", label: "⚪ Arrêté / Hors Service" }
                   ].map((opt) => (
                     <button
                       key={opt.val}
                       type="button"
                       onClick={() => setNewStatut(opt.val as any)}
-                      className={`h-11 px-3 text-xs font-semibold rounded-lg border text-left flex items-center justify-between transition-all ${
+                      className={`h-10 px-3 text-xs font-bold rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                         newStatut === opt.val
-                          ? "bg-hydro/5 border-hydro text-hydro ring-2 ring-hydro/10"
-                          : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                          ? "bg-amber-50 border-amber-500/30 text-amber-800"
+                          : "bg-slate-50 border-slate-200/70 text-slate-700 hover:bg-slate-100"
                       }`}
                     >
                       <span>{opt.label}</span>
@@ -415,27 +1058,28 @@ export function EnginList() {
                 </div>
               </div>
 
-              {/* Warnings and Info footnotes */}
-              <div className="p-3 bg-amber-50 rounded-lg text-[10px] leading-snug text-amber-800 border border-amber-200 font-mono">
-                ⚠️ Tout enregistrement d'engin initie automatiquement son carnet numérique légal d'intervention (HSE CFR Part 11).
+              {/* Informative footer text */}
+              <div className="p-3 bg-amber-50/50 rounded-xl text-[10px] leading-relaxed text-amber-900 border border-amber-200/40 font-semibold uppercase tracking-wider flex items-start gap-1.5">
+                <Info className="h-4 w-4 shrink-0 -mt-0.5 text-amber-700" />
+                <span>Tout actif enregistré est rattaché à son carnet de maintenance légal et traçabilité de défauts d'ateliers (HSE-CFR MSHA).</span>
               </div>
 
-              {/* Footer Buttons inside Scroll Form */}
-              <div className="flex gap-3 justify-end pt-2 border-t border-slate-150">
+              {/* Actions footer */}
+              <div className="flex gap-2 justify-end pt-4 border-t border-slate-100 mt-6">
                 <Button 
-                  type="button" 
-                  variant="outline" 
+                  type="button"
+                  variant="outline"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="h-12 px-6 hover:bg-slate-100 text-slate-700 font-bold tracking-wider uppercase text-xs"
+                  className="h-10 px-4 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-500 cursor-pointer"
                 >
                   Annuler
                 </Button>
                 <Button 
-                  type="submit" 
+                  type="submit"
                   disabled={isSubmitLoading}
-                  className="h-12 px-8 bg-hydro text-white font-heavy tracking-wider hover:bg-hydro/90 uppercase text-xs shadow-lg shadow-hydro/20"
+                  className="h-10 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold uppercase tracking-widest text-xs cursor-pointer shadow-sm"
                 >
-                  {isSubmitLoading ? "Enregistrement..." : "Créer l'Équipement"}
+                  {isSubmitLoading ? "Enregistrement..." : "Créer l'actif"}
                 </Button>
               </div>
 
@@ -443,10 +1087,258 @@ export function EnginList() {
           </div>
         </div>
       )}
+
+      {/* 5.1. EDIT EQUIPMENT MODAL (Polished, role: ADMIN only) */}
+      {isEditModalOpen && editingEquip && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            
+            {/* Modal header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
+              <div className="space-y-0.5">
+                <h3 className="text-lg font-black uppercase tracking-tight text-slate-950 flex items-center gap-1.5 animate-pulse">
+                  <Pencil className="h-5 w-5 text-amber-500" /> Modifier l'Équipement
+                </h3>
+                <p className="text-xs text-slate-500 font-bold">Modification de l'actif opérationnel • {editingEquip.categorie}</p>
+              </div>
+              <button 
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingEquip(null);
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveEdit} className="space-y-5">
+              
+              {/* Shared parameters layer */}
+              <div className="grid grid-cols-2 gap-4">
+                
+                {/* Matricule code */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">
+                    Code / Matricule *
+                  </label>
+                  <Input 
+                    placeholder="Ex: ST7-01, H-124"
+                    className="h-10 border-slate-200 text-xs font-bold focus-visible:ring-amber-500 uppercase font-mono"
+                    value={editMatricule}
+                    onChange={(e) => setEditMatricule(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {/* Site picker */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">
+                    Chantier / Site *
+                  </label>
+                  <select
+                    className="w-full bg-white border border-slate-200 h-10 px-3 rounded-xl text-xs text-slate-800 font-bold focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-550 cursor-pointer"
+                    value={editSite}
+                    onChange={(e) => setEditSite(e.target.value)}
+                  >
+                    {SITES.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+              </div>
+
+              {/* Dynamic inputs based on Categorie */}
+              <div className="p-4 bg-amber-50/30 border border-amber-200/20 rounded-xl space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  
+                  {/* Model / Type field */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-extrabold text-slate-755 uppercase tracking-widest">
+                      Modèle de l'équipement *
+                    </label>
+                    {editingEquip.categorie === "LHD" ? (
+                      <select
+                        className="w-full bg-white border border-slate-200 h-10 px-3 rounded-xl text-xs text-slate-800 font-bold focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-550 cursor-pointer"
+                        value={editType}
+                        onChange={(e) => setEditType(e.target.value)}
+                      >
+                        <option value="ST2G">ST2G (Bucket 3.0t)</option>
+                        <option value="ST2D">ST2D (Bucket 3.6t)</option>
+                        <option value="ST7">ST7 (Bucket 7.0t)</option>
+                      </select>
+                    ) : editingEquip.categorie === "VL" ? (
+                      <select
+                        className="w-full bg-white border border-slate-200 h-10 px-3 rounded-xl text-xs text-slate-800 font-bold focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-550 cursor-pointer"
+                        value={editType}
+                        onChange={(e) => setEditType(e.target.value)}
+                      >
+                        <option value="Hilux">Toyota Hilux (4x4)</option>
+                        <option value="Duster">Dacia Duster (Supervision)</option>
+                        <option value="Master">Renault Master (Minibus)</option>
+                      </select>
+                    ) : (
+                      <select
+                        className="w-full bg-white border border-slate-200 h-10 px-3 rounded-xl text-xs text-slate-800 font-bold focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-550 cursor-pointer"
+                        value={editType}
+                        onChange={(e) => setEditType(e.target.value)}
+                      >
+                        <option value="MONTABERT T23">MONTABERT T23 (23 kg)</option>
+                        <option value="EPIROC COP 1638">EPIROC COP 1638 (28 kg)</option>
+                        <option value="EPIROC COP 1838">EPIROC COP 1838 (34 kg)</option>
+                      </select>
+                    )}
+                  </div>
+
+                  {/* Heures counter or Km counter */}
+                  {editingEquip.categorie !== "PERFORATEUR" ? (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold text-slate-755 uppercase tracking-widest font-mono">
+                        {editingEquip.categorie === "VL" ? "Kilométrage *" : "Heures Compteur *"}
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        className="h-10 border-slate-200 text-xs font-bold focus-visible:ring-amber-550 font-mono"
+                        value={editHeures || ""}
+                        onChange={(e) => setEditHeures(Math.max(0, Number(e.target.value) || 0))}
+                        required
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold text-slate-755 uppercase tracking-widest font-mono">
+                        Engin Associé
+                      </label>
+                      <Input
+                        placeholder="Ex: ST7-02"
+                        className="h-10 border-slate-200 text-xs font-bold focus-visible:ring-amber-555 font-mono uppercase"
+                        value={editAssocie}
+                        onChange={(e) => setEditAssocie(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                </div>
+              </div>
+
+              {/* Operational status picker */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">
+                  Statut Opérationnel *
+                </label>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  {[
+                    { val: "actif", label: "🟢 En service / Actif" },
+                    { val: "maintenance", label: "🟡 Planifié / Maintenance" },
+                    { val: "panne", label: "🔴 Diagnostic / En Panne" },
+                    { val: "hors service", label: "⚪ Arrêté / Hors Service" }
+                  ].map((opt) => (
+                    <button
+                      key={opt.val}
+                      type="button"
+                      onClick={() => setEditStatut(opt.val as any)}
+                      className={`h-10 px-3 text-xs font-bold rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                        editStatut === opt.val
+                          ? "bg-amber-50 border-amber-500/30 text-amber-800"
+                          : "bg-slate-50 border-slate-200/70 text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Informative footer text */}
+              <div className="p-3 bg-amber-50/50 rounded-xl text-[10px] leading-relaxed text-amber-900 border border-amber-200/40 font-semibold uppercase tracking-wider flex items-start gap-1.5">
+                <Info className="h-4 w-4 shrink-0 -mt-0.5 text-amber-700" />
+                <span>La modification de cet actif est tracée dans le grand registre de la flotte minière.</span>
+              </div>
+
+              {/* Actions footer */}
+              <div className="flex gap-2 justify-end pt-4 border-t border-slate-100 mt-6">
+                <Button 
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditingEquip(null);
+                  }}
+                  className="h-10 px-4 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-500 cursor-pointer"
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={isSubmitLoading}
+                  className="h-10 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold uppercase tracking-widest text-xs cursor-pointer shadow-sm"
+                >
+                  {isSubmitLoading ? "Mise à jour..." : "Enregistrer les modifications"}
+                </Button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5.2. DELETE CONFIRMATION MODAL */}
+      {isDeleteModalOpen && deleteTarget && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-100 animate-in fade-in zoom-in-95 duration-150">
+            
+            <div className="flex items-start gap-4">
+              <div className="h-12 w-12 rounded-full bg-rose-50 flex items-center justify-center shrink-0 border border-rose-100">
+                <AlertTriangle className="h-6 w-6 text-rose-600" />
+              </div>
+              <div className="space-y-1 flex-1">
+                <h3 className="text-base font-black uppercase text-slate-950 tracking-tight">
+                  Supprimer l'Équipement ?
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                  Êtes-vous absolument sûr de vouloir supprimer définitivement l'équipement <span className="font-extrabold text-slate-900 font-mono">{deleteTarget.matricule}</span> ?
+                </p>
+                <p className="text-[10px] text-rose-700 font-bold uppercase tracking-wider mt-2 bg-rose-50 p-2.5 rounded-xl border border-rose-100/40">
+                  ⚠️ Attention : Cette action supprimera définitivement l'engin de la flotte ainsi que tout son carnet d'entretien associé.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4 border-t border-slate-100 mt-6">
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setDeleteTarget(null);
+                }}
+                className="h-10 px-4 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-500 cursor-pointer"
+              >
+                Annuler
+              </Button>
+              <Button 
+                onClick={handleConfirmDelete}
+                className="h-10 px-6 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold uppercase tracking-widest text-xs cursor-pointer shadow-sm"
+              >
+                Confirmer la suppression
+              </Button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
 
+// ════════════════════════════════════
+// PARTIE 9 — COMPOSANT ENGIN DETAIL CONSERVÉ TEL QUEL
+// ════════════════════════════════════
 function EnginDetail({ engin, onBack }: { engin: Engin; onBack: () => void }) {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -461,7 +1353,7 @@ function EnginDetail({ engin, onBack }: { engin: Engin; onBack: () => void }) {
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="h-16 w-16 rounded-2xl bg-hydro flex items-center justify-center text-white shadow-lg shadow-hydro/20">
-             <TruckIcon className="h-8 w-8" />
+             <Truck className="h-8 w-8" />
           </div>
           <div>
             <h2 className="text-3xl font-bold tracking-tight">{engin.matricule}</h2>
@@ -571,14 +1463,14 @@ function EnginDetail({ engin, onBack }: { engin: Engin; onBack: () => void }) {
                        </h4>
                        <p className="text-sm text-muted-foreground">Usure uniforme. Fin de vie estimée dans 800h.</p>
                     </div>
-                 </div>
-                 <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium">Poser une question spécifique à l'IA :</label>
-                    <div className="flex gap-2">
-                       <Input placeholder="Pourquoi la consommation a augmenté ?" />
-                       <Button className="bg-hydro">Analyser</Button>
-                    </div>
-                 </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                     <label className="text-sm font-medium">Poser une question spécifique à l'IA :</label>
+                     <div className="flex gap-2">
+                        <Input placeholder="Pourquoi la consommation a augmenté ?" />
+                        <Button className="bg-hydro">Analyser</Button>
+                     </div>
+                  </div>
               </CardContent>
            </Card>
         </TabsContent>

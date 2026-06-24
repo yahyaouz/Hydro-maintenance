@@ -41,12 +41,7 @@ export function useCollection<T>(
     setLoading(true);
     lastDocRef.current = null;
 
-    // Apply soft delete filtering unless explicitly bypassed (Soft Delete Architecture)
     const activeFilters = [...filters];
-    if (!options.includeDeleted) {
-      activeFilters.push(where('deleted', '!=', true));
-    }
-
     // Build base query constraints with limits as requested
     const qConstraints: any[] = [...activeFilters];
     
@@ -60,7 +55,10 @@ export function useCollection<T>(
       (snapshot) => {
         const result: T[] = [];
         snapshot.forEach((doc) => {
-          result.push({ id: doc.id, ...doc.data() } as T);
+          const docData = { id: doc.id, ...doc.data() } as any;
+          if (options.includeDeleted || docData.deleted !== true) {
+            result.push(docData);
+          }
         });
         
         setData(result);
@@ -84,10 +82,6 @@ export function useCollection<T>(
     
     try {
       const activeFilters = [...filters];
-      if (!options.includeDeleted) {
-        activeFilters.push(where('deleted', '!=', true));
-      }
-
       const qConstraints: any[] = [
         ...activeFilters,
         orderBy(orderByField, orderByDirection),
@@ -101,7 +95,10 @@ export function useCollection<T>(
       if (snapshot.docs.length > 0) {
         const chunk: T[] = [];
         snapshot.forEach((doc) => {
-          chunk.push({ id: doc.id, ...doc.data() } as T);
+          const docData = { id: doc.id, ...doc.data() } as any;
+          if (options.includeDeleted || docData.deleted !== true) {
+            chunk.push(docData);
+          }
         });
         
         setData(prev => {

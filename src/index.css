@@ -2,7 +2,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
   --color-hydro: #00BFFF;
@@ -11,6 +11,8 @@
   --color-alert-orange: #F5A623;
   --color-critical-red: #E02020;
   --color-ok-green: #27AE60;
+  --color-brand-sky: #0ea5e9;
+  --color-brand-red: #dc2626;
 
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
@@ -290,4 +292,45 @@ button,
 }
 .scroll-industrial::-webkit-scrollbar-thumb:active {
   background-color: rgba(74, 144, 217, 0.9);
+}
+
+@keyframes goldWhiteGlow {
+  0% { background-position: 200% 50%; }
+  100% { background-position: -200% 50%; }
+}
+
+.luminous-gold-white-text {
+  background: linear-gradient(to left, #b8860b 0%, #e5c158 25%, #475569 50%, #ffd700 75%, #b8860b 100%);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: goldWhiteGlow 8s linear infinite;
+  font-weight: 950;
+  display: inline-block;
+}
+
+@keyframes logo-shine {
+  0% { transform: translateX(-100%) rotate(25deg); }
+  30% { transform: translateX(100%) rotate(25deg); }
+  100% { transform: translateX(100%) rotate(25deg); }
+}
+
+.shiny-logo::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -150%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    to right,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.4) 45%,
+    rgba(255,255,255,1) 50%,
+    rgba(255,255,255,0.4) 55%,
+    rgba(255,255,255,0) 100%
+  );
+  transform: rotate(25deg);
+  animation: logo-shine 4s ease-in-out infinite;
+  pointer-events: none;
 }
