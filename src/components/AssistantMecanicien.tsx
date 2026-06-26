@@ -16,6 +16,7 @@ import { HydrominesLogo } from "./auth/HydrominesLogo";
 import { AssistantEpiroc } from "./AssistantEpiroc";
 import { AssistantEpirocSt2d } from "./AssistantEpirocSt2d";
 import { AssistantEpirocSt7 } from "./AssistantEpirocSt7";
+import { AssistantEpirocSt2G } from "./AssistantEpirocSt2G";
 
 export function AssistantMecanicien() {
   const { activeSite } = useAuthStore();
@@ -218,7 +219,7 @@ export function AssistantMecanicien() {
       </div>
 
       {activeMachine === "epiroc" ? (
-        <AssistantEpiroc />
+        <AssistantEpirocSt2G />
       ) : activeMachine === "epiroc_st2d" ? (
         <AssistantEpirocSt2d />
       ) : activeMachine === "epiroc_st7" ? (

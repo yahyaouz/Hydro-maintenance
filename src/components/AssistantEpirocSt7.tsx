@@ -2646,7 +2646,7 @@ export function AssistantEpirocSt7() {
 
           .cahier-nav {
             position: sticky;
-            top: 0;
+            top: 80px;
             background: #FFFFFF;
             padding: 15px;
             display: flex;
@@ -2657,6 +2657,75 @@ export function AssistantEpirocSt7() {
             z-index: 100;
             border-radius: 12px;
             margin-bottom: 20px;
+          }
+
+          /* PDF Download Bar & Buttons */
+          .pdf-download-bar {
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+            background: #0a0a0a;
+            border-bottom: 2px solid #f59e0b;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-radius: 12px;
+          }
+          
+          .pdf-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 2px solid;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 280px;
+          }
+          
+          .pdf-btn-cahier {
+            background: #f59e0b;
+            color: #000;
+            border-color: #f59e0b;
+          }
+          
+          .pdf-btn-manuel {
+            background: #1a1a1a;
+            color: #fff;
+            border-color: #f59e0b;
+          }
+          
+          .pdf-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(245,158,11,0.3);
+          }
+          
+          .pdf-icon {
+            font-size: 24px;
+          }
+          
+          .pdf-text {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+          }
+          
+          .pdf-text strong {
+            font-size: 14px;
+            font-weight: 700;
+          }
+          
+          .pdf-text small {
+            font-size: 11px;
+            opacity: 0.8;
+          }
+          
+          .pdf-arrow {
+            font-size: 20px;
+            margin-left: auto;
           }
 
           .cahier-nav button {
@@ -2820,7 +2889,7 @@ export function AssistantEpirocSt7() {
 
           /* PRINT */
           @media print {
-            .cahier-nav, .btn-retour-assistant, .btn-retour-st7 {
+            .cahier-nav, .btn-retour-assistant, .btn-retour-st7, .pdf-download-bar {
               display: none;
             }
             .cahier-chapitre {
@@ -2835,6 +2904,26 @@ export function AssistantEpirocSt7() {
           <p className="cahier-sous-titre">EPIROC SCOOPTRAM ST7 — Référence technique multimédia</p>
           <button className="btn-retour-st7" onClick={() => (window as any).fermerCahier()}>← RETOUR À L'ASSISTANT ST7</button>
         </header>
+
+        <div className="pdf-download-bar">
+          <button className="pdf-btn pdf-btn-cahier" onClick={() => window.open('/print-st7.html', '_blank')}>
+            <span className="pdf-icon">📋</span>
+            <span className="pdf-text">
+              <strong>CAHIER DES CHARGES VISUELS</strong>
+              <small>101 pages · A4 · Prêt à imprimer</small>
+            </span>
+            <span className="pdf-arrow">⬇</span>
+          </button>
+          
+          <button className="pdf-btn pdf-btn-manuel" onClick={() => window.open('/print-st7-manuel.html', '_blank')}>
+            <span className="pdf-icon">📘</span>
+            <span className="pdf-text">
+              <strong>MANUEL COMPLET ST7</strong>
+              <small>150 pages · A4 · Pannes + Arbres + Checklist</small>
+            </span>
+            <span className="pdf-arrow">⬇</span>
+          </button>
+        </div>
 
         {/* NAVIGATION CHAPITRES */}
         <nav className="cahier-nav">
