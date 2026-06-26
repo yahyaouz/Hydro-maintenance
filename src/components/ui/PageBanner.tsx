@@ -10,6 +10,7 @@ interface PageBannerProps {
   siteLabel?: string;
   children?: React.ReactNode;
   className?: string;
+  logo?: React.ReactNode;
 }
 
 export function PageBanner({
@@ -20,6 +21,7 @@ export function PageBanner({
   siteLabel,
   children,
   className,
+  logo,
 }: PageBannerProps) {
   return (
     <div className={cn(
@@ -56,6 +58,11 @@ export function PageBanner({
 
         {/* Droite : site + actions */}
         <div className="lg:col-span-3 bg-white p-6 flex flex-col justify-center items-center lg:items-end gap-2.5 lg:border-l border-slate-100">
+          {logo && (
+            <div className="mb-2 flex justify-center lg:justify-end">
+              {logo}
+            </div>
+          )}
           {siteLabel && (
             <>
               <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50/80 border border-amber-200/30 rounded-md shadow-sm">

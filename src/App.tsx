@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
 import { LoginPage } from "@/components/auth/LoginPage";
 import { ReferentielTechnique } from "@/components/ReferentielTechnique";
+import { AssistantMecanicien } from "@/components/AssistantMecanicien";
 import { IndustrialBackdrop } from "@/components/IndustrialBackdrop";
 import { RestrictedActionModal } from "@/components/RestrictedActionModal";
 import { startViewerTrackingSession, trackViewerPageTransition } from "@/services/viewerTracking";
@@ -313,6 +314,7 @@ export default function App() {
       case "ma_fiche": return "Ma Fiche Praticien Souterrain";
       case "interventions": return "Activités Spécifiques de Maintenance";
       case "saisies": return "Saisies de Temps et BT";
+      case "assistant_mecanicien": return "Assistant Mécanicien - Montabert T23";
       default: return "Hydromines SOU-GMAO Platform";
     }
   };
@@ -422,8 +424,9 @@ export default function App() {
               {activeTab === "ma_fiche" && <MecaniciensModule view="ma_fiche" />}
               {activeTab === "interventions" && <MecaniciensModule view="interventions" />}
               {activeTab === "saisies" && <MecaniciensModule view="saisies" />}
+              {activeTab === "assistant_mecanicien" && <AssistantMecanicien />}
               
-              {!["dashboard", "engins", "referentiel", "pannes", "heures", "vision_ia", "maintenance", "alertes", "pneus", "carburant", "stock", "rapports", "mecaniciens", "ma_fiche", "interventions", "saisies", "declaration_panne", "import_gasoil", "inspection", "monde", "admin"].includes(activeTab) && (
+              {!["dashboard", "engins", "referentiel", "pannes", "heures", "vision_ia", "maintenance", "alertes", "pneus", "carburant", "stock", "rapports", "mecaniciens", "ma_fiche", "interventions", "saisies", "declaration_panne", "import_gasoil", "inspection", "monde", "admin", "assistant_mecanicien"].includes(activeTab) && (
                 <div className="flex items-center justify-center h-full text-muted-foreground bg-white dark:bg-slate-900">
                   Module {activeTab} en cours d'implémentation...
                 </div>

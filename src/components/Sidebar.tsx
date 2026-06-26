@@ -52,6 +52,7 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
         { id: "dashboard", label: "Tableau de Bord", icon: LayoutDashboard, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","VIEWER"] },
         { id: "engins", label: "État de la Flotte", icon: Truck, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","VIEWER"] },
         { id: "referentiel", label: "Référentiel Technique", icon: BookOpen, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","SECRETAIRE","VIEWER"] },
+        { id: "assistant_mecanicien", label: "Assistant Mécanicien", icon: Wrench, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","VIEWER"] },
       ]
     },
     {
