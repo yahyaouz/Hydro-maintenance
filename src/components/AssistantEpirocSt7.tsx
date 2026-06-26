@@ -4248,60 +4248,733 @@ export function AssistantEpirocSt7() {
 
         {/* CHAPITRE 6 : OUTILS */}
         <article id="ch6" className="cahier-chapitre">
-          <h2 className="cahier-titre-chapitre">CHAPITRE 6 — FICHES OUTILS</h2>
-          <p className="cahier-intro text-slate-600">25 outils spécifiques minimum. Pour chaque : photo, référence, specs, localisation, alternative, précautions.</p>
-          
-          <div className="outil-fiche" id="outil-01">
-            <h3 className="font-bold text-lg text-slate-800 mt-4 mb-2">6.1 Extracteur injecteur Cummins QSB 6.7</h3>
-            <div className="outil-photo-placeholder">[PHOTO PLACEHOLDER — Extracteur hydraulique 10 tonnes]</div>
-            <table className="cahier-tableau outil-tableau">
-              <tbody>
-                <tr><td className="font-bold w-1/3 bg-slate-50">Référence Epiroc</td><td>8234-056</td></tr>
-                <tr><td className="font-bold bg-slate-50">Référence fabricant</td><td>OTC 7448A</td></tr>
-                <tr><td className="font-bold bg-slate-50">Capacité</td><td>10 tonnes (98 kN)</td></tr>
-                <tr><td className="font-bold bg-slate-50">Course vérin</td><td>75 mm</td></tr>
-                <tr><td className="font-bold bg-slate-50">Pression pompe max</td><td>700 bar</td></tr>
-                <tr><td className="font-bold bg-slate-50">Poids</td><td>8,5 kg</td></tr>
-                <tr><td className="font-bold bg-slate-50">Dimensions</td><td>350×150×120 mm</td></tr>
-                <tr><td className="font-bold bg-slate-50">Localisation</td><td>Tiroir 3, compartiment B, caisse mobile ST7. Étiquette rouge "EXTRACTEUR INJECTEUR"</td></tr>
-                <tr><td className="font-bold bg-slate-50">Alternative</td><td>Tirant M16×150 (risque casse) | Location Epiroc Mines Services 48h</td></tr>
-                <tr><td className="font-bold bg-slate-50">Précautions</td><td>Graisser filetage. Max 500bar. Vérifier alignement. Protéger filetages collecteur.</td></tr>
-                <tr><td className="font-bold bg-slate-50">Vidéo associée</td><td>V07</td></tr>
-                <tr><td className="font-bold bg-slate-50">Panne associée</td><td>1.1.2.B</td></tr>
-              </tbody>
-            </table>
-          </div>
+          <h2 className="cahier-titre-chapitre">CHAPITRE 6 — FICHES TECHNIQUES DES OUTILS DE MAINTENANCE</h2>
+          <p className="cahier-intro text-slate-400 mb-8 font-medium">
+            Catalogue de 25 outils spécifiques requis pour la maintenance préventive et corrective du chargeur Epiroc Scooptram ST7 — spécifications, procédures opérationnelles, maintenance et localisation d'atelier.
+          </p>
 
-          <div className="outils-liste mt-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
-            <h4 className="font-bold text-slate-800 mb-3">24 fiches restantes à compléter Phase 2 :</h4>
-            <ol className="list-decimal pl-5 space-y-1 text-slate-600 text-sm">
-              <li>6.2 — Clé dynamométrique 3/4" 2000Nm</li>
-              <li>6.3 — Testeur pression hydraulique 0-400bar</li>
-              <li>6.4 — Testeur pression accumulateur 0-300bar</li>
-              <li>6.5 — Testeur précharge azote</li>
-              <li>6.6 — Lecteur codes défaut Cummins + RCS</li>
-              <li>6.7 — Outil calibration Funk DF150</li>
-              <li>6.8 — Outil calibration RCS / firmware</li>
-              <li>6.9 — Purgeur hydraulique haute pression</li>
-              <li>6.10 — Extracteur vérin hydraulique 24 MPa</li>
-              <li>6.11 — Clé fourche écrous articulation Rock Tough</li>
-              <li>6.12 — Extracteur chaîne transmission</li>
-              <li>6.13 — Extracteur convertisseur Funk</li>
-              <li>6.14 — Outil blocage volant moteur QSB 6.7</li>
-              <li>6.15 — Micromètre 0-25mm précision 0,01</li>
-              <li>6.16 — Pied à coulisse 0-300mm</li>
-              <li>6.17 — Jauge d'épaisseur 0,05-1,00mm</li>
-              <li>6.18 — Testeur circuit électrique</li>
-              <li>6.19 — Balance étalon load weighing 500kg</li>
-              <li>6.20 — Rugosimètre portatif</li>
-              <li>6.21 — Duromètre Leeb</li>
-              <li>6.22 — Endoscope flexible</li>
-              <li>6.23 — Stéthoscope électronique</li>
-              <li>6.24 — Caméra thermique</li>
-              <li>6.25 — Analyseur gaz échappement</li>
-            </ol>
-          </div>
+          {(() => {
+            const OUTILS_LIST = [
+              {
+                id: "6.1",
+                ref: "8234-001",
+                name: "Extracteur de disque frein SAHR",
+                cat: "Mécanique — Freinage",
+                mfr: "Kukko 20-30+",
+                specs: [
+                  ["Type", "Extracteur hydraulique 3 griffes"],
+                  ["Dimensions", "350 × 200 × 180 mm"],
+                  ["Poids", "8,5 kg"],
+                  ["Matériau", "Acier chrome-molybdène 42CrMo4"],
+                  ["Capacité", "Ø 80-300 mm | Force : 12 T max"],
+                  ["Norme", "ISO 1101 (Raccord 3/4\" BSP)"]
+                ],
+                proc: [
+                  "Centrer l'extracteur sur le moyeu (contrôler l'alignement).",
+                  "Engager les 3 griffes dans les cannelures du disque.",
+                  "Relier la pompe manuelle (vérifier le joint torique).",
+                  "Pomper régulièrement (1 coup/sec) jusqu'au décollage.",
+                  "Maintenir la charge 10s puis décharger doucement.",
+                  "Retirer l'ensemble disque/outil et poser sur support propre."
+                ],
+                maint: "Nettoyer à l'essence F. Graisser la vis centrale toutes les 10 utilisations. Étalonner la pompe de test tous les 12 mois.",
+                loc: "Armoire atelier — Compartiment B-3. Caisse mobile frein — Tiroir 2.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><line x1="100" y1="20" x2="100" y2="130" stroke="#f59e0b" stroke-width="2" stroke-dasharray="2,2" /><rect x="95" y="30" width="10" height="80" fill="none" stroke="#f59e0b" stroke-width="1.5" /><rect x="60" y="55" width="80" height="15" rx="3" fill="none" stroke="#f59e0b" stroke-width="1.5" /><path d="M 70 70 L 70 110 L 80 120 L 75 125 L 60 115 L 60 70 Z" fill="none" stroke="#f59e0b" stroke-width="1.5" /><path d="M 130 70 L 130 110 L 120 120 L 125 125 L 140 115 L 140 70 Z" fill="none" stroke="#f59e0b" stroke-width="1.5" />`
+              },
+              {
+                id: "6.2",
+                ref: "8234-015",
+                name: "Clé dynamométrique 3/4\" 100-650 Nm",
+                cat: "Mécanique — Serrage",
+                mfr: "Snap-on QD3R250",
+                specs: [
+                  ["Type", "Clé à déclenchement d'échelle"],
+                  ["Dimensions", "680 × 80 × 80 mm"],
+                  ["Poids", "2,1 kg"],
+                  ["Matériau", "Acier Cr-V S2, poignée aluminium"],
+                  ["Plage", "100-650 Nm (Précision ±3%)"],
+                  ["Norme", "ISO 6789 Classe 2"]
+                ],
+                proc: [
+                  "Sélectionner la valeur cible sur le curseur gradué.",
+                  "Vérifier le zéro de l'échelle avant utilisation.",
+                  "Engager la douille d'impact avec goupille de sécurité.",
+                  "Tirer de façon rectiligne jusqu'au déclenchement.",
+                  "Relâcher l'effort dès le clic (pas de sur-serrage).",
+                  "Consigner le couple sur la fiche technique de suivi."
+                ],
+                maint: "Étalonner tous les 6 mois (ISO 17025). Nettoyer le corps après usage. Stocker déchargée à 50 Nm.",
+                loc: "Armoire atelier — Compartiment A-1. Caisse mobile transmission — Tiroir 1.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="30" y="70" width="130" height="8" fill="none" stroke="#f59e0b" stroke-width="1.5" /><rect x="110" y="66" width="50" height="16" rx="2" fill="none" stroke="#f59e0b" stroke-width="1" /><circle cx="25" cy="74" r="12" fill="none" stroke="#f59e0b" stroke-width="1.5" /><rect x="21" y="70" width="8" height="8" fill="none" stroke="#f59e0b" stroke-width="1.5" />`
+              },
+              {
+                id: "6.3",
+                ref: "8234-022",
+                name: "Clé à choc 1\" pneumatique",
+                cat: "Mécanique — Desserrage / Serrage rapide",
+                mfr: "Ingersoll Rand 285B-6",
+                specs: [
+                  ["Type", "Clé pneumatique à impact lourd"],
+                  ["Dimensions", "450 × 120 × 200 mm"],
+                  ["Poids", "5,8 kg"],
+                  ["Matériau", "Corps aluminium, enclume forgée"],
+                  ["Capacité", "2700 Nm desserrage / 1800 Nm serrage"],
+                  ["Norme", "CE / EN ISO 11148 (Ligne : 6.2 bar)"]
+                ],
+                proc: [
+                  "Vérifier la pression de ligne (6.2 bar min / 8.5 bar max).",
+                  "Injecter 3 gouttes d'huile pneumatique dans l'admission.",
+                  "Monter la douille à choc d'impact sécurisée.",
+                  "Positionner la clé parfaitement dans l'axe de l'écrou.",
+                  "Déclencher par impulsions courtes (2-3s maximum).",
+                  "Finaliser le serrage final à la clé dynamométrique."
+                ],
+                maint: "Purger les condensats d'eau de l'air comprimé tous les jours. Graisser toutes les 50h. Remplacer les marteaux après 500h.",
+                loc: "Armoire atelier — Compartiment A-2. Raccord d'air station 3.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="60" y="35" width="80" height="50" rx="5" fill="none" stroke="#f59e0b" stroke-width="1.5" /><path d="M 60 50 L 45 50 L 45 70 L 60 70 Z" fill="none" stroke="#f59e0b" stroke-width="1.5" /><rect x="35" y="55" width="10" height="10" fill="none" stroke="#f59e0b" stroke-width="1.5" /><path d="M 100 85 L 100 130 C 100 135, 115 135, 115 130 L 115 85 Z" fill="none" stroke="#f59e0b" stroke-width="1.5" />`
+              },
+              {
+                id: "6.4",
+                ref: "8234-031",
+                name: "Marteau à inertie extracteur injecteur",
+                cat: "Mécanique — Système d'injection",
+                mfr: "OTC 7448",
+                specs: [
+                  ["Type", "Extracteur injecteur à masse coulissante"],
+                  ["Dimensions", "280 × 80 × 80 mm"],
+                  ["Poids", "1,2 kg"],
+                  ["Matériau", "Acier trempé haute résistance 55 HRC"],
+                  ["Capacité", "Common Rail Ø 14-17 mm (M14×1,5)"],
+                  ["Norme", "DIN 3122 (Masse d'inertie : 800g)"]
+                ],
+                proc: [
+                  "Déposer la tuyauterie haute pression et les brides.",
+                  "Visser l'adaptateur M14×1.5 sur la tête d'injecteur (15 Nm).",
+                  "Visser la tige de l'outil fermement dans l'adaptateur.",
+                  "Positionner la butée et la masse de coulissement.",
+                  "Frapper d'un geste sec et rectiligne le long de la tige.",
+                  "Extraire l'injecteur et nettoyer la portée de culasse."
+                ],
+                maint: "Contrôler le filetage de l'adaptateur après usage. Graisser l'arbre de coulissement mensuellement. Rebut si fissures.",
+                loc: "Armoire atelier — Compartiment C-1. Caisse mobile moteur — Tiroir 3.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><line x1="20" y1="75" x2="180" y2="75" stroke="#f59e0b" stroke-width="2" /><rect x="80" y="55" width="40" height="40" rx="3" fill="none" stroke="#f59e0b" stroke-width="1.5" /><rect x="140" y="65" width="10" height="20" fill="none" stroke="#f59e0b" stroke-width="1.5" />`
+              },
+              {
+                id: "6.5",
+                ref: "8234-040",
+                name: "Jeu de cales de précision",
+                cat: "Mécanique — Mesures & Jeux",
+                mfr: "Mitutoyo 184-304S",
+                specs: [
+                  ["Type", "Cales d'épaisseur en coffret rigide"],
+                  ["Dimensions", "150 × 100 × 40 mm"],
+                  ["Poids", "0,8 kg"],
+                  ["Matériau", "Acier allié trempé et rectifié 62 HRC"],
+                  ["Plage", "0,05 à 1,00 mm (par pas de 0,05 mm)"],
+                  ["Norme", "DIN 2275 Classe 1 (Précision ±0,002 mm)"]
+                ],
+                proc: [
+                  "Sélectionner la lame de calage estimée.",
+                  "Nettoyer la lame à l'aide d'un chiffon propre.",
+                  "Glisser la lame à plat (mesure perpendiculaire).",
+                  "Évaluer la friction : le glissement doit être gras.",
+                  "Si l'insertion est lâche, tester la taille supérieure.",
+                  "Essuyer et replier immédiatement la cale dans l'étui."
+                ],
+                maint: "Interdiction de plier ou forcer les cales. Dépoussiérer et huiler légèrement après usage. Étalonner tous les 24 mois.",
+                loc: "Armoire atelier — Compartiment D-1. Coffret de précision sous clé.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><circle cx="50" cy="100" r="6" fill="none" stroke="#f59e0b" stroke-width="1.5" /><path d="M 50 100 L 130 30 L 140 38 L 50 100" fill="none" stroke="#f59e0b" stroke-width="1.2" /><path d="M 50 100 L 150 55 L 157 65 L 50 100" fill="none" stroke="#f59e0b" stroke-width="1.2" />`
+              },
+              {
+                id: "6.6",
+                ref: "8234-050",
+                name: "Pompe de test hydraulique manuelle",
+                cat: "Hydraulique — Test pression",
+                mfr: "Enerpac P-392",
+                specs: [
+                  ["Type", "Pompe hydraulique manuelle 2 vitesses"],
+                  ["Dimensions", "400 × 150 × 180 mm"],
+                  ["Poids", "4,2 kg"],
+                  ["Matériau", "Corps aluminium, piston chromé"],
+                  ["Capacité", "0-700 bar | Réservoir interne : 1,5 L"],
+                  ["Norme", "CE / ASME B30.1"]
+                ],
+                proc: [
+                  "Vérifier le niveau d'huile hydraulique ISO VG 46.",
+                  "Relier le flexible haute pression à la prise Minimess.",
+                  "Purger le circuit en pompant à vide (robinet ouvert).",
+                  "Fermer fermement le robinet de purge de la pompe.",
+                  "Pomper régulièrement jusqu'à la pression requise.",
+                  "Ouvrir lentement la valve de vidange avant dépose."
+                ],
+                maint: "Vidanger et rincer le réservoir tous les 6 mois. Remplacer les joints toriques si fuite. Étalonner le manomètre tous les 12 mois.",
+                loc: "Armoire atelier — Compartiment E-1. Station test hydraulique.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="40" y="80" width="120" height="40" rx="3" fill="none" stroke="#f59e0b" stroke-width="1.5" /><path d="M 148 60 L 50 30" stroke="#f59e0b" stroke-width="2.5" fill="none" /><circle cx="65" cy="55" r="15" fill="none" stroke="#f59e0b" stroke-width="1.5" />`
+              },
+              {
+                id: "6.7",
+                ref: "8234-089",
+                name: "Testeur de précharge azote",
+                cat: "Hydraulique — Accumulateurs",
+                mfr: "Hydac FPU-1-350/250",
+                specs: [
+                  ["Type", "Vérificateur / bloc de charge d'accumulateurs"],
+                  ["Dimensions", "600 × 200 × 150 mm"],
+                  ["Poids", "3,5 kg"],
+                  ["Matériau", "Corps inox 316L, flexible haute pression"],
+                  ["Capacité", "0-300 bar d'azote maximum"],
+                  ["Norme", "EN 14359 (Manomètre : Classe 1.0)"]
+                ],
+                proc: [
+                  "Dépressuriser entièrement le circuit hydraulique.",
+                  "Démonter le capuchon de la valve de l'accumulateur.",
+                  "Visser le raccord rapide du testeur sur la valve d'accu.",
+                  "Ouvrir lentement la molette et relever la pression.",
+                  "Connecter la bouteille d'azote si recharge nécessaire.",
+                  "Fermer les valves de sécurité et remonter le bouchon."
+                ],
+                maint: "Azote pur uniquement. Interdiction absolue d'utiliser de l'air ou de l'oxygène. Étalonner le manomètre tous les 12 mois.",
+                loc: "Armoire atelier — Compartiment E-2. Bouteille d'azote d'atelier.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="80" y="60" width="40" height="30" rx="2" fill="none" stroke="#f59e0b" stroke-width="1.5" /><circle cx="100" cy="35" r="15" fill="none" stroke="#f59e0b" stroke-width="1.5" /><line x1="120" y1="75" x2="150" y2="120" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="2,2" />`
+              },
+              {
+                id: "6.8",
+                ref: "8234-055",
+                name: "Clé à sangle filtre hydraulique",
+                cat: "Hydraulique — Filtration",
+                mfr: "Gedore 40 Z 90",
+                specs: [
+                  ["Type", "Clé à sangle de desserrage de cartouches"],
+                  ["Dimensions", "350 × 50 × 30 mm (Sangle : 400 mm)"],
+                  ["Poids", "0,4 kg"],
+                  ["Matériau", "Sangle Kevlar nylon, poignée acier"],
+                  ["Capacité", "Ø 60-140 mm (cloches et cartouches)"],
+                  ["Norme", "DIN 3122 (Serrage : 80 Nm max)"]
+                ],
+                proc: [
+                  "Essuyer le corps métallique du filtre filtre.",
+                  "Enrouler la sangle nylon (sens anti-horaire).",
+                  "Passer l'extrémité dans le verrou du manche.",
+                  "Exercer une pré-tension manuelle ferme.",
+                  "Faire levier avec le manche pour décoller la cartouche.",
+                  "Finir le dévissage à la main de la cartouche."
+                ],
+                maint: "Laver la sangle à l'essence F. Remplacer immédiatement la sangle si déchirures transversales supérieures à 10%.",
+                loc: "Armoire atelier — Compartiment E-3. Caisse mobile hyd — Tiroir 1.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="30" y="70" width="100" height="10" rx="2" fill="none" stroke="#f59e0b" stroke-width="1.5" /><circle cx="145" cy="75" r="25" fill="none" stroke="#f59e0b" stroke-width="1" stroke-dasharray="2,2" />`
+              },
+              {
+                id: "6.9",
+                ref: "8234-060",
+                name: "Purgeur de circuit hydraulique",
+                cat: "Hydraulique — Maintenance fluide",
+                mfr: "Stauff Test-20",
+                specs: [
+                  ["Type", "Station mobile de dégazage et filtration"],
+                  ["Dimensions", "800 × 500 × 900 mm"],
+                  ["Poids", "45 kg (sans huile)"],
+                  ["Matériau", "Châssis acier, réservoir inox"],
+                  ["Capacité", "Filtration 3µ absolue | Débit : 100 L/min"],
+                  ["Norme", "ISO 4406 (Moteur 380V triphasé)"]
+                ],
+                proc: [
+                  "Amener le chariot mobile et raccorder au réseau 380V.",
+                  "Relier l'aspiration à la prise de vidange basse.",
+                  "Relier le refoulement au bouchon supérieur de cuve.",
+                  "Mettre en route la pompe et le réchauffeur (40°C).",
+                  "Laisser circuler l'huile (cible propreté 18/16/13).",
+                  "Ouvrir les purgeurs des points hauts du circuit."
+                ],
+                maint: "Changer la cartouche filtrante 3µ si l'indicateur de colmatage s'allume. Inspecter les flexibles tous les 3 mois.",
+                loc: "Zone atelier — Emplacement marqué au sol 'PURGE HYD'.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="60" y="40" width="80" height="70" rx="5" fill="none" stroke="#f59e0b" stroke-width="1.5" /><circle cx="75" cy="120" r="12" fill="none" stroke="#f59e0b" stroke-width="1.5" /><circle cx="125" cy="120" r="12" fill="none" stroke="#f59e0b" stroke-width="1.5" />`
+              },
+              {
+                id: "6.10",
+                ref: "8234-070",
+                name: "Multimètre numérique industriel",
+                cat: "Électronique — Appareils de mesure",
+                mfr: "Fluke 87V",
+                specs: [
+                  ["Type", "Multimètre True-RMS de précision IP67"],
+                  ["Dimensions", "190 × 90 × 50 mm"],
+                  ["Poids", "0,5 kg"],
+                  ["Matériau", "Coque antichoc renforcée"],
+                  ["Capacité", "V AC/DC : 1000V | I DC : 10A"],
+                  ["Norme", "CAT III 1000V / CAT IV 600V"]
+                ],
+                proc: [
+                  "Inspecter l'état des gaines d'isolant des cordons.",
+                  "Sélectionner le mode approprié (V, R, I) au rotateur.",
+                  "Connecter le cordon noir sur la borne commune COM.",
+                  "Appliquer fermement les pointes de mesure.",
+                  "Attendre la stabilisation de la mesure (2-3 sec).",
+                  "Relever la valeur et déconnecter les bornes."
+                ],
+                maint: "Utiliser exclusivement des fusibles d'origine haute tension. Nettoyer l'outil. Étalonner tous les 12 mois.",
+                loc: "Armoire atelier — Compartiment F-1. Housse de protection.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="65" y="25" width="70" height="100" rx="6" fill="none" stroke="#f59e0b" stroke-width="1.5" /><rect x="75" y="35" width="50" height="25" fill="none" stroke="#f59e0b" stroke-width="1.2" /><circle cx="100" cy="80" r="12" fill="none" stroke="#f59e0b" stroke-width="1.2" />`
+              },
+              {
+                id: "6.11",
+                ref: "8234-080",
+                name: "Analyseur de bus CAN J1939",
+                cat: "Électronique — Outils de diagnostic",
+                mfr: "Dearborn Group DPA5",
+                specs: [
+                  ["Type", "Interface diagnostic réseau CAN dual-channel"],
+                  ["Dimensions", "150 × 80 × 35 mm"],
+                  ["Poids", "0,3 kg"],
+                  ["Matériau", "Boîtier aluminium, fiches industrielles"],
+                  ["Capacité", "SAE J1939 / CANopen (125-1000 kbps)"],
+                  ["Norme", "CE / Alimentation 9-36V DC par port"]
+                ],
+                proc: [
+                  "Couper le commutateur principal de la machine.",
+                  "Raccorder la fiche Deutsch sur le port de diagnostic.",
+                  "Connecter la prise USB de l'outil au PC d'atelier.",
+                  "Mettre le contact d'alimentation de la cabine.",
+                  "Ouvrir l'application de diagnostic de l'ordinateur.",
+                  "Lire et enregistrer les codes d'erreurs (DTC)."
+                ],
+                maint: "Mettre à jour l'application logicielle et le firmware tous les 6 mois. Dépoussiérer les broches.",
+                loc: "Armoire atelier — Compartiment F-2. Mallette PC diagnostic.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="50" y="40" width="100" height="70" rx="8" fill="none" stroke="#f59e0b" stroke-width="1.5" /><circle cx="65" cy="55" r="3" fill="none" stroke="#f59e0b" stroke-width="1" /><rect x="40" y="65" width="10" height="20" fill="none" stroke="#f59e0b" stroke-width="1.5" />`
+              },
+              {
+                id: "6.12",
+                ref: "8234-085",
+                name: "Testeur de câble Ethernet / M12",
+                cat: "Électronique — Continuité réseau",
+                mfr: "Fluke Networks MicroScanner2",
+                specs: [
+                  ["Type", "Vérificateur de câblage et jarretières"],
+                  ["Dimensions", "130 × 70 × 30 mm"],
+                  ["Poids", "0,2 kg"],
+                  ["Matériau", "ABS injecté avec enveloppe caoutchouc"],
+                  ["Capacité", "Longueur Segment : 0-460 m (courts-circuits)"],
+                  ["Norme", "ISO 11801 / TIA/EIA-568"]
+                ],
+                proc: [
+                  "Vérifier que le réseau ciblé est hors tension.",
+                  "Brancher l'émetteur du testeur à l'extrémité du câble.",
+                  "Brancher l'unité réceptrice à l'autre extrémité.",
+                  "Mettre le boîtier en marche et lancer le test.",
+                  "Contrôler le câblage (Wiremap) et l'absence de coupure.",
+                  "Noter la distance en mètres si court-circuit détecté."
+                ],
+                maint: "Nettoyer les fiches à l'air sec comprimé. Remplacer les piles 2xAA. Étalonner la mesure de longueur annuellement.",
+                loc: "Armoire atelier — Compartiment F-3. Caisse mobile RCS — Tiroir 1.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="70" y="30" width="60" height="90" rx="5" fill="none" stroke="#f59e0b" stroke-width="1.5" /><rect x="78" y="40" width="44" height="30" fill="none" stroke="#f59e0b" stroke-width="1.2" />`
+              },
+              {
+                id: "6.13",
+                ref: "8234-090",
+                name: "Alimentation de banc 24V / 12V",
+                cat: "Électronique — Banc de test",
+                mfr: "Manson SPS-9605",
+                specs: [
+                  ["Type", "Alimentation DC régulée programmable"],
+                  ["Dimensions", "220 × 110 × 280 mm"],
+                  ["Poids", "3,8 kg"],
+                  ["Matériau", "Boîtier en acier, ventilateur arrière"],
+                  ["Capacité", "0-60V DC | 0-5A (Régulation ±10mV)"],
+                  ["Norme", "IEC 61010-1 (Puissance : 300W maximum)"]
+                ],
+                proc: [
+                  "Raccorder le cordon d'alimentation à la prise 220V.",
+                  "Allumer le boîtier, configurer la tension requise.",
+                  "Fixer le courant maximum de protection (anti-court-circuit).",
+                  "Vérifier que l'indicateur de sortie est sur OFF.",
+                  "Brancher les cordons de raccordement aux fiches.",
+                  "Activer l'alimentation (ON) et surveiller la puissance."
+                ],
+                maint: "Dépoussiérer le bloc de ventilation mensuellement. Contrôler les tensions de sortie tous les 12 mois.",
+                loc: "Banc de test atelier — Compartiment F-4.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="40" y="30" width="120" height="90" rx="3" fill="none" stroke="#f59e0b" stroke-width="1.5" /><circle cx="62" cy="80" r="8" fill="none" stroke="#f59e0b" stroke-width="1" /><circle cx="100" cy="105" r="4" fill="none" stroke="#f59e0b" stroke-width="1.2" />`
+              },
+              {
+                id: "6.14",
+                ref: "8234-095",
+                name: "Oscilloscope portable 2 canaux",
+                cat: "Électronique — Métrologie signaux",
+                mfr: "PicoScope 2204A",
+                specs: [
+                  ["Type", "Oscilloscope d'acquisition USB 2 voies"],
+                  ["Dimensions", "130 × 100 × 20 mm"],
+                  ["Poids", "0,2 kg"],
+                  ["Matériau", "ABS, fiches BNC coaxiales blindées"],
+                  ["Capacité", "Bande passante : 10 MHz | Échantillonnage : 100 MS/s"],
+                  ["Norme", "CE / EN 61326-1 (Résolution : 8 bits)"]
+                ],
+                proc: [
+                  "Brancher l'appareil au port USB de l'ordinateur.",
+                  "Démarrer l'application d'acquisition PicoScope.",
+                  "Relier la sonde d'analyse coaxiale sur la voie A.",
+                  "Fixer la pince crocodile de masse sur le châssis.",
+                  "Appliquer la pointe de contact sur le fil à mesurer.",
+                  "Capturer la courbe et enregistrer la fréquence PWM."
+                ],
+                maint: "Lancer l'auto-calibrage avant toute mesure critique. Manipuler les pointes de mesure délicatement.",
+                loc: "Armoire atelier — Compartiment F-5. Mallette de transport.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="60" y="45" width="80" height="60" rx="4" fill="none" stroke="#f59e0b" stroke-width="1.5" /><circle cx="75" cy="75" r="6" fill="none" stroke="#f59e0b" stroke-width="1.2" />`
+              },
+              {
+                id: "6.15",
+                ref: "8234-100",
+                name: "Programmateur firmware RCS",
+                cat: "Électronique — Écriture microprocesseurs",
+                mfr: "Segger J-Link EDU",
+                specs: [
+                  ["Type", "Sonde d'analyse / programmation JTAG / SWD"],
+                  ["Dimensions", "100 × 40 × 20 mm"],
+                  ["Poids", "0,1 kg"],
+                  ["Matériau", "Coffret rigide ABS moulé sous pression"],
+                  ["Capacité", "Série RCS ARM Cortex (M0 à M4)"],
+                  ["Norme", "CE / RoHS (Fréquence : 15 MHz max)"]
+                ],
+                proc: [
+                  "Mettre le calculateur RCS de la machine hors tension.",
+                  "Relier la nappe SWD de programmation sur la carte.",
+                  "Brancher le câble d'acquisition USB sur le PC.",
+                  "Lancer l'application de flashage officielle.",
+                  "Relever le matricule CPU de la carte (test d'accès).",
+                  "Charger le fichier .hex et lancer l'injection."
+                ],
+                maint: "Prendre garde à ne pas déformer la nappe de programmation SWD. Mettre à jour l'application J-Link.",
+                loc: "Armoire atelier — Compartiment F-6. Sous clé chez le chef d'atelier.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="40" y="60" width="80" height="30" rx="3" fill="none" stroke="#f59e0b" stroke-width="1.5" /><rect x="120" y="65" width="10" height="20" fill="none" stroke="#f59e0b" stroke-width="1.2" />`
+              },
+              {
+                id: "6.16",
+                ref: "8234-110",
+                name: "Comparateur digital sur pied magnétique",
+                cat: "Mesure — Métrologie & Tolérances",
+                mfr: "Mitutoyo 543-390B",
+                specs: [
+                  ["Type", "Comparateur numérique de précision à quartz"],
+                  ["Dimensions", "150 × 60 × 30 mm (pied inclus)"],
+                  ["Poids", "1,2 kg"],
+                  ["Matériau", "Axe en acier traité, base magnétique"],
+                  ["Capacité", "Course : 0 - 12,7 mm | Précision : ±0,003 mm"],
+                  ["Norme", "ISO 463 / DIN 878 (Résolution : 0,001 mm)"]
+                ],
+                proc: [
+                  "Nettoyer le support métallique d'ancrage de la machine.",
+                  "Fixer la base magnétique en tournant le levier.",
+                  "Positionner le bras articulé et visser la molette.",
+                  "Mettre le palpeur en contact (précharge de 1,5 mm).",
+                  "Appuyer sur ZERO pour calibrer la référence.",
+                  "Faire pivoter la pièce et relever les variations."
+                ],
+                maint: "Essuyer la tige mobile du palpeur après usage. Ne jamais appliquer de graisse. Étalonner tous les 6 mois.",
+                loc: "Armoire atelier — Compartiment D-1. Coffret d'origine Mitutoyo.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="45" y="110" width="35" height="25" rx="2" fill="none" stroke="#f59e0b" stroke-width="1.5" /><line x1="62" y1="110" x2="62" y2="40" stroke="#f59e0b" stroke-width="2.5" /><circle cx="130" cy="61" r="16" fill="none" stroke="#f59e0b" stroke-width="1.5" />`
+              },
+              {
+                id: "6.17",
+                ref: "8234-115",
+                name: "Thermomètre infrarouge laser",
+                cat: "Mesure — Température",
+                mfr: "Fluke 62 MAX+",
+                specs: [
+                  ["Type", "Thermomètre IR antichoc IP54"],
+                  ["Dimensions", "175 × 85 × 75 mm"],
+                  ["Poids", "0,3 kg"],
+                  ["Matériau", "Boîtier plastique renforcé caoutchouc"],
+                  ["Capacité", "Plage : -30°C à +650°C | Précision : ±1,0°C"],
+                  ["Norme", "CE / ratio distance/cible 12:1"]
+                ],
+                proc: [
+                  "Ajuster l'émissivité selon la pièce (peinture=0.95).",
+                  "Appuyer sur la gâchette pour activer l'écran.",
+                  "Viser l'organe de freinage à l'aide du double laser.",
+                  "Vérifier que les points laser s'inscrivent dans la zone.",
+                  "Relever la température de crête stabilisée.",
+                  "Relâcher la gâchette pour geler la valeur (HOLD)."
+                ],
+                maint: "Essuyer délicatement l'optique à l'aide d'un chiffon doux. Étalonner tous les 12 mois.",
+                loc: "Armoire atelier — Compartiment D-2. Housse de protection.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><path d="M 120 110 L 105 110 L 90 60 L 150 40 L 160 65 L 115 80 Z" fill="none" stroke="#f59e0b" stroke-width="1.5" /><line x1="150" y1="40" x2="160" y2="65" stroke="#f59e0b" stroke-width="2" />`
+              },
+              {
+                id: "6.18",
+                ref: "8234-120",
+                name: "Analyseur d'huile portable",
+                cat: "Mesure — Qualité lubrifiants",
+                mfr: "Parker Kittiwake DIGI",
+                specs: [
+                  ["Type", "Détecteur de pollution et humidité en cellule"],
+                  ["Dimensions", "200 × 100 × 50 mm"],
+                  ["Poids", "0,5 kg"],
+                  ["Matériau", "Coffret en ABS étanche aux huiles"],
+                  ["Capacité", "Humidité 0-500 ppm | Viscosité relative"],
+                  ["Norme", "ISO 4406 / CE (Dérive viscosité : ±3% max)"]
+                ],
+                proc: [
+                  "Prélever 5 mL d'huile à l'aide d'une seringue neuve.",
+                  "Injecter délicatement le fluide dans la cellule.",
+                  "Sélectionner la classe d'huile de référence (ISO 46).",
+                  "Lancer l'analyse automatique (60 secondes).",
+                  "Noter la teneur en eau (ppm) et la propreté.",
+                  "Rincer soigneusement la cellule avec le solvant."
+                ],
+                maint: "Ne pas conserver de fluides dans l'analyseur. Remplacer les capteurs tous les 12 mois. Étalonner tous les 6 mois.",
+                loc: "Armoire atelier — Compartiment D-3. Mallette de test.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="60" y="30" width="80" height="90" rx="8" fill="none" stroke="#f59e0b" stroke-width="1.5" /><rect x="85" y="40" width="30" height="35" rx="2" fill="none" stroke="#f59e0b" stroke-width="1.2" />`
+              },
+              {
+                id: "6.19",
+                ref: "8234-125",
+                name: "Règle de flèche chaîne",
+                cat: "Mesure — Transmission",
+                mfr: "KRW 100-0",
+                specs: [
+                  ["Type", "Règle graduée d'alignement avec peson"],
+                  ["Dimensions", "1000 × 50 × 10 mm"],
+                  ["Poids", "0,6 kg"],
+                  ["Matériau", "Règle aluminium, peson à ressort inox"],
+                  ["Capacité", "Déviation : 0-100 mm | Effort calibré : 10 kg"],
+                  ["Norme", "DIN 8187 (Précision ressort : ±0,1 kg)"]
+                ],
+                proc: [
+                  "Placer la règle le long du brin de chaîne libre.",
+                  "Fixer le crochet du peson sur le maillon central.",
+                  "Tirer sur la poignée jusqu'au repère de charge (10 kg).",
+                  "Mesurer la flèche (déviation) indiquée par la règle.",
+                  "Comparer la mesure obtenue à l'intervalle d'usine.",
+                  "Relâcher doucement la charge et ranger l'outil."
+                ],
+                maint: "Vérifier le tarage du peson de force (10 kg) tous les 3 mois. Lubrifier le ressort interne.",
+                loc: "Armoire atelier — Compartiment D-4. Support mural d'atelier.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="15" y="70" width="170" height="10" fill="none" stroke="#f59e0b" stroke-width="1.5" /><rect x="92" y="80" width="16" height="40" fill="none" stroke="#f59e0b" stroke-width="1.2" />`
+              },
+              {
+                id: "6.20",
+                ref: "8234-130",
+                name: "Micromètre extérieur 0-25 mm",
+                cat: "Mesure — Tolérances & Cotes",
+                mfr: "Mitutoyo 103-137",
+                specs: [
+                  ["Type", "Micromètre de précision extérieur"],
+                  ["Dimensions", "150 × 50 × 30 mm"],
+                  ["Poids", "0,3 kg"],
+                  ["Matériau", "Cadre fonte traité, touches carbure"],
+                  ["Capacité", "Plage : 0-25 mm | Résolution : 0,01 mm"],
+                  ["Norme", "DIN 863 (Précision : ±0,002 mm)"]
+                ],
+                proc: [
+                  "Essuyer les touches de mesure en carbure.",
+                  "Ajuster le point zéro à l'aide de la bague.",
+                  "Placer la pièce à mesurer entre l'enclume et la touche.",
+                  "Rapprocher le tambour micrométrique de serrage.",
+                  "Serrer de façon calibrée à l'aide du cliquet (3 clics).",
+                  "Bloquer la vis, extraire la pièce et lire la valeur."
+                ],
+                maint: "Ne pas forcer sur le tambour sans cliquet. Nettoyer et ranger l'outil dans son boîtier après usage. Étalonner tous les 6 mois.",
+                loc: "Armoire atelier — Compartiment D-1. Boîte de rangement rouge.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><path d="M 50 65 A 35 35 0 0 0 110 65 L 110 80 L 50 80 Z" fill="none" stroke="#f59e0b" stroke-width="1.5" /><rect x="110" y="58" width="40" height="12" fill="none" stroke="#f59e0b" stroke-width="1.5" />`
+              },
+              {
+                id: "6.21",
+                ref: "8234-140",
+                name: "Pont roulant d'atelier 2 tonnes",
+                cat: "Levage — Gantry d'atelier",
+                mfr: "Demag PK 2",
+                specs: [
+                  ["Type", "Pont roulant électrique à chaîne"],
+                  ["Dimensions", "Portée 3m | Hauteur de levage 6m"],
+                  ["Poids", "350 kg (poutre et chariot de translation)"],
+                  ["Matériau", "Acier de construction soudé S355"],
+                  ["Capacité", "Charge maximale admissible 2000 kg"],
+                  ["Norme", "EN 15011 / CE (Chaîne grade 80)"]
+                ],
+                proc: [
+                  "Vérifier la validité du certificat de sécurité annuel.",
+                  "Inspecter l'état de la chaîne (déformation, maillons).",
+                  "Positionner le palan à la verticale de la charge.",
+                  "Élinguer la charge à soulever avec des manilles.",
+                  "Effectuer une pré-tension de 10 cm pour équilibrer.",
+                  "Déplacer lentement vers la zone de dépose."
+                ],
+                maint: "Graisser la chaîne d'engrènement tous les 3 mois. Réaliser le contrôle périodique annuel réglementaire obligatoire.",
+                loc: "Atelier de maintenance — Poutre supérieure mobile. Commande filaire suspendue.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="15" y="25" width="170" height="12" fill="none" stroke="#f59e0b" stroke-width="1.5" /><line x1="100" y1="57" x2="100" y2="105" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,1" />`
+              },
+              {
+                id: "6.22",
+                ref: "8234-145",
+                name: "Élingues textiles 2 tonnes",
+                cat: "Levage — Sangles",
+                mfr: "Yale TTX 2000",
+                specs: [
+                  ["Type", "Élingue textile plate sans fin double couche"],
+                  ["Dimensions", "Longueur utile 2m | Largeur 90mm"],
+                  ["Poids", "1,8 kg"],
+                  ["Matériau", "Polyester haute ténacité 100%"],
+                  ["Capacité", "CMU : 2000 kg direct / 4000 kg en U"],
+                  ["Norme", "EN 1492-1 (Coefficient de sécurité 7:1)"]
+                ],
+                proc: [
+                  "Contrôler la lisibilité des indications de l'étiquette.",
+                  "Inspecter l'ensemble de la sangle (pas de coupure).",
+                  "Positionner de façon stable sous l'organe à lever.",
+                  "Utiliser des fourreaux sur les angles vifs.",
+                  "Accrocher les deux boucles au crochet du palan.",
+                  "Lever sans à-coups en maintenant la charge plane."
+                ],
+                maint: "Rincer à l'eau savonneuse froide si souillée. Rebut obligatoire si coutures de retenue endommagées ou effilochage.",
+                loc: "Panneau d'élingage atelier — Compartiment G-1. Support métallique mural.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><path d="M 60 75 Q 100 20, 140 75 T 60 75" fill="none" stroke="#f59e0b" stroke-width="3" />`
+              },
+              {
+                id: "6.23",
+                ref: "8234-150",
+                name: "Chandelles de calage 10 tonnes",
+                cat: "Levage — Équipements de sécurité",
+                mfr: "Bahco BH3A10",
+                specs: [
+                  ["Type", "Chandelles mécaniques réglables à vis"],
+                  ["Dimensions", "Hauteur 350-550 mm | Base 200×200"],
+                  ["Poids", "12 kg (la paire)"],
+                  ["Matériau", "Acier moulé haute résistance S355"],
+                  ["Capacité", "Charge nominale paire : 10000 kg"],
+                  ["Norme", "EN 1494 / CE (Vis à filetage trapézoïdal)"]
+                ],
+                proc: [
+                  "Vérifier la planéité et la propreté de la dalle béton.",
+                  "Régler la hauteur initiale de la chandelle à vis.",
+                  "Lever le Scooptram avec le cric de l'atelier.",
+                  "Placer les deux chandelles sous les points d'ancrage.",
+                  "Ajuster l'écrou de butée de sécurité à fond.",
+                  "Redescendre la machine pour la faire porter sur l'outil."
+                ],
+                maint: "Graisser la vis de réglage tous les 3 mois. Inspecter l'état des filetages et de la base (rebut si jeu).",
+                loc: "Atelier de maintenance — Repères marqués au sol 'CHANDELLES'. Support mural nord.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><polygon points="50,130 150,130 120,65 80,65" fill="none" stroke="#f59e0b" stroke-width="1.5" /><rect x="80" y="22" width="40" height="8" rx="1" fill="none" stroke="#f59e0b" stroke-width="2" />`
+              },
+              {
+                id: "6.24",
+                ref: "8234-155",
+                name: "Chariot de visite mécanique",
+                cat: "Manutention — Accès sous-machine",
+                mfr: "Siegmund Creeper",
+                specs: [
+                  ["Type", "Chariot de visite à plateau réglable"],
+                  ["Dimensions", "1200 × 600 × 120 mm (profil bas)"],
+                  ["Poids", "35 kg"],
+                  ["Matériau", "Cadre tubulaire acier, plateau ergonomique"],
+                  ["Capacité", "Charge maximale autorisée : 150 kg"],
+                  ["Norme", "CE (Roulettes pivotantes à freins)"]
+                ],
+                proc: [
+                  "Positionner le chariot sous le compartiment ciblé.",
+                  "Bloquer les freins des roulettes pivotantes.",
+                  "Régler la hauteur et l'inclinaison de l'appui-tête.",
+                  "S'allonger, bras à l'intérieur de la structure.",
+                  "Agencer les outils d'intervention sur les plateaux.",
+                  "Désengager les freins avant d'extraire le chariot."
+                ],
+                maint: "Dépoussiérer et lubrifier l'axe des roues tous les 6 mois. Remplacer les bandages s'ils sont coupés.",
+                loc: "Zone de maintenance d'atelier — Repères marqués au sol 'CHARIOT VISITE'.",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="30" y="65" width="140" height="20" rx="3" fill="none" stroke="#f59e0b" stroke-width="1.5" /><circle cx="50" cy="95" r="10" fill="none" stroke="#f59e0b" stroke-width="1.2" /><circle cx="150" cy="95" r="10" fill="none" stroke="#f59e0b" stroke-width="1.2" />`
+              },
+              {
+                id: "6.25",
+                ref: "8234-160",
+                name: "Caisse mobile de maintenance",
+                cat: "Manutention — Organisation d'atelier",
+                mfr: "Lista 36×27E",
+                specs: [
+                  ["Type", "Servante d'atelier mobile à 7 tiroirs"],
+                  ["Dimensions", "700 × 450 × 1000 mm"],
+                  ["Poids", "45 kg (vide)"],
+                  ["Matériau", "Tôle d'acier peinte époxy, rails télescopiques"],
+                  ["Capacité", "Charge totale : 100 kg (15 kg par tiroir)"],
+                  ["Norme", "DIN EN 14073 / CE (Serrure de sécurité)"]
+                ],
+                proc: [
+                  "Vérifier l'inventaire des tiroirs avant tout déplacement.",
+                  "Verrouiller la serrure centrale de blocage des tiroirs.",
+                  "Pousser la servante à l'aide de la barre latérale.",
+                  "Positionner l'outil et actionner les freins de roue.",
+                  "Ouvrir un seul tiroir à la fois (système anti-bascule).",
+                  "Nettoyer et ranger les outils après chaque usage."
+                ],
+                maint: "Dépoussiérer et graisser les glissières télescopiques tous les 6 mois. Contrôler l'inventaire d'atelier tous les mois.",
+                loc: "Atelier de maintenance — Alignement d'outils le long du mur est (Caisses CM-01 à CM-04).",
+                svg: `<rect width="100%" height="100%" fill="#0a0a0a" /><rect x="55" y="30" width="90" height="90" rx="4" fill="none" stroke="#f59e0b" stroke-width="1.5" /><line x1="60" y1="45" x2="140" y2="45" stroke="#f59e0b" stroke-width="1" /><circle cx="70" cy="128" r="8" fill="none" stroke="#f59e0b" stroke-width="1.5" />`
+              }
+            ];
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="outil-list-container">
+                {OUTILS_LIST.map((otl) => (
+                  <div key={otl.id} className="outil-fiche bg-[#111111] border border-slate-800 rounded-lg p-5 flex flex-col justify-between hover:border-amber-500/30 transition-colors" id={`outil-${otl.id}`}>
+                    
+                    {/* En-tête */}
+                    <div className="outil-header mb-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded font-mono text-[10px] font-bold">
+                          REF: {otl.ref}
+                        </span>
+                        <span className="text-slate-500 font-mono text-[10px] font-bold">FICHE {otl.id}</span>
+                      </div>
+                      <h4 className="font-extrabold text-sm text-slate-200 uppercase tracking-tight">{otl.name}</h4>
+                      <div className="flex justify-between text-slate-500 text-[10px] font-semibold mt-1">
+                        <span>{otl.cat}</span>
+                        <span className="text-amber-500/70 font-mono">{otl.mfr}</span>
+                      </div>
+                    </div>
+
+                    {/* SVG Blueprint Technique */}
+                    <div className="mb-4 rounded bg-[#0a0a0a] p-2 flex justify-center items-center border border-slate-900/60 overflow-hidden">
+                      <svg viewBox="0 0 200 150" className="w-full h-32" dangerouslySetInnerHTML={{ __html: otl.svg }} />
+                    </div>
+
+                    {/* Tableau des Spécifications */}
+                    <table className="outil-specs w-full text-left text-[11px] border-collapse border border-slate-900 bg-[#0c0c0c] mb-4">
+                      <tbody>
+                        {otl.specs.map((spc, idx) => (
+                          <tr key={idx} className="border-b border-slate-900/60 last:border-b-0">
+                            <td className="p-1.5 font-bold text-slate-500 bg-[#121212] w-1/3 border-r border-slate-900/60">{spc[0]}</td>
+                            <td className="p-1.5 text-slate-300 font-mono text-[10px]">{spc[1]}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {/* Procédure d'utilisation */}
+                    <div className="outil-procedure mb-4 p-3 bg-slate-900/40 border border-slate-900/60 rounded">
+                      <h5 className="font-extrabold text-[10px] text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <span className="flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 text-[8px] text-black font-bold">▶</span>
+                        Procédure d'utilisation
+                      </h5>
+                      <ol className="list-decimal pl-4 space-y-1 text-slate-300 text-[11px]">
+                        {otl.proc.map((step, idx) => (
+                          <li key={idx}>{step}</li>
+                        ))}
+                      </ol>
+                    </div>
+
+                    {/* Maintenance */}
+                    <div className="outil-maintenance mb-4 p-3 bg-amber-500/5 border border-amber-500/10 rounded text-[11px] text-slate-400">
+                      <strong className="text-amber-500/80">Entretien & Étalonnage :</strong> {otl.maint}
+                    </div>
+
+                    {/* Localisation */}
+                    <div className="outil-localisation p-2.5 bg-emerald-500/5 border border-emerald-500/10 rounded text-[11px] text-slate-400 flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
+                      <span><strong>Stockage :</strong> {otl.loc}</span>
+                    </div>
+
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </article>
+
 
         {/* BOUTON RETOUR FIXE */}
         <button className="btn-retour-assistant" onClick={() => (window as any).fermerCahier()}>← RETOUR À L'ASSISTANT ST7</button>
