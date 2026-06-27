@@ -38,11 +38,11 @@ export const EPIROC_ST2D_PANNES: EpirocSt2dPanne[] = [
   {
     id: "1.1.1.B",
     system: "SYS1",
-    title: "Démarrage difficile par temps froid (bougies de préchauffage, basse compression)",
+    title: "Démarrage difficile par temps froid (compression basse, starter pneumatique)", // CORRIGÉ V2 : Moteur à air sans préchauffage électrique
     severity: "JAUNE",
     symptoms: "Démarrage très long, fumée grise/blanche intermittente au démarreur, régime instable au début.",
-    cause: "Bougies de préchauffage grillées ou usure générale des segments provoquant une baisse de compression.",
-    action: "Tester l'alimentation 24V des bougies de préchauffage et leur résistance électrique individuelle. Remplacer les défectueuses.",
+    cause: "Compression basse due à l'usure des segments ou des soupapes, starter pneumatique défectueux ou pression d'air insuffisante, ou huile moteur trop épaisse (SAE 40 en dessous de -10°C).",
+    action: "Mesurer la compression au démarrage (min 25 bar), vérifier le starter pneumatique et la pression d'air (min 6 bar), et utiliser de l'huile SAE 30 par temps froid.",
     repTime: 1.5
   },
   {
@@ -88,11 +88,11 @@ export const EPIROC_ST2D_PANNES: EpirocSt2dPanne[] = [
   {
     id: "1.1.3.B",
     system: "SYS1",
-    title: "Oil bath air cleaner (filtre à bain d'huile) - Huile sale ou colmatée",
+    title: "Filtre à air bouché (filtre à sec / cyclone)", // CORRIGÉ V2 : Filtre à sec (cartouche papier) et cyclone de pré-filtrage
     severity: "JAUNE",
     symptoms: "Fumée noire à l'échappement, moteur étouffé, perte de puissance à l'accélération.",
-    cause: "Accumulation de boue dans la coupelle d'huile inférieure du filtre à bain d'huile.",
-    action: "Démonter la coupelle, vider l'huile usée, nettoyer la boue sédimentée, et remplir d'huile propre (15W-40) jusqu'au repère de niveau.",
+    cause: "Cartouche papier du filtre à air saturée de poussière, ou cyclone de pré-filtrage bouché par des particules fines.",
+    action: "Remplacer la cartouche papier du filtre à air, vérifier et nettoyer le cyclone de pré-filtrage.",
     repTime: 0.8
   },
   {
@@ -180,31 +180,31 @@ export const EPIROC_ST2D_PANNES: EpirocSt2dPanne[] = [
   {
     id: "2.1.1.A",
     system: "SYS2",
-    title: "Convertisseur de couple qui patine (vitesse lente, huile surchauffe)",
+    title: "Embrayage mécanique qui patine (vitesse lente, odeur de brûlé)", // CORRIGÉ V2 : Pas de convertisseur hydraulique, boîte mécanique Funk DF80
     severity: "ROUGE",
-    symptoms: "Le régime moteur monte haut mais le Scooptram n'a aucune force de pénétration dans le tas. Température de transmission > 110°C.",
-    cause: "Usure interne des aubes du stator ou pression de charge du convertisseur trop basse.",
-    action: "Mesurer la pression de charge du convertisseur (doit être de 15 bars). Si pression OK, le convertisseur doit être remplacé.",
+    symptoms: "Le régime moteur monte haut mais le Scooptram n'a aucune force de pénétration dans le tas, odeur de brûlé caractéristique.",
+    cause: "Disques d'embrayage de la Funk DF80 usés ou vitrifiés, réglage incorrect du câble d'embrayage (jeu trop faible), ou huile de transmission SAE 80W-90 contaminée ou dégradée.",
+    action: "Vérifier l'épaisseur des disques d'embrayage (min 2.5 mm), régler le jeu du câble d'embrayage (3-5 mm au levier), et remplacer l'huile de transmission SAE 80W-90 (12 L).",
     repTime: 8.0
   },
   {
     id: "2.1.1.B",
     system: "SYS2",
-    title: "Convertisseur de couple grippé mécaniquement",
+    title: "Embrayage mécanique grippé (démarrage brutal, blocage)", // CORRIGÉ V2 : Remplacé par embrayage mécanique Funk DF80
     severity: "ROUGE",
-    symptoms: "Le moteur cale immédiatement dès qu'une vitesse est engagée ou au démarrage du démarreur.",
-    cause: "Blocage mécanique de l'embrayage de verrouillage ou rupture interne des aubages.",
-    action: "Déposer la transmission et remplacer l'ensemble convertisseur Dana C-270.",
+    symptoms: "Le moteur cale immédiatement dès qu'une vitesse est engagée ou au démarrage.",
+    cause: "Disques d'embrayage de la Funk DF80 collés ou vitrifiés, roulement d'embrayage grippé, ou câble d'embrayage cassé ou bloqué.",
+    action: "Déposer le carter d'embrayage et inspecter les disques, vérifier le roulement d'embrayage et le câble, puis remplacer les disques vitrifiés et régler le jeu.",
     repTime: 10.0
   },
   {
     id: "2.1.1.C",
     system: "SYS2",
-    title: "Huile de convertisseur hautement contaminée (limaille ou eau)",
+    title: "Huile de transmission SAE 80W-90 contaminée (particules métalliques)", // CORRIGÉ V2 : Boîte Funk DF80 avec huile SAE 80W-90 pour engrenages
     severity: "ROUGE",
     symptoms: "Huile de couleur laiteuse ou présence de paillettes de bronze brillantes sur la jauge de transmission.",
-    cause: "Entrée d'eau de mine par le reniflard ou usure destructive des disques de friction en bronze.",
-    action: "Vidanger immédiatement la transmission, rincer le circuit, remplacer les filtres à huile de transmission et inspecter la crépine magnétique.",
+    cause: "Usure des pignons et roulements de la boîte Funk DF80 (paillettes métalliques), usure des disques d'embrayage (poussière de friction), ou infiltration d'eau ou de poussière dans la boîte.",
+    action: "Analyser l'huile SAE 80W-90 (présence de paillettes = usure engrenages), inspecter les pignons et roulements de la Funk DF80, puis remplacer l'huile et le filtre de la boîte (12 L).",
     repTime: 3.5
   },
   {
@@ -250,21 +250,21 @@ export const EPIROC_ST2D_PANNES: EpirocSt2dPanne[] = [
   {
     id: "2.2.2.A",
     system: "SYS2",
-    title: "Boîte Powershift ne passe aucune vitesse (pas de commande)",
+    title: "Boîte Funk DF80 ne passe aucune vitesse (levier inopérant)", // CORRIGÉ V2 : Boîte mécanique Funk DF80 avec commande par câble
     severity: "ROUGE",
     symptoms: "Le levier de vitesse est manipulé mais la boîte reste désespérément au point mort (Neutre).",
-    cause: "Fusible de commande grillé, bobine de distributeur grillée ou manque de pression pilote de sélection.",
-    action: "Vérifier les fusibles 24V de la console, tester la tension sur les solénoides du bloc de vannes de la transmission.",
+    cause: "Câble de commande de la boîte Funk DF80 cassé ou détendu, fourchette de sélecteur grippée ou usée, ou roulement d'arbre primaire grippé.",
+    action: "Vérifier le câble de commande et le régler (jeu 2-3 mm), déposer le carter et inspecter les fourchettes de sélecteur, puis vérifier le roulement d'arbre primaire.",
     repTime: 2.0
   },
   {
     id: "2.2.2.B",
     system: "SYS2",
-    title: "Boîte Powershift passe les vitesses mais de façon très brutale",
+    title: "Boîte Funk DF80 passe les vitesses mais de façon très brutale", // CORRIGÉ V2 : Remplacé par boîte mécanique Funk DF80
     severity: "JAUNE",
     symptoms: "Chocs violents dans toute la transmission lors du changement de rapport, risquant de casser les cardans.",
-    cause: "Accumulateur de modulation de pression de transmission déchargé ou mal réglé.",
-    action: "Vérifier la valve de modulation hydraulique et régler la rampe de montée en pression hydraulique.",
+    cause: "Embrayage mécanique mal réglé (jeu insuffisant), synchroniseurs de la Funk DF80 usés, ou câble de commande mal ajusté ou usé.",
+    action: "Régler le jeu de l'embrayage mécanique (3-5 mm au levier), inspecter les synchroniseurs de la boîte Funk DF80, et remplacer le câble de commande si nécessaire.",
     repTime: 3.0
   },
   {
@@ -913,7 +913,7 @@ export const EPIROC_ST2D_STOCK: { [key: string]: { desc: string; qty: number } }
   verin_hoist: { desc: "Vérin de levage (Hoist) complet reconditionné", qty: 1 },
   verin_dump: { desc: "Vérin de benne (Dump) complet reconditionné", qty: 1 },
   chaine: { desc: "Chaîne de transmission renforcée (jeu)", qty: 1 },
-  bougies: { desc: "Bougies de préchauffage Deutz 24V", qty: 6 }
+  segments: { desc: "Segments de piston Deutz F4L912 (jeu de 4 cylindres)", qty: 2 }
 };
 
 export const EPIROC_ST2D_PROCEDURES = [
@@ -1099,7 +1099,7 @@ export const EPIROC_ST2D_REFERENCES = {
   pression_freinage: { normal: "Mécanique à câble", alarme: "N/A", arret: "N/A" },
   tension_batterie: { normal: "25.2V - 27.8V", alarme: "< 23.5V", arret: "< 21.0V" },
   pression_pneus: { normal: "4.5 bar (65 psi)", alarme: "N/A", arret: "N/A" },
-  epaisseur_disque_min: { normal: "12.0 mm", limite: "9.5 mm", action: "Remplacement" },
+  epaisseur_machoires_min: { normal: "8.0 mm", limite: "3.0 mm", action: "Remplacement" },
   jeu_articulation_max: { normal: "< 0.5 mm", limite: "2.0 mm", action: "Réfection pivot" }
 };
 
@@ -1112,7 +1112,7 @@ export const EPIROC_ST2D_COUPLES = [
 ];
 
 export const EPIROC_ST2D_KITS = [
-  { frequence: "50 heures (Mise en route / Mine)", operations: "Graissage de tous les pivots, vidange du filtre à air à bain d'huile, contrôle du serrage de roues." },
+  { frequence: "50 heures (Mise en route / Mine)", operations: "Graissage de tous les pivots, nettoyage du cyclone de pré-filtrage d'air, contrôle du serrage de roues." },
   { frequence: "100 heures (Périodique standard)", operations: "Niveau d'huile de boîte de vitesses Funk DF80, contrôle d'étanchéité des vérins, dépoussiérage des ailettes moteur." },
   { frequence: "250 heures (Vidange moteur)", operations: "Vidange de l'huile de carter Deutz F4L912 (15W-40), remplacement du filtre à huile et carburant primaire." },
   { frequence: "500 heures (Entretien intermédiaire)", operations: "Remplacement de la cartouche de filtre à air sèche, remplacement des filtres de transmission, réglage des culbuteurs." },

@@ -854,7 +854,7 @@ export function AssistantEpirocSt2d() {
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
                   {[
                     "Arrêt moteur, clé retirée",
-                    "Batterie débranchée (+ et -)",
+                    "Démarrage manuel/pneumatique verrouillé (manette bloquée)",
                     "Réservoir hydraulique dépressurisé",
                     "Câble de frein mécanique desserré",
                     "Cales de roues de secours placées",
@@ -1061,8 +1061,8 @@ export function AssistantEpirocSt2d() {
                       </tr>
                       <tr>
                         <td className="py-3 px-3 font-black text-slate-950">Huile Transmission</td>
-                        <td className="py-3 px-3">Dexron III ou spécification officielle DANA</td>
-                        <td className="py-3 px-3 text-slate-500">Mobil Delvac ATF</td>
+                        <td className="py-3 px-3">SAE 80W-90 (boîte mécanique Funk DF80)</td>
+                        <td className="py-3 px-3 text-slate-500">Mobilube HD 80W-90 ou equivalent</td>
                       </tr>
                       <tr>
                         <td className="py-3 px-3 font-black text-slate-950">Huile Hydraulique</td>
@@ -1106,7 +1106,7 @@ export function AssistantEpirocSt2d() {
                     </div>
                     <div className="p-3 bg-white/60 rounded-xl border border-red-100">
                       <span className="text-red-700 font-black uppercase tracking-wider block mb-1">11.2 Freins Bloqués en Descente de Rampe</span>
-                      <p>Utilisez le frein moteur au ralenti accéléré, ne tentez pas de forcer la descente. Placez les cales de roues dès l'arrêt complet de sécurité.</p>
+                      <p>Utilisez le frein de service tambour mécanique et réduisez la vitesse par points d'arrêt, ne tentez pas de forcer la descente. Placez les cales de roues dès l'arrêt complet de sécurité.</p>
                     </div>
                     <div className="p-3 bg-white/60 rounded-xl border border-red-100">
                       <span className="text-red-700 font-black uppercase tracking-wider block mb-1">11.3 Rupture d'un Flexible Hydraulique sous Pression</span>
@@ -1122,7 +1122,7 @@ export function AssistantEpirocSt2d() {
                     </div>
                     <div className="p-3 bg-white/60 rounded-xl border border-red-100">
                       <span className="text-red-700 font-black uppercase tracking-wider block mb-1">11.6 Patinage de l'Embrayage en Descente</span>
-                      <p>Engagez le frein moteur mécanique pour soulager l'arbre de transmission de la boîte Funk, évitez le frein de service seul.</p>
+                      <p>Engagez le frein de service tambour mécanique pour soulager l'arbre de transmission de la boîte Funk, évitez le frein de service seul.</p>
                     </div>
                   </div>
                 </div>

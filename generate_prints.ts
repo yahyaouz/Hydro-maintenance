@@ -1499,7 +1499,7 @@ Rappel de sécurité : Ressort hélicoïdal 50 N qui rappelle les mâchoires
         "Vérifier le bon fonctionnement du sectionneur rotatif général et coupe-batterie 24V",
         "Effectuer le tour complet d'usure des pneumatiques de mine et serrage des boulons",
         "Vérifier la jauge visuelle transparente du réservoir d'huile hydraulique",
-        "Contrôler le témoin de colmatage du filtre à air de sécurité à bain d'huile"
+        isST2G ? "Contrôler le témoin de colmatage du filtre à air de sécurité à bain d'huile" : "Contrôler le témoin de colmatage du filtre à air de sécurité à sec (cyclone)"
       ] : is250h ? [
         "Vidanger le carter d'huile moteur Deutz et remplacer le filtre spin-on",
         "Ajuster la flèche de tension mécanique de la chaîne d'essieu (Nominal 15 mm)",
@@ -1510,8 +1510,8 @@ Rappel de sécurité : Ressort hélicoïdal 50 N qui rappelle les mâchoires
       ] : [
         "Remplacer le filtre de carburant primaire et vider le décanteur d'eau",
         "Vérifier et ajuster le jeu mécanique aux soupapes d'admission et d'échappement à froid",
-        "Vidanger entièrement l'huile de la transmission Powershift Funk et nettoyer les disques",
-        "Tester la pression d'azote interne de l'accumulateur à membrane de frein de secours",
+        isST2G ? "Vidanger entièrement l'huile de la transmission Powershift Funk et nettoyer les disques" : "Vidanger entièrement l'huile de la boîte de vitesses mécanique Funk DF80 et nettoyer les disques d'embrayage",
+        isST2G ? "Tester la pression d'azote interne de l'accumulateur à membrane de frein de secours" : "Vérifier le jeu et graisser la câblerie de commande mécanique de frein de secours",
         "Inspecter l'état géométrique de l'articulation centrale et mesurer le jeu d'articulation",
         "Vérifier le déclenchement automatique du système anti-incendie Ansul de cabine"
       ];
@@ -1549,7 +1549,7 @@ Rappel de sécurité : Ressort hélicoïdal 50 N qui rappelle les mâchoires
 
     const glossaire = isST2G ? EPIROC_ST2G_GLOSSAIRE : [
       { term: "Deutz F4L912", def: "Moteur diesel 4 cylindres en ligne refroidi par air direct par turbine axiale, robuste et simple." },
-      { term: "Funk DF80", def: "Boîte Powershift mécanique à 4 vitesses avec embrayage à sec, conçue sans électronique." },
+      { term: "Funk DF80", def: "Boîte mécanique à 4 vitesses avec embrayage à sec, conçue pour un entretien simple sans électronique." },
       { term: "Frein à Tambour", def: "Système de freinage mécanique de service à commande par came et mâchoires expansibles." },
       { term: "Orbitrol Danfoss", def: "Valve hydrostatique de direction guidant l'huile directement aux vérins en fonction du volant." },
       { term: "Consignation LOTO", def: "Lockout/Tagout - Procédure de condamnation des énergies mécaniques et électriques avant travaux." },

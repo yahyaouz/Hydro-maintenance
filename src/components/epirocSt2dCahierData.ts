@@ -77,12 +77,12 @@ export const ST2D_SCHEMAS_DATA: SchemaGroup[] = [
       { id: "012", desc: "Joint spi vilebrequin arrière (1 pièce, feutre, Ø 55×70×8)", ref: "DE-F4L912-012", panne: "Pan. 1.1.2.A" },
       { id: "013", desc: "Pompe à huile (engrenages, 8 L/min, entraînement vilebrequin)", ref: "DE-F4L912-013", panne: "Pan. 1.1.3.A" },
       { id: "014", desc: "Carter inférieur (fonte, 8 L capacité, joint liège)", ref: "DE-F4L912-014", panne: "Pan. 1.1.3.A" },
-      { id: "015", desc: "Pompe injection Bosch (rotative, 4 cylindres, 700 bar max)", ref: "DE-F4L912-015", panne: "Pan. 1.1.4.A" },
-      { id: "016", desc: "Injecteur mécanique (4 pièces, Bosch, trou 0,22 mm, pression 180 bar)", ref: "DE-F4L912-016", panne: "Pan. 1.1.4.B" },
+      { id: "015", desc: "Pompe injection Bosch VE (distributeur rotatif, 4 cylindres, ~450 bar)", ref: "DE-F4L912-015", panne: "Pan. 1.1.4.A" },
+      { id: "016", desc: "Injecteur mécanique à buses multiples (4 pièces, Bosch, pression d'ouverture ~200-220 bar)", ref: "DE-F4L912-016", panne: "Pan. 1.1.4.B" },
       { id: "017", desc: "Tuyau haute pression injection (4 pièces, acier Ø 6 mm, 700 bar)", ref: "DE-F4L912-017", panne: "Pan. 1.1.4.B" },
-      { id: "018", desc: "Filtre gasoil (bain d'huile + maille, 25 µ)", ref: "DE-F4L912-018", panne: "Pan. 1.1.4.C" },
-      { id: "019", desc: "Filtre air (bain d'huile + maille métallique, Ø 180×250 mm)", ref: "DE-F4L912-019", panne: "Pan. 1.1.5.A" },
-      { id: "020", desc: "Ventilateur refroidissement (4 pales, entraînement courroie, Ø 350 mm)", ref: "DE-F4L912-020", panne: "Pan. 1.1.6.A" }
+      { id: "018", desc: "Filtre gazole (cartouche filtrante standard, 25 µ)", ref: "DE-F4L912-018", panne: "Pan. 1.1.4.C" },
+      { id: "019", desc: "Filtre air à sec (cartouche papier, Ø 180×250 mm)", ref: "DE-F4L912-019", panne: "Pan. 1.1.5.A" },
+      { id: "020", desc: "Ventilateur refroidissement (centrifuge, entraînement courroie ou direct, Ø 350 mm)", ref: "DE-F4L912-020", panne: "Pan. 1.1.6.A" }
     ]
   },
   {
@@ -136,7 +136,7 @@ export const ST2D_SCHEMAS_DATA: SchemaGroup[] = [
       { id: "303", desc: "Mâchoire frein avant (2 pièces, garniture organique, épaisseur 8 mm)", ref: "FR-TAM-303", panne: "Pan. 4.1.1.A" },
       { id: "304", desc: "Mâchoire frein arrière (2 pièces, garniture organique, épaisseur 8 mm)", ref: "FR-TAM-304", panne: "Pan. 4.1.1.A" },
       { id: "305", desc: "Ressort rappel mâchoires (4 ressorts, 50 N)", ref: "FR-TAM-305", panne: "Pan. 4.1.2.A" },
-      { id: "306", desc: "Cylindre répartiteur (Ø 20 mm, course 25 mm)", ref: "FR-TAM-306", panne: "Pan. 4.1.2.A" },
+      { id: "306", desc: "Câble de frein (Ø 4 mm, longueur 2.5 m, gaine étanche)", ref: "FR-TAM-306", panne: "Pan. 4.1.2.A" },
       { id: "307", desc: "Câble frein (acier Ø 4 mm, gaine plastique, longueur 3000 mm)", ref: "FR-TAM-307", panne: "Pan. 4.2.1.A" },
       { id: "308", desc: "Pédale frein (acier, levier 150 mm, course 40 mm)", ref: "FR-TAM-308", panne: "Pan. 4.2.1.A" },
       { id: "309", desc: "Levier frein de parking (cabine, acier, course 100 mm)", ref: "FR-TAM-309", panne: "Pan. 4.3.1.A" },
@@ -203,12 +203,12 @@ export const ST2D_PHOTOS_PROCEDURES = [
   },
   {
     ref: "1.1.5.A",
-    title: "Nettoyage filtre air bain d'huile",
+    title: "Remplacement de la cartouche de filtre à air", // CORRIGÉ V2 : Remplacement de la cartouche papier sèche
     steps: [
-      { type: "CASSÉ", title: "Boues saturées", desc: "La coupelle inférieure contient plus de 3 cm de boue siliceuse solide." },
-      { type: "OUTIL", title: "Bassin de rinçage", desc: "Nettoyage de la maille métallique tricotée au gazole propre sous pression." },
-      { type: "RÉSULTAT", title: "Niveau d'huile ajusté", desc: "Remplissage de la coupelle d'huile neuve (15W-40) jusqu'au trait rouge." },
-      { type: "MAUVAIS", title: "Surremplissage d'huile", desc: "Huile aspirée par le moteur provoquant un emballement destructif." }
+      { type: "CASSÉ", title: "Cartouche saturée", desc: "La cartouche en papier plissé est complètement noire et colmatée par la poussière." },
+      { type: "OUTIL", title: "Soufflette de nettoyage", desc: "Nettoyage du cyclone de pré-filtrage à l'air comprimé sec régulé." },
+      { type: "RÉSULTAT", title: "Cartouche sèche neuve", desc: "Mise en place de la cartouche papier neuve et fermeture étanche du couvercle." },
+      { type: "MAUVAIS", title: "Cartouche mal positionnée", desc: "Fuite d'air non filtré causant une usure prématurée des cylindres par abrasion." }
     ]
   },
   {
@@ -322,12 +322,12 @@ export const ST2D_STORYBOARDS: StoryboardItem[] = [
   },
   {
     id: "3.8",
-    title: "Vidéo 1.1.5.A : Nettoyage filtre air bain d'huile (20s)",
+    title: "Vidéo 1.1.5.A : Remplacement cartouche de filtre à air (20s)", // CORRIGÉ V2 : Filtre à sec cartouche papier
     duration: "20s",
-    framing: "Plan moyen poitrine au-dessus du bac de décantation à l'atelier mine.",
-    audio: "VO : 'Videz le bol inférieur du filtre à air de ses boues d'aspiration. Rincez le treillis métallique et remettez de l'huile de moteur 15W-40 propre.'",
-    overlay: "Repère visuel : 'Ligne de niveau maximal en orange clignotant.'",
-    specs: "Contrôle de viscosité de l'huile moteur de remplacement montrée au thermomètre."
+    framing: "Plan moyen poitrine devant le boîtier de filtre à air à l'atelier mine.",
+    audio: "VO : 'Déposez le couvercle métallique du boîtier de filtre. Retirez la cartouche papier saturée, passez la soufflette dans le cyclone de pré-filtrage, puis insérez la nouvelle cartouche sèche.'",
+    overlay: "Repère visuel : 'Flèche d'alignement du couvercle de filtre en orange clignotant.'",
+    specs: "Vérification visuelle de la cartouche de sécurité interne intacte avant remontage."
   }
 ];
 
@@ -761,15 +761,15 @@ export const ST2D_OUTILS_FICHE: ToolFiche[] = [
   },
   {
     id: "OUT-15",
-    name: "Pompe de vidange manuelle pour bain d'huile",
-    code: "EP-ST2D-POM-15",
-    rack: "Zone Distribution Huiles — Bac de Rétention 2",
-    desc: "Seringue mécanique d'aspiration métallique de 500 mL munie d'un flexible semi-rigide pour vider le réservoir du filtre à bain d'huile.",
-    specs: "Capacité : 500 mL, Corps : Acier galvanisé, Joint de piston : Caoutchouc fluoré résistant aux solvants.",
-    procedure: "Insérer le tube d'aspiration au fond de la coupelle d'huile sale. Tirer le piston pour aspirer les dépôts de boue.",
+    name: "Aspirateur de poussière pour cyclone de pré-filtrage", // CORRIGÉ V2 : Cyclone de pré-filtrage au lieu du bain d'huile
+    code: "EP-ST2D-ASP-15",
+    rack: "Zone Filtration — Étagère Principale 2",
+    desc: "Outil pneumatique portable de nettoyage par aspiration pour vider les poussières fines accumulées dans le cyclone de pré-filtrage.",
+    specs: "Débit : 350 L/min, Corps : Aluminium composite résistant aux impacts de mine, Raccord rapide : 1/4 pouce standard.",
+    procedure: "Brancher l'outil sur le réseau d'air comprimé, insérer l'embout conique dans le collecteur du cyclone pour extraire les sédiments de silice.",
     maintenance: [
-      "Rincer le corps cylindrique et le piston à l'aide de gazole propre après chaque usage.",
-      "Inspecter le joint de piston en caoutchouc pour déceler tout durcissement mécanique."
+      "Vider le sac collecteur de poussière en microfibres et le brosser après chaque séance.",
+      "Vérifier le raccord rapide pneumatique et remplacer le joint torique interne si fuite d'air."
     ]
   }
 ];
