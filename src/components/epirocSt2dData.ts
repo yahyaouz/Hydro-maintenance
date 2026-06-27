@@ -10,12 +10,12 @@ export interface EpirocSt2dPanne {
 }
 
 export const EPIROC_ST2D_SYSTEMS = [
-  { id: "SYS1", label: "MOTEUR DEUTZ F6L-912W AIR", icon: "Flame" },
-  { id: "SYS2", label: "TRANSMISSION DANA & CONVERTISSEUR", icon: "Shuffle" },
+  { id: "SYS1", label: "MOTEUR DEUTZ F4L912 AIR", icon: "Flame" },
+  { id: "SYS2", label: "TRANSMISSION FUNK DF80 MÉCANIQUE", icon: "Shuffle" },
   { id: "SYS3", label: "HYDRAULIQUE GEAR PUMPS", icon: "Droplets" },
   { id: "SYS4", label: "DIRECTION & ARTICULATION", icon: "Compass" },
-  { id: "SYS5", label: "FREINAGE HASR", icon: "ShieldAlert" },
-  { id: "SYS6", label: "ÉLECTRIQUE 24V", icon: "Zap" },
+  { id: "SYS5", label: "FREINAGE TAMBOUR MÉCANIQUE À CÂBLE", icon: "ShieldAlert" },
+  { id: "SYS6", label: "ÉLECTRIQUE MINIMALE (DÉMARRAGE MANUEL/PNEUMATIQUE)", icon: "Zap" },
   { id: "SYS7", label: "REFROIDISSEMENT AIR", icon: "ThermometerSnowflake" },
   { id: "SYS8", label: "ÉCHAPPEMENT CATALYTIQUE", icon: "Wind" },
   { id: "SYS9", label: "CHÂSSIS & ROUES", icon: "Disc" },
@@ -880,12 +880,12 @@ export const EPIROC_ST2D_PANNES: EpirocSt2dPanne[] = [
 export const EPIROC_ST2D_ERRORS = [
   { id: "1", text: "Graissage manuel oublié → Usure définitive des bagues et des pivots en seulement 2 semaines de travail continu." },
   { id: "2", text: "Nettoyage des ailettes de cylindres négligé → Surchauffe catastrophique du moteur Deutz à air en moins d'une semaine." },
-  { id: "3", text: "Huile de transmission non remplacée → Patinage sévère du convertisseur de couple et disques d'embrayages brûlés." },
+  { id: "3", text: "Huile de transmission non remplacée → Patinage de la boîte Funk DF80 et disques d'embrayages brûlés." },
   { id: "4", text: "Démarreur sollicité de façon prolongée sur moteur grippé ou bloqué → Surchauffe et destruction électrique du démarreur." },
   { id: "5", text: "Filtre à air à bain d'huile non vidangé → Le moteur aspire directement l'huile usée accumulée, fumée noire violente." },
-  { id: "6", text: "Démontage de l'accumulateur de frein HASR sans dépressuriser → Risque d'explosion mortelle du raccord d'azote." },
-  { id: "7", text: "Utilisation prolongée avec convertisseur qui patine → Surchauffe de l'huile de boîte et destruction de la boîte Dana." },
-  { id: "8", text: "Embrayage de 3ème usé forcé par maintien constant du blockout → Surcharge thermique destructive sur l'embrayage de 2ème." },
+  { id: "6", text: "Rupture ou manque de tension du câble de frein tambour mécanique → Perte totale de freinage de secours en rampe." },
+  { id: "7", text: "Utilisation prolongée avec embrayage Funk qui patine → Surchauffe de l'huile de boîte et destruction de la transmission Funk DF80." },
+  { id: "8", text: "Embrayage de 3ème usé forcé par maintien constant du levier de cabine → Surcharge thermique destructive sur la transmission Funk." },
   { id: "9", text: "Démontage de vérin sous charge sans installer l'axe de sécurité (Boom Lock) → Chute brutale mortelle du bras de levage." },
   { id: "10", text: "Réutilisation d'un joint torique hydraulique usé lors d'un raccordement → Fuite garantie sous pression sous 24 heures." },
   { id: "11", text: "Serrage des boulons de roues sans respecter l'ordre croisé → Voilement irrémédiable du disque de fixation de moyeu." },
@@ -897,18 +897,18 @@ export const EPIROC_ST2D_ERRORS = [
 
 export const EPIROC_ST2D_STOCK: { [key: string]: { desc: string; qty: number } } = {
   joints: { desc: "Kit de joints toriques hydrauliques", qty: 2 },
-  injecteur: { desc: "Injecteur Deutz F6L-912W d'origine", qty: 2 },
+  injecteur: { desc: "Injecteur Deutz F4L912 d'origine", qty: 2 },
   pompe_injection: { desc: "Pompe d'injection mécanique reconditionnée", qty: 1 },
   filtre_air: { desc: "Filtre à air principal (cartouche sèche)", qty: 4 },
   filtre_huile: { desc: "Filtre à huile moteur Deutz", qty: 4 },
   filtre_carb: { desc: "Filtre à carburant primaire + secondaire", qty: 2 },
   filtre_hyd: { desc: "Filtre hydraulique d'aspiration 25 microns", qty: 4 },
-  disques_frein: { desc: "Disques de frein HASR immergés (jeu)", qty: 2 },
-  plaquettes_frein: { desc: "Plaquettes de frein de secours HASR", qty: 2 },
-  accumulateur: { desc: "Accumulateur de frein d'azote (85 bars)", qty: 1 },
-  pompe_charge: { desc: "Pompe de charge hydraulique de frein", qty: 1 },
-  kit_embrayage: { desc: "Kit d'embrayage Dana Powershift", qty: 1 },
-  convertisseur: { desc: "Convertisseur Dana C-270 reconditionné", qty: 1 },
+  disques_frein: { desc: "Garnitures et mâchoires de frein à tambour", qty: 2 },
+  plaquettes_frein: { desc: "Câble de frein de secours en acier renforcé", qty: 2 },
+  accumulateur: { desc: "Ressort de rappel d'ancrage de frein tambour", qty: 4 },
+  pompe_charge: { desc: "Commande de frein mécanique à levier", qty: 1 },
+  kit_embrayage: { desc: "Kit d'embrayage et disques Funk DF80", qty: 1 },
+  convertisseur: { desc: "Arbre de transmission Funk reconditionné", qty: 1 },
   verin_dir: { desc: "Vérin de direction complet reconditionné", qty: 1 },
   verin_hoist: { desc: "Vérin de levage (Hoist) complet reconditionné", qty: 1 },
   verin_dump: { desc: "Vérin de benne (Dump) complet reconditionné", qty: 1 },
@@ -924,7 +924,7 @@ export const EPIROC_ST2D_PROCEDURES = [
       "Arrêt du moteur et retrait de la clé de contact.",
       "Déconnexion du pack de batteries à l'aide des deux coupe-circuits (+ et -).",
       "Dépressurisation manuelle du réservoir d'huile hydraulique principal.",
-      "Dépressurisation complète de l'accumulateur de frein HASR en pompant la pédale.",
+      "Relâcher complètement la tension mécanique du câble de frein tambour de secours.",
       "Mise en place obligatoire des deux cales de roues de part et d'autre des pneus.",
       "Abaissement complet du bras et verrouillage mécanique à l'aide de l'axe Boom Lock.",
       "Pose du godet à plat sur le sol ferme de la galerie.",
@@ -948,55 +948,55 @@ export const EPIROC_ST2D_PROCEDURES = [
   },
   {
     id: "C",
-    title: "Remplacement des disques et plaquettes HASR",
+    title: "Remplacement des mâchoires et garnitures de frein à tambour",
     steps: [
       "Sécuriser la machine au plat et appliquer la procédure LOTO.",
-      "Déposer l'étrier mécanique extérieur de frein de parking pour accéder au disque d'arbre.",
-      "Mesurer l'épaisseur du disque à l'aide d'un palmer (remplacer si < épaisseur min).",
-      "Remplacer les plaquettes d'étrier usées par un jeu de plaquettes neuves d'origine.",
-      "Pour les disques immergés de service : démonter le carter de moyeu de pont.",
-      "Extraire le pack de disques usés et nettoyer minutieusement la chambre d'huile.",
-      "Aligner et insérer le nouveau jeu de disques de friction immergés HASR.",
-      "Remonter l'ensemble avec des joints de carter neufs et faire le plein d'huile d'axe."
+      "Déposer la roue et le tambour de frein pour accéder aux mâchoires de frein.",
+      "Mesurer l'usure de la garniture de frein (remplacer si < épaisseur minimale).",
+      "Remplacer les mâchoires de frein tambour usées par un jeu de mâchoires neuves d'origine.",
+      "Vérifier l'état mécanique du cylindre de roue et des ressorts de rappel.",
+      "Reposer le tambour de frein et régler le jeu à l'aide de la molette de réglage.",
+      "Ajuster la tension du câble de commande mécanique au levier de cabine.",
+      "Remonter la roue et faire un test d'efficacité de freinage à l'arrêt."
     ]
   },
   {
     id: "D",
-    title: "Remplacement de l'accumulateur de frein HASR",
+    title: "Remplacement du câble de commande de frein à tambour",
     steps: [
-      "Décharger complètement la pression hydraulique restante en cabine.",
-      "Raccorder le manomètre de contrôle pour vérifier l'absence de pression d'huile.",
-      "Desserrer lentement le raccord de fixation de l'accumulateur pour libérer d'éventuels résidus gazeux.",
-      "Déposer l'accumulateur usé de son support métallique.",
-      "Monter l'accumulateur neuf préchargé à 85 bars d'azote d'origine.",
-      "Serrer au couple préconisé et reconnecter la ligne d'alimentation.",
-      "Démarrer la machine, charger le circuit de freinage et tester l'étanchéité."
+      "Décharger la tension mécanique du câble de frein de secours en cabine.",
+      "Désaccoupler le câble de la chape de liaison sur les mâchoires de frein.",
+      "Détacher le câble de ses guides de châssis intermédiaire.",
+      "Poser le câble neuf en acier renforcé et lubrifier ses gaines.",
+      "Reconnecter le câble à l'étrier de tension et aux mâchoires.",
+      "Ajuster la tension du câble pour obtenir une course de levier conforme.",
+      "Démarrer la machine et effectuer un test d'arrêt complet sur rampe."
     ]
   },
   {
     id: "E",
-    title: "Démontage du convertisseur de couple Dana C-270",
+    title: "Remplacement de la boîte de vitesses Funk DF80",
     steps: [
-      "Vidanger intégralement l'huile de la transmission Dana.",
+      "Vidanger intégralement l'huile de la transmission Funk DF80.",
       "Déposer les arbres de transmission de ponts pour libérer l'espace sous la boîte.",
-      "Désaccoupler la tringlerie de vitesse et les connexions électriques des vannes.",
-      "Soutenir solidement l'ensemble convertisseur à l'aide d'un cric de transmission lourd.",
-      "Dévisser les boulons de la bride d'accouplement moteur/convertisseur.",
-      "Reculer doucement le convertisseur pour dégager l'arbre cannelé du volant moteur.",
+      "Désaccoupler la tringlerie de vitesse mécanique et les commandes de sélection.",
+      "Soutenir solidement l'ensemble boîte Funk à l'aide d'un cric de transmission lourd.",
+      "Dévisser les boulons de la bride de fixation mécanique de la boîte.",
+      "Reculer doucement la boîte Funk pour dégager l'arbre cannelé du volant moteur.",
       "Inspecter l'état des cannelures et du palier pilote avant le remontage."
     ]
   },
   {
     id: "F",
-    title: "Démontage de l'embrayage Powershift Dana R32000",
+    title: "Démontage de l'embrayage mécanique Funk DF80",
     steps: [
-      "Déposer la boîte de vitesses Dana complète de l'engin.",
+      "Déposer la boîte de vitesses Funk DF80 complète de l'engin.",
       "Placer la boîte sur un berceau d'atelier approprié.",
       "Ouvrir le carter de boîte arrière pour accéder aux packs d'embrayage.",
-      "Utiliser l'outillage de compression spécial Dana pour libérer le circlip de retenue.",
-      "Extraire le pack de disques usés de la 1ère ou de la 2ème vitesse.",
-      "Inspecter l'état de surface des pistons de commande hydraulique (remplacer les joints).",
-      "Poser les nouveaux disques après les avoir immergés dans l'huile de boîte propre."
+      "Utiliser l'outillage de compression spécial Funk pour libérer le circlip de retenue.",
+      "Extraire le pack de disques d'embrayage usés de la boîte Funk DF80.",
+      "Inspecter l'état de surface des disques de friction (remplacer les disques brûlés).",
+      "Poser les nouveaux disques après les avoir immergés dans l'huile Funk propre."
     ]
   },
   {
@@ -1013,7 +1013,7 @@ export const EPIROC_ST2D_PROCEDURES = [
   },
   {
     id: "H",
-    title: "Remplacement d'un injecteur mécanique Deutz F6L-912W",
+    title: "Remplacement d'un injecteur mécanique Deutz F4L912",
     steps: [
       "Nettoyer parfaitement la zone de culasse autour de l'injecteur à remplacer.",
       "Déposer le raccord haute pression métallique d'alimentation en gazole.",
@@ -1082,8 +1082,8 @@ export const EPIROC_ST2D_SYMPTOMS_INDEX: { [key: string]: string[] } = {
     "3.3.4.A Fuite récurrente sur tige de vérin (Tige rayée)"
   ],
   "COMPORTEMENTS": [
-    "1.1.1.A Démarreur tourne mais pas d'allumage (Arrêt mécanique)",
-    "2.1.1.A Pas de force de pénétration dans le tas de roche (Convertisseur)",
+    "1.1.1.A Le moteur ne démarre pas (Arrêt mécanique)",
+    "2.1.1.A Pas de force de pénétration dans le tas de roche (Boîte Funk)",
     "3.3.2.A Le bras redescend tout seul sous charge (Dérive interne)",
     "4.1.1.A Volant de direction extrêmement dur (Orbitrol pollué)",
     "5.1.2.A Freins bloqués et refus de déplacement (Étrier grippé)"
@@ -1096,7 +1096,7 @@ export const EPIROC_ST2D_REFERENCES = {
   pression_transmission: { normal: "18 - 21 bar", alarme: "< 15 bar", arret: "< 12 bar" },
   hydraulique_travail: { normal: "11.4 MPa (114 bar)", alarme: "< 10.0 MPa", arret: "N/A" },
   hydraulique_direction: { normal: "13.1 MPa (131 bar)", alarme: "< 11.5 MPa", arret: "N/A" },
-  pression_freinage: { normal: "110 - 120 bar", alarme: "< 85 bar", arret: "< 70 bar" },
+  pression_freinage: { normal: "Mécanique à câble", alarme: "N/A", arret: "N/A" },
   tension_batterie: { normal: "25.2V - 27.8V", alarme: "< 23.5V", arret: "< 21.0V" },
   pression_pneus: { normal: "4.5 bar (65 psi)", alarme: "N/A", arret: "N/A" },
   epaisseur_disque_min: { normal: "12.0 mm", limite: "9.5 mm", action: "Remplacement" },
@@ -1107,14 +1107,14 @@ export const EPIROC_ST2D_COUPLES = [
   { assemblage: "Boulons de culasse individuelle Deutz", filetage: "M12", couple: "45 Nm + 120°", freinage: "Lubrification fine", controle: "À chaque dépose" },
   { assemblage: "Écrous de roues avant et arrière", filetage: "M22", couple: "650 Nm", freinage: "Serrage croisé étoile", controle: "Toutes les 50 heures" },
   { assemblage: "Brides de fixation d'articulation centrale", filetage: "M20", couple: "480 Nm", freinage: "Frein filet fort Loctite 270", controle: "Toutes les 250 heures" },
-  { assemblage: "Boulons de fixation du convertisseur Dana", filetage: "M10", couple: "85 Nm", freinage: "Rondelles grower", controle: "À la pose" },
+  { assemblage: "Boulons de fixation de la boîte Funk DF80", filetage: "M10", couple: "85 Nm", freinage: "Rondelles grower", controle: "À la pose" },
   { assemblage: "Écrous de brides de joints de cardans", filetage: "M14", couple: "140 Nm", freinage: "Écrous nylstop neufs", controle: "Toutes les 100 heures" }
 ];
 
 export const EPIROC_ST2D_KITS = [
   { frequence: "50 heures (Mise en route / Mine)", operations: "Graissage de tous les pivots, vidange du filtre à air à bain d'huile, contrôle du serrage de roues." },
-  { frequence: "100 heures (Périodique standard)", operations: "Niveau d'huile de boîte de vitesses Dana, contrôle d'étanchéité des vérins, dépoussiérage des ailettes moteur." },
-  { frequence: "250 heures (Vidange moteur)", operations: "Vidange de l'huile de carter Deutz (15W-40), remplacement du filtre à huile et carburant primaire." },
+  { frequence: "100 heures (Périodique standard)", operations: "Niveau d'huile de boîte de vitesses Funk DF80, contrôle d'étanchéité des vérins, dépoussiérage des ailettes moteur." },
+  { frequence: "250 heures (Vidange moteur)", operations: "Vidange de l'huile de carter Deutz F4L912 (15W-40), remplacement du filtre à huile et carburant primaire." },
   { frequence: "500 heures (Entretien intermédiaire)", operations: "Remplacement de la cartouche de filtre à air sèche, remplacement des filtres de transmission, réglage des culbuteurs." },
-  { frequence: "1000 heures (Grande révision)", operations: "Vidange complète de l'huile de transmission Dana, vidange hydraulique, réétalonnage de l'accumulateur de frein d'azote." }
+  { frequence: "1000 heures (Grande révision)", operations: "Vidange complète de l'huile de transmission Funk DF80, vidange hydraulique, lubrification des câbles de frein." }
 ];

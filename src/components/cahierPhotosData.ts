@@ -213,6 +213,14 @@ export function getPlaceholderSvg(
     `;
   }
 
+  // Handle precise truncation to max 80 characters with word-boundary cut
+  let descText = escapedSubject;
+  if (descText.length > 80) {
+    const cutIdx = descText.lastIndexOf(' ', 80);
+    descText = cutIdx > 0 ? descText.substring(0, cutIdx) : descText.substring(0, 80);
+    descText += '...';
+  }
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
     <!-- Fond blanc blueprint -->
     <rect width="800" height="500" fill="#ffffff" rx="8" stroke="#cbd5e1" stroke-width="1"/>
@@ -228,37 +236,41 @@ export function getPlaceholderSvg(
     <!-- Encadré intérieur technique -->
     <rect x="15" y="15" width="770" height="470" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6,4" rx="6" />
 
+    <!-- Red Banner at top -->
+    <rect x="15" y="15" width="770" height="25" fill="#ef4444" rx="2" />
+    <text x="400" y="32" text-anchor="middle" fill="#ffffff" font-family="monospace" font-size="11" font-weight="black">⚠️ PHOTO MANQUANTE — PLACEHOLDER TECHNIQUE</text>
+
     <!-- Viewfinder Corners -->
-    <path d="M 35,70 L 35,35 L 70,35" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-    <path d="M 765,70 L 765,35 L 730,35" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-    <path d="M 35,430 L 35,465 L 70,465" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-    <path d="M 765,430 L 765,465 L 730,465" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 35,90 L 35,55 L 70,55" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 765,90 L 765,55 L 730,55" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 35,410 L 35,445 L 70,445" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 765,410 L 765,445 L 730,445" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
 
     <!-- Crosshairs -->
-    <circle cx="400" cy="230" r="50" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="8,6" />
-    <line x1="400" y1="160" x2="400" y2="300" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" />
-    <line x1="330" y1="230" x2="470" y2="230" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" />
+    <circle cx="400" cy="245" r="50" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="8,6" />
+    <line x1="400" y1="175" x2="400" y2="315" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" />
+    <line x1="330" y1="245" x2="470" y2="245" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" />
 
     <!-- Custom Tech Diagram -->
     ${customArt}
 
-    <!-- Status HUD -->
-    <rect x="35" y="35" width="240" height="28" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
-    <circle cx="50" cy="49" r="6" fill="${accentColor}"/>
-    <text x="65" y="54" fill="#0f172a" font-family="monospace" font-size="11" font-weight="black">${accentText}</text>
+    <!-- Status HUD shifted down for red banner -->
+    <rect x="35" y="50" width="240" height="28" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+    <circle cx="50" cy="64" r="6" fill="${accentColor}"/>
+    <text x="65" y="69" fill="#0f172a" font-family="monospace" font-size="11" font-weight="black">${accentText}</text>
     
-    <text x="765" y="54" text-anchor="end" fill="#64748b" font-family="monospace" font-size="10" font-weight="bold">${escapedCamera}</text>
+    <text x="765" y="69" text-anchor="end" fill="#64748b" font-family="monospace" font-size="10" font-weight="bold">${escapedCamera}</text>
     
-    <!-- Title plate -->
-    <rect x="35" y="75" width="730" height="35" fill="#f8fafc" rx="4" stroke="#cbd5e1" stroke-width="1" />
-    <text x="50" y="97" fill="#0f172a" font-family="monospace" font-size="12" font-weight="black">${escapedTitle}</text>
+    <!-- Title plate shifted down -->
+    <rect x="35" y="85" width="730" height="40" fill="#f8fafc" rx="4" stroke="#cbd5e1" stroke-width="1" />
+    <text x="50" y="112" fill="#0f172a" font-family="monospace" font-size="24" font-weight="black">${escapedTitle}</text>
     
-    <!-- Subject Details -->
-    <text x="35" y="420" fill="#0f172a" font-family="monospace" font-size="11" font-weight="black">DESCRIPTION :</text>
-    <text x="135" y="420" fill="#334155" font-family="monospace" font-size="11" font-weight="bold">${escapedSubject.substring(0, 85)}...</text>
+    <!-- Subject Details with increased size (16px) and black color (#000000) -->
+    <text x="35" y="415" fill="#000000" font-family="monospace" font-size="16" font-weight="black">DESCRIPTION :</text>
+    <text x="165" y="415" fill="#000000" font-family="monospace" font-size="16" font-weight="bold">${descText}</text>
     
     <!-- Technical Specification Status Text -->
-    <text x="35" y="440" fill="${isCasse ? '#ef4444' : '#22c55e'}" font-family="monospace" font-size="10" font-weight="black">${specText}</text>
+    <text x="35" y="440" fill="${isCasse ? '#ef4444' : '#22c55e'}" font-family="monospace" font-size="11" font-weight="black">${specText}</text>
     
     <!-- Margins / Technical metadata -->
     <text x="765" y="445" text-anchor="end" fill="#f59e0b" font-family="monospace" font-size="10" font-weight="black">EPIROC MINING BLUEPRINT</text>

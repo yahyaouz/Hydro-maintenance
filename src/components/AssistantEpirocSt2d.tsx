@@ -103,8 +103,8 @@ export function AssistantEpirocSt2d() {
   const getGuideStepText = (tabId: string, step: number) => {
     if (tabId === "depannage") {
       return step === 1 
-        ? "Trouvez les pannes spécifiques au Scooptram ST2D à transmission mécanique Dana et moteur Deutz F6L912W refroidi par air."
-        : "Résolvez les problèmes de fumée d'échappement, de surchauffe moteur par air, ou de patinage du convertisseur.";
+        ? "Trouvez les pannes spécifiques au Scooptram ST2D à transmission mécanique Funk DF80 et moteur Deutz F4L912 refroidi par air."
+        : "Résolvez les problèmes de fumée d'échappement, de surchauffe moteur par air, ou de patinage de la boîte Funk.";
     }
     if (tabId === "procedures") {
       return step === 1 
@@ -359,7 +359,7 @@ export function AssistantEpirocSt2d() {
           icon={Wrench}
           badgeLabel="ASSISTANT TECHNIQUE"
           title="Epiroc Scooptram ST2D"
-          subtitle="Chargeur Souterrain Mécanique • Deutz refroidi par air & Dana C-270"
+          subtitle="Chargeur Souterrain Mécanique • Deutz refroidi par air & Funk DF80"
           siteLabel={activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
           logo={<HydrominesLogo size={110} variant="full" className="mb-1" />}
         >
@@ -606,13 +606,13 @@ export function AssistantEpirocSt2d() {
                 onClick={() => setSearchQuery("Deutz")} 
                 className="px-2 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded text-[9px] font-bold"
               >
-                🔥 Deutz F6L
+                🔥 Deutz F4L
               </button>
               <button 
-                onClick={() => setSearchQuery("Dana")} 
+                onClick={() => setSearchQuery("Funk")} 
                 className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded text-[9px] font-bold"
               >
-                ⚙️ Transmission
+                ⚙️ Transmission Funk
               </button>
               <button 
                 onClick={() => setSelectedSeverityFilter("ROUGE")} 
@@ -845,7 +845,7 @@ export function AssistantEpirocSt2d() {
                   <div>
                     <h3 className="text-sm font-black uppercase tracking-wider text-red-200">PROCÉDURE LOTO ST2D — CONSIGNATION</h3>
                     <p className="text-xs text-red-300 leading-relaxed mt-1">
-                      Avant toute intervention mécanique majeure sur le circuit hydraulique sous pression, l'accumulateur de frein HASR ou le bloc Deutz refroidi à air, effectuez impérativement les 9 étapes de consignation :
+                      Avant toute intervention mécanique majeure sur le circuit hydraulique sous pression, le système de freinage ou le bloc Deutz refroidi à air, effectuez impérativement les 9 étapes de consignation :
                     </p>
                   </div>
                 </div>
@@ -856,7 +856,7 @@ export function AssistantEpirocSt2d() {
                     "Arrêt moteur, clé retirée",
                     "Batterie débranchée (+ et -)",
                     "Réservoir hydraulique dépressurisé",
-                    "Accumulateur frein dépressurisé",
+                    "Câble de frein mécanique desserré",
                     "Cales de roues de secours placées",
                     "Boom baissé et calé mécaniquement",
                     "Godet à plat sur le sol",
@@ -1009,21 +1009,21 @@ export function AssistantEpirocSt2d() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <span className="font-black text-[9px] uppercase tracking-wider block text-slate-400 mb-1">MOTEUR DEUTZ F6L-912W</span>
+                    <span className="font-black text-[9px] uppercase tracking-wider block text-slate-400 mb-1">MOTEUR DEUTZ F4L912</span>
                     <p className="text-slate-700 leading-relaxed font-semibold">
-                      Composant 100% interchangeable avec les moteurs de chargeuses Wagner anciennes, ainsi que certains compresseurs d'air souterrains de chantier.
+                      Composant 100% interchangeable avec les moteurs de chargeuses anciennes de même série, ainsi que certains compresseurs d'air souterrains de chantier.
                     </p>
                   </div>
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <span className="font-black text-[9px] uppercase tracking-wider block text-slate-400 mb-1">TRANSMISSION DANA R32000</span>
+                    <span className="font-black text-[9px] uppercase tracking-wider block text-slate-400 mb-1">TRANSMISSION FUNK DF80</span>
                     <p className="text-slate-700 leading-relaxed font-semibold">
-                      Spécifique au ST2D. Vérifier attentivement la compatibilité des cannelures d'arbres avec la transmission du ST2G avant tout montage.
+                      Spécifique au ST2D. Vérifier attentivement la compatibilité de l'axe et de la timonerie mécanique de commande avec d'autres engins de même série.
                     </p>
                   </div>
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <span className="font-black text-[9px] uppercase tracking-wider block text-slate-400 mb-1">CONVERTISSEUR C-270</span>
+                    <span className="font-black text-[9px] uppercase tracking-wider block text-slate-400 mb-1">FREINS À TAMBOUR MÉCANIQUE</span>
                     <p className="text-slate-700 leading-relaxed font-semibold">
-                      Spécifique à la série ST2D. Ne pas interchanger avec d'autres séries sans l'aval du chef d'atelier de la mine.
+                      Spécifique à la série ST2D. Le système de freinage est entièrement mécanique par câble et biellettes, sans accumulateurs d'azote hydrauliques.
                     </p>
                   </div>
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
@@ -1114,15 +1114,15 @@ export function AssistantEpirocSt2d() {
                     </div>
                     <div className="p-3 bg-white/60 rounded-xl border border-red-100">
                       <span className="text-red-700 font-black uppercase tracking-wider block mb-1">11.4 Perte de la Direction en Mouvement</span>
-                      <p>Appliquez immédiatement le frein d'urgence HASR au pied ou serrez l'interrupteur d'urgence de la boîte.</p>
+                      <p>Appliquez immédiatement le frein d'urgence mécanique à tambour au pied ou tirez le levier d'arrêt d'urgence.</p>
                     </div>
                     <div className="p-3 bg-white/60 rounded-xl border border-red-100">
                       <span className="text-red-700 font-black uppercase tracking-wider block mb-1">11.5 Fuite Majeure de Carburant (Gazole)</span>
                       <p>Arrêtez le bloc Deutz chaud immédiatement. Interdiction de produire la moindre étincelle ou d'éclairage non ATEX à proximité.</p>
                     </div>
                     <div className="p-3 bg-white/60 rounded-xl border border-red-100">
-                      <span className="text-red-700 font-black uppercase tracking-wider block mb-1">11.6 Patinage du Convertisseur en Descente</span>
-                      <p>Engagez le frein moteur mécanique pour soulager l'arbre de transmission de la boîte Dana, évitez le frein de service seul.</p>
+                      <span className="text-red-700 font-black uppercase tracking-wider block mb-1">11.6 Patinage de l'Embrayage en Descente</span>
+                      <p>Engagez le frein moteur mécanique pour soulager l'arbre de transmission de la boîte Funk, évitez le frein de service seul.</p>
                     </div>
                   </div>
                 </div>
@@ -1146,7 +1146,7 @@ export function AssistantEpirocSt2d() {
                   </div>
                   <div className="p-3 bg-slate-800 rounded-xl border border-slate-700 text-xs space-y-2 text-slate-300">
                     <span className="font-bold text-amber-500 uppercase block text-[10px]">🚨 RÈGLE D'OR SÉCURITÉ</span>
-                    <p>Ne touchez jamais à l'accumulateur d'azote HASR sans avoir pompé 20 fois sur la pédale de frein moteur éteint pour libérer la pression résiduelle.</p>
+                    <p>Ne touchez jamais aux réglages du câble de frein mécanique sans avoir calé fermement l'engin pour éviter tout glissement accidentel.</p>
                   </div>
                 </div>
 
@@ -1312,7 +1312,7 @@ export function AssistantEpirocSt2d() {
                     <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">Pièces prélevées du Stock (références)</label>
                     <input
                       type="text"
-                      placeholder="Ex: 1x Injecteur Deutz F6L-912W, 1x Joint"
+                      placeholder="Ex: 1x Injecteur Deutz F4L912, 1x Joint"
                       value={formState.partsUsed}
                       onChange={(e) => setFormState(prev => ({ ...prev, partsUsed: e.target.value }))}
                       className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-bold"
@@ -1459,7 +1459,7 @@ export function AssistantEpirocSt2d() {
                         <td className="py-3 px-3 text-red-600 font-bold">&gt; 175°C (serrage cyl.!)</td>
                       </tr>
                       <tr>
-                        <td className="py-3 px-3 font-black text-slate-900">Huile Transmission Dana</td>
+                        <td className="py-3 px-3 font-black text-slate-900">Huile Transmission Funk DF80</td>
                         <td className="py-3 px-3">18.0 à 21.0 bar (pression d'embrayage)</td>
                         <td className="py-3 px-3 text-amber-600">&lt; 15.0 bar</td>
                         <td className="py-3 px-3 text-red-600 font-bold">&lt; 12.0 bar</td>
@@ -1477,10 +1477,10 @@ export function AssistantEpirocSt2d() {
                         <td className="py-3 px-3 text-slate-400">N/A</td>
                       </tr>
                       <tr>
-                        <td className="py-3 px-3 font-black text-slate-900">Pression Accumulateur Frein HASR</td>
-                        <td className="py-3 px-3">110 - 120 bar</td>
-                        <td className="py-3 px-3 text-amber-600">&lt; 85 bar</td>
-                        <td className="py-3 px-3 text-red-600 font-bold">&lt; 70 bar</td>
+                        <td className="py-3 px-3 font-black text-slate-900">Commande Frein à Tambour</td>
+                        <td className="py-3 px-3">Mécanique à câble</td>
+                        <td className="py-3 px-3 text-amber-600">N/A</td>
+                        <td className="py-3 px-3 text-red-600 font-bold">N/A</td>
                       </tr>
                       <tr>
                         <td className="py-3 px-3 font-black text-slate-900">Tension Électrique batteries</td>
@@ -1558,8 +1558,8 @@ export function AssistantEpirocSt2d() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px] font-bold text-slate-700">
                   <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">🔧 Clé dynamométrique haute capacité (&gt;800 Nm)</div>
                   <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">📐 Testeur de pression hydraulique (0 à 25 MPa)</div>
-                  <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">🔋 Testeur de charge accumulateur d'azote</div>
-                  <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">⚙️ Extracteur de cannelures pour convertisseur Dana</div>
+                  <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">🔋 Testeur de charge de batterie d'atelier</div>
+                  <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">⚙️ Extracteur d'embrayage mécanique Funk</div>
                   <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">🚗 Clé à fourche géante pour excentrique de chaîne</div>
                   <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">🔥 Outil de calage et de pigeage moteur Deutz</div>
                   <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">🔩 Testeur de compression moteur (adaptateur bougie)</div>
@@ -1588,10 +1588,10 @@ export function AssistantEpirocSt2d() {
                     "Démarrage moteur et ralenti stable pendant 5 minutes sans fumée inhabituelle",
                     "Pression hydraulique de travail testée en charge maximale (doit atteindre 11.4 MPa)",
                     "Pression hydraulique de direction vérifiée à plein braquage à gauche et à droite (13.1 MPa)",
-                    "Montée et maintien de la pression de l'accumulateur de frein HASR sans à-coups",
+                    "Tension et débattement conforme du câble de frein tambour mécanique",
                     "Test d'efficacité du frein de service en descente avec godet chargé",
                     "Test de maintien statique du frein de parking sur rampe de 15% (le loader ne doit pas glisser)",
-                    "Passage des 4 rapports de la boîte Powershift fluide sans patinage du convertisseur",
+                    "Passage des 4 vitesses de la boîte Funk fluide sans frottement ni patinage",
                     "Vérification d'absence de fuite d'huile externe sur l'axe d'articulation et les vérins",
                     "Contrôle de température des culasses à l'aide du manomètre de carter d'air",
                     "Signature de conformité d'intervention co-signée par le mécanicien et le chef"
@@ -1619,21 +1619,21 @@ export function AssistantEpirocSt2d() {
                     <p className="text-slate-700 leading-relaxed">
                       <strong>Autorisé :</strong> Quick Fixes, changement de filtres (moteur, air, carburant), graissage manuel centralisé, contrôles de niveaux d'huile standards, nettoyage des ailettes de refroidissement Deutz.
                     </p>
-                    <p className="text-red-600 font-bold mt-1.5">🚫 Interdit de toucher aux accumulateurs sous pression, au circuit de freinage HASR, à la boîte Dana ou au moteur.</p>
+                    <p className="text-red-600 font-bold mt-1.5">🚫 Interdit de toucher aux réglages de timonerie, au système de freinage à tambour, à la boîte Funk ou au moteur.</p>
                   </div>
 
                   <div className="p-3.5 bg-slate-50 rounded-xl border-l-4 border-l-amber-500">
                     <span className="font-black text-[10px] uppercase tracking-wider text-amber-700 block mb-1">🎓 Niveau 2 — Confirmé (2 à 5 ans d'expérience)</span>
                     <p className="text-slate-700 leading-relaxed">
-                      <strong>Autorisé :</strong> Remplacement de vérins hydrauliques complets, changement des disques et plaquettes HASR extérieures, entretien de l'articulation centrale, maintenance électrique standard (éclairage, solénoides).
+                      <strong>Autorisé :</strong> Remplacement de vérins hydrauliques complets, changement des mâchoires et garnitures de frein à tambour, entretien de l'articulation centrale, maintenance électrique standard (éclairage, solénoides).
                     </p>
-                    <p className="text-red-600 font-bold mt-1.5">🚫 Interdit d'ouvrir la boîte Powershift Dana, de démonter le moteur à air ou de purger les accumulateurs de gaz d'azote.</p>
+                    <p className="text-red-600 font-bold mt-1.5">🚫 Interdit d'ouvrir la boîte Funk DF80 ou de démonter le moteur à air sans supervision.</p>
                   </div>
 
                   <div className="p-3.5 bg-slate-50 rounded-xl border-l-4 border-l-emerald-500">
                     <span className="font-black text-[10px] uppercase tracking-wider text-emerald-700 block mb-1">🎓 Niveau 3 — Expert / Chef d'Atelier (Plus de 5 ans d'expérience)</span>
                     <p className="text-slate-700 leading-relaxed font-bold">
-                      Autorisation totale. Révision complète du bloc moteur Deutz F6L, calage fin de la pompe d'injection, réfection interne de la boîte Powershift Dana R32000, recharge et manipulation des accumulateurs d'azote sous haute pression.
+                      Autorisation totale. Révision complète du bloc moteur Deutz F4L912, calage fin de la pompe d'injection mécanique, réfection interne de la boîte Funk DF80 et ajustement de la timonerie de frein.
                     </p>
                     <p className="text-emerald-700 font-bold mt-1.5">🛡 Co-signature obligatoire de toutes les fiches d'intervention du personnel de niveau 1 et 2.</p>
                   </div>
