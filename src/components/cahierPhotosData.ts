@@ -69,49 +69,200 @@ export function getPlaceholderSvg(
   const escapedSubject = subject.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const escapedPrompt = prompt.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   
-  const accentColor = type === 'CASSÉ' ? '#ff4d4d' : type === 'MAUVAIS' ? '#ff9900' : type === 'RÉSULTAT' ? '#4cdf50' : '#ffd700';
-  const accentText = type === 'CASSÉ' ? 'CASSÉ' : type === 'MAUVAIS' ? 'CATASTROPHE' : type === 'RÉSULTAT' ? 'RÉSULTAT NEUF' : 'OUTIL EN PLACE';
+  const accentColor = type === 'CASSÉ' ? '#ef4444' : type === 'MAUVAIS' ? '#f59e0b' : type === 'RÉSULTAT' ? '#22c55e' : '#3b82f6';
+  const accentText = type === 'CASSÉ' ? 'CASSÉ / DÉFAUT CRITIQUE' : type === 'MAUVAIS' ? 'CATASTROPHE MECANIQUE' : type === 'RÉSULTAT' ? 'RÉSULTAT CONFORME NEUF' : 'OUTIL ET MONTAGE REQUIS';
+
+  const lowerTitle = title.toLowerCase();
+  const lowerSubject = subject.toLowerCase();
+  const isCasse = type === 'CASSÉ' || type === 'MAUVAIS';
+  const isNeuf = type === 'RÉSULTAT';
+
+  let customArt = '';
+  let subTitleText = 'VUE TECHNIQUE — ÉCHELLE 1:2 — SCHÉMA MÉCANIQUE';
+  let specText = '';
+
+  if (lowerTitle.includes('frein') || lowerTitle.includes('sahr') || lowerTitle.includes('disque') || lowerSubject.includes('frein') || lowerSubject.includes('sahr') || lowerSubject.includes('disque')) {
+    subTitleText = 'ÉTRIER FREIN SAHR — ÉCHELLE 1:2 — SYSTÈME DE FREINAGE DISQUES WET';
+    specText = isCasse ? '⚠ ÉPAISSEUR DE COMPOSANT HORS SERVICE — REMPLACEMENT REQUIS (MIN 6.0 mm)' : '✓ ÉTAT DU COMPOSANT VALIDE (JEU ET RESSORTS VÉRIFIÉS)';
+    customArt = `
+      <!-- Silhouette étrier SAHR -->
+      <path d="M 120 140 L 120 80 L 680 80 L 680 140 L 640 140 L 640 100 L 160 100 L 160 140 Z" fill="none" stroke="#f59e0b" stroke-width="2.5" />
+      <!-- Disque mobile -->
+      <circle cx="400" cy="240" r="100" fill="none" stroke="${isNeuf ? '#22c55e' : '#3b82f6'}" stroke-width="2.5" />
+      <circle cx="400" cy="240" r="40" fill="none" stroke="#3b82f6" stroke-width="1.5" />
+      <!-- Plaquettes -->
+      <rect x="310" y="190" width="60" height="100" fill="none" stroke="${isCasse ? '#ef4444' : '#22c55e'}" stroke-width="2.5" stroke-dasharray="${isCasse ? '5,3' : '0'}" />
+      <rect x="430" y="190" width="60" height="100" fill="none" stroke="${isCasse ? '#ef4444' : '#22c55e'}" stroke-width="2.5" stroke-dasharray="${isCasse ? '5,3' : '0'}" />
+      <!-- Pistons -->
+      <circle cx="340" cy="240" r="22" fill="none" stroke="#3b82f6" stroke-width="2" />
+      <circle cx="460" cy="240" r="22" fill="none" stroke="#3b82f6" stroke-width="2" />
+      <!-- Ressorts -->
+      <path d="M 340 210 Q 345 215 340 220 Q 335 225 340 230 Q 345 235 340 240" fill="none" stroke="#f59e0b" stroke-width="1.5" />
+      <path d="M 460 210 Q 465 215 460 220 Q 455 225 460 230 Q 465 235 460 240" fill="none" stroke="#f59e0b" stroke-width="1.5" />
+      <!-- Cotes -->
+      <line x1="120" y1="360" x2="680" y2="360" stroke="#f59e0b" stroke-width="1" />
+      <path d="M 120 360 L 130 357 L 130 363 Z" fill="#f59e0b" />
+      <path d="M 680 360 L 670 357 L 670 363 Z" fill="#f59e0b" />
+      <text x="400" y="380" text-anchor="middle" fill="#111827" font-family="monospace" font-size="11" font-weight="bold">Ø ESPACE INTERNE : 560 mm</text>
+    `;
+  } else if (lowerTitle.includes('pompe') || lowerTitle.includes('hydraulique') || lowerTitle.includes('vérin') || lowerTitle.includes('direction') || lowerTitle.includes('filtre') || lowerSubject.includes('hydr') || lowerSubject.includes('filtre')) {
+    subTitleText = 'CIRCUIT HYDRAULIQUE EXCLUSIF — REPARTITION ET CONTROLE PRESSION';
+    specText = isCasse ? '⚠ SOUPLAGE ET JOINT TORIQUE ENDOMMAGE — RISQUE DE FUITE D\'HUILE' : '✓ NIVEAU ET PRESCRIPTION FILTRE VALIDES (25 microns)';
+    customArt = `
+      <!-- Vérin hydraulique corps -->
+      <rect x="200" y="180" width="300" height="70" rx="4" fill="none" stroke="#f59e0b" stroke-width="2.5" />
+      <!-- Piston et Tige -->
+      <rect x="250" y="182" width="20" height="66" fill="none" stroke="#3b82f6" stroke-width="2" />
+      <rect x="270" y="210" width="330" height="14" fill="none" stroke="${isNeuf ? '#22c55e' : '#3b82f6'}" stroke-width="2" />
+      <!-- Joints d'étanchéité -->
+      <rect x="210" y="180" width="8" height="70" fill="none" stroke="${isCasse ? '#ef4444' : '#3b82f6'}" stroke-width="1.5" stroke-dasharray="${isCasse ? '2,2' : '0'}" />
+      <rect x="480" y="180" width="8" height="70" fill="none" stroke="${isCasse ? '#ef4444' : '#3b82f6'}" stroke-width="1.5" stroke-dasharray="${isCasse ? '2,2' : '0'}" />
+      <!-- Conduites hydrauliques -->
+      <path d="M 230 180 L 230 130 L 120 130" fill="none" stroke="#3b82f6" stroke-width="3" />
+      <path d="M 470 180 L 470 130 L 580 130" fill="none" stroke="#3b82f6" stroke-width="3" />
+      <!-- Manomètre -->
+      <circle cx="120" cy="130" r="18" fill="none" stroke="#f59e0b" stroke-width="1.5" />
+      <line x1="120" y1="130" x2="132" y2="118" stroke="#ef4444" stroke-width="2" />
+      <!-- Cotes -->
+      <line x1="200" y1="280" x2="500" y2="280" stroke="#f59e0b" stroke-width="1" />
+      <text x="350" y="298" text-anchor="middle" fill="#111827" font-family="monospace" font-size="11" font-weight="bold">COURSE ET DEBIT MAX REQUIS</text>
+    `;
+  } else if (lowerTitle.includes('moteur') || lowerTitle.includes('turbo') || lowerTitle.includes('injecteur') || lowerTitle.includes('soupape') || lowerSubject.includes('moteur') || lowerSubject.includes('injecteur')) {
+    subTitleText = 'MOTEUR THERMIQUE — CHAMBRE D\'INJECTION ET JEU DES POUSSOIRS';
+    specText = isCasse ? '⚠ CALAMINE RELEVÉE / INJECTEUR COLLÉ ET PERTE DE COMPRESSION' : '✓ ATOMISATION CONFORME — PUISSANCE MOTEUR IDÉALE';
+    customArt = `
+      <!-- Cylindre de moteur -->
+      <line x1="280" y1="100" x2="280" y2="340" stroke="#f59e0b" stroke-width="2.5" />
+      <line x1="520" y1="100" x2="520" y2="340" stroke="#f59e0b" stroke-width="2.5" />
+      <!-- Piston mobile -->
+      <path d="M 290 180 L 510 180 L 510 260 L 290 260 Z" fill="none" stroke="#3b82f6" stroke-width="2" />
+      <!-- Segments de piston -->
+      <rect x="282" y="195" width="8" height="6" fill="none" stroke="${isCasse ? '#ef4444' : '#3b82f6'}" stroke-width="1.5" />
+      <rect x="510" y="195" width="8" height="6" fill="none" stroke="${isCasse ? '#ef4444' : '#3b82f6'}" stroke-width="1.5" />
+      <rect x="282" y="210" width="8" height="6" fill="none" stroke="${isCasse ? '#ef4444' : '#3b82f6'}" stroke-width="1.5" />
+      <rect x="510" y="210" width="8" height="6" fill="none" stroke="${isCasse ? '#ef4444' : '#3b82f6'}" stroke-width="1.5" />
+      <!-- Bielle moteur -->
+      <line x1="400" y1="240" x2="400" y2="360" stroke="${isNeuf ? '#22c55e' : '#3b82f6'}" stroke-width="4" />
+      <circle cx="400" cy="240" r="10" fill="none" stroke="#f59e0b" stroke-width="2" />
+      <!-- Injecteur -->
+      <path d="M 400 60 L 400 130" stroke="#3b82f6" stroke-width="3" />
+      <path d="M 390 60 L 410 60 L 405 130 L 395 130 Z" fill="none" stroke="#f59e0b" stroke-width="1.5" />
+      <!-- Cotes de jeu -->
+      <line x1="280" y1="180" x2="290" y2="180" stroke="#ef4444" stroke-width="1.5" />
+      <text x="230" y="175" fill="#ef4444" font-family="monospace" font-size="10" font-weight="bold">Jeu: 0.08 mm</text>
+    `;
+  } else if (lowerTitle.includes('convertisseur') || lowerTitle.includes('boîte') || lowerTitle.includes('transmission') || lowerTitle.includes('embrayage') || lowerTitle.includes('électrovanne') || lowerSubject.includes('trans') || lowerSubject.includes('boite')) {
+    subTitleText = 'CONVERTISSEUR DE COUPLE ET BOÎTE POWERSHIFT FUNK';
+    specText = isCasse ? '⚠ PRESSION CONVERTISSEUR BASSE / GLISSEMENT DETECTE' : '✓ EMBRAYAGE CONFORME (PRESSION ET COUPLAGE ACTIFS)';
+    customArt = `
+      <!-- Couronne externe -->
+      <circle cx="400" cy="230" r="110" fill="none" stroke="#f59e0b" stroke-width="3" />
+      <!-- Solaire central -->
+      <circle cx="400" cy="230" r="30" fill="none" stroke="#3b82f6" stroke-width="2" />
+      <!-- Satellites -->
+      <circle cx="400" cy="155" r="24" fill="none" stroke="${isNeuf ? '#22c55e' : '#3b82f6'}" stroke-width="1.5" />
+      <circle cx="335" cy="268" r="24" fill="none" stroke="${isNeuf ? '#22c55e' : '#3b82f6'}" stroke-width="1.5" />
+      <circle cx="465" cy="268" r="24" fill="none" stroke="${isNeuf ? '#22c55e' : '#3b82f6'}" stroke-width="1.5" />
+      <!-- Porte-satellites -->
+      <polygon points="400,155 335,268 465,268" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="3,3" />
+      <!-- Diagnostic zone -->
+      <rect x="240" y="315" width="320" height="35" fill="none" stroke="${isCasse ? '#ef4444' : '#22c55e'}" stroke-width="1.5" stroke-dasharray="${isCasse ? '4,2' : '0'}" />
+      <text x="400" y="337" text-anchor="middle" fill="${isCasse ? '#ef4444' : '#111827'}" font-family="monospace" font-size="11" font-weight="bold">
+        ${isCasse ? '⚠ POLLUTION DETECTÉE PAR LIMAILLE METALLIQUE' : '✓ PRESSION HYDRAULIQUE D\'ENGAGEMENT OK'}
+      </text>
+    `;
+  } else if (lowerTitle.includes('rcs') || lowerTitle.includes('capteur') || lowerTitle.includes('faisceau') || lowerTitle.includes('module') || lowerTitle.includes('manostat') || lowerSubject.includes('faisceau') || lowerSubject.includes('élect')) {
+    subTitleText = 'EPIROC SYSTEM CONTROL RCS — DIAGRAMME TECHNIQUE BUS CAN';
+    specText = isCasse ? '⚠ COURT-CIRCUIT DÉTECTÉ SUR LE FAISCEAU D\'ALIMENTATION' : '✓ TRANSMISSION DU SIGNAL ET MODULE ALIMENTÉ';
+    customArt = `
+      <!-- Module RCS de base -->
+      <rect x="250" y="110" width="300" height="180" rx="6" fill="none" stroke="#f59e0b" stroke-width="2.5" />
+      <rect x="270" y="130" width="100" height="50" fill="none" stroke="#3b82f6" stroke-width="1.5" />
+      <!-- Écran symbolique -->
+      <text x="320" y="160" text-anchor="middle" fill="#3b82f6" font-family="monospace" font-size="11" font-weight="bold">RCS OK</text>
+      <!-- Connexions et microprocesseur -->
+      <circle cx="480" cy="160" r="16" fill="none" stroke="#3b82f6" stroke-width="1.5" />
+      <line x1="450" y1="160" x2="510" y2="160" stroke="#3b82f6" stroke-width="1" />
+      <line x1="480" y1="130" x2="480" y2="190" stroke="#3b82f6" stroke-width="1" />
+      <!-- Borne de broches -->
+      <rect x="270" y="240" width="260" height="30" fill="none" stroke="#f59e0b" stroke-width="1.5" />
+      <circle cx="290" cy="255" r="4" fill="${isCasse ? '#ef4444' : '#22c55e'}" />
+      <circle cx="310" cy="255" r="4" fill="${isCasse ? '#ef4444' : '#22c55e'}" />
+      <circle cx="330" cy="255" r="4" fill="#22c55e" />
+      <circle cx="350" cy="255" r="4" fill="#22c55e" />
+      <!-- Lignes de bus CAN (torsadées) -->
+      <path d="M 180 255 Q 210 245 240 255 T 300 255" fill="none" stroke="#3b82f6" stroke-width="2" />
+      <path d="M 180 255 Q 210 265 240 255 T 300 255" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="3,1" />
+    `;
+  } else {
+    // Générique (châssis, roues, transmission latérale etc)
+    subTitleText = 'ROUE, MOYEU & CHÂSSIS OSCILLANT — TOLERANCE GÉOMETRIQUE';
+    specText = isCasse ? '⚠ ALIGNEMENT NON CONFORME / JEU DE TRAIN EXCÉSIF' : '✓ JEUX MECANIQUES ET ROTULES SANS ANOMALIE';
+    customArt = `
+      <!-- Silhouette du châssis -->
+      <rect x="180" y="160" width="200" height="120" rx="4" fill="none" stroke="#3b82f6" stroke-width="2.5" />
+      <rect x="420" y="160" width="200" height="120" rx="4" fill="none" stroke="#3b82f6" stroke-width="2.5" />
+      <!-- Joint d'articulation -->
+      <circle cx="400" cy="220" r="16" fill="none" stroke="#f59e0b" stroke-width="2" />
+      <circle cx="400" cy="220" r="6" fill="${isNeuf ? '#22c55e' : '#f59e0b'}" />
+      <!-- Axe d'articulation -->
+      <line x1="400" y1="120" x2="400" y2="320" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6,4" />
+      <!-- Cotes -->
+      <line x1="180" y1="310" x2="620" y2="310" stroke="#f59e0b" stroke-width="1" />
+      <text x="400" y="330" text-anchor="middle" fill="#111827" font-family="monospace" font-size="11" font-weight="bold">ALIGNEMENT STRUCTUREL REQUIS</text>
+    `;
+  }
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
-    <rect width="800" height="500" fill="#151922" rx="8"/>
-    <rect x="10" y="10" width="780" height="480" fill="none" stroke="${accentColor}" stroke-width="1.5" stroke-opacity="0.3" rx="6"/>
+    <!-- Fond blanc blueprint -->
+    <rect width="800" height="500" fill="#ffffff" rx="8" stroke="#cbd5e1" stroke-width="1"/>
     
+    <!-- Grille technique -->
+    <defs>
+      <pattern id="grid" width="25" height="25" patternUnits="userSpaceOnUse">
+        <path d="M 25 0 L 0 0 0 25" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+      </pattern>
+    </defs>
+    <rect width="800" height="500" fill="url(#grid)" rx="8" />
+    
+    <!-- Encadré intérieur technique -->
+    <rect x="15" y="15" width="770" height="470" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6,4" rx="6" />
+
     <!-- Viewfinder Corners -->
-    <path d="M 30,60 L 30,30 L 60,30" fill="none" stroke="${accentColor}" stroke-width="3" stroke-linecap="round"/>
-    <path d="M 770,60 L 770,30 L 740,30" fill="none" stroke="${accentColor}" stroke-width="3" stroke-linecap="round"/>
-    <path d="M 30,440 L 30,470 L 60,470" fill="none" stroke="${accentColor}" stroke-width="3" stroke-linecap="round"/>
-    <path d="M 770,440 L 770,470 L 740,470" fill="none" stroke="${accentColor}" stroke-width="3" stroke-linecap="round"/>
-    
+    <path d="M 35,70 L 35,35 L 70,35" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 765,70 L 765,35 L 730,35" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 35,430 L 35,465 L 70,465" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 765,430 L 765,465 L 730,465" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+
     <!-- Crosshairs -->
-    <circle cx="400" cy="230" r="45" fill="none" stroke="${accentColor}" stroke-width="1.5" stroke-dasharray="8,6" stroke-opacity="0.5"/>
-    <line x1="400" y1="170" x2="400" y2="290" stroke="${accentColor}" stroke-width="1.5" stroke-dasharray="4,4" stroke-opacity="0.4"/>
-    <line x1="340" y1="230" x2="460" y2="230" stroke="${accentColor}" stroke-width="1.5" stroke-dasharray="4,4" stroke-opacity="0.4"/>
-    
+    <circle cx="400" cy="230" r="50" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="8,6" />
+    <line x1="400" y1="160" x2="400" y2="300" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" />
+    <line x1="330" y1="230" x2="470" y2="230" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" />
+
+    <!-- Custom Tech Diagram -->
+    ${customArt}
+
     <!-- Status HUD -->
-    <circle cx="50" cy="50" r="8" fill="${accentColor}"/>
-    <text x="70" y="55" fill="${accentColor}" font-family="monospace" font-size="14" font-weight="bold">${accentText}</text>
-    <text x="750" y="55" text-anchor="end" fill="#a0aec0" font-family="monospace" font-size="12">${escapedCamera}</text>
+    <rect x="35" y="35" width="240" height="28" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+    <circle cx="50" cy="49" r="6" fill="${accentColor}"/>
+    <text x="65" y="54" fill="#0f172a" font-family="monospace" font-size="11" font-weight="black">${accentText}</text>
+    
+    <text x="765" y="54" text-anchor="end" fill="#64748b" font-family="monospace" font-size="10" font-weight="bold">${escapedCamera}</text>
     
     <!-- Title plate -->
-    <rect x="30" y="100" width="740" height="40" fill="#0d1117" rx="4"/>
-    <text x="45" y="125" fill="${accentColor}" font-family="monospace" font-size="13" font-weight="bold">${escapedTitle}</text>
+    <rect x="35" y="75" width="730" height="35" fill="#f8fafc" rx="4" stroke="#cbd5e1" stroke-width="1" />
+    <text x="50" y="97" fill="#0f172a" font-family="monospace" font-size="12" font-weight="black">${escapedTitle}</text>
     
     <!-- Subject Details -->
-    <text x="35" y="360" fill="#e2e8f0" font-family="sans-serif" font-size="14" font-weight="bold">SUJET :</text>
-    <text x="110" y="360" fill="#cbd5e0" font-family="sans-serif" font-size="13">${escapedSubject.substring(0, 85)}...</text>
+    <text x="35" y="420" fill="#0f172a" font-family="monospace" font-size="11" font-weight="black">DESCRIPTION :</text>
+    <text x="135" y="420" fill="#334155" font-family="monospace" font-size="11" font-weight="bold">${escapedSubject.substring(0, 85)}...</text>
     
-    <!-- Prompt block -->
-    <rect x="30" y="385" width="740" height="85" fill="#1b212c" fill-opacity="0.8" rx="4" stroke="#ffffff" stroke-opacity="0.1"/>
-    <text x="45" y="405" fill="#718096" font-family="sans-serif" font-weight="bold" font-size="10">PROMPT DE GÉNÉRATION REAL-TIME IMAGING (GEMINI 3.5 IMAGEN) :</text>
-    <text x="45" y="425" fill="${accentColor}" font-family="monospace" font-size="10" font-weight="500">
-      <tspan x="45" dy="0">${escapedPrompt.substring(0, 95)}...</tspan>
-      <tspan x="45" dy="15">${escapedPrompt.substring(95, 190)}...</tspan>
-      <tspan x="45" dy="15" fill="#a0aec0" font-style="italic" font-family="sans-serif" font-size="9">Code d'intégration complet et métadonnées techniques incluses dans l'attribut alt de l'image.</tspan>
-    </text>
+    <!-- Technical Specification Status Text -->
+    <text x="35" y="440" fill="${isCasse ? '#ef4444' : '#22c55e'}" font-family="monospace" font-size="10" font-weight="black">${specText}</text>
     
-    <!-- Margins -->
-    <text x="750" y="445" text-anchor="end" fill="${accentColor}" fill-opacity="0.4" font-family="monospace" font-size="10">EPIROC ST7 VISUAL MANUAL</text>
-    <text x="750" y="460" text-anchor="end" fill="#a0aec0" fill-opacity="0.4" font-family="monospace" font-size="9">CH2 : PHOTOS AVANT/APRÈS</text>
+    <!-- Margins / Technical metadata -->
+    <text x="765" y="445" text-anchor="end" fill="#f59e0b" font-family="monospace" font-size="10" font-weight="black">EPIROC MINING BLUEPRINT</text>
+    <text x="765" y="460" text-anchor="end" fill="#64748b" font-family="monospace" font-size="9" font-weight="bold">${subTitleText}</text>
   </svg>`;
 
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;

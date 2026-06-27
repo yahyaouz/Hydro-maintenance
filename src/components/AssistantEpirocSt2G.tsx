@@ -38,22 +38,22 @@ function AnimEngineDeutz() {
   }, [isPlaying]);
 
   return (
-    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-slate-300 font-mono text-xs">
-      <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
-        <span className="text-emerald-400 font-bold">⚙️ DEUTZ BF4M2012 WATER-COOLED ENGINE INTEGRATION</span>
+    <div className="bg-white p-4 rounded-xl border border-slate-200 text-slate-700 font-mono text-xs shadow-sm">
+      <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
+        <span className="text-emerald-600 font-bold">⚙️ DEUTZ BF4M2012 WATER-COOLED ENGINE INTEGRATION</span>
         <button 
           onClick={() => setIsPlaying(!isPlaying)}
-          className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-0.5 rounded text-[10px]"
+          className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2 py-0.5 rounded text-[10px]"
         >
           {isPlaying ? "PAUSE ANIMATION" : "PLAY ANIMATION"}
         </button>
       </div>
       <div className="flex flex-col md:flex-row gap-4 items-center">
-        <div className="w-full md:w-1/2 flex justify-center bg-slate-900 rounded p-4 border border-slate-800">
+        <div className="w-full md:w-1/2 flex justify-center bg-slate-50 rounded p-4 border border-slate-200">
           <svg viewBox="0 0 400 300" className="w-full max-w-[280px] h-auto">
             {/* Water Cooling Jacket */}
             <rect x="50" y="60" width="300" height="180" fill="none" stroke="#2563eb" strokeWidth={4} strokeDasharray="5,3" className="opacity-60" />
-            <text x="200" y="50" textAnchor="middle" fill="#3b82f6" fontSize={10} fontWeight="bold">CHAMBRE DE REFROIDISSEMENT LIQUIDE (EAU + ANTIGEL)</text>
+            <text x="200" y="50" textAnchor="middle" fill="#2563eb" fontSize={10} fontWeight="bold">CHAMBRE DE REFROIDISSEMENT LIQUIDE (EAU + ANTIGEL)</text>
             
             {/* Cylinder blocks */}
             {[0, 1, 2, 3].map((i) => {
@@ -66,9 +66,9 @@ function AnimEngineDeutz() {
                   {/* Piston */}
                   <rect x={xOffset + 2} y={85 + curY} width="46" height="35" fill="#475569" rx={2} />
                   {/* Connecting Rod */}
-                  <line x1={xOffset + 25} y1={120 + curY} x2={xOffset + 25} y2={200} stroke="#cbd5e1" strokeWidth={4} />
+                  <line x1={xOffset + 25} y1={120 + curY} x2={xOffset + 25} y2={200} stroke="#475569" strokeWidth={4} />
                   {/* Crankshaft wristpin */}
-                  <circle cx={xOffset + 25} cy={200} r={6} fill="#1e293b" stroke="#cbd5e1" strokeWidth={2} />
+                  <circle cx={xOffset + 25} cy={200} r={6} fill="#f1f5f9" stroke="#475569" strokeWidth={2} />
                   {/* Spark / Injection burst */}
                   {curY < 5 && isPlaying && (
                     <polygon points={`${xOffset+25},70 ${xOffset+15},82 ${xOffset+35},82`} fill="#f59e0b" />
@@ -77,31 +77,31 @@ function AnimEngineDeutz() {
               );
             })}
             {/* Oil pan */}
-            <rect x="60" y="220" width="280" height="30" fill="#1e293b" stroke="#ef4444" strokeWidth={2} />
+            <rect x="60" y="220" width="280" height="30" fill="#f8fafc" stroke="#ef4444" strokeWidth={2} />
             <text x="200" y="240" textAnchor="middle" fill="#ef4444" fontSize={9}>CARTER D'HUILE BAS (PRESSION NOMINALE 1.5 BAR RALENTI)</text>
           </svg>
         </div>
         <div className="w-full md:w-1/2 space-y-2">
-          <div className="p-3 bg-slate-900 rounded border border-slate-800">
-            <h4 className="text-emerald-400 font-bold mb-1">MOTEUR DEUTZ BF4M2012 TIER 3</h4>
-            <p className="text-[11px] text-slate-400">Régulation mécanique avec pompes d'injection individuelles Bosch PFR. Cylindrée totale de 4.04 L délivrant une puissance nette de 75 kW à 2200 tr/min.</p>
+          <div className="p-3 bg-slate-50 rounded border border-slate-200">
+            <h4 className="text-emerald-600 font-bold mb-1">MOTEUR DEUTZ BF4M2012 TIER 3</h4>
+            <p className="text-[11px] text-slate-600">Régulation mécanique avec pompes d'injection individuelles Bosch PFR. Cylindrée totale de 4.04 L délivrant une puissance nette de 75 kW à 2200 tr/min.</p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-[11px]">
-            <div className="p-2 bg-slate-900 rounded border border-slate-800">
+            <div className="p-2 bg-slate-50 rounded border border-slate-200">
               <span className="text-slate-500 block">TEMP. NOMINALE :</span>
-              <span className="text-white font-bold">{temp.toFixed(1)} °C</span>
+              <span className="text-slate-900 font-bold">{temp.toFixed(1)} °C</span>
             </div>
-            <div className="p-2 bg-slate-900 rounded border border-slate-800">
+            <div className="p-2 bg-slate-50 rounded border border-slate-200">
               <span className="text-slate-500 block">RÉGIME :</span>
-              <span className="text-white font-bold">{isPlaying ? "2200 tr/min" : "0 tr/min"}</span>
+              <span className="text-slate-900 font-bold">{isPlaying ? "2200 tr/min" : "0 tr/min"}</span>
             </div>
-            <div className="p-2 bg-slate-900 rounded border border-slate-800">
+            <div className="p-2 bg-slate-50 rounded border border-slate-200">
               <span className="text-slate-500 block">POMPE À EAU :</span>
-              <span className="text-blue-400 font-bold">{isPlaying ? "ACTIVE (FLUX OK)" : "ARRÊTÉE"}</span>
+              <span className="text-blue-600 font-bold">{isPlaying ? "ACTIVE (FLUX OK)" : "ARRÊTÉE"}</span>
             </div>
-            <div className="p-2 bg-slate-900 rounded border border-slate-800">
+            <div className="p-2 bg-slate-50 rounded border border-slate-200">
               <span className="text-slate-500 block"> PRESSION HUILE :</span>
-              <span className="text-emerald-400 font-bold">{isPlaying ? "3.8 bar" : "0.0 bar"}</span>
+              <span className="text-emerald-600 font-bold">{isPlaying ? "3.8 bar" : "0.0 bar"}</span>
             </div>
           </div>
         </div>
@@ -116,9 +116,9 @@ function AnimHydraulicOpenCenter() {
   const [spoolState, setSpoolState] = React.useState<"NEUTRAL" | "LIFT" | "LOWER">("NEUTRAL");
 
   return (
-    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-slate-300 font-mono text-xs mt-4">
-      <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
-        <span className="text-yellow-400 font-bold">💧 ST2G OPEN-CENTER GEAR PUMPS INTEGRATION</span>
+    <div className="bg-white p-4 rounded-xl border border-slate-200 text-slate-700 font-mono text-xs mt-4 shadow-sm">
+      <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
+        <span className="text-amber-600 font-bold">💧 ST2G OPEN-CENTER GEAR PUMPS INTEGRATION</span>
         <div className="flex gap-1">
           {["NEUTRAL", "LIFT", "LOWER"].map((st) => (
             <button
@@ -127,8 +127,8 @@ function AnimHydraulicOpenCenter() {
                 setSpoolState(st as any);
                 setPressure(st === "NEUTRAL" ? 25 : st === "LIFT" ? 195 : 120);
               }}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                spoolState === st ? "bg-yellow-500 text-black" : "bg-slate-800 hover:bg-slate-700 text-slate-300"
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                spoolState === st ? "bg-amber-500 text-black" : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
               }`}
             >
               {st}
@@ -137,20 +137,20 @@ function AnimHydraulicOpenCenter() {
         </div>
       </div>
       <div className="flex flex-col md:flex-row gap-4 items-center">
-        <div className="w-full md:w-1/2 flex justify-center bg-slate-900 rounded p-4 border border-slate-800">
+        <div className="w-full md:w-1/2 flex justify-center bg-slate-50 rounded p-4 border border-slate-200">
           <svg viewBox="0 0 400 300" className="w-full max-w-[280px] h-auto">
             {/* Hydraulic Reservoir */}
-            <rect x="30" y="210" width="100" height="60" fill="none" stroke="#3b82f6" strokeWidth={2} />
-            <path d="M30 230 C 50 225, 80 235, 130 230 L130 270 L30 270 Z" fill="#2563eb" className="opacity-40" />
-            <text x="80" y="250" textAnchor="middle" fill="#60a5fa" fontSize={8}>RÉSERVOIR 80L</text>
+            <rect x="30" y="210" width="100" height="60" fill="none" stroke="#2563eb" strokeWidth={2} />
+            <path d="M30 230 C 50 225, 80 235, 130 230 L130 270 L30 270 Z" fill="#3b82f6" className="opacity-40" />
+            <text x="80" y="250" textAnchor="middle" fill="#1e40af" fontSize={8} fontWeight="bold">RÉSERVOIR 80L</text>
 
             {/* Gear Pump symbol */}
-            <circle cx="200" cy="240" r="25" fill="none" stroke="#cbd5e1" strokeWidth={2} />
+            <circle cx="200" cy="240" r="25" fill="none" stroke="#475569" strokeWidth={2} />
             <polygon points="200,225 190,235 210,235" fill="#f59e0b" />
-            <text x="200" y="210" textAnchor="middle" fill="#cbd5e1" fontSize={8}>POMPE À ENGRENAGES</text>
+            <text x="200" y="210" textAnchor="middle" fill="#475569" fontSize={8}>POMPE À ENGRENAGES</text>
 
             {/* Hydraulic Cylinder */}
-            <rect x="250" y="50" width="110" height="30" fill="none" stroke="#cbd5e1" strokeWidth={2} />
+            <rect x="250" y="50" width="110" height="30" fill="none" stroke="#475569" strokeWidth={2} />
             {/* Piston inside cylinder */}
             <rect 
               x={spoolState === "LIFT" ? "300" : spoolState === "LOWER" ? "260" : "280"} 
@@ -167,7 +167,7 @@ function AnimHydraulicOpenCenter() {
               height="10" 
               fill="#94a3b8" 
             />
-            <text x="300" y="40" textAnchor="middle" fill="#cbd5e1" fontSize={8}>VÉRIN BRAS (HOIST)</text>
+            <text x="300" y="40" textAnchor="middle" fill="#475569" fontSize={8}>VÉRIN BRAS (HOIST)</text>
 
             {/* Fluid lines */}
             {/* Suction */}
@@ -177,32 +177,32 @@ function AnimHydraulicOpenCenter() {
             {/* Bypass to Tank */}
             <path d="M250 140 L110 140 L110 210" fill="none" stroke="#2563eb" strokeWidth={3} strokeDasharray={spoolState === "NEUTRAL" ? "3,3" : "none"} />
 
-            <text x="180" y="120" textAnchor="middle" fill="#ef4444" fontSize={9}>DISTRIBUTEUR OUVERT</text>
+            <text x="180" y="120" textAnchor="middle" fill="#ef4444" fontSize={9} fontWeight="bold">DISTRIBUTEUR OUVERT</text>
           </svg>
         </div>
         <div className="w-full md:w-1/2 space-y-2">
-          <div className="p-3 bg-slate-900 rounded border border-slate-800">
-            <h4 className="text-yellow-400 font-bold mb-1">RÉGULATION HYDRAULIQUE DOUBLE POMPE SECS</h4>
-            <p className="text-[11px] text-slate-400">Le Scooptram ST2G fonctionne en centre ouvert : le débit constant s'écoule au réservoir au neutre. Pression maximale limitée par soupape de décharge calibrée à 200 bar.</p>
+          <div className="p-3 bg-slate-50 rounded border border-slate-200">
+            <h4 className="text-amber-600 font-bold mb-1">RÉGULATION HYDRAULIQUE DOUBLE POMPE SECS</h4>
+            <p className="text-[11px] text-slate-600">Le Scooptram ST2G fonctionne en centre ouvert : le débit constant s'écoule au réservoir au neutre. Pression maximale limitée par soupape de décharge calibrée à 200 bar.</p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-[11px]">
-            <div className="p-2 bg-slate-900 rounded border border-slate-800">
+            <div className="p-2 bg-slate-50 rounded border border-slate-200">
               <span className="text-slate-500 block">PRESSION :</span>
-              <span className="text-white font-bold">{pressure} bar</span>
+              <span className="text-slate-900 font-bold">{pressure} bar</span>
             </div>
-            <div className="p-2 bg-slate-900 rounded border border-slate-800">
+            <div className="p-2 bg-slate-50 rounded border border-slate-200">
               <span className="text-slate-500 block">DÉBIT POMPE :</span>
-              <span className="text-white font-bold">60 L/min</span>
+              <span className="text-slate-900 font-bold">60 L/min</span>
             </div>
-            <div className="p-2 bg-slate-900 rounded border border-slate-800">
+            <div className="p-2 bg-slate-50 rounded border border-slate-200">
               <span className="text-slate-500 block">BYPASS CENTRAL :</span>
-              <span className={spoolState === "NEUTRAL" ? "text-blue-400 font-bold" : "text-rose-400 font-bold"}>
+              <span className={spoolState === "NEUTRAL" ? "text-blue-600 font-bold" : "text-rose-600 font-bold"}>
                 {spoolState === "NEUTRAL" ? "OUVERT (0 bar delta)" : "FERMÉ (SOUS CHARGE)"}
               </span>
             </div>
-            <div className="p-2 bg-slate-900 rounded border border-slate-800">
+            <div className="p-2 bg-slate-50 rounded border border-slate-200">
               <span className="text-slate-500 block">FLUIDE RECOMMANDÉ :</span>
-              <span className="text-emerald-400 font-bold">ISO VG 46</span>
+              <span className="text-emerald-600 font-bold">ISO VG 46</span>
             </div>
           </div>
         </div>
@@ -234,9 +234,9 @@ function AnimBrakesDryDisc() {
   }, [brakePressed]);
 
   return (
-    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-slate-300 font-mono text-xs mt-4">
-      <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
-        <span className="text-rose-400 font-bold">🛡️ ST2G DRY DISC BRAKES ACTUATION</span>
+    <div className="bg-white p-4 rounded-xl border border-slate-200 text-slate-700 font-mono text-xs mt-4 shadow-sm">
+      <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
+        <span className="text-rose-600 font-bold">🛡️ ST2G DRY DISC BRAKES ACTUATION</span>
         <button 
           onMouseDown={() => setBrakePressed(true)}
           onMouseUp={() => setBrakePressed(false)}
@@ -244,14 +244,14 @@ function AnimBrakesDryDisc() {
           onTouchStart={() => setBrakePressed(true)}
           onTouchEnd={() => setBrakePressed(false)}
           className={`px-3 py-1 rounded text-xs font-bold transition-all ${
-            brakePressed ? "bg-rose-600 text-white shadow-lg shadow-rose-600/40" : "bg-slate-800 hover:bg-slate-700 text-slate-300"
+            brakePressed ? "bg-rose-600 text-white shadow-lg shadow-rose-600/40" : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
           }`}
         >
           {brakePressed ? "🚨 FREINS SERRÉS" : "🛑 APPUYER POUR FREINER"}
         </button>
       </div>
       <div className="flex flex-col md:flex-row gap-4 items-center">
-        <div className="w-full md:w-1/2 flex justify-center bg-slate-900 rounded p-4 border border-slate-800">
+        <div className="w-full md:w-1/2 flex justify-center bg-slate-50 rounded p-4 border border-slate-200">
           <svg viewBox="0 0 400 300" className="w-full max-w-[280px] h-auto">
             {/* Ventilated Disc Rotor */}
             <circle cx="200" cy="150" r="90" fill="none" stroke="#64748b" strokeWidth={15} />
@@ -280,7 +280,7 @@ function AnimBrakesDryDisc() {
             />
 
             {/* Brake Caliper */}
-            <path d="M 270 90 A 40 40 0 0 0 310 140 L 330 140 L 330 80 Z" fill="#1e293b" stroke="#cbd5e1" strokeWidth={2} />
+            <path d="M 270 90 A 40 40 0 0 0 310 140 L 330 140 L 330 80 Z" fill="#f1f5f9" stroke="#475569" strokeWidth={2} />
             
             {/* Brake Pads Left and Right */}
             {/* Left Pad */}
@@ -308,30 +308,30 @@ function AnimBrakesDryDisc() {
             <path d="M 245 112 L 260 112" stroke="#ef4444" strokeWidth={3} strokeDasharray={brakePressed ? "none" : "2,2"} />
             <path d="M 310 112 L 295 112" stroke="#ef4444" strokeWidth={3} strokeDasharray={brakePressed ? "none" : "2,2"} />
 
-            <text x="200" y="270" textAnchor="middle" fill="#94a3b8" fontSize={9}>DISQUE VENTILÉ SEC Ø 350 MM</text>
+            <text x="200" y="270" textAnchor="middle" fill="#475569" fontSize={9} fontWeight="bold">DISQUE VENTILÉ SEC Ø 350 MM</text>
           </svg>
         </div>
         <div className="w-full md:w-1/2 space-y-2">
-          <div className="p-3 bg-slate-900 rounded border border-slate-800">
-            <h4 className="text-rose-400 font-bold mb-1">SYSTÈME DE FREIN DE SERVICE DIRECT</h4>
-            <p className="text-[11px] text-slate-400">Le ST2G utilise un freinage mécanique par étriers flottants agissant sur disques ventilés secs. Aucun bain d'huile forcée. Nécessite une surveillance rigoureuse des garnitures organiques de 15 mm.</p>
+          <div className="p-3 bg-slate-50 rounded border border-slate-200">
+            <h4 className="text-rose-600 font-bold mb-1">SYSTÈME DE FREIN DE SERVICE DIRECT</h4>
+            <p className="text-[11px] text-slate-600">Le ST2G utilise un freinage mécanique par étriers flottants agissant sur disques ventilés secs. Aucun bain d'huile forcée. Nécessite une surveillance rigoureuse des garnitures organiques de 15 mm.</p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-[11px]">
-            <div className="p-2 bg-slate-900 rounded border border-slate-800">
+            <div className="p-2 bg-slate-50 rounded border border-slate-200">
               <span className="text-slate-500 block">T°C DU DISQUE :</span>
-              <span className={`font-bold ${discTemp > 140 ? "text-red-500 animate-pulse" : "text-white"}`}>{discTemp} °C</span>
+              <span className={`font-bold ${discTemp > 140 ? "text-red-500 animate-pulse" : "text-slate-900"}`}>{discTemp} °C</span>
             </div>
-            <div className="p-2 bg-slate-900 rounded border border-slate-800">
+            <div className="p-2 bg-slate-50 rounded border border-slate-200">
               <span className="text-slate-500 block">JEU ETRIER-GARNITURE :</span>
-              <span className="text-white font-bold">{padGap.toFixed(1)} mm</span>
+              <span className="text-slate-900 font-bold">{padGap.toFixed(1)} mm</span>
             </div>
-            <div className="p-2 bg-slate-900 rounded border border-slate-800">
+            <div className="p-2 bg-slate-50 rounded border border-slate-200">
               <span className="text-slate-500 block">PRESSION PÉDALE :</span>
-              <span className="text-white font-bold">{brakePressed ? "120 bar" : "0 bar"}</span>
+              <span className="text-slate-900 font-bold">{brakePressed ? "120 bar" : "0 bar"}</span>
             </div>
-            <div className="p-2 bg-slate-900 rounded border border-slate-800">
+            <div className="p-2 bg-slate-50 rounded border border-slate-200">
               <span className="text-slate-500 block">GARNITURE MINI :</span>
-              <span className="text-rose-400 font-bold">3.0 mm</span>
+              <span className="text-rose-600 font-bold">3.0 mm</span>
             </div>
           </div>
         </div>
@@ -592,12 +592,12 @@ export function AssistantEpirocSt2G() {
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#07090e] text-slate-100 flex flex-col relative pb-12">
+    <div className="w-full min-h-screen bg-slate-50 text-slate-900 flex flex-col relative pb-12">
       {/* GLOBAL CSS STYLES FOR BLUEPRINT THEME AND CAHIER */}
       <style>{`
         .cahier-container {
-          background-color: #0d1117;
-          color: #e2e8f0;
+          background-color: #ffffff;
+          color: #1e293b;
           font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
           padding: 2.5rem;
           min-h: 100vh;
@@ -616,7 +616,7 @@ export function AssistantEpirocSt2G() {
         }
         .cahier-sous-titre {
           font-size: 1rem;
-          color: #94a3b8;
+          color: #64748b;
           margin-top: 0.25rem;
         }
         .btn-retour-st2g {
@@ -642,16 +642,16 @@ export function AssistantEpirocSt2G() {
           gap: 0.5rem;
           flex-wrap: wrap;
           margin-bottom: 2rem;
-          background-color: #1e293b;
+          background-color: #f1f5f9;
           padding: 0.5rem;
           border-radius: 0.5rem;
-          border: 1px solid #334155;
+          border: 1px solid #e2e8f0;
         }
         .cahier-nav button {
           flex: 1 1 auto;
-          background-color: #0f172a;
-          border: 1px solid #334155;
-          color: #cbd5e1;
+          background-color: #ffffff;
+          border: 1px solid #e2e8f0;
+          color: #475569;
           font-weight: 700;
           font-size: 0.75rem;
           padding: 0.5rem 1rem;
@@ -665,24 +665,24 @@ export function AssistantEpirocSt2G() {
           border-color: #f59e0b;
         }
         .cahier-chapitre {
-          background-color: #0f172a;
-          border: 1px solid #1e293b;
+          background-color: #ffffff;
+          border: 1px solid #e2e8f0;
           border-radius: 1rem;
           padding: 2rem;
           margin-bottom: 2.5rem;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
         .cahier-titre-chapitre {
           font-size: 1.5rem;
           font-weight: 800;
-          color: #ffffff;
-          border-bottom: 1px solid #334155;
+          color: #0f172a;
+          border-bottom: 1px solid #e2e8f0;
           padding-bottom: 0.75rem;
           margin-bottom: 1.5rem;
         }
         .schema-bloc {
-          background-color: #020617;
-          border: 1px solid #1e293b;
+          background-color: #f8fafc;
+          border: 1px solid #e2e8f0;
           border-radius: 0.75rem;
           padding: 1.25rem;
           margin-bottom: 1.5rem;
@@ -690,7 +690,7 @@ export function AssistantEpirocSt2G() {
         .schema-svg {
           width: 100%;
           height: auto;
-          background-color: #151922;
+          background-color: #ffffff;
           border-radius: 0.5rem;
           border: 1.5px solid #f59e0b;
         }
@@ -705,8 +705,8 @@ export function AssistantEpirocSt2G() {
           }
         }
         .photo-placeholder {
-          background-color: #151922;
-          border: 1px solid #1e293b;
+          background-color: #ffffff;
+          border: 1px solid #e2e8f0;
           border-radius: 0.75rem;
           padding: 1rem;
           display: flex;
@@ -715,7 +715,7 @@ export function AssistantEpirocSt2G() {
         .photo-realiste {
           width: 100%;
           border-radius: 0.375rem;
-          border: 1px solid #334155;
+          border: 1px solid #e2e8f0;
         }
         .cahier-tableau {
           width: 100%;
@@ -724,15 +724,15 @@ export function AssistantEpirocSt2G() {
           text-align: left;
         }
         .cahier-tableau th {
-          background-color: #1e293b;
-          color: #f59e0b;
+          background-color: #f1f5f9;
+          color: #b45309;
           padding: 0.5rem;
-          border: 1px solid #334155;
+          border: 1px solid #cbd5e1;
         }
         .cahier-tableau td {
           padding: 0.5rem;
-          border: 1px solid #1e293b;
-          color: #cbd5e1;
+          border: 1px solid #e2e8f0;
+          color: #334155;
         }
         .pdf-download-bar {
           display: grid;
@@ -757,22 +757,22 @@ export function AssistantEpirocSt2G() {
           text-align: left;
         }
         .pdf-btn-cahier {
-          background-color: #022c22;
+          background-color: #f0fdf4;
           border-color: #10b981;
-          color: #a7f3d0;
+          color: #166534;
         }
         .pdf-btn-cahier:hover {
-          background-color: #064e3b;
-          box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+          background-color: #dcfce7;
+          box-shadow: 0 0 12px rgba(16, 185, 129, 0.1);
         }
         .pdf-btn-manuel {
-          background-color: #1e3a8a;
+          background-color: #eff6ff;
           border-color: #3b82f6;
-          color: #bfdbfe;
+          color: #1e40af;
         }
         .pdf-btn-manuel:hover {
-          background-color: #172554;
-          box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+          background-color: #dbeafe;
+          box-shadow: 0 0 12px rgba(59, 130, 246, 0.1);
         }
         .pdf-icon {
           font-size: 1.75rem;
@@ -800,7 +800,7 @@ export function AssistantEpirocSt2G() {
       {/* STANDARD ST2G ASSISTANT SECTION */}
       <section id="contenu-st2g-standard" className="flex-1 flex flex-col p-4 md:p-6 max-w-7xl mx-auto w-full">
         {/* BANNER HEADER */}
-        <div className="relative mb-6 rounded-2xl bg-[#0d1117] border border-slate-800 p-6 shadow-xl overflow-hidden">
+        <div className="relative mb-6 rounded-2xl bg-white border border-slate-200 p-6 shadow-md overflow-hidden">
           <HydrominesIdentity isEco={mode === "ECO"} />
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
             <div className="space-y-2">
@@ -808,10 +808,10 @@ export function AssistantEpirocSt2G() {
                 <span className="bg-amber-500 text-black font-black text-xs px-2.5 py-1 rounded">EPIROC ST2G</span>
                 <span className="text-slate-500 font-mono text-xs">DIAGNOSTIC & MAINTENANCE SUITE</span>
               </div>
-              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">
                 ASSISTANT TECHNIQUE SCOOPTRAM ST2G
               </h1>
-              <p className="text-xs md:text-sm text-slate-400 max-w-xl">
+              <p className="text-xs md:text-sm text-slate-600 max-w-xl">
                 Moteur Deutz BF4M2012 (75 kW), transmission Powershift Funk DF100 et freins mécaniques secs.
               </p>
             </div>
@@ -824,7 +824,7 @@ export function AssistantEpirocSt2G() {
               >
                 <span>📐</span>
                 <span>CAHIER DES CHARGES VISUEL ST2G</span>
-                <span className="bg-slate-950 text-amber-400 text-[10px] font-black px-1.5 py-0.5 rounded ml-1 animate-pulse">NOUVEAU</span>
+                <span className="bg-amber-500/10 text-amber-600 text-[10px] font-black px-1.5 py-0.5 rounded ml-1 animate-pulse">NOUVEAU</span>
               </button>
             </div>
           </div>
@@ -832,9 +832,9 @@ export function AssistantEpirocSt2G() {
 
         {/* QUICK METRICS & SYSTEM NAVIGATION */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-          <div className="lg:col-span-3 bg-[#0d1117] rounded-2xl border border-slate-800 p-6 flex flex-col gap-4">
+          <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200 p-6 flex flex-col gap-4 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-400 flex items-center gap-2">
+              <span className="text-sm font-bold text-slate-600 flex items-center gap-2">
                 <Activity className="w-4 h-4 text-amber-500 animate-pulse" /> FILTRES DE DIAGNOSTIC SYSTEME
               </span>
               <button 
@@ -843,7 +843,7 @@ export function AssistantEpirocSt2G() {
                   setSelectedSeverityFilter("TOUS");
                   setSearchQuery("");
                 }}
-                className="text-xs text-slate-500 hover:text-white"
+                className="text-xs text-slate-400 hover:text-slate-800"
               >
                 RÉINITIALISER
               </button>
@@ -852,7 +852,7 @@ export function AssistantEpirocSt2G() {
               <button
                 onClick={() => setSelectedSystemFilter("TOUS")}
                 className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${
-                  selectedSystemFilter === "TOUS" ? "bg-amber-500 text-black border-amber-500" : "bg-[#111622] text-slate-400 border-slate-800 hover:bg-[#161d2d]"
+                  selectedSystemFilter === "TOUS" ? "bg-amber-500 text-black border-amber-500" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
                 }`}
               >
                 TOUS SYSTÈMES
@@ -862,7 +862,7 @@ export function AssistantEpirocSt2G() {
                   key={sys.id}
                   onClick={() => setSelectedSystemFilter(sys.id)}
                   className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${
-                    selectedSystemFilter === sys.id ? "bg-amber-500 text-black border-amber-500" : "bg-[#111622] text-slate-400 border-slate-800 hover:bg-[#161d2d]"
+                    selectedSystemFilter === sys.id ? "bg-amber-500 text-black border-amber-500" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
                   }`}
                 >
                   {sys.label}
@@ -871,7 +871,7 @@ export function AssistantEpirocSt2G() {
             </div>
           </div>
 
-          <div className="bg-[#0d1117] rounded-2xl border border-slate-800 p-6 flex flex-col justify-between">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col justify-between shadow-sm">
             <div>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">État Urgences</span>
               <div className="text-2xl font-black text-rose-500 mt-1 flex items-center gap-2">
@@ -881,7 +881,7 @@ export function AssistantEpirocSt2G() {
             <button
               onClick={() => setIsEmergencyActive(!isEmergencyActive)}
               className={`w-full py-2.5 rounded-xl text-xs font-black transition-all ${
-                isEmergencyActive ? "bg-rose-600 text-white animate-pulse" : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
+                isEmergencyActive ? "bg-rose-600 text-white animate-pulse" : "bg-slate-200 text-slate-700 hover:bg-slate-300"
               }`}
             >
               {isEmergencyActive ? "🔴 FILTRE URGENCE ACTIF" : "⚙️ UNIFORMISER AUX GRAVITÉS"}
@@ -890,7 +890,7 @@ export function AssistantEpirocSt2G() {
         </div>
 
         {/* INTERACTIVE NAVIGATION TABS */}
-        <div className="flex gap-2 overflow-x-auto pb-3 mb-6 border-b border-slate-800/60">
+        <div className="flex gap-2 overflow-x-auto pb-3 mb-6 border-b border-slate-200">
           {[
             { id: "depannage", label: "🔧 Diagnostic & Pannes", icon: Wrench },
             { id: "procedures", label: "📋 Procédures", icon: FileText },
@@ -903,7 +903,7 @@ export function AssistantEpirocSt2G() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${
-                  activeTab === tab.id ? "bg-amber-500 text-black" : "bg-[#0d1117] text-slate-400 border border-slate-800 hover:bg-[#111622]"
+                  activeTab === tab.id ? "bg-amber-500 text-black" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 shadow-sm"
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -918,13 +918,13 @@ export function AssistantEpirocSt2G() {
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-500" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Rechercher un symptôme, code d'erreur ou mot-clé..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#0d1117] border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-amber-500"
+                  className="w-full bg-white border border-slate-200 rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-slate-900 shadow-sm"
                 />
               </div>
               <div className="flex gap-2">
@@ -933,7 +933,7 @@ export function AssistantEpirocSt2G() {
                     key={sev}
                     onClick={() => setSelectedSeverityFilter(sev)}
                     className={`px-4 py-2 rounded-xl text-xs font-bold border ${
-                      selectedSeverityFilter === sev ? "bg-amber-500 text-black border-amber-500" : "bg-[#0d1117] text-slate-400 border-slate-800 hover:bg-[#111622]"
+                      selectedSeverityFilter === sev ? "bg-amber-500 text-black border-amber-500" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100 shadow-sm"
                     }`}
                   >
                     {sev === "TOUS" ? "TOUTES GRAVITÉS" : sev}
@@ -944,28 +944,28 @@ export function AssistantEpirocSt2G() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               {filteredPannes.map(p => (
-                <div key={p.id} className="bg-[#0d1117] border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition-all">
-                  <div className="flex items-start justify-between gap-4 mb-3 pb-3 border-b border-slate-800/50">
+                <div key={p.id} className="bg-white border border-slate-200 rounded-2xl p-6 hover:border-slate-300 transition-all shadow-sm">
+                  <div className="flex items-start justify-between gap-4 mb-3 pb-3 border-b border-slate-200">
                     <div>
-                      <span className="font-mono text-xs text-amber-500">{p.id}</span>
-                      <h3 className="text-base font-bold text-white mt-0.5">{p.title}</h3>
+                      <span className="font-mono text-xs text-amber-600">{p.id}</span>
+                      <h3 className="text-base font-bold text-slate-900 mt-0.5">{p.title}</h3>
                     </div>
                     <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded ${
-                      p.severity === "ROUGE" ? "bg-red-950/50 text-red-400 border border-red-500/30" :
-                      p.severity === "JAUNE" ? "bg-yellow-950/50 text-yellow-400 border border-yellow-500/30" :
-                      "bg-emerald-950/50 text-emerald-400 border border-emerald-500/30"
+                      p.severity === "ROUGE" ? "bg-red-50 text-red-600 border border-red-200" :
+                      p.severity === "JAUNE" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                      "bg-emerald-50 text-emerald-700 border border-emerald-200"
                     }`}>
                       {p.severity}
                     </span>
                   </div>
-                  <div className="space-y-2 text-xs text-slate-400">
-                    <p><strong>System :</strong> {getSystemLabel(p.system)}</p>
-                    <p><strong>Symptôme :</strong> {p.symptoms}</p>
-                    <p><strong>Cause :</strong> {p.cause}</p>
-                    <p><strong>Action correction :</strong> {p.action}</p>
-                    <div className="flex items-center justify-between pt-3 text-[11px] border-t border-slate-800/40 mt-3 text-slate-500">
+                  <div className="space-y-2 text-xs text-slate-600">
+                    <p><strong className="text-slate-800">System :</strong> {getSystemLabel(p.system)}</p>
+                    <p><strong className="text-slate-800">Symptôme :</strong> {p.symptoms}</p>
+                    <p><strong className="text-slate-800">Cause :</strong> {p.cause}</p>
+                    <p><strong className="text-slate-800">Action correction :</strong> {p.action}</p>
+                    <div className="flex items-center justify-between pt-3 text-[11px] border-t border-slate-200 mt-3 text-slate-500">
                       <span>⏱️ Temps correction : {p.repTime}h</span>
-                      <span className="text-amber-500 font-bold hover:underline cursor-pointer">Consulter fiche technique →</span>
+                      <span className="text-amber-600 font-bold hover:underline cursor-pointer">Consulter fiche technique →</span>
                     </div>
                   </div>
                 </div>
@@ -978,13 +978,13 @@ export function AssistantEpirocSt2G() {
         {activeTab === "procedures" && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {EPIROC_ST2G_PROCEDURES.map(proc => (
-              <div key={proc.id} className="bg-[#0d1117] border border-slate-800 rounded-2xl p-6">
+              <div key={proc.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-mono text-amber-500">{proc.id}</span>
+                  <span className="text-xs font-mono text-amber-600">{proc.id}</span>
                   <span className="text-xs text-slate-500">⏱️ {proc.time} min</span>
                 </div>
-                <h3 className="text-base font-bold text-white mb-3">{proc.title}</h3>
-                <ul className="space-y-2 text-xs text-slate-400 list-decimal pl-4">
+                <h3 className="text-base font-bold text-slate-900 mb-3">{proc.title}</h3>
+                <ul className="space-y-2 text-xs text-slate-600 list-decimal pl-4">
                   {proc.steps.map((st, i) => (
                     <li key={i}>{st}</li>
                   ))}
@@ -996,10 +996,10 @@ export function AssistantEpirocSt2G() {
 
         {/* TAB CONTENT: STOCK */}
         {activeTab === "magasin" && (
-          <div className="bg-[#0d1117] border border-slate-800 rounded-2xl overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-[#111622] border-b border-slate-800 text-xs text-slate-400">
+                <tr className="bg-slate-50 border-b border-slate-200 text-xs text-slate-600">
                   <th className="p-4 font-bold">RÉFÉRENCE</th>
                   <th className="p-4 font-bold">DESIGNATION TECHNIQUE</th>
                   <th className="p-4 font-bold">LOCALISATION</th>
@@ -1007,16 +1007,16 @@ export function AssistantEpirocSt2G() {
                   <th className="p-4 font-bold text-center">AJUSTEMENT</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/50 text-xs">
+              <tbody className="divide-y divide-slate-100 text-xs">
                 {Object.entries(EPIROC_ST2G_STOCK).map(([key, item]) => {
                   const qty = stocks[key] !== undefined ? stocks[key] : item.qty;
                   return (
-                    <tr key={key} className="hover:bg-[#0f1420]/30">
-                      <td className="p-4 font-mono text-amber-500">{item.ref}</td>
-                      <td className="p-4 text-white font-semibold">{item.label}</td>
-                      <td className="p-4 text-slate-400">{item.loc}</td>
+                    <tr key={key} className="hover:bg-slate-50">
+                      <td className="p-4 font-mono text-amber-600">{item.ref}</td>
+                      <td className="p-4 text-slate-900 font-semibold">{item.label}</td>
+                      <td className="p-4 text-slate-600">{item.loc}</td>
                       <td className="p-4 text-center">
-                        <span className={`font-mono text-sm px-2.5 py-1 rounded-md font-bold ${qty <= 2 ? "bg-red-950/60 text-red-400" : "bg-slate-900 text-slate-300"}`}>
+                        <span className={`font-mono text-sm px-2.5 py-1 rounded-md font-bold ${qty <= 2 ? "bg-red-50 text-red-600 border border-red-200" : "bg-slate-100 text-slate-700"}`}>
                           {qty} {item.unit}
                         </span>
                       </td>
@@ -1024,13 +1024,13 @@ export function AssistantEpirocSt2G() {
                         <div className="flex items-center justify-center gap-1">
                           <button 
                             onClick={() => updateStockQty(key, -1)}
-                            className="w-7 h-7 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 text-slate-200"
+                            className="w-7 h-7 flex items-center justify-center rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
                           >
                             -
                           </button>
                           <button 
                             onClick={() => updateStockQty(key, 1)}
-                            className="w-7 h-7 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 text-slate-200"
+                            className="w-7 h-7 flex items-center justify-center rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
                           >
                             +
                           </button>
@@ -1047,16 +1047,16 @@ export function AssistantEpirocSt2G() {
         {/* TAB CONTENT: TORQUES */}
         {activeTab === "referentiel" && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-[#0d1117] border border-slate-800 rounded-2xl p-6">
-              <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
                 🔧 COUPLES DE SERRAGE NOMINAUX ST2G
               </h3>
               <div className="space-y-4">
                 {EPIROC_ST2G_COUPLES.map((c, i) => (
-                  <div key={i} className="pb-3 border-b border-slate-800 last:border-0 text-xs">
-                    <span className="text-slate-400 font-semibold block">{c.item}</span>
+                  <div key={i} className="pb-3 border-b border-slate-200 last:border-0 text-xs">
+                    <span className="text-slate-600 font-semibold block">{c.item}</span>
                     <div className="flex justify-between items-center mt-1">
-                      <span className="text-amber-500 font-mono text-sm font-bold">{c.value}</span>
+                      <span className="text-amber-600 font-mono text-sm font-bold">{c.value}</span>
                       <span className="text-slate-500 italic">{c.tool}</span>
                     </div>
                   </div>
@@ -1064,20 +1064,20 @@ export function AssistantEpirocSt2G() {
               </div>
             </div>
 
-            <div className="bg-[#0d1117] border border-slate-800 rounded-2xl p-6">
-              <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
                 ⚖️ PRESSIONS & TOLÉRANCES CRITIQUES
               </h3>
               <div className="space-y-4">
                 {EPIROC_ST2G_VALEURS.map((v, i) => (
-                  <div key={i} className="pb-3 border-b border-slate-800 last:border-0 text-xs">
+                  <div key={i} className="pb-3 border-b border-slate-200 last:border-0 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-slate-400 font-semibold">{v.parameter}</span>
-                      <span className="text-slate-500 text-[10px] uppercase font-mono">{v.system}</span>
+                      <span className="text-slate-600 font-semibold">{v.parameter}</span>
+                      <span className="text-slate-400 text-[10px] uppercase font-mono">{v.system}</span>
                     </div>
                     <div className="flex justify-between items-center mt-1 font-mono">
-                      <span className="text-emerald-400 font-bold">Normal : {v.normal}</span>
-                      <span className="text-rose-400">Seuil : {v.limit}</span>
+                      <span className="text-emerald-600 font-bold">Normal : {v.normal}</span>
+                      <span className="text-rose-600">Seuil : {v.limit}</span>
                     </div>
                   </div>
                 ))}
@@ -1239,11 +1239,11 @@ export function AssistantEpirocSt2G() {
                 ]
               }
             ].map((proc, idx) => (
-              <div key={proc.id} className="photo-procedure border-b border-slate-800 pb-8 last:border-0" id={proc.id}>
+              <div key={proc.id} className="photo-procedure border-b border-slate-200 pb-8 last:border-0" id={proc.id}>
                 <div className="mb-4">
-                  <span className="text-xs font-mono text-amber-500 font-bold">PROCÉDURE {idx+1} / 15</span>
-                  <h3 className="font-bold text-lg text-white">{proc.title}</h3>
-                  <p className="text-slate-400 text-xs">{proc.desc}</p>
+                  <span className="text-xs font-mono text-amber-600 font-bold">PROCÉDURE {idx+1} / 15</span>
+                  <h3 className="font-bold text-lg text-slate-900">{proc.title}</h3>
+                  <p className="text-slate-500 text-xs">{proc.desc}</p>
                 </div>
                 <div className="photo-grid">
                   {proc.items.map((photo, pIdx) => (
@@ -1255,9 +1255,9 @@ export function AssistantEpirocSt2G() {
                         loading="lazy"
                         referrerPolicy="no-referrer"
                       />
-                      <div className="text-xs text-slate-300">
-                        <strong className="text-amber-500">{photo.title}</strong>
-                        <p className="mt-1 text-slate-400"><strong>Sujet :</strong> {photo.subject}</p>
+                      <div className="text-xs text-slate-700">
+                        <strong className="text-amber-600">{photo.title}</strong>
+                        <p className="mt-1 text-slate-500"><strong className="text-slate-700">Sujet :</strong> {photo.subject}</p>
                       </div>
                     </div>
                   ))}
@@ -1270,7 +1270,7 @@ export function AssistantEpirocSt2G() {
         {/* CHAPITRE 3 : STORYBOARDS */}
         <article id="ch3" className="cahier-chapitre">
           <h2 className="cahier-titre-chapitre">CHAPITRE 3 — STORYBOARDS DE TOURNAGE</h2>
-          <p className="cahier-intro text-slate-400 mb-6">
+          <p className="cahier-intro text-slate-600 mb-6">
             12 storyboards de tournage détaillés pour l'Epiroc Scooptram ST2G. Cadrages, directions d'acteurs et annotations pour technicien terrain.
           </p>
 
@@ -1298,26 +1298,26 @@ export function AssistantEpirocSt2G() {
                 ]
               }
             ].map((sb) => (
-              <div key={sb.id} className="bg-[#111622] rounded-xl border border-slate-800 p-6 shadow-sm hover:border-amber-500 transition-all duration-300" id={sb.id}>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-800">
+              <div key={sb.id} className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:border-amber-500 transition-all duration-300" id={sb.id}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-200">
                   <div>
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                       <span className="bg-amber-500 text-slate-950 text-xs font-black px-2 py-0.5 rounded">{sb.num}</span>
                       STORYBOARD {sb.num} — {sb.title}
                     </h3>
                   </div>
-                  <span className="bg-slate-900 border border-slate-700 text-slate-400 px-3 py-1 rounded text-xs font-mono">
+                  <span className="bg-slate-100 border border-slate-200 text-slate-600 px-3 py-1 rounded text-xs font-mono">
                     ⏱️ Durée : {sb.time}
                   </span>
                 </div>
                 <div className="space-y-4">
                   {sb.plans.map((pl, pIdx) => (
-                    <div key={pIdx} className="bg-slate-950 p-4 rounded-lg border-l-4 border-amber-500 text-xs text-slate-300">
-                      <div className="flex justify-between font-bold text-white mb-2">
+                    <div key={pIdx} className="bg-slate-50 p-4 rounded-lg border-l-4 border-amber-500 text-xs text-slate-600">
+                      <div className="flex justify-between font-bold text-slate-800 mb-2">
                         <span>{pl.label}</span>
-                        <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-amber-500 uppercase">{pl.angle}</span>
+                        <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded text-amber-600 uppercase font-mono">{pl.angle}</span>
                       </div>
-                      <p><strong>Détails visuels :</strong> {pl.details}</p>
+                      <p><strong className="text-slate-800">Détails visuels :</strong> {pl.details}</p>
                     </div>
                   ))}
                 </div>
@@ -1329,7 +1329,7 @@ export function AssistantEpirocSt2G() {
         {/* CHAPITRE 4 : ANIMATIONS TECHNIQUES INTERACTIVES */}
         <article id="ch4" className="cahier-chapitre">
           <h2 className="cahier-titre-chapitre">CHAPITRE 4 — ANIMATIONS TECHNIQUES INTERACTIVES</h2>
-          <p className="cahier-intro text-slate-400 mb-6">
+          <p className="cahier-intro text-slate-600 mb-6">
             Explorez les 3 animations techniques interactives conçues spécifiquement pour illustrer les cycles du moteur Deutz, de l'hydraulique à centre ouvert et du freinage sec du ST2G.
           </p>
           <div className="space-y-8">
@@ -1342,18 +1342,18 @@ export function AssistantEpirocSt2G() {
         {/* CHAPITRE 5 : COTES */}
         <article id="ch5" className="cahier-chapitre">
           <h2 className="cahier-titre-chapitre">CHAPITRE 5 — COTES, TOLÉRANCES ET PROCÉDURES DE CONTRÔLE</h2>
-          <p className="cahier-intro text-slate-400 mb-6">
+          <p className="cahier-intro text-slate-600 mb-6">
             25 tolérances techniques et procédures de contrôle de l'Epiroc Scooptram ST2G.
           </p>
 
           <div className="space-y-8">
             {COTES_DATA_ST2G.map((sec, sIdx) => (
-              <div key={sIdx} className="bg-[#111622] rounded-xl p-6 border border-slate-800" id={sec.id}>
-                <h3 className="font-bold text-sm text-amber-500 uppercase tracking-wider mb-4">{sec.title}</h3>
+              <div key={sIdx} className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm" id={sec.id}>
+                <h3 className="font-bold text-sm text-amber-600 uppercase tracking-wider mb-4">{sec.title}</h3>
                 
                 {sec.tables.map((t) => (
                   <div key={t.id} className="mb-6 last:mb-0">
-                    <h4 className="font-bold text-xs text-slate-300 mb-2">{t.id} — {t.title}</h4>
+                    <h4 className="font-bold text-xs text-slate-800 mb-2">{t.id} — {t.title}</h4>
                     <div className="overflow-x-auto mb-3">
                       <table className="cahier-tableau">
                         <thead>
@@ -1380,12 +1380,12 @@ export function AssistantEpirocSt2G() {
                         </tbody>
                       </table>
                     </div>
-                    <div className="bg-slate-950 p-3 rounded text-[11px] text-slate-400 space-y-1">
-                      <p><strong>🔧 Préparation :</strong> {t.prep}</p>
-                      <p><strong>⚙️ Positionnement :</strong> {t.pos}</p>
-                      <p><strong>📊 Méthode de mesure :</strong> {t.mesure}</p>
-                      <p><strong>✅ Enregistrement :</strong> {t.reg}</p>
-                      <p><strong>🚨 Arbre de décision :</strong> {t.dec}</p>
+                    <div className="bg-slate-50 p-3 rounded text-[11px] text-slate-600 space-y-1 border border-slate-100">
+                      <p><strong className="text-slate-800">🔧 Préparation :</strong> {t.prep}</p>
+                      <p><strong className="text-slate-800">⚙️ Positionnement :</strong> {t.pos}</p>
+                      <p><strong className="text-slate-800">📊 Méthode de mesure :</strong> {t.mesure}</p>
+                      <p><strong className="text-slate-800">✅ Enregistrement :</strong> {t.reg}</p>
+                      <p><strong className="text-slate-800">🚨 Arbre de décision :</strong> {t.dec}</p>
                     </div>
                   </div>
                 ))}
@@ -1397,26 +1397,26 @@ export function AssistantEpirocSt2G() {
         {/* CHAPITRE 6 : OUTILS */}
         <article id="ch6" className="cahier-chapitre">
           <h2 className="cahier-titre-chapitre">CHAPITRE 6 — FICHES TECHNIQUES DES OUTILS DE MAINTENANCE</h2>
-          <p className="cahier-intro text-slate-400 mb-6">
+          <p className="cahier-intro text-slate-600 mb-6">
             Référentiel complet de 20 fiches outils qualifiés requis pour l'entretien et le diagnostic du Scooptram ST2G.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {OUTILS_DATA_ST2G.map((tool) => (
-              <div key={tool.id} className="bg-[#111622] rounded-xl border border-slate-800 p-5 hover:border-slate-700 transition-all">
+              <div key={tool.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:border-slate-300 shadow-sm transition-all">
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <span className="text-[10px] font-mono text-amber-500 font-bold">{tool.id} · {tool.code}</span>
-                    <h3 className="text-sm font-bold text-white mt-0.5">{tool.name}</h3>
+                    <span className="text-[10px] font-mono text-amber-600 font-bold">{tool.id} · {tool.code}</span>
+                    <h3 className="text-sm font-bold text-slate-900 mt-0.5">{tool.name}</h3>
                   </div>
-                  <span className="bg-slate-950 text-slate-400 text-[10px] px-2.5 py-1 rounded font-mono">
+                  <span className="bg-slate-100 text-slate-600 text-[10px] px-2.5 py-1 rounded font-mono border border-slate-200">
                     {tool.category}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 mb-3">{tool.desc}</p>
-                <div className="bg-slate-950 p-2 rounded text-[11px] text-slate-500 flex justify-between">
-                  <span>📍 Stockage : <strong>{tool.rack}</strong></span>
-                  <span className="text-emerald-400 font-bold">État : Disponible</span>
+                <p className="text-xs text-slate-600 mb-3">{tool.desc}</p>
+                <div className="bg-slate-50 p-2 rounded text-[11px] text-slate-500 flex justify-between border border-slate-100">
+                  <span>📍 Stockage : <strong className="text-slate-700">{tool.rack}</strong></span>
+                  <span className="text-emerald-600 font-bold">État : Disponible</span>
                 </div>
               </div>
             ))}

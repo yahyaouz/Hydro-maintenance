@@ -12,17 +12,17 @@ export interface EpirocSt7Panne {
 }
 
 export const EPIROC_ST7_SYSTEMS = [
-  { id: "SYS1", label: "Moteur Cummins QSB 6.7", color: "#2E7D32", shape: "◼", shapeName: "Carré", text: "text-emerald-500", bg: "bg-emerald-950/40 border-emerald-500/30" },
-  { id: "SYS2", label: "Transmission Funk DF150", color: "#6A1B9A", shape: "⬢", shapeName: "Hexagone", text: "text-purple-500", bg: "bg-purple-950/40 border-purple-500/30" },
-  { id: "SYS3", label: "Hydraulique Rexroth A10VO", color: "#F9A825", shape: "◆", shapeName: "Losange", text: "text-yellow-500", bg: "bg-yellow-950/40 border-yellow-500/30" },
-  { id: "SYS4", label: "Direction & Articulation", color: "#1565C0", shape: "●", shapeName: "Cercle", text: "text-blue-500", bg: "bg-blue-950/40 border-blue-500/30" },
-  { id: "SYS5", label: "Freinage SAHR Force Cooled", color: "#C62828", shape: "▲", shapeName: "Triangle", text: "text-rose-500", bg: "bg-rose-950/40 border-rose-500/30" },
-  { id: "SYS6", label: "RCS (Rig Control System)", color: "#212121", shape: "✚", shapeName: "Croix", text: "text-slate-300", bg: "bg-slate-900 border-slate-700" },
-  { id: "SYS7", label: "Électrique & Électronique", color: "#EF6C00", shape: "☼", shapeName: "Soleil", text: "text-orange-500", bg: "bg-orange-950/40 border-orange-500/30" },
-  { id: "SYS8", label: "RRC & Automation", color: "#00838F", shape: "★", shapeName: "Étoile", text: "text-cyan-500", bg: "bg-cyan-950/40 border-cyan-500/30" },
-  { id: "SYS9", label: "Cabine & Confort", color: "#4E342E", shape: "■", shapeName: "Bloc", text: "text-amber-700", bg: "bg-amber-950/40 border-amber-500/30" },
-  { id: "SYS10", label: "Godet, Boom & Auto-Lube", color: "#EF6C00", shape: "☼", shapeName: "Soleil", text: "text-orange-600", bg: "bg-orange-900/30 border-orange-700" },
-  { id: "SYS11", label: "Sécurité & Ansul Checkfire", color: "#C62828", shape: "▲", shapeName: "Triangle", text: "text-red-600", bg: "bg-red-950/40 border-red-500/30" }
+  { id: "SYS1", label: "Moteur Cummins QSB 6.7", color: "#2E7D32", shape: "◼", shapeName: "Carré", text: "text-emerald-500", bg: "bg-emerald-100/60 border-emerald-200 text-emerald-800" },
+  { id: "SYS2", label: "Transmission Funk DF150", color: "#6A1B9A", shape: "⬢", shapeName: "Hexagone", text: "text-purple-500", bg: "bg-purple-100/60 border-purple-200 text-purple-800" },
+  { id: "SYS3", label: "Hydraulique Rexroth A10VO", color: "#F9A825", shape: "◆", shapeName: "Losange", text: "text-yellow-500", bg: "bg-amber-100/60 border-amber-200 text-amber-800" },
+  { id: "SYS4", label: "Direction & Articulation", color: "#1565C0", shape: "●", shapeName: "Cercle", text: "text-blue-500", bg: "bg-blue-100/60 border-blue-200 text-blue-800" },
+  { id: "SYS5", label: "Freinage SAHR Force Cooled", color: "#C62828", shape: "▲", shapeName: "Triangle", text: "text-rose-500", bg: "bg-rose-100/60 border-rose-200 text-rose-800" },
+  { id: "SYS6", label: "RCS (Rig Control System)", color: "#212121", shape: "✚", shapeName: "Croix", text: "text-slate-300", bg: "bg-slate-100 border-slate-200 text-slate-800" },
+  { id: "SYS7", label: "Électrique & Électronique", color: "#EF6C00", shape: "☼", shapeName: "Soleil", text: "text-orange-500", bg: "bg-orange-100/60 border-orange-200 text-orange-800" },
+  { id: "SYS8", label: "RRC & Automation", color: "#00838F", shape: "★", shapeName: "Étoile", text: "text-cyan-500", bg: "bg-cyan-100/60 border-cyan-200 text-cyan-800" },
+  { id: "SYS9", label: "Cabine & Confort", color: "#4E342E", shape: "■", shapeName: "Bloc", text: "text-amber-700", bg: "bg-amber-100/60 border-amber-200 text-amber-800" },
+  { id: "SYS10", label: "Godet, Boom & Auto-Lube", color: "#EF6C00", shape: "☼", shapeName: "Soleil", text: "text-orange-600", bg: "bg-orange-100/60 border-orange-200 text-orange-800" },
+  { id: "SYS11", label: "Sécurité & Ansul Checkfire", color: "#C62828", shape: "▲", shapeName: "Triangle", text: "text-red-600", bg: "bg-red-100/60 border-red-200 text-red-800" }
 ];
 
 export const EPIROC_ST7_GLOSSAIRE = [

@@ -5,7 +5,8 @@ import {
   Search, Wrench, Printer, BookOpen, Plus, Minus, 
   AlertTriangle, CheckCircle2, Activity, FileText, Check, 
   ExternalLink, Lock, Scale, GraduationCap, AlertCircle, 
-  Save, Trash2, Send, ShoppingCart, Sliders
+  Save, Trash2, Send, ShoppingCart, Sliders, ChevronDown,
+  ChevronRight, Eye, RefreshCw
 } from "lucide-react";
 import { 
   EPIROC_ST2D_PANNES, EPIROC_ST2D_SYSTEMS, EPIROC_ST2D_ERRORS, 
@@ -17,6 +18,14 @@ import {
 import { PageBanner } from "@/components/ui/PageBanner";
 import { useAuthStore } from "@/lib/store";
 import { HydrominesLogo } from "./auth/HydrominesLogo";
+import { getPlaceholderSvg } from "./cahierPhotosData";
+import {
+  ST2D_SCHEMAS_DATA,
+  ST2D_PHOTOS_PROCEDURES,
+  ST2D_STORYBOARDS,
+  ST2D_COTES_TOLERANCES,
+  ST2D_OUTILS_FICHE
+} from "./epirocSt2dCahierData";
 
 export function AssistantEpirocSt2d() {
   const { activeSite } = useAuthStore();
@@ -268,6 +277,39 @@ export function AssistantEpirocSt2d() {
     setActiveTab("depannage");
   };
 
+  React.useEffect(() => {
+    const ouvrir = () => {
+      const section = document.getElementById('section-cahier-st2d');
+      const standard = document.getElementById('contenu-st2d-standard');
+      if (section) section.style.display = 'block';
+      if (standard) standard.style.display = 'none';
+      window.scrollTo(0, 0);
+    };
+    const fermer = () => {
+      const section = document.getElementById('section-cahier-st2d');
+      const standard = document.getElementById('contenu-st2d-standard');
+      if (section) section.style.display = 'none';
+      if (standard) standard.style.display = 'block';
+      window.scrollTo(0, 0);
+    };
+    const scrollTo = (id: string) => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+
+    (window as any).ouvrirCahierSt2d = ouvrir;
+    (window as any).fermerCahierSt2d = fermer;
+    (window as any).scrollToChapitreSt2d = scrollTo;
+
+    return () => {
+      delete (window as any).ouvrirCahierSt2d;
+      delete (window as any).fermerCahierSt2d;
+      delete (window as any).scrollToChapitreSt2d;
+    };
+  }, []);
+
   // Liste des pannes filtrées
   const filteredPannes = React.useMemo(() => {
     return EPIROC_ST2D_PANNES.filter(p => {
@@ -309,6 +351,7 @@ export function AssistantEpirocSt2d() {
 
   return (
     <div className={`w-full min-h-screen bg-slate-50 text-slate-900 font-sans ${isEco ? 'contrast-125' : ''}`}>
+      <section id="contenu-st2d-standard" className="w-full">
       
       {/* 🚀 BANNIÈRE D'ACCUEIL */}
       <div className="p-4 md:p-6 pb-0 print:hidden">
@@ -364,6 +407,16 @@ export function AssistantEpirocSt2d() {
               🔋 ÉCO
             </button>
           </div>
+
+          <button
+            onClick={() => (window as any).ouvrirCahierSt2d?.()}
+            className="px-4 h-10 bg-amber-500 hover:bg-amber-400 text-slate-900 font-black text-xs uppercase tracking-wider rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm"
+            title="Ouvrir le cahier des charges visuel complet"
+          >
+            <span>📐</span>
+            <span>Cahier Visuel</span>
+            <span className="bg-slate-950 text-amber-400 text-[9px] font-black px-1.5 py-0.5 rounded ml-0.5 animate-pulse">NOUVEAU</span>
+          </button>
 
           <button
             onClick={() => window.print()}
@@ -1593,7 +1646,1042 @@ export function AssistantEpirocSt2d() {
         </div>
 
       </div>
+    </section>
 
+      {/* --- CAHIER DES CHARGES VISUEL --- */}
+      <section id="section-cahier-st2d" className="cahier-container" style={{ display: 'none' }}>
+        <style>{`
+          .cahier-container {
+            background-color: #ffffff;
+            color: #1e293b;
+            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+            padding: 2.5rem;
+            min-height: 100vh;
+          }
+          .cahier-header {
+            border-bottom: 2px solid #f59e0b;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            position: relative;
+          }
+          .cahier-titre-principal {
+            font-size: 2.25rem;
+            font-weight: 900;
+            color: #f59e0b;
+            letter-spacing: -0.025em;
+          }
+          .cahier-sous-titre {
+            font-size: 1rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+          }
+          .btn-retour-st2d {
+            position: absolute;
+            right: 0;
+            top: 0.5rem;
+            background-color: #ef4444;
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 800;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.375rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+          }
+          .btn-retour-st2d:hover {
+            background-color: #dc2626;
+            transform: translateY(-1px);
+          }
+          .cahier-nav {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            background-color: #f8fafc;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #e2e8f0;
+          }
+          .cahier-nav button {
+            flex: 1 1 auto;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: all 0.15s;
+          }
+          .cahier-nav button:hover {
+            background-color: #f59e0b;
+            color: #ffffff;
+            border-color: #f59e0b;
+          }
+          .cahier-chapitre {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+          }
+          .cahier-titre-chapitre {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #0f172a;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 0.75rem;
+            margin-bottom: 1.5rem;
+          }
+          .schema-bloc {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+          }
+          .schema-svg {
+            width: 100%;
+            height: auto;
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            border: 1.5px solid #f59e0b;
+          }
+          .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+            gap: 1.5rem;
+          }
+          @media (min-width: 768px) {
+            .photo-grid {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+          }
+          .photo-placeholder {
+            background-color: #ffffff;
+            border: 1.5px solid #f59e0b;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+          }
+          .cahier-tableau {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            text-align: left;
+          }
+          .cahier-tableau th {
+            background-color: #f8fafc;
+            color: #f59e0b;
+            padding: 0.5rem;
+            border: 1px solid #cbd5e1;
+          }
+          .cahier-tableau td {
+            padding: 0.5rem;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+          }
+          .pdf-download-bar {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 2rem;
+          }
+          @media (min-width: 640px) {
+            .pdf-download-bar {
+              grid-template-columns: 1fr 1fr;
+            }
+          }
+          .pdf-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: 1.5px solid;
+            cursor: pointer;
+            transition: all 0.25s;
+            text-align: left;
+          }
+          .pdf-btn-cahier {
+            background-color: #fffbeb;
+            border-color: #f59e0b;
+            color: #b45309;
+          }
+          .pdf-btn-cahier:hover {
+            background-color: #fef3c7;
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+          }
+          .pdf-btn-manuel {
+            background-color: #eff6ff;
+            border-color: #3b82f6;
+            color: #1d4ed8;
+          }
+          .pdf-btn-manuel:hover {
+            background-color: #dbeafe;
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+          }
+          .pdf-icon {
+            font-size: 1.75rem;
+          }
+          .pdf-text {
+            display: flex;
+            flex-direction: column;
+          }
+          .pdf-titre {
+            font-weight: 800;
+            font-size: 0.875rem;
+          }
+          .pdf-desc {
+            font-size: 0.75rem;
+            opacity: 0.8;
+          }
+        `}</style>
+
+        <header className="cahier-header" id="cahier-top-st2d">
+          <h1 className="cahier-titre-principal">📐 CAHIER DES CHARGES VISUEL COMPLET</h1>
+          <p className="cahier-sous-titre">EPIROC SCOOPTRAM ST2D — Dossier Technique & Visuels Mine Souterraine</p>
+          <button className="btn-retour-st2d" onClick={() => (window as any).fermerCahierSt2d()}>
+            ← RETOUR ASSISTANT
+          </button>
+        </header>
+
+        {/* PDF DOWNLOAD BAR */}
+        <div className="pdf-download-bar">
+          <button className="pdf-btn pdf-btn-cahier" onClick={() => window.print()}>
+            <span className="pdf-text">
+              <span className="pdf-titre">📄 EXPORTER LE CAHIER TECHNIQUE (PDF)</span>
+              <span className="pdf-desc">Générer la version d'impression complète des 6 chapitres</span>
+            </span>
+            <span className="pdf-icon">💾</span>
+          </button>
+          <button className="pdf-btn pdf-btn-manuel" onClick={() => alert("Téléchargement du dossier de maintenance Deutz F4L912...")}>
+            <span className="pdf-text">
+              <span className="pdf-titre">📖 MANUEL MOTEUR DEUTZ F4L912</span>
+              <span className="pdf-desc">Données constructeur d'époque d'origine pour moteur à air</span>
+            </span>
+            <span className="pdf-icon">⚙️</span>
+          </button>
+        </div>
+
+        {/* CHAPTER NAVIGATION */}
+        <nav className="cahier-nav">
+          <button onClick={() => (window as any).scrollToChapitreSt2d('ch1-st2d')}>1. SCHÉMAS</button>
+          <button onClick={() => (window as any).scrollToChapitreSt2d('ch2-st2d')}>2. PHOTOS</button>
+          <button onClick={() => (window as any).scrollToChapitreSt2d('ch3-st2d')}>3. STORYBOARDS</button>
+          <button onClick={() => (window as any).scrollToChapitreSt2d('ch4-st2d')}>4. ANIMATIONS</button>
+          <button onClick={() => (window as any).scrollToChapitreSt2d('ch5-st2d')}>5. COTES</button>
+          <button onClick={() => (window as any).scrollToChapitreSt2d('ch6-st2d')}>6. OUTILS</button>
+        </nav>
+
+        {/* CHAPITRE 1 : SCHÉMAS ÉCLATÉS INTERACTIFS */}
+        <article id="ch1-st2d" className="cahier-chapitre">
+          <h2 className="cahier-titre-chapitre">CHAPITRE 1 — SCHÉMAS ÉCLATÉS INTERACTIFS</h2>
+          <p className="text-xs text-slate-500 mb-6 font-semibold">
+            Cliquez sur l'un des schémas interactifs ci-dessous pour inspecter les repères techniques du Scooptram ST2D mécanique :
+          </p>
+          
+          <div className="space-y-10">
+            {ST2D_SCHEMAS_DATA.map((schema, index) => (
+              <div key={index} className="schema-bloc border border-slate-200 rounded-xl p-5 bg-slate-50">
+                <h3 className="font-black text-base text-slate-900 mb-3 uppercase tracking-wide">
+                  {schema.id} — {schema.title}
+                </h3>
+                
+                <div className="mb-4">
+                  <svg viewBox="0 0 800 400" className="schema-svg">
+                    <rect width={800} height={400} fill="#ffffff" stroke="#f59e0b" strokeWidth={2}/>
+                    
+                    {index === 0 && (
+                      // Moteur Deutz F4L912
+                      <g>
+                        <circle cx={400} cy={200} r={120} fill="none" stroke="#f59e0b" strokeWidth={1} strokeDasharray="4,4" />
+                        <rect x={200} y={130} width={400} height={140} fill="none" stroke="#f59e0b" strokeWidth={2} />
+                        {[0, 1, 2, 3].map((i) => (
+                          <g key={i} transform={`translate(${230 + i * 90}, 150)`}>
+                            <rect x="0" y="0" width="60" height="100" fill="none" stroke="#f59e0b" strokeWidth={1.5} />
+                            {[10, 22, 34, 46, 58, 70, 82].map((y) => (
+                              <line key={y} x1="-5" y1={y} x2="65" y2={y} stroke="#f59e0b" strokeWidth={1} />
+                            ))}
+                            <text x="30" y="55" textAnchor="middle" fill="#f59e0b" fontSize={9} fontWeight="bold" fontFamily="monospace">CYL {i+1}</text>
+                          </g>
+                        ))}
+                        {/* Cooling fan turbine */}
+                        <circle cx={140} cy={200} r={35} fill="none" stroke="#f59e0b" strokeWidth={2} />
+                        {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+                          <line key={deg} x1="140" y1="200" x2={140 + Math.cos(deg*Math.PI/180)*32} y2={200 + Math.sin(deg*Math.PI/180)*32} stroke="#f59e0b" strokeWidth={1.5} />
+                        ))}
+                        <text x="400" y="320" textAnchor="middle" fill="#0f172a" fontSize="13" fontWeight="900" fontFamily="monospace">
+                          CONCEPTION 100% AIR-COOLED DEUTZ (REPÈRE D-001 À D-005)
+                        </text>
+                      </g>
+                    )}
+
+                    {index === 1 && (
+                      // Hydraulique Open-Center
+                      <g>
+                        <circle cx={400} cy={200} r={110} fill="none" stroke="#f59e0b" strokeWidth={1} strokeDasharray="4,4" />
+                        {/* Hydraulic Pump */}
+                        <g transform="translate(180, 200)">
+                          <circle cx="0" cy="0" r="25" fill="none" stroke="#f59e0b" strokeWidth={2} />
+                          <polygon points="-8,-12 8,-12 0,4" fill="none" stroke="#f59e0b" strokeWidth={2} />
+                          <text x="0" y="38" textAnchor="middle" fill="#f59e0b" fontSize="8" fontWeight="bold" fontFamily="monospace">POMPE</text>
+                        </g>
+                        {/* Distributor block */}
+                        <rect x={280} y={150} width={100} height={100} fill="none" stroke="#f59e0b" strokeWidth={2} />
+                        <line x1={280} y1={200} x2={380} y2={200} stroke="#f59e0b" strokeWidth={1.5} />
+                        <line x1={330} y1={150} x2={330} y2={250} stroke="#f59e0b" strokeWidth={1.5} />
+                        <text x="330" y="270" textAnchor="middle" fill="#f59e0b" fontSize="8" fontWeight="bold" fontFamily="monospace">DISTRIBUTEUR</text>
+                        {/* Cylinder */}
+                        <rect x={460} y={170} width={160} height={40} fill="none" stroke="#f59e0b" strokeWidth={2} />
+                        <rect x={510} y={180} width={200} height={20} fill="none" stroke="#f59e0b" strokeWidth={2} />
+                        <text x="540" y="155" textAnchor="middle" fill="#f59e0b" fontSize="8" fontWeight="bold" fontFamily="monospace">VÉRIN GODET</text>
+                        {/* Pipes */}
+                        <path d="M 205,200 L 280,200" fill="none" stroke="#f59e0b" strokeWidth={1.5} />
+                        <path d="M 380,180 L 460,180" fill="none" stroke="#f59e0b" strokeWidth={1.5} />
+                        <path d="M 380,220 L 460,220" fill="none" stroke="#f59e0b" strokeWidth={1.5} />
+                        <text x="400" y="340" textAnchor="middle" fill="#0f172a" fontSize="13" fontWeight="900" fontFamily="monospace">
+                          CIRCUIT HYDRAULIQUE CENTRE OUVERT (REPÈRE H-101 À H-105)
+                        </text>
+                      </g>
+                    )}
+
+                    {index >= 2 && (
+                      // Other systems line arts
+                      <g>
+                        <circle cx={400} cy={180} r={95} fill="none" stroke="#f59e0b" strokeWidth={1} strokeDasharray="3,3" />
+                        <rect x={240} y={120} width={320} height={120} fill="none" stroke="#f59e0b" strokeWidth={2} rx="4" />
+                        <line x1={240} y1={180} x2={560} y2={180} stroke="#f59e0b" strokeWidth={1.5} />
+                        <line x1={400} y1={120} x2={400} y2={240} stroke="#f59e0b" strokeWidth={1.5} />
+                        <circle cx={400} cy={180} r={25} fill="none" stroke="#f59e0b" strokeWidth={2} />
+                        <text x="400" y="320" textAnchor="middle" fill="#0f172a" fontSize="13" fontWeight="900" fontFamily="monospace">
+                          SENS CINÉMATIQUE BLUEPRINT MACHINE ST2D
+                        </text>
+                      </g>
+                    )}
+
+                    <text x={775} y={385} textAnchor="end" fill="#f59e0b" fontSize="8" fontWeight="bold" fontFamily="monospace">
+                      SCHEMA ST2D • CONFIDENTIEL EP-MINES
+                    </text>
+                  </svg>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="cahier-tableau">
+                    <thead>
+                      <tr>
+                        <th>REPÈRE DIAGNOSTIC</th>
+                        <th>N° PIÈCE CONSTRUCTEUR</th>
+                        <th>NOM DE LA PIÈCE</th>
+                        <th>ZONE PHYSIQUE</th>
+                        <th>PROCÉDURE COMPORTEMENTALE ASSOCIÉE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {schema.items.map((item, cIdx) => (
+                        <tr key={cIdx} className="hover:bg-amber-50/40">
+                          <td className="font-bold font-mono text-amber-600">ST2D-{item.id}</td>
+                          <td className="font-mono text-slate-600">{item.ref}</td>
+                          <td className="font-bold text-slate-800">{item.desc}</td>
+                          <td className="text-slate-500">{schema.title.split('—')[1] || schema.title}</td>
+                          <td className="text-slate-600 italic font-semibold">{item.panne}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        {/* CHAPITRE 2 : PHOTOS AVANT/APRÈS EN PLACEHOLDERS SVG */}
+        <article id="ch2-st2d" className="cahier-chapitre">
+          <h2 className="cahier-titre-chapitre">CHAPITRE 2 — PHOTOS RÉELLES AVANT/PENDANT/APRÈS (BLUEPRINT DESIGN)</h2>
+          <p className="text-sm text-slate-500 mb-6 font-semibold">
+            Pour chaque procédure de maintenance, inspectez les 4 reconstitutions blueprint orange sur blanc. Conformes aux règles, aucune image IA n'est utilisée.
+          </p>
+
+          <div className="space-y-12">
+            {ST2D_PHOTOS_PROCEDURES.map((proc, idx) => (
+              <div key={idx} className="border-b border-slate-100 pb-10 last:border-0">
+                <div className="mb-4">
+                  <span className="text-xs font-mono text-amber-600 font-black uppercase tracking-wider">
+                    PRODUCE {idx + 1} sur {ST2D_PHOTOS_PROCEDURES.length} — RÉFÉRENCE {proc.ref}
+                  </span>
+                  <h3 className="font-black text-lg text-slate-900">{proc.title}</h3>
+                </div>
+
+                <div className="photo-grid">
+                  {proc.steps.map((step, sIdx) => {
+                    const sampleCamera = "Canon EOS 5D Mark IV, macro lens, white light";
+                    const samplePrompt = `${step.title} pour la procédure ${proc.ref} (${proc.title}) sur le Scooptram mécanique ST2D.`;
+                    const mockSvg = getPlaceholderSvgSt2d(step.type, step.title, sampleCamera, step.desc, samplePrompt);
+
+                    return (
+                      <div key={sIdx} className="photo-placeholder">
+                        <div className="aspect-[8/5] overflow-hidden rounded-lg mb-3 border border-slate-200">
+                          <img 
+                            src={mockSvg} 
+                            alt={step.title}
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                        <h4 className="text-xs font-black text-slate-800 mb-1 uppercase tracking-wide">
+                          {step.type === "CASSÉ" ? "⚠️ 1. État Défectueux" : 
+                           step.type === "OUTIL" ? "🔧 2. Outillage Requis" : 
+                           step.type === "RÉSULTAT" ? "✅ 3. Résultat Attendu" : 
+                           "🚫 4. Erreur À Éviter"} : {step.title}
+                        </h4>
+                        <p className="text-[11px] text-slate-600 leading-relaxed font-semibold">
+                          {step.desc}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        {/* CHAPITRE 3 : STORYBOARDS DE TOURNAGE */}
+        <article id="ch3-st2d" className="cahier-chapitre">
+          <h2 className="cahier-titre-chapitre">CHAPITRE 3 — STORYBOARDS DE TOURNAGE DES INTERVENTIONS</h2>
+          <p className="text-sm text-slate-500 mb-6 font-semibold">
+            Chronologies cinématiques étape par étape destinées au tournage des vidéos de démonstration d'atelier.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {ST2D_STORYBOARDS.map((sb, idx) => (
+              <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-5 flex flex-col justify-between hover:border-amber-400 transition-all">
+                <div>
+                  <div className="flex justify-between items-center mb-2 pb-1.5 border-b border-slate-200">
+                    <span className="text-[10px] font-mono font-black text-amber-600 uppercase tracking-wider">
+                      ID: {sb.id} • DURÉE: {sb.duration}
+                    </span>
+                    <span className="font-mono text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded">
+                      ST2D TOURNAGE
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-black text-slate-900 mb-3">{sb.title}</h3>
+
+                  <div className="space-y-2 text-xs text-slate-600 mb-4">
+                    <p className="leading-relaxed">
+                      <strong>🎥 CADRAGE REQUIS :</strong> {sb.framing}
+                    </p>
+                    <p className="leading-relaxed bg-white p-2.5 rounded border border-slate-200 text-slate-700 font-medium italic">
+                      <strong>🗣️ VOIX OFF (AUDIO) :</strong> {sb.audio}
+                    </p>
+                    <p className="leading-relaxed text-amber-800">
+                      <strong>✨ INCUSTATIONS (OVERLAY) :</strong> {sb.overlay}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="bg-slate-100 p-2.5 rounded border border-slate-200 text-[10px] font-mono text-slate-500 font-semibold">
+                  🎬 SPÉCIFICATIONS TECHNIQUES DE TOURNAGE : {sb.specs}
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        {/* CHAPITRE 4 : ANIMATIONS TECHNIQUES INTERACTIVES */}
+        <article id="ch4-st2d" className="cahier-chapitre">
+          <h2 className="cahier-titre-chapitre">CHAPITRE 4 — ANIMATIONS TECHNIQUES INTERACTIVES</h2>
+          <p className="text-sm text-slate-500 mb-6 font-semibold">
+            Deux animations interactives exclusives détaillant la thermique de refroidissement par air Deutz et la cinématique du freinage mécanique à tambour.
+          </p>
+
+          <div className="space-y-10">
+            <div id="anim-engine-deutz-air">
+              <AnimEngineDeutzAir isEco={isEco} />
+            </div>
+            <div id="anim-brakes-drum">
+              <AnimBrakesDrum isEco={isEco} />
+            </div>
+          </div>
+        </article>
+
+        {/* CHAPITRE 5 : COTES, TOLÉRANCES ET PROCÉDURES DE CONTRÔLE */}
+        <article id="ch5-st2d" className="cahier-chapitre">
+          <h2 className="cahier-titre-chapitre">CHAPITRE 5 — COTES, TOLÉRANCES ET PROCÉDURES DE CONTRÔLE</h2>
+          <p className="text-sm text-slate-500 mb-6 font-semibold">
+            Tableaux complets de tolérances mécaniques pour l'usinage, l'assemblage et les mesures d'étanchéité sous terre.
+          </p>
+
+          <div className="space-y-8">
+            {ST2D_COTES_TOLERANCES.map((table, idx) => (
+              <div key={idx} className="border border-slate-200 rounded-xl p-5 bg-white shadow-xs">
+                <div className="mb-4">
+                  <span className="text-[10px] font-mono font-black text-amber-600 block uppercase tracking-wider">TABLEAU {table.id} — RÉFÉRENCE {table.ref}</span>
+                  <h3 className="font-black text-sm text-slate-900 uppercase tracking-wider">
+                    {table.title}
+                  </h3>
+                </div>
+                
+                {/* Preparation and Procedure guidelines */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-[11px] font-semibold text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                  <div>
+                    <p className="text-amber-700 font-bold uppercase text-[9px] tracking-wider mb-1">🏁 Préparation :</p>
+                    <p>{table.prep}</p>
+                    <p className="text-amber-700 font-bold uppercase text-[9px] tracking-wider mt-2 mb-1">📍 Position :</p>
+                    <p>{table.pos}</p>
+                  </div>
+                  <div>
+                    <p className="text-amber-700 font-bold uppercase text-[9px] tracking-wider mb-1">📏 Mesure :</p>
+                    <p>{table.mesure}</p>
+                    <p className="text-amber-700 font-bold uppercase text-[9px] tracking-wider mt-2 mb-1">🛠️ Décision :</p>
+                    <p>{table.dec}</p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="cahier-tableau">
+                    <thead>
+                      <tr>
+                        <th>N° ID</th>
+                        <th>PARAMÈTRE FONCTIONNEL</th>
+                        <th>VALEUR NOMINALE</th>
+                        <th>VALEUR MINIMALE</th>
+                        <th>VALEUR MAXIMALE</th>
+                        <th>UNITÉ</th>
+                        <th>OUTIL DE MESURE ET CONTRÔLE</th>
+                        <th>LIEN ARBRE GMAO / PANNE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {table.rows.map((item, itemIdx) => (
+                        <tr key={itemIdx} className="hover:bg-slate-50">
+                          <td className="font-mono text-slate-400 font-bold">{item.id}</td>
+                          <td className="font-black text-slate-800">{item.param}</td>
+                          <td className="font-mono text-center bg-slate-100 text-slate-900 font-black rounded">{item.nominal}</td>
+                          <td className="font-mono text-center text-amber-600 font-bold">{item.minVal}</td>
+                          <td className="font-mono text-center text-red-600 font-bold">{item.maxVal}</td>
+                          <td className="font-bold text-slate-500">{item.unit}</td>
+                          <td className="text-slate-600 font-semibold">{item.tool}</td>
+                          <td className="font-mono text-[10px] text-indigo-600 font-black">{item.gmao}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        {/* CHAPITRE 6 : FICHES TECHNIQUES DES OUTILS DE MAINTENANCE */}
+        <article id="ch6-st2d" className="cahier-chapitre">
+          <h2 className="cahier-titre-chapitre">CHAPITRE 6 — FICHES TECHNIQUES DES OUTILS DE MAINTENANCE</h2>
+          <p className="text-sm text-slate-500 mb-6 font-semibold">
+            Référentiel des 15 outils obligatoires avec planches, codes racks d'atelier et procédures d'entretien associées.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {ST2D_OUTILS_FICHE.map((tool, idx) => (
+              <div key={idx} className="border border-slate-200 rounded-xl p-4 bg-white shadow-xs flex flex-col justify-between hover:border-amber-400 transition-all">
+                <div>
+                  <div className="flex justify-between items-start gap-2 mb-2">
+                    <div>
+                      <span className="text-[10px] font-mono font-black text-amber-600 uppercase block tracking-wider">
+                        FICHE {idx + 1} — {tool.id}
+                      </span>
+                      <h3 className="font-black text-base text-slate-900">{tool.name}</h3>
+                    </div>
+                    <span className="font-mono text-[9px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded uppercase">
+                      {tool.code}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-50 text-[10px] font-mono font-bold text-slate-500 p-2 rounded border border-slate-200 mb-3">
+                    📍 EMPLACEMENT RACK : {tool.rack}
+                  </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed mb-3 font-semibold">
+                    {tool.desc}
+                  </p>
+
+                  <div className="space-y-2 mb-3 text-xs">
+                    <div>
+                      <span className="font-black text-slate-800">Spécifications techniques :</span>
+                      <p className="text-slate-500 font-semibold">{tool.specs}</p>
+                    </div>
+                    <div>
+                      <span className="font-black text-slate-800">Procédure d'usage :</span>
+                      <p className="text-slate-500 font-semibold">{tool.procedure}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50/50 border border-amber-200 rounded-lg p-2.5">
+                  <span className="text-[10px] font-black text-amber-800 block uppercase mb-1">🔧 Maintenance de l'Outil :</span>
+                  <ul className="list-disc pl-4 text-[11px] text-slate-700 font-semibold space-y-1">
+                    {tool.maintenance.map((m, mIdx) => (
+                      <li key={mIdx}>{m}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-slate-200 text-center">
+            <button 
+              className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-black text-sm uppercase tracking-wider rounded-xl cursor-pointer shadow-md"
+              onClick={() => (window as any).fermerCahierSt2d()}
+            >
+              ← FERMER LE CAHIER DES CHARGES VISUEL
+            </button>
+          </div>
+        </article>
+
+      </section>
     </div>
   );
+}
+
+// ============================================================================
+// --- INTERACTIVE ANIMATION COMPONENT 1: AIR-COOLED DEUTZ ENGINE ---
+// ============================================================================
+function AnimEngineDeutzAir({ isEco }: { isEco: boolean }) {
+  const [isPlaying, setIsPlaying] = React.useState(true);
+  const [rpm, setRpm] = React.useState(1500);
+  const [temp, setTemp] = React.useState(75);
+  const [angle, setAngle] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!isPlaying || isEco) return;
+    const interval = setInterval(() => {
+      setAngle((prev) => (prev + rpm / 100) % 360);
+      // Temperature logic: higher RPM = slightly more heat, but also more cooling fan efficiency.
+      // If fan RPM is low (< 800) temp rises. If high, temp stabilizes.
+      setTemp((prev) => {
+        const targetTemp = 60 + (rpm / 40) - (rpm > 1000 ? 10 : 0);
+        const diff = targetTemp - prev;
+        return +(prev + diff * 0.05).toFixed(1);
+      });
+    }, 30);
+    return () => clearInterval(interval);
+  }, [isPlaying, rpm, isEco]);
+
+  return (
+    <div className="border border-amber-200 rounded-xl p-4 bg-white shadow-xs max-w-3xl mx-auto mb-8">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h4 className="text-sm font-black text-slate-900 uppercase tracking-wide">
+            4.1 Turbine de Refroidissement & Séquence d'Allumage F4L912
+          </h4>
+          <p className="text-[10px] text-slate-500 font-semibold">
+            Moteur Deutz refroidi par air : la turbine souffle l'air de refroidissement à travers les ailettes des culasses individuelles.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsPlaying(!isPlaying)}
+            className="px-2.5 py-1 text-[11px] font-bold bg-amber-500 text-slate-900 rounded hover:bg-amber-400 cursor-pointer"
+          >
+            {isPlaying ? "⏸ Pause" : "▶ Lecture"}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* SVG Stage */}
+        <div className="md:col-span-2 border border-slate-200 rounded-lg p-2 bg-slate-50 flex justify-center items-center">
+          <svg viewBox="0 0 500 350" className="w-full h-auto max-h-[250px]">
+            {/* Background block */}
+            <rect width="500" height="350" fill="#ffffff" stroke="#f59e0b" strokeWidth="1.5" rx="6" />
+            
+            {/* Air flow indicator lines (moving dasharrays) */}
+            {isPlaying && !isEco && (
+              <g>
+                <path d="M 50,110 L 150,110 L 150,220" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="6,6" strokeDashoffset={-angle} />
+                <path d="M 50,130 L 250,130 L 250,220" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="6,6" strokeDashoffset={-angle * 0.8} />
+                <path d="M 50,150 L 350,150 L 350,220" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="6,6" strokeDashoffset={-angle * 0.6} />
+                <path d="M 50,170 L 450,170 L 450,220" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="6,6" strokeDashoffset={-angle * 0.4} />
+              </g>
+            )}
+
+            {/* Turbine de refroidissement (cooling fan) */}
+            <g transform="translate(100, 150)">
+              <circle cx="0" cy="0" r="45" fill="none" stroke="#f59e0b" strokeWidth="2" />
+              <circle cx="0" cy="0" r="10" fill="#f59e0b" />
+              {/* Fan blades */}
+              {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
+                <line
+                  key={deg}
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="-42"
+                  stroke="#f59e0b"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  transform={`rotate(${deg + angle})`}
+                />
+              ))}
+              <text x="0" y="55" textAnchor="middle" fill="#f59e0b" fontSize="9" fontWeight="900" fontFamily="monospace">
+                TURBINE DEUTZ
+              </text>
+            </g>
+
+            {/* 4 Cylinders with cooling fins */}
+            {[0, 1, 2, 3].map((i) => {
+              // Piston displacement based on angle
+              const phase = (angle + i * 90) * (Math.PI / 180);
+              const pistonYOffset = Math.sin(phase) * 15;
+              const isFiring = Math.sin(phase) > 0.9 && isPlaying;
+
+              return (
+                <g key={i} transform={`translate(${210 + i * 75}, 160)`}>
+                  {/* Cylinder block */}
+                  <rect x="0" y="0" width="55" height="100" fill="none" stroke="#f59e0b" strokeWidth="2" />
+                  
+                  {/* Cooling fins (ailettes de refroidissement) */}
+                  {[10, 22, 34, 46, 58, 70, 82].map((y) => (
+                    <line key={y} x1="-8" y1={y} x2="63" y2={y} stroke="#f59e0b" strokeWidth="1.5" />
+                  ))}
+
+                  {/* Piston inside */}
+                  <g transform={`translate(0, ${35 + pistonYOffset})`}>
+                    <rect x="4" y="0" width="47" height="25" fill="#f59e0b" fillOpacity="0.15" stroke="#f59e0b" strokeWidth="1.5" />
+                    {/* Segment lines */}
+                    <line x1="4" y1="6" x2="51" y2="6" stroke="#f59e0b" strokeWidth="1" />
+                    <line x1="4" y1="12" x2="51" y2="12" stroke="#f59e0b" strokeWidth="1" />
+                    {/* Connecting rod */}
+                    <line x1="27" y1="20" x2="27" y2="60" stroke="#f59e0b" strokeWidth="2.5" />
+                  </g>
+
+                  {/* Combustion spark/fire indicator for air-cooled diesel */}
+                  {isFiring && (
+                    <circle cx="27" cy="15" r="14" fill="#f59e0b" fillOpacity="0.4" stroke="#f59e0b" strokeWidth="1.5" className="animate-ping" />
+                  )}
+
+                  <text x="27" y="-12" textAnchor="middle" fill="#0f172a" fontSize="9" fontWeight="bold" fontFamily="monospace">
+                    CYL {i + 1}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Title & Speed HUD */}
+            <text x="250" y="30" textAnchor="middle" fill="#0f172a" fontSize="12" fontWeight="900" fontFamily="monospace">
+              DEUTZ F4L912 AIR-COOLED FLOW BLUEPRINT
+            </text>
+            <text x="250" y="48" textAnchor="middle" fill="#f59e0b" fontSize="9" fontWeight="bold" fontFamily="monospace">
+              0 ELECTRONICS • 100% AIR DISSIPATION VIA INTEGRAL BLOWER
+            </text>
+          </svg>
+        </div>
+
+        {/* Control Panel */}
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 flex flex-col justify-between">
+          <div className="space-y-3">
+            <div>
+              <span className="text-[10px] font-black text-slate-400 block uppercase tracking-wider">Régime Moteur</span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-black text-slate-800 font-mono">{rpm} tr/min</span>
+                <span className="text-[9px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.5 rounded">
+                  {rpm > 2000 ? "MAX" : rpm < 900 ? "RALENTI" : "NOMINAL"}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="600"
+                max="2500"
+                step="100"
+                value={rpm}
+                onChange={(e) => setRpm(Number(e.target.value))}
+                className="w-full accent-amber-500 h-1.5 bg-slate-200 rounded-lg cursor-pointer mt-1"
+              />
+            </div>
+
+            <div>
+              <span className="text-[10px] font-black text-slate-400 block uppercase tracking-wider">Flux d'air de refroidissement</span>
+              <div className="font-mono text-xs font-bold text-amber-600 mt-0.5">
+                {(rpm * 1.8).toFixed(0)} L/min soufflés
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-200">
+              <span className="text-[10px] font-black text-slate-400 block uppercase tracking-wider">Température de Culasse</span>
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className={`text-xl font-black font-mono ${temp > 115 ? 'text-red-600 animate-pulse' : temp > 95 ? 'text-amber-500' : 'text-slate-800'}`}>
+                  {temp} °C
+                </span>
+                <span className="text-[9px] text-slate-400 font-bold">Limite: 130°C</span>
+              </div>
+              {temp > 115 && (
+                <p className="text-[9px] text-red-600 font-black mt-1 animate-pulse">
+                  ⚠️ ALERTE SURCHAUFFE AIR : Nettoyer immédiatement les ailettes de culasse !
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="text-[9px] text-slate-500 font-semibold bg-white border border-slate-200 p-2 rounded mt-2">
+            💡 <strong>Observation :</strong> Le Deutz F4L912 ne possède aucune sonde de température d'eau car il est refroidi par air. Le contrôle se fait par thermocouple de culasse.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// --- INTERACTIVE ANIMATION COMPONENT 2: MECHANICAL DRUM BRAKES ---
+// ============================================================================
+function AnimBrakesDrum({ isEco }: { isEco: boolean }) {
+  const [isBraking, setIsBraking] = React.useState(false);
+  const [drumTemp, setDrumTemp] = React.useState(40);
+  const [wearLevel, setWearLevel] = React.useState(1.8); // wear in mm (1.5mm is limit)
+
+  React.useEffect(() => {
+    if (isEco) return;
+    const interval = setInterval(() => {
+      setDrumTemp((prev) => {
+        if (isBraking) {
+          // Heat up
+          return Math.min(220, +(prev + 3.2).toFixed(1));
+        } else {
+          // Cool down
+          return Math.max(40, +(prev - 1.5).toFixed(1));
+        }
+      });
+    }, 100);
+    return () => clearInterval(interval);
+  }, [isBraking, isEco]);
+
+  // Adjuster clearance calculation (shoe gap)
+  const shoeGap = isBraking ? 0 : 1.2 + (2.5 - wearLevel) * 0.4;
+
+  return (
+    <div className="border border-amber-200 rounded-xl p-4 bg-white shadow-xs max-w-3xl mx-auto">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h4 className="text-sm font-black text-slate-900 uppercase tracking-wide">
+            4.2 Cinématique Mécanique du Frein à Tambour ST2D
+          </h4>
+          <p className="text-[10px] text-slate-500 font-semibold">
+            Système 100% mécanique sans assistance : l'écartement des mâchoires s'effectue par came pivotante sur tambour Ø 300 mm.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onMouseDown={() => setIsBraking(true)}
+            onMouseUp={() => setIsBraking(false)}
+            onTouchStart={() => setIsBraking(true)}
+            onTouchEnd={() => setIsBraking(false)}
+            className={`px-3 py-1.5 text-xs font-black uppercase rounded-lg shadow-sm transition-all cursor-pointer select-none ${
+              isBraking 
+                ? "bg-red-600 text-white scale-95" 
+                : "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-900"
+            }`}
+          >
+            {isBraking ? "🛑 FREIN APPLIQUÉ (Clic maintenu)" : "⚙️ APPUYER SUR LE FREIN"}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* SVG Drum Stage */}
+        <div className="md:col-span-2 border border-slate-200 rounded-lg p-2 bg-slate-50 flex justify-center items-center">
+          <svg viewBox="0 0 400 350" className="w-full h-auto max-h-[250px]">
+            {/* Background block */}
+            <rect width="400" height="350" fill="#ffffff" stroke="#f59e0b" strokeWidth="1.5" rx="6" />
+
+            {/* Outer Brake Drum Ring */}
+            <circle 
+              cx="200" 
+              cy="175" 
+              r="120" 
+              fill="none" 
+              stroke={isBraking ? "#ef4444" : "#f59e0b"} 
+              strokeWidth={isBraking ? "10" : "6"} 
+              strokeOpacity={isBraking ? "0.85" : "0.5"}
+              className="transition-all duration-200"
+            />
+            {/* Outer drum casing line */}
+            <circle cx="200" cy="175" r="126" fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+
+            {/* Rotating central shaft hub */}
+            <circle cx="200" cy="175" r="30" fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4,4" />
+            <circle cx="200" cy="175" r="12" fill="#0f172a" />
+
+            {/* Expander Cam (L'excentrique / Came en S) */}
+            <g transform={`translate(200, 80) rotate(${isBraking ? 25 : 0})`} className="transition-all duration-200">
+              <rect x="-12" y="-6" width="24" height="12" rx="3" fill="none" stroke="#f59e0b" strokeWidth="2" />
+              <line x1="0" y1="-6" x2="0" y2="6" stroke="#f59e0b" strokeWidth="1.5" />
+            </g>
+            <text x="200" y="65" textAnchor="middle" fill="#0f172a" fontSize="8" fontWeight="bold" fontFamily="monospace">
+              CAME DE COMMANDE
+            </text>
+
+            {/* Left Shoe (Mâchoire gauche) */}
+            <g transform={`translate(${-shoeGap}, 0)`} className="transition-all duration-200">
+              {/* Metal shoe holder */}
+              <path d="M 175,100 A 75,75 0 0,0 175,250" fill="none" stroke="#f59e0b" strokeWidth="6" strokeLinecap="round" />
+              {/* Brake lining (garniture organique) */}
+              <path d="M 167,110 A 85,85 0 0,0 167,240" fill="none" stroke={isBraking ? "#ef4444" : "#f59e0b"} strokeWidth="5.5" strokeLinecap="round" />
+              {/* Support rib */}
+              <path d="M 183,120 L 183,230" fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+            </g>
+
+            {/* Right Shoe (Mâchoire droite) */}
+            <g transform={`translate(${shoeGap}, 0)`} className="transition-all duration-200">
+              {/* Metal shoe holder */}
+              <path d="M 225,100 A 75,75 0 0,1 225,250" fill="none" stroke="#f59e0b" strokeWidth="6" strokeLinecap="round" />
+              {/* Brake lining (garniture organique) */}
+              <path d="M 233,110 A 85,85 0 0,1 233,240" fill="none" stroke={isBraking ? "#ef4444" : "#f59e0b"} strokeWidth="5.5" strokeLinecap="round" />
+              {/* Support rib */}
+              <path d="M 217,120 L 217,230" fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+            </g>
+
+            {/* Return Springs (Ressorts de rappel) */}
+            <g transform="translate(180, 115)">
+              {/* Zig-zag spring line */}
+              <path d="M 0,0 L 5,3 L 10,-3 L 15,3 L 20,-3 L 25,3 L 30,0" fill="none" stroke="#f59e0b" strokeWidth="2" />
+              <line x1="-12" y1="0" x2="0" y2="0" stroke="#f59e0b" strokeWidth="1.5" />
+              <line x1="30" y1="0" x2="42" y2="0" stroke="#f59e0b" strokeWidth="1.5" />
+            </g>
+            <text x="200" y="128" textAnchor="middle" fill="#f59e0b" fontSize="7" fontWeight="bold">RESSORT DE RAPPEL</text>
+
+            {/* Lower Pivot pin (Point de pivot commun inférieur) */}
+            <circle cx="200" cy="275" r="8" fill="none" stroke="#f59e0b" strokeWidth="2" />
+            <circle cx="200" cy="275" r="3" fill="#f59e0b" />
+            <text x="200" y="295" textAnchor="middle" fill="#0f172a" fontSize="8" fontWeight="bold" fontFamily="monospace">
+              AXE DE PIVOT SÉCURISÉ
+            </text>
+
+            {/* Annotation Overlay */}
+            {isBraking && (
+              <g className="animate-pulse">
+                <text x="110" y="180" fill="#ef4444" fontSize="9" fontWeight="900" fontFamily="monospace" textAnchor="middle">FRICTION</text>
+                <text x="290" y="180" fill="#ef4444" fontSize="9" fontWeight="900" fontFamily="monospace" textAnchor="middle">FRICTION</text>
+              </g>
+            )}
+          </svg>
+        </div>
+
+        {/* Brakes Diagnostics Panel */}
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 flex flex-col justify-between">
+          <div className="space-y-3">
+            <div>
+              <span className="text-[10px] font-black text-slate-400 block uppercase tracking-wider">État d'Usure Mâchoires</span>
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-black font-mono ${wearLevel < 2.0 ? 'text-amber-600' : 'text-slate-800'}`}>
+                  {wearLevel} mm restant
+                </span>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${wearLevel < 2.0 ? 'bg-amber-100 text-amber-700 animate-pulse' : 'bg-green-100 text-green-700'}`}>
+                  {wearLevel < 2.0 ? "À CHANGER" : "CONFORME"}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="1.2"
+                max="6.0"
+                step="0.1"
+                value={wearLevel}
+                onChange={(e) => setWearLevel(Number(e.target.value))}
+                className="w-full accent-amber-500 h-1.5 bg-slate-200 rounded-lg cursor-pointer mt-1"
+              />
+            </div>
+
+            <div className="pt-2 border-t border-slate-200">
+              <span className="text-[10px] font-black text-slate-400 block uppercase tracking-wider">Température du Tambour</span>
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className={`text-xl font-black font-mono ${drumTemp > 180 ? 'text-red-600 animate-pulse' : drumTemp > 100 ? 'text-amber-500' : 'text-slate-800'}`}>
+                  {drumTemp} °C
+                </span>
+                <span className="text-[9px] text-slate-400 font-bold">Limite: 250°C</span>
+              </div>
+              {drumTemp > 180 && (
+                <p className="text-[9px] text-red-600 font-black mt-1 animate-pulse">
+                  ⚠️ SURCHAUFFE TAMBOUR : Risque de glaçage des garnitures organiques !
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="text-[9px] text-slate-500 font-semibold bg-white border border-slate-200 p-2 rounded mt-2">
+            ℹ️ <strong>Règle technique ST2D :</strong> Contrairement au ST7/ST2G doté de disques SAHR pressurisés, le ST2D utilise un freinage mécanique à tambour sur arbre de transmission ultra robuste et simple à réparer.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function getPlaceholderSvgSt2d(
+  type: string,
+  title: string,
+  camera: string,
+  subject: string,
+  prompt: string
+): string {
+  const escapedTitle = title.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const escapedCamera = camera.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const escapedSubject = subject.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const escapedPrompt = prompt.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  
+  const accentColor = '#f59e0b'; // Always orange for ST2D blueprint style
+  const bgFill = '#ffffff'; // Always white for light theme
+  const textColor = '#1e293b';
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+    <rect width="800" height="500" fill="${bgFill}" rx="8" stroke="${accentColor}" stroke-width="2"/>
+    <rect x="10" y="10" width="780" height="480" fill="none" stroke="${accentColor}" stroke-width="1" stroke-opacity="0.3" rx="6"/>
+    
+    <!-- Viewfinder Corners -->
+    <path d="M 30,60 L 30,30 L 60,30" fill="none" stroke="${accentColor}" stroke-width="2" stroke-linecap="round"/>
+    <path d="M 770,60 L 770,30 L 740,30" fill="none" stroke="${accentColor}" stroke-width="2" stroke-linecap="round"/>
+    <path d="M 30,440 L 30,470 L 60,470" fill="none" stroke="${accentColor}" stroke-width="2" stroke-linecap="round"/>
+    <path d="M 770,440 L 770,470 L 740,470" fill="none" stroke="${accentColor}" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Crosshairs -->
+    <circle cx="400" cy="230" r="45" fill="none" stroke="${accentColor}" stroke-width="1" stroke-dasharray="8,6" stroke-opacity="0.5"/>
+    <line x1="400" y1="170" x2="400" y2="290" stroke="${accentColor}" stroke-width="1" stroke-dasharray="4,4" stroke-opacity="0.4"/>
+    <line x1="340" y1="230" x2="460" y2="230" stroke="${accentColor}" stroke-width="1" stroke-dasharray="4,4" stroke-opacity="0.4"/>
+    
+    <!-- Status HUD -->
+    <circle cx="50" cy="50" r="6" fill="${accentColor}"/>
+    <text x="70" y="54" fill="${textColor}" font-family="monospace" font-size="11" font-weight="900">EPIROC ST2D • DIAGNOSTIC VISUEL</text>
+    <text x="750" y="54" text-anchor="end" fill="#64748b" font-family="monospace" font-size="10" font-weight="700">${escapedCamera}</text>
+    
+    <!-- Title plate -->
+    <rect x="30" y="90" width="740" height="35" fill="#fffbeb" rx="4" stroke="${accentColor}" stroke-width="1"/>
+    <text x="45" y="112" fill="#b45309" font-family="monospace" font-size="11" font-weight="bold">${escapedTitle}</text>
+    
+    <!-- Line art for the mock mechanical context -->
+    <g transform="translate(400, 230) scale(1.2)">
+      <rect x="-80" y="-40" width="160" height="80" rx="6" fill="none" stroke="${accentColor}" stroke-width="1.5" />
+      <circle cx="0" cy="0" r="28" fill="none" stroke="${accentColor}" stroke-width="1.5" />
+      <line x1="-80" y1="0" x2="80" y2="0" stroke="${accentColor}" stroke-width="1" />
+      <line x1="0" y1="-40" x2="0" y2="40" stroke="${accentColor}" stroke-width="1" />
+    </g>
+
+    <!-- Subject Details -->
+    <text x="35" y="375" fill="${textColor}" font-family="sans-serif" font-size="12" font-weight="bold">DESCRIPTION VISUELLE DE MAQUETTE :</text>
+    <text x="35" y="395" fill="#475569" font-family="sans-serif" font-size="11" font-weight="600">${escapedSubject.substring(0, 110)}...</text>
+    
+    <!-- Prompt block -->
+    <rect x="30" y="415" width="740" height="55" fill="#f8fafc" rx="4" stroke="${accentColor}" stroke-width="1" stroke-opacity="0.4"/>
+    <text x="42" y="432" fill="#64748b" font-family="sans-serif" font-weight="bold" font-size="9">PROMPT DIRECTEUR D'ACQUISITION :</text>
+    <text x="42" y="450" fill="#b45309" font-family="monospace" font-size="9" font-weight="500">
+      <tspan x="42" dy="0">${escapedPrompt.substring(0, 120)}...</tspan>
+    </text>
+    
+    <!-- Margins -->
+    <text x="750" y="375" text-anchor="end" fill="${accentColor}" font-family="monospace" font-size="9" font-weight="bold">EPIROC ST2D VISUAL RECORD</text>
+    <text x="750" y="390" text-anchor="end" fill="#64748b" font-family="monospace" font-size="8" font-weight="bold">CHAPTER 2: EXPERT EVIDENCE</text>
+  </svg>`;
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }

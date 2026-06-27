@@ -1171,21 +1171,21 @@ export function AssistantEpirocSt7() {
             </button>
             <button 
               onClick={() => { setMode("APP"); }} 
-              className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${mode === "APP" ? "bg-indigo-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"}`}
+              className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${mode === "APP" ? "bg-indigo-600 text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-800"}`}
               title="Apprentissage explicatif"
             >
               🎓 APP
             </button>
             <button 
               onClick={() => { setMode("CHF"); }} 
-              className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${mode === "CHF" ? "bg-emerald-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"}`}
+              className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${mode === "CHF" ? "bg-emerald-600 text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-800"}`}
               title="Suivi administratif Chef"
             >
               👨‍✈️ CHEF
             </button>
             <button 
               onClick={() => { setMode("ECO"); }} 
-              className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${mode === "ECO" ? "bg-slate-900 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"}`}
+              className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${mode === "ECO" ? "bg-slate-50 text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-800"}`}
               title="Mode ÉCO contraste maximal sans images"
             >
               🔋 ÉCO
@@ -1197,7 +1197,7 @@ export function AssistantEpirocSt7() {
             onClick={() => setIsEmergencyActive(!isEmergencyActive)}
             className={`px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-300 flex items-center gap-2 cursor-pointer ${
               isEmergencyActive 
-                ? "bg-red-600 text-white animate-pulse border border-white shadow-sm" 
+                ? "bg-red-600 text-slate-900 animate-pulse border border-white shadow-sm" 
                 : "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
             }`}
           >
@@ -1217,7 +1217,7 @@ export function AssistantEpirocSt7() {
 
       {/* ⚠️ BANDEAU URGENCE ACTIVE */}
       {isEmergencyActive && (
-        <div className="bg-red-700 text-white font-black text-xs uppercase text-center py-2 px-4 flex items-center justify-center gap-2 animate-pulse">
+        <div className="bg-red-700 text-slate-900 font-black text-xs uppercase text-center py-2 px-4 flex items-center justify-center gap-2 animate-pulse">
           <AlertCircle className="w-4 h-4" />
           <span>Filtre d'arrêt immédiat actif : seuls les organes critiques (Rouge ▲) s'affichent !</span>
           <button onClick={() => setIsEmergencyActive(false)} className="underline ml-4 bg-red-900 px-2 py-0.5 rounded text-[10px]">Désactiver</button>
@@ -1226,33 +1226,33 @@ export function AssistantEpirocSt7() {
 
       {/* 📖 GUIDE DÉMARRAGE OVERLAY */}
       {guideStep !== null && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border-2 border-amber-500 rounded-2xl max-w-md p-6 space-y-6">
+        <div className="fixed inset-0 bg-white/90 z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-50 border-2 border-amber-500 rounded-2xl max-w-md p-6 space-y-6">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black tracking-widest text-amber-500 uppercase">Étape {guideStep} sur 3</span>
-              <button onClick={closeGuide} className="text-xs text-slate-400 hover:text-white uppercase font-bold">Passer ✕</button>
+              <button onClick={closeGuide} className="text-xs text-slate-600 hover:text-slate-900 uppercase font-bold">Passer ✕</button>
             </div>
             
             {guideStep === 1 && (
               <div className="space-y-3">
-                <h3 className="text-lg font-black text-white">🔍 Recherche de Symptômes</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
+                <h3 className="text-lg font-black text-slate-900">🔍 Recherche de Symptômes</h3>
+                <p className="text-xs text-slate-700 leading-relaxed">
                   Tu as une panne sur le ST7 ? Tape le symptôme direct (ex: "fumée noire", "RCS-T01", "frein") ou utilise l'Index de symptômes physiques inversé.
                 </p>
               </div>
             )}
             {guideStep === 2 && (
               <div className="space-y-3">
-                <h3 className="text-lg font-black text-white">🚨 Mode Urgence Direct</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
+                <h3 className="text-lg font-black text-slate-900">🚨 Mode Urgence Direct</h3>
+                <p className="text-xs text-slate-700 leading-relaxed">
                   Pas de temps à perdre ? Active le bouton rouge d'urgence en haut à droite. Il élimine le superflu et ne montre que le critique.
                 </p>
               </div>
             )}
             {guideStep === 3 && (
               <div className="space-y-3">
-                <h3 className="text-lg font-black text-white">🎓 Explications du vieux</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
+                <h3 className="text-lg font-black text-slate-900">🎓 Explications du vieux</h3>
+                <p className="text-xs text-slate-700 leading-relaxed">
                   Pour apprendre et comprendre le fonctionnement des organes (V-tube core, Funk DF150, SAHR force-cooled), active le mode Apprentissage.
                 </p>
               </div>
@@ -1262,7 +1262,7 @@ export function AssistantEpirocSt7() {
               {guideStep > 1 ? (
                 <button 
                   onClick={() => setGuideStep(prev => prev! - 1)} 
-                  className="px-4 py-2 bg-slate-800 text-slate-200 text-xs font-bold rounded-lg"
+                  className="px-4 py-2 bg-slate-800 text-slate-800 text-xs font-bold rounded-lg"
                 >
                   Précédent
                 </button>
@@ -1278,7 +1278,7 @@ export function AssistantEpirocSt7() {
               ) : (
                 <button 
                   onClick={closeGuide} 
-                  className="px-5 py-2.5 bg-emerald-600 text-white text-xs font-black rounded-lg"
+                  className="px-5 py-2.5 bg-emerald-600 text-slate-900 text-xs font-black rounded-lg"
                 >
                   Compris ! Ouvrir l'Assistant
                 </button>
@@ -1307,7 +1307,7 @@ export function AssistantEpirocSt7() {
                 onClick={() => { setActiveTab(tab.id); setActiveTabGuide({ tabId: tab.id, step: 1 }); }}
                 className={`px-3 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 border ${
                   activeTab === tab.id 
-                    ? (isEco ? "bg-black text-white border-black" : "bg-amber-500 text-slate-900 border-amber-600 shadow-sm") 
+                    ? (isEco ? "bg-white text-slate-900 border-black" : "bg-amber-500 text-slate-900 border-amber-600 shadow-sm") 
                     : (isEco ? "bg-white text-slate-900 border-slate-400" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900")
                 }`}
               >
@@ -1325,7 +1325,7 @@ export function AssistantEpirocSt7() {
 
       {/* 🧭 TAB GUIDE OVERLAY */}
       {activeTabGuide && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-white/85 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
             <div className="flex items-center justify-between mb-4">
               <span className="text-[10px] font-black tracking-widest text-amber-600 uppercase">
@@ -1333,7 +1333,7 @@ export function AssistantEpirocSt7() {
               </span>
               <button 
                 onClick={() => setActiveTabGuide(null)} 
-                className="text-xs text-slate-400 hover:text-slate-600 uppercase font-bold cursor-pointer"
+                className="text-xs text-slate-600 hover:text-slate-600 uppercase font-bold cursor-pointer"
               >
                 Passer ✕
               </button>
@@ -1368,7 +1368,7 @@ export function AssistantEpirocSt7() {
               ) : (
                 <button 
                   onClick={() => setActiveTabGuide(null)} 
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-lg cursor-pointer shadow-sm"
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-slate-900 text-xs font-black rounded-lg cursor-pointer shadow-sm"
                 >
                   Ouvrir l'onglet
                 </button>
@@ -1388,7 +1388,7 @@ export function AssistantEpirocSt7() {
           <div className="col-span-12 space-y-6">
             
             {/* SEARCH AND QUICK FILTERS WIDGET */}
-            <div className={`p-6 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} shadow-xl relative overflow-hidden`}>
+            <div className={`p-6 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} shadow-xl relative overflow-hidden`}>
               <HydrominesIdentity isEco={isEco} />
               <h3 className="text-sm font-black uppercase tracking-wider mb-4 flex items-center gap-2">
                 <Search className="w-5 h-5 text-amber-500" />
@@ -1401,14 +1401,14 @@ export function AssistantEpirocSt7() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Tape un symptôme, un bruit, un code Cummins (SPN/FMI), un code RCS, une pièce..."
                   className={`w-full py-4 pl-12 pr-4 text-sm font-bold rounded-xl outline-none focus:ring-2 focus:ring-amber-500/40 ${
-                    isEco ? "border-2 border-slate-300 bg-slate-50 text-black" : "border border-slate-800 bg-[#000000] text-white"
+                    isEco ? "border-2 border-slate-300 bg-slate-50 text-black" : "border border-slate-200 bg-white text-slate-900"
                   }`}
                 />
                 <Search className="absolute left-4 top-4.5 w-5 h-5 text-slate-500" />
                 {searchQuery && (
                   <button 
                     onClick={() => setSearchQuery("")} 
-                    className="absolute right-4 top-3.5 bg-slate-800 text-slate-300 text-xs font-bold px-2.5 py-1 rounded-md"
+                    className="absolute right-4 top-3.5 bg-slate-800 text-slate-700 text-xs font-bold px-2.5 py-1 rounded-md"
                   >
                     Effacer
                   </button>
@@ -1429,7 +1429,7 @@ export function AssistantEpirocSt7() {
                     key={tag.label}
                     onClick={() => { setSearchQuery(tag.query); setActiveTab("pannes_detaillees"); }}
                     className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg border cursor-pointer transition-all ${
-                      isEco ? "border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-800" : "border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300"
+                      isEco ? "border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-800" : "border-slate-200 bg-slate-50 hover:bg-slate-800 text-slate-700"
                     }`}
                   >
                     {tag.label}
@@ -1442,7 +1442,7 @@ export function AssistantEpirocSt7() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
               {/* ALERTES MAINTENANCE PRÉDICTIVES */}
-              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} relative overflow-hidden`}>
+              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} relative overflow-hidden`}>
                 <HydrominesIdentity isEco={isEco} />
                 <h4 className="text-xs font-black uppercase tracking-wider text-amber-500 mb-3 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" />
@@ -1452,69 +1452,69 @@ export function AssistantEpirocSt7() {
                   <div className="p-3 bg-red-950/30 border border-red-900/40 rounded-xl flex items-start gap-2">
                     <span className="text-red-500 font-bold shrink-0">▲</span>
                     <div>
-                      <p className="font-bold text-white">ST7-001 : Brake test failed hier</p>
-                      <p className="text-[10px] text-slate-400">Usure disques suspectée. Inspection requise.</p>
+                      <p className="font-bold text-slate-900">ST7-001 : Brake test failed hier</p>
+                      <p className="text-[10px] text-slate-600">Usure disques suspectée. Inspection requise.</p>
                     </div>
                   </div>
                   <div className="p-3 bg-yellow-950/30 border border-yellow-900/40 rounded-xl flex items-start gap-2">
                     <span className="text-yellow-500 font-bold shrink-0">◆</span>
                     <div>
-                      <p className="font-bold text-white">Capteur colmatage filtre air à 80%</p>
-                      <p className="text-[10px] text-slate-400">Planifier le changement dans les 20h.</p>
+                      <p className="font-bold text-slate-900">Capteur colmatage filtre air à 80%</p>
+                      <p className="text-[10px] text-slate-600">Planifier le changement dans les 20h.</p>
                     </div>
                   </div>
                   <div className="p-3 bg-emerald-950/30 border border-emerald-900/40 rounded-xl flex items-start gap-2">
                     <span className="text-emerald-500 font-bold shrink-0">◼</span>
                     <div>
-                      <p className="font-bold text-white">Cycle graissage Auto-Lube OK</p>
-                      <p className="text-[10px] text-slate-400">Aucun point sec détecté par les capteurs.</p>
+                      <p className="font-bold text-slate-900">Cycle graissage Auto-Lube OK</p>
+                      <p className="text-[10px] text-slate-600">Aucun point sec détecté par les capteurs.</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* TOP 5 PANNES FRÉQUENTES ST7 */}
-              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} relative overflow-hidden`}>
+              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} relative overflow-hidden`}>
                 <HydrominesIdentity isEco={isEco} />
                 <h4 className="text-xs font-black uppercase tracking-wider text-amber-500 mb-3 flex items-center gap-2">
                   <Sliders className="w-4 h-4" />
                   Top Pannes Fréquentes ST7
                 </h4>
                 <div className="space-y-2 text-xs font-semibold">
-                  <div className="flex justify-between items-center py-1.5 border-b border-slate-900">
-                    <span className="text-slate-300">1. Capteur filtre air colmaté</span>
+                  <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+                    <span className="text-slate-700">1. Capteur filtre air colmaté</span>
                     <span className="bg-red-900/40 text-red-400 px-2 py-0.5 rounded text-[10px] font-black">25%</span>
                   </div>
-                  <div className="flex justify-between items-center py-1.5 border-b border-slate-900">
-                    <span className="text-slate-300">2. Traction control défectueux</span>
+                  <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+                    <span className="text-slate-700">2. Traction control défectueux</span>
                     <span className="bg-amber-900/40 text-amber-400 px-2 py-0.5 rounded text-[10px] font-black">18%</span>
                   </div>
-                  <div className="flex justify-between items-center py-1.5 border-b border-slate-900">
-                    <span className="text-slate-300">3. Ride control inerte</span>
+                  <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+                    <span className="text-slate-700">3. Ride control inerte</span>
                     <span className="bg-amber-900/40 text-amber-400 px-2 py-0.5 rounded text-[10px] font-black">15%</span>
                   </div>
-                  <div className="flex justify-between items-center py-1.5 border-b border-slate-900">
-                    <span className="text-slate-300">4. Capteur Door Interlock déréglé</span>
-                    <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[10px] font-black">12%</span>
+                  <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+                    <span className="text-slate-700">4. Capteur Door Interlock déréglé</span>
+                    <span className="bg-slate-800 text-slate-700 px-2 py-0.5 rounded text-[10px] font-black">12%</span>
                   </div>
                 </div>
               </div>
 
               {/* TRAVAUX EN COURS */}
-              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} relative overflow-hidden`}>
+              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} relative overflow-hidden`}>
                 <HydrominesIdentity isEco={isEco} />
                 <h4 className="text-xs font-black uppercase tracking-wider text-amber-500 mb-3 flex items-center gap-2">
                   <Activity className="w-4 h-4" />
                   Chantier & Activité
                 </h4>
                 <div className="space-y-3 text-xs">
-                  <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="font-bold text-amber-500">ST7-002 : Attente Pièce</span>
-                    <p className="text-[11px] text-slate-400 mt-1">Pompe Rexroth A10VO en commande chez SOU-MAG Stock.</p>
+                    <p className="text-[11px] text-slate-600 mt-1">Pompe Rexroth A10VO en commande chez SOU-MAG Stock.</p>
                   </div>
-                  <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="font-bold text-emerald-500">ST7-001 : Maintenance 250h</span>
-                    <p className="text-[11px] text-slate-400 mt-1">Checklist d'entretien démarrée par Yahya (Mécano).</p>
+                    <p className="text-[11px] text-slate-600 mt-1">Checklist d'entretien démarrée par Yahya (Mécano).</p>
                   </div>
                 </div>
               </div>
@@ -1522,20 +1522,20 @@ export function AssistantEpirocSt7() {
             </div>
 
             {/* INDEX SYMPTÔMES INVERSÉ */}
-            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} relative overflow-hidden`}>
+            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} relative overflow-hidden`}>
               <HydrominesIdentity isEco={isEco} />
               <h3 className="text-xs font-black uppercase tracking-wider text-amber-500 mb-3 flex items-center gap-2">
                 <Activity className="w-4 h-4" />
                 24. Index Recherche Rapide par Symptôme Physique
               </h3>
-              <p className="text-xs text-slate-400 mb-4 font-semibold">
+              <p className="text-xs text-slate-600 mb-4 font-semibold">
                 Touchez un symptôme observé sur le terrain pour identifier immédiatement la fiche technique correspondante :
               </p>
               
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {Object.entries(EPIROC_ST7_SYMPTOMS_INDEX).map(([category, items]) => (
-                  <div key={category} className="space-y-2 border-r last:border-0 border-slate-900 pr-2">
-                    <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider block border-b border-slate-900 pb-1">
+                  <div key={category} className="space-y-2 border-r last:border-0 border-slate-200 pr-2">
+                    <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider block border-b border-slate-200 pb-1">
                       {category}
                     </span>
                     <div className="space-y-1">
@@ -1546,7 +1546,7 @@ export function AssistantEpirocSt7() {
                           <button
                             key={item}
                             onClick={() => triggerSymptomSearch(code)}
-                            className="w-full text-left p-1.5 rounded hover:bg-slate-900 text-[11px] font-semibold text-slate-300 hover:text-white transition-all flex justify-between items-center"
+                            className="w-full text-left p-1.5 rounded hover:bg-slate-50 text-[11px] font-semibold text-slate-700 hover:text-slate-900 transition-all flex justify-between items-center"
                           >
                             <span className="truncate mr-1">{text}</span>
                             <span className="font-mono text-[9px] bg-slate-800 px-1 py-0.5 rounded text-amber-500 font-bold">{code}</span>
@@ -1568,15 +1568,15 @@ export function AssistantEpirocSt7() {
         {activeTab === "fiche_identité" && (
           <div className="col-span-12 space-y-6">
             
-            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"}`}>
+            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"}`}>
               <h3 className="text-sm font-black uppercase tracking-wider mb-2">1. Fiche d'Identité & Zones Cliquables ST7</h3>
-              <p className="text-xs text-slate-400 mb-6 font-semibold">
+              <p className="text-xs text-slate-600 mb-6 font-semibold">
                 La machine de 21 tonnes à 800 000€ requiert une connaissance parfaite des organes majeurs :
               </p>
 
               {/* INTERACTIVE HOTSPOTS MAP */}
-              <div className="relative overflow-hidden w-full bg-[#000000] rounded-xl p-4 border border-slate-800 flex justify-center">
-                <svg viewBox="0 0 820 300" className="w-full max-w-3xl font-mono text-[9px] font-black select-none text-white">
+              <div className="relative overflow-hidden w-full bg-white rounded-xl p-4 border border-slate-200 flex justify-center">
+                <svg viewBox="0 0 820 300" className="w-full max-w-3xl font-mono text-[9px] font-black select-none text-slate-900">
                   {/* Châssis */}
                   <rect x="420" y="100" width="220" height="90" rx="12" fill="#1e293b" stroke="#334155" strokeWidth="2.5" />
                   <rect x="220" y="100" width="160" height="90" rx="6" fill="#1e293b" stroke="#334155" strokeWidth="2.5" />
@@ -1627,18 +1627,18 @@ export function AssistantEpirocSt7() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 text-xs">
-                <div className="p-4 bg-slate-900 rounded-xl space-y-2">
+                <div className="p-4 bg-slate-50 rounded-xl space-y-2">
                   <h4 className="font-black text-amber-500 uppercase tracking-wider">📦 Identification Machine</h4>
                   <ul className="space-y-1 font-semibold">
-                    <li>• Modèle : <strong className="text-white">Epiroc Scooptram ST7</strong></li>
-                    <li>• Type : <strong className="text-white">Chargeuse souterraine LHD haute performance</strong></li>
-                    <li>• Capacité charge utile : <strong className="text-white">6 800 kg</strong></li>
-                    <li>• Poids : <strong className="text-white">19 300 kg à 21 500 kg</strong></li>
+                    <li>• Modèle : <strong className="text-slate-900">Epiroc Scooptram ST7</strong></li>
+                    <li>• Type : <strong className="text-slate-900">Chargeuse souterraine LHD haute performance</strong></li>
+                    <li>• Capacité charge utile : <strong className="text-slate-900">6 800 kg</strong></li>
+                    <li>• Poids : <strong className="text-slate-900">19 300 kg à 21 500 kg</strong></li>
                   </ul>
                 </div>
-                <div className="p-4 bg-slate-900 rounded-xl space-y-2">
+                <div className="p-4 bg-slate-50 rounded-xl space-y-2">
                   <h4 className="font-black text-amber-500 uppercase tracking-wider">📱 QR Codes Machine (SOU-QR)</h4>
-                  <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">
+                  <p className="text-[11px] text-slate-600 leading-relaxed font-semibold">
                     6 QR codes sont rivetés directement sur les capots de l'engin pour charger instantanément les fiches d'urgences d'organes spécifiques sur mobile.
                   </p>
                 </div>
@@ -1646,7 +1646,7 @@ export function AssistantEpirocSt7() {
             </div>
 
             {/* SECTION 2: GLOSSAIRE */}
-            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} relative overflow-hidden`}>
+            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} relative overflow-hidden`}>
               <HydrominesIdentity isEco={isEco} />
               <h3 className="text-xs font-black uppercase tracking-wider text-amber-500 mb-3 flex items-center gap-1">
                 <BookOpen className="w-4 h-4" />
@@ -1654,9 +1654,9 @@ export function AssistantEpirocSt7() {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {EPIROC_ST7_GLOSSAIRE.map((item) => (
-                  <div key={item.term} className="p-3 bg-slate-900/50 rounded-xl border border-slate-900">
-                    <span className="font-black text-white block text-xs tracking-wider">{item.term}</span>
-                    <span className="text-[11px] text-slate-400 mt-0.5 block leading-relaxed font-semibold">{item.def}</span>
+                  <div key={item.term} className="p-3 bg-slate-50/50 rounded-xl border border-slate-200">
+                    <span className="font-black text-slate-900 block text-xs tracking-wider">{item.term}</span>
+                    <span className="text-[11px] text-slate-600 mt-0.5 block leading-relaxed font-semibold">{item.def}</span>
                   </div>
                 ))}
               </div>
@@ -1672,14 +1672,14 @@ export function AssistantEpirocSt7() {
           <div className="col-span-12 space-y-6">
             
             {/* SEARCH AND FILTERS */}
-            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} grid grid-cols-1 md:grid-cols-3 gap-4 items-center`}>
+            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} grid grid-cols-1 md:grid-cols-3 gap-4 items-center`}>
               <div>
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">Filtrer par Système :</label>
                 <select
                   value={selectedSystem}
                   onChange={(e) => setSelectedSystem(e.target.value)}
                   className={`w-full py-2 px-3 text-xs font-bold rounded-lg border ${
-                    isEco ? "bg-white text-black border-slate-300" : "bg-slate-900 text-white border-slate-800"
+                    isEco ? "bg-white text-black border-slate-300" : "bg-slate-50 text-slate-900 border-slate-200"
                   }`}
                 >
                   <option value="TOUS">🌍 TOUS LES ORGANES</option>
@@ -1697,7 +1697,7 @@ export function AssistantEpirocSt7() {
                   value={selectedSeverity}
                   onChange={(e) => setSelectedSeverity(e.target.value)}
                   className={`w-full py-2 px-3 text-xs font-bold rounded-lg border ${
-                    isEco ? "bg-white text-black border-slate-300" : "bg-slate-900 text-white border-slate-800"
+                    isEco ? "bg-white text-black border-slate-300" : "bg-slate-50 text-slate-900 border-slate-200"
                   }`}
                 >
                   <option value="TOUS">🟡 TOUTES GRAVITÉS</option>
@@ -1715,7 +1715,7 @@ export function AssistantEpirocSt7() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="SPN, FMI, fumée, raccord..."
                   className={`w-full py-1.5 px-3 text-xs font-bold rounded-lg border ${
-                    isEco ? "bg-white text-black border-slate-300" : "bg-slate-900 text-white border-slate-800"
+                    isEco ? "bg-white text-black border-slate-300" : "bg-slate-50 text-slate-900 border-slate-200"
                   }`}
                 />
               </div>
@@ -1724,7 +1724,7 @@ export function AssistantEpirocSt7() {
             {/* CODES DÉFAUT REFERENCE */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
-              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} relative overflow-hidden`}>
+              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} relative overflow-hidden`}>
                 <HydrominesIdentity isEco={isEco} />
                 <h4 className="text-xs font-black uppercase text-amber-500 mb-3 flex items-center gap-2">
                   <Sliders className="w-4 h-4" />
@@ -1732,15 +1732,15 @@ export function AssistantEpirocSt7() {
                 </h4>
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                   {EPIROC_ST7_CUMMINS_CODES.map((item) => (
-                    <div key={item.code} className="p-2 bg-slate-900 rounded-lg border border-slate-900 text-xs flex justify-between items-start gap-4">
+                    <div key={item.code} className="p-2 bg-slate-50 rounded-lg border border-slate-200 text-xs flex justify-between items-start gap-4">
                       <span className="font-mono text-red-400 font-bold shrink-0">{item.code}</span>
-                      <span className="text-slate-300 font-semibold">{item.desc}</span>
+                      <span className="text-slate-700 font-semibold">{item.desc}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} relative overflow-hidden`}>
+              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} relative overflow-hidden`}>
                 <HydrominesIdentity isEco={isEco} />
                 <h4 className="text-xs font-black uppercase text-amber-500 mb-3 flex items-center gap-2">
                   <Sliders className="w-4 h-4" />
@@ -1748,9 +1748,9 @@ export function AssistantEpirocSt7() {
                 </h4>
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                   {EPIROC_ST7_RCS_CODES.map((item) => (
-                    <div key={item.code} className="p-2 bg-slate-900 rounded-lg border border-slate-900 text-xs flex justify-between items-start gap-4">
+                    <div key={item.code} className="p-2 bg-slate-50 rounded-lg border border-slate-200 text-xs flex justify-between items-start gap-4">
                       <span className="font-mono text-amber-400 font-bold shrink-0">{item.code}</span>
-                      <span className="text-slate-300 font-semibold">{item.desc}</span>
+                      <span className="text-slate-700 font-semibold">{item.desc}</span>
                     </div>
                   ))}
                 </div>
@@ -1759,17 +1759,17 @@ export function AssistantEpirocSt7() {
             </div>
 
             {/* TABLEAU DE BORD & VOYANTS */}
-            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} relative overflow-hidden`}>
+            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} relative overflow-hidden`}>
               <HydrominesIdentity isEco={isEco} />
               <h3 className="text-xs font-black uppercase text-amber-500 mb-3">
                 3. Tableau de Bord & Dictionnaire des Voyants (Accessibilité Daltonisme)
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {EPIROC_ST7_VOYANTS.map((voyant) => (
-                  <div key={voyant.name} className="p-3.5 bg-slate-900 rounded-xl border border-slate-900 text-xs space-y-1">
+                  <div key={voyant.name} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
                     <div className="flex justify-between items-center">
-                      <span className="font-black text-white">{voyant.name}</span>
-                      <span className="text-[10px] font-bold text-slate-400">{voyant.symbol}</span>
+                      <span className="font-black text-slate-900">{voyant.name}</span>
+                      <span className="text-[10px] font-bold text-slate-600">{voyant.symbol}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold">
                       <div><span className="text-slate-500">Normal :</span> <strong className="text-emerald-400">{voyant.normal}</strong></div>
@@ -1787,7 +1787,7 @@ export function AssistantEpirocSt7() {
                 <h3 className="text-xs font-black text-slate-500 uppercase tracking-wider">
                   Fiches Pannes & Diagnostics correspondants ({filteredPannes.length})
                 </h3>
-                <span className="text-[10px] text-slate-400 font-bold uppercase">SOU-ST7 Dépannage rapide</span>
+                <span className="text-[10px] text-slate-600 font-bold uppercase">SOU-ST7 Dépannage rapide</span>
               </div>
 
               {filteredPannes.map((panne) => {
@@ -1796,22 +1796,22 @@ export function AssistantEpirocSt7() {
                   <div 
                     key={panne.id} 
                     className={`p-5 rounded-2xl border ${
-                      isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"
+                      isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"
                     } relative overflow-hidden break-inside-avoid border-l-4`}
                     style={{ borderLeftColor: sysInfo.color }}
                   >
                     <HydrominesIdentity isEco={isEco} />
-                    <div className="flex justify-between items-start gap-4 mb-3 border-b border-slate-900 pb-2.5">
+                    <div className="flex justify-between items-start gap-4 mb-3 border-b border-slate-200 pb-2.5">
                       <div>
-                        <span className="font-mono text-xs font-black bg-slate-900 text-amber-500 px-2 py-0.5 rounded border border-slate-800 mr-2">
+                        <span className="font-mono text-xs font-black bg-slate-50 text-amber-500 px-2 py-0.5 rounded border border-slate-200 mr-2">
                           {panne.id}
                         </span>
-                        <span className="text-[10px] font-black text-slate-400 uppercase">
+                        <span className="text-[10px] font-black text-slate-600 uppercase">
                           {sysInfo.shape} {sysInfo.label}
                         </span>
                       </div>
                       <div className="flex items-center gap-3 text-xs">
-                        <span className="text-slate-400 font-bold">⌛ {panne.repTime}h</span>
+                        <span className="text-slate-600 font-bold">⌛ {panne.repTime}h</span>
                         <span className={`px-2 py-0.5 rounded text-[9px] font-black ${
                           panne.severity === "ROUGE" 
                             ? "bg-red-950 text-red-400 border border-red-800" 
@@ -1822,20 +1822,20 @@ export function AssistantEpirocSt7() {
                       </div>
                     </div>
 
-                    <h4 className="text-sm font-black text-white mb-4">{panne.title}</h4>
+                    <h4 className="text-sm font-black text-slate-900 mb-4">{panne.title}</h4>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="p-3 bg-slate-900 rounded-xl border border-slate-900">
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                         <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">🔍 Symptômes constatés</span>
-                        <p className="text-xs text-slate-300 font-medium leading-relaxed">{panne.symptoms}</p>
+                        <p className="text-xs text-slate-700 font-medium leading-relaxed">{panne.symptoms}</p>
                       </div>
-                      <div className="p-3 bg-slate-900 rounded-xl border border-slate-900">
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                         <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">⚙️ Causes probables</span>
-                        <p className="text-xs text-slate-300 font-medium leading-relaxed">{panne.cause}</p>
+                        <p className="text-xs text-slate-700 font-medium leading-relaxed">{panne.cause}</p>
                       </div>
                       <div className="p-3 bg-amber-950/20 rounded-xl border border-amber-900/40">
                         <span className="text-[9px] font-black text-amber-400 uppercase block mb-1">🛠️ Remède & Action corrective</span>
-                        <p className="text-xs text-slate-200 font-black leading-relaxed">{panne.action}</p>
+                        <p className="text-xs text-slate-800 font-black leading-relaxed">{panne.action}</p>
                       </div>
                     </div>
 
@@ -1843,7 +1843,7 @@ export function AssistantEpirocSt7() {
                     {mode === "APP" && panne.tip && (
                       <div className="mt-4 p-3 bg-indigo-950/40 border border-indigo-900/60 rounded-xl text-xs space-y-1">
                         <span className="font-black text-[9px] text-indigo-400 uppercase tracking-wider block">🎓 Astuce du Vieux Chef Mécano :</span>
-                        <p className="text-slate-300 font-semibold">{panne.tip}</p>
+                        <p className="text-slate-700 font-semibold">{panne.tip}</p>
                       </div>
                     )}
 
@@ -1851,7 +1851,7 @@ export function AssistantEpirocSt7() {
                     {mode === "CHF" && panne.casReel && (
                       <div className="mt-4 p-3 bg-emerald-950/40 border border-emerald-900/60 rounded-xl text-xs space-y-1">
                         <span className="font-black text-[9px] text-emerald-400 uppercase tracking-wider block">👨‍✈️ Retour d'Expérience Mine (REX) :</span>
-                        <p className="text-slate-300 font-semibold">{panne.casReel}</p>
+                        <p className="text-slate-700 font-semibold">{panne.casReel}</p>
                       </div>
                     )}
                   </div>
@@ -1868,9 +1868,9 @@ export function AssistantEpirocSt7() {
         {activeTab === "arbres_decision" && (
           <div className="col-span-12 space-y-6">
             
-            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"}`}>
+            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"}`}>
               <h3 className="text-sm font-black uppercase tracking-wider mb-2">7. Arbres de Décision Transversaux Interactifs</h3>
-              <p className="text-xs text-slate-400 mb-6 font-semibold">
+              <p className="text-xs text-slate-600 mb-6 font-semibold">
                 Sélectionnez une situation critique pour dérouler logiquement l'arbre de décision mécanique :
               </p>
 
@@ -1887,7 +1887,7 @@ export function AssistantEpirocSt7() {
                     key={tree.id}
                     onClick={() => { setCurrentTree(tree.id); resetTree(); }}
                     className={`p-3 rounded-xl text-[11px] font-black uppercase text-center border cursor-pointer transition-all ${
-                      currentTree === tree.id ? "bg-amber-500 text-black border-amber-600" : "bg-slate-900 text-slate-400 border-slate-800"
+                      currentTree === tree.id ? "bg-amber-500 text-black border-amber-600" : "bg-slate-50 text-slate-600 border-slate-200"
                     }`}
                   >
                     Arbre #{tree.id}
@@ -1898,17 +1898,17 @@ export function AssistantEpirocSt7() {
 
               {/* TREE DISPLAY */}
               {currentTree !== null && (
-                <div className="mt-6 p-5 bg-slate-900 rounded-xl border border-slate-800 space-y-4">
-                  <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                <div className="mt-6 p-5 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
+                  <div className="flex justify-between items-center border-b border-slate-200 pb-3">
                     <h4 className="text-xs font-black uppercase text-amber-500">Logique active : Arbre #{currentTree}</h4>
-                    <button onClick={resetTree} className="text-xs text-slate-400 hover:text-white uppercase font-bold">Réinitialiser l'Arbre 🔄</button>
+                    <button onClick={resetTree} className="text-xs text-slate-600 hover:text-slate-900 uppercase font-bold">Réinitialiser l'Arbre 🔄</button>
                   </div>
 
                   {treeHistory.length > 0 && (
-                    <div className="p-3 bg-slate-950 rounded-lg space-y-1">
+                    <div className="p-3 bg-white rounded-lg space-y-1">
                       <span className="text-[9px] font-black text-slate-500 uppercase block">Historique de diagnostic :</span>
                       {treeHistory.map((h, i) => (
-                        <p key={i} className="text-xs text-slate-300 font-semibold">✔️ {h}</p>
+                        <p key={i} className="text-xs text-slate-700 font-semibold">✔️ {h}</p>
                       ))}
                     </div>
                   )}
@@ -1916,7 +1916,7 @@ export function AssistantEpirocSt7() {
                   {/* INTERACTIVE QUESTION NODE */}
                   {treeHistory.length === 0 && currentTree === 1 && (
                     <div className="space-y-3">
-                      <p className="text-sm font-black text-white">Q1 : Le démarreur tourne-t-il lorsque tu tournes la clé ?</p>
+                      <p className="text-sm font-black text-slate-900">Q1 : Le démarreur tourne-t-il lorsque tu tournes la clé ?</p>
                       <div className="flex gap-4">
                         <button 
                           onClick={() => handleTreeChoice("Q1", "Oui (Le démarreur tourne)", "Le démarreur tourne mais le bloc Cummins ne démarre pas. Vérifie les préfiltres séparateurs d'eau Cummins (gazole contaminé) et pompe la poire de gavage manuelle. Es-tu sûr du préchauffage Grid Heater ?")} 
@@ -1936,7 +1936,7 @@ export function AssistantEpirocSt7() {
 
                   {treeHistory.length === 0 && currentTree === 2 && (
                     <div className="space-y-3">
-                      <p className="text-sm font-black text-white">Q1 : La pression d'embrayage 'Clutch Pressure' est-elle supérieure à 16 bar ?</p>
+                      <p className="text-sm font-black text-slate-900">Q1 : La pression d'embrayage 'Clutch Pressure' est-elle supérieure à 16 bar ?</p>
                       <div className="flex gap-4">
                         <button 
                           onClick={() => handleTreeChoice("Q1", "Oui (>16 bar)", "La pression de commande hydraulique est correcte. Le patinage est probablement mécanique interne. Les disques d'embrayages Funk DF150 humides sont usés ou calaminés, nécessitant une réfection complète d'atelier.")} 
@@ -1956,7 +1956,7 @@ export function AssistantEpirocSt7() {
 
                   {treeHistory.length === 0 && currentTree === 3 && (
                     <div className="space-y-3">
-                      <p className="text-sm font-black text-white">Q1 : La pression générale d'utilisation en charge atteint-elle 24.0 MPa ?</p>
+                      <p className="text-sm font-black text-slate-900">Q1 : La pression générale d'utilisation en charge atteint-elle 24.0 MPa ?</p>
                       <div className="flex gap-4">
                         <button 
                           onClick={() => handleTreeChoice("Q1", "Oui (24.0 MPa nominal)", "La pression de puissance est correcte. Les tiroirs du distributeur principal Parker ou les joysticks d'ergonomie sont défaillants. Vérifie également le bon fonctionnement du capteur de pesage Load Weighing.")} 
@@ -1976,9 +1976,9 @@ export function AssistantEpirocSt7() {
 
                   {/* FALLBACK INFO NODE */}
                   {treeAnswerText && (
-                    <div className="p-4 bg-slate-950 rounded-xl border border-amber-500/20 space-y-2">
+                    <div className="p-4 bg-white rounded-xl border border-amber-500/20 space-y-2">
                       <span className="text-[10px] font-black text-amber-500 uppercase block">💡 Recommandation d'arrêt & Diagnostic :</span>
-                      <p className="text-xs text-slate-300 leading-relaxed font-semibold">{treeAnswerText}</p>
+                      <p className="text-xs text-slate-700 leading-relaxed font-semibold">{treeAnswerText}</p>
                       <button 
                         onClick={resetTree} 
                         className="mt-2 text-xs text-amber-500 hover:underline block font-bold"
@@ -1992,27 +1992,27 @@ export function AssistantEpirocSt7() {
             </div>
 
             {/* QUICK FIXES SECTION */}
-            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"}`}>
+            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"}`}>
               <h3 className="text-xs font-black uppercase text-amber-500 mb-3 flex items-center gap-2">
                 <Wrench className="w-4 h-4" />
                 8. Quick Fix — Résolution Sans Démontage (30 secondes à 10 minutes)
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
-                <div className="p-3 bg-slate-900 rounded-xl border border-slate-900">
-                  <span className="font-black text-white block">🚪 Door Interlock bloque tout</span>
-                  <p className="text-slate-400 text-[11px] mt-0.5">Vérifie l'accumulation de boue ferreuse collée sur l'aimant du capteur de porte. Nettoie au chiffon sec. (1 min)</p>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="font-black text-slate-900 block">🚪 Door Interlock bloque tout</span>
+                  <p className="text-slate-600 text-[11px] mt-0.5">Vérifie l'accumulation de boue ferreuse collée sur l'aimant du capteur de porte. Nettoie au chiffon sec. (1 min)</p>
                 </div>
-                <div className="p-3 bg-slate-900 rounded-xl border border-slate-900">
-                  <span className="font-black text-white block">🛑 Erreur Brake test failed RCS-B01</span>
-                  <p className="text-slate-400 text-[11px] mt-0.5">Active la procédure de purge automatique de freinage depuis l'écran RCS, puis relance le test à l'arrêt complet. (3 min)</p>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="font-black text-slate-900 block">🛑 Erreur Brake test failed RCS-B01</span>
+                  <p className="text-slate-600 text-[11px] mt-0.5">Active la procédure de purge automatique de freinage depuis l'écran RCS, puis relance le test à l'arrêt complet. (3 min)</p>
                 </div>
-                <div className="p-3 bg-slate-900 rounded-xl border border-slate-900">
-                  <span className="font-black text-white block">◆ Voyant Colmatage Air Jaune</span>
-                  <p className="text-slate-400 text-[11px] mt-0.5">Extrais le filtre d'air primaire Cummins et tapote-le doucement contre une cale de bois pour éliminer la poussière sèche de galerie. (2 min)</p>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="font-black text-slate-900 block">◆ Voyant Colmatage Air Jaune</span>
+                  <p className="text-slate-600 text-[11px] mt-0.5">Extrais le filtre d'air primaire Cummins et tapote-le doucement contre une cale de bois pour éliminer la poussière sèche de galerie. (2 min)</p>
                 </div>
-                <div className="p-3 bg-slate-900 rounded-xl border border-slate-900">
-                  <span className="font-black text-white block">☼ De-clutch inerte au levage</span>
-                  <p className="text-slate-400 text-[11px] mt-0.5">Nettoie et resserre la connectique du commutateur fixé sur la base du levier de cabine. (2 min)</p>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="font-black text-slate-900 block">☼ De-clutch inerte au levage</span>
+                  <p className="text-slate-600 text-[11px] mt-0.5">Nettoie et resserre la connectique du commutateur fixé sur la base du levier de cabine. (2 min)</p>
                 </div>
               </div>
             </div>
@@ -2027,10 +2027,10 @@ export function AssistantEpirocSt7() {
           <div className="col-span-12 space-y-6">
             
             {/* LOTO - LOCK OUT TAG OUT */}
-            <div className="bg-red-950/60 text-white rounded-2xl p-6 border border-red-800/80 space-y-4">
+            <div className="bg-red-950/60 text-slate-900 rounded-2xl p-6 border border-red-800/80 space-y-4">
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-red-600 rounded-xl shrink-0">
-                  <Lock className="w-6 h-6 text-white" />
+                  <Lock className="w-6 h-6 text-slate-900" />
                 </div>
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wider text-red-200">17. LOTO — Lock Out Tag Out (10 étapes de survie)</h3>
@@ -2058,12 +2058,12 @@ export function AssistantEpirocSt7() {
                     onClick={() => toggleLotoStep(idx)}
                     className={`p-3 rounded-xl text-left text-xs font-bold flex items-center gap-3 border transition-all cursor-pointer ${
                       lotoProgress[idx] 
-                        ? "bg-red-800/40 border-red-500 text-slate-300 line-through" 
+                        ? "bg-red-800/40 border-red-500 text-slate-700 line-through" 
                         : "bg-red-900/30 border-red-800 text-red-200 hover:bg-red-900/60"
                     }`}
                   >
                     <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
-                      lotoProgress[idx] ? "bg-red-500 text-white" : "bg-red-950 text-red-400"
+                      lotoProgress[idx] ? "bg-red-500 text-slate-900" : "bg-red-950 text-red-400"
                     }`}>
                       {idx + 1}
                     </span>
@@ -2080,12 +2080,12 @@ export function AssistantEpirocSt7() {
               </h3>
 
               {EPIROC_ST7_PROCEDURES.map((proc) => (
-                <div key={proc.id} className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} space-y-3`}>
-                  <div className="flex items-center gap-3 border-b border-slate-900 pb-2">
+                <div key={proc.id} className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} space-y-3`}>
+                  <div className="flex items-center gap-3 border-b border-slate-200 pb-2">
                     <span className="w-7 h-7 rounded-lg bg-amber-500 text-black flex items-center justify-center text-xs font-black">
                       {proc.id}
                     </span>
-                    <h4 className="text-xs font-black uppercase text-white tracking-wider">{proc.title}</h4>
+                    <h4 className="text-xs font-black uppercase text-slate-900 tracking-wider">{proc.title}</h4>
                   </div>
 
                   <div className="space-y-2">
@@ -2097,12 +2097,12 @@ export function AssistantEpirocSt7() {
                           onClick={() => toggleProcStep(proc.id, sIdx)}
                           className={`p-3 rounded-xl border text-xs flex items-start gap-3 transition-all cursor-pointer ${
                             isDone 
-                              ? "bg-slate-900/20 border-emerald-900/60 text-slate-500 line-through" 
-                              : "bg-slate-900 border-slate-900 text-slate-300 hover:bg-slate-800"
+                              ? "bg-slate-50/20 border-emerald-900/60 text-slate-500 line-through" 
+                              : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-800"
                           }`}
                         >
                           <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
-                            isDone ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400"
+                            isDone ? "bg-emerald-600 text-slate-900" : "bg-slate-800 text-slate-600"
                           }`}>
                             {sIdx + 1}
                           </span>
@@ -2125,11 +2125,11 @@ export function AssistantEpirocSt7() {
           <div className="col-span-12 space-y-6">
             
             {/* WIDGET STOCKS SOU-MAG */}
-            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"}`}>
+            <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"}`}>
               <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-white">11. Pièces Stock Mine & Consommables Exacts</h3>
-                  <p className="text-[10px] text-slate-400 mt-0.5 font-semibold">Gérer localement les prélèvements d'urgence du stock d'atelier :</p>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">11. Pièces Stock Mine & Consommables Exacts</h3>
+                  <p className="text-[10px] text-slate-600 mt-0.5 font-semibold">Gérer localement les prélèvements d'urgence du stock d'atelier :</p>
                 </div>
                 <ShoppingCart className="w-5 h-5 text-amber-500" />
               </div>
@@ -2137,38 +2137,38 @@ export function AssistantEpirocSt7() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="border-b border-slate-900 bg-slate-900/40 text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                    <tr className="border-b border-slate-200 bg-slate-50/40 text-[10px] font-black text-slate-500 uppercase tracking-wider">
                       <th className="py-3 px-3">Désignation Organe</th>
                       <th className="py-3 px-3">Référence Mine</th>
                       <th className="py-3 px-3 text-center">Quantité Disponible</th>
                       <th className="py-3 px-3 text-right">Ajuster Stock</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-900 text-slate-300 font-semibold">
+                  <tbody className="divide-y divide-slate-900 text-slate-700 font-semibold">
                     {Object.entries(EPIROC_ST7_STOCK).map(([key, item]) => (
-                      <tr key={key} className="hover:bg-slate-900/30">
-                        <td className="py-3.5 px-3 font-black text-white">{item.desc}</td>
+                      <tr key={key} className="hover:bg-slate-50/30">
+                        <td className="py-3.5 px-3 font-black text-slate-900">{item.desc}</td>
                         <td className="py-3.5 px-3 font-mono text-slate-500">{item.ref}</td>
                         <td className="py-3.5 px-3 text-center">
                           <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${
                             stocks[key] === 0 
                               ? "bg-red-950 text-red-400 border border-red-900" 
-                              : "bg-slate-900 text-slate-300 border border-slate-800"
+                              : "bg-slate-50 text-slate-700 border border-slate-200"
                           }`}>
                             {stocks[key]} unité{stocks[key] > 1 ? "s" : ""} {stocks[key] === 0 ? "(RUPTURE !)" : ""}
                           </span>
                         </td>
                         <td className="py-3.5 px-3 text-right">
-                          <div className="inline-flex bg-slate-900 p-1 rounded-lg border border-slate-800 gap-1">
+                          <div className="inline-flex bg-slate-50 p-1 rounded-lg border border-slate-200 gap-1">
                             <button
                               onClick={() => updateStockQty(key, -1)}
-                              className="w-7 h-7 bg-slate-950 hover:bg-red-950 text-red-400 rounded flex items-center justify-center font-bold border border-slate-800 cursor-pointer"
+                              className="w-7 h-7 bg-white hover:bg-red-950 text-red-400 rounded flex items-center justify-center font-bold border border-slate-200 cursor-pointer"
                             >
                               <Minus className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => updateStockQty(key, 1)}
-                              className="w-7 h-7 bg-slate-950 hover:bg-emerald-950 text-emerald-400 rounded flex items-center justify-center font-bold border border-slate-800 cursor-pointer"
+                              className="w-7 h-7 bg-white hover:bg-emerald-950 text-emerald-400 rounded flex items-center justify-center font-bold border border-slate-200 cursor-pointer"
                             >
                               <Plus className="w-3.5 h-3.5" />
                             </button>
@@ -2184,36 +2184,36 @@ export function AssistantEpirocSt7() {
             {/* INTERCHANGEABILITY & ALTERNATIVES */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
               
-              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} space-y-3`}>
+              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} space-y-3`}>
                 <h4 className="font-black text-amber-500 uppercase tracking-wider">🔗 Interchangeabilité d'Urgence</h4>
-                <div className="space-y-3 font-semibold text-slate-300 leading-relaxed">
+                <div className="space-y-3 font-semibold text-slate-700 leading-relaxed">
                   <p>
-                    • <strong className="text-white">Moteur Cummins QSB6.7 :</strong> Totalement compatible avec les moteurs de pelles hydrauliques Komatsu de chantiers de surface ou camions d'exploitation souterrains.
+                    • <strong className="text-slate-900">Moteur Cummins QSB6.7 :</strong> Totalement compatible avec les moteurs de pelles hydrauliques Komatsu de chantiers de surface ou camions d'exploitation souterrains.
                   </p>
                   <p>
-                    • <strong className="text-white">Pompe Rexroth A10VO :</strong> Interchangeable avec la pompe de direction de la chargeuse ST10, sous réserve d'ajustement du compensateur de pression d'usine.
+                    • <strong className="text-slate-900">Pompe Rexroth A10VO :</strong> Interchangeable avec la pompe de direction de la chargeuse ST10, sous réserve d'ajustement du compensateur de pression d'usine.
                   </p>
                 </div>
               </div>
 
-              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} space-y-3`}>
+              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} space-y-3`}>
                 <h4 className="font-black text-amber-500 uppercase tracking-wider">🛢️ Consommables Exacts d'Origine</h4>
-                <div className="space-y-2 font-semibold text-slate-300">
-                  <div className="flex justify-between border-b border-slate-900 pb-1.5">
+                <div className="space-y-2 font-semibold text-slate-700">
+                  <div className="flex justify-between border-b border-slate-200 pb-1.5">
                     <span>Huile moteur Cummins</span>
-                    <strong className="text-white">API CK-4 (15W-40)</strong>
+                    <strong className="text-slate-900">API CK-4 (15W-40)</strong>
                   </div>
-                  <div className="flex justify-between border-b border-slate-900 pb-1.5">
+                  <div className="flex justify-between border-b border-slate-200 pb-1.5">
                     <span>Huile transmission Funk</span>
-                    <strong className="text-white">ATF Dexron III</strong>
+                    <strong className="text-slate-900">ATF Dexron III</strong>
                   </div>
-                  <div className="flex justify-between border-b border-slate-900 pb-1.5">
+                  <div className="flex justify-between border-b border-slate-200 pb-1.5">
                     <span>Huile hydraulique Rexroth</span>
-                    <strong className="text-white">ISO VG 46 Premium</strong>
+                    <strong className="text-slate-900">ISO VG 46 Premium</strong>
                   </div>
                   <div className="flex justify-between">
                     <span>Liquide de refroidissement</span>
-                    <strong className="text-white">Mélange Glycol 50/50 ELC</strong>
+                    <strong className="text-slate-900">Mélange Glycol 50/50 ELC</strong>
                   </div>
                 </div>
               </div>
@@ -2229,52 +2229,52 @@ export function AssistantEpirocSt7() {
         {activeTab === "suivi_intervention" && (
           <div className="col-span-12 space-y-6">
             
-            <div className={`p-6 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} shadow-xl`}>
+            <div className={`p-6 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} shadow-xl`}>
               <h3 className="text-sm font-black uppercase tracking-wider mb-2 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-amber-500" />
                 21. Fiche Suivi Intervention SOU-ST7 (Persistant Local)
               </h3>
-              <p className="text-xs text-slate-400 mb-6 font-semibold">
+              <p className="text-xs text-slate-600 mb-6 font-semibold">
                 Remplissez et archivez localement les opérations d'entretien pour le rapport de fin de poste :
               </p>
 
-              <form onSubmit={submitInterventionForm} className="space-y-6 text-xs text-slate-300">
+              <form onSubmit={submitInterventionForm} className="space-y-6 text-xs text-slate-700">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="font-bold text-slate-400 block mb-1">Date d'intervention :</label>
+                    <label className="font-bold text-slate-600 block mb-1">Date d'intervention :</label>
                     <input
                       type="date"
                       value={formState.date}
                       onChange={(e) => setFormState({ ...formState, date: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 font-bold"
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-400 block mb-1">Heures Machine :</label>
+                    <label className="font-bold text-slate-600 block mb-1">Heures Machine :</label>
                     <input
                       type="number"
                       placeholder="Ex: 4850"
                       value={formState.machineHours}
                       onChange={(e) => setFormState({ ...formState, machineHours: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 font-bold"
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-400 block mb-1">Nom Mécanicien :</label>
+                    <label className="font-bold text-slate-600 block mb-1">Nom Mécanicien :</label>
                     <input
                       type="text"
                       placeholder="Ex: Yahya"
                       value={formState.mecoName}
                       onChange={(e) => setFormState({ ...formState, mecoName: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 font-bold"
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-400 block mb-1">N° de Parc ST7 :</label>
+                    <label className="font-bold text-slate-600 block mb-1">N° de Parc ST7 :</label>
                     <select
                       value={formState.parkNo}
                       onChange={(e) => setFormState({ ...formState, parkNo: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 font-bold"
                     >
                       <option value="ST7-001">ST7-001 (Mine Nord)</option>
                       <option value="ST7-002">ST7-002 (Galerie 3B)</option>
@@ -2285,74 +2285,74 @@ export function AssistantEpirocSt7() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="font-bold text-slate-400 block mb-1">Symptôme constaté :</label>
+                    <label className="font-bold text-slate-600 block mb-1">Symptôme constaté :</label>
                     <input
                       type="text"
                       placeholder="Ex: Bruit de raclement"
                       value={formState.symptom}
                       onChange={(e) => setFormState({ ...formState, symptom: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 font-bold"
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-400 block mb-1">Fiche Panne N° :</label>
+                    <label className="font-bold text-slate-600 block mb-1">Fiche Panne N° :</label>
                     <input
                       type="text"
                       placeholder="Ex: 5.1.1.A"
                       value={formState.panneNo}
                       onChange={(e) => setFormState({ ...formState, panneNo: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 font-bold"
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-400 block mb-1">Pièces remplacées :</label>
+                    <label className="font-bold text-slate-600 block mb-1">Pièces remplacées :</label>
                     <input
                       type="text"
                       placeholder="Ex: Disques SAHR"
                       value={formState.partsUsed}
                       onChange={(e) => setFormState({ ...formState, partsUsed: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 font-bold"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="font-bold text-slate-400 block mb-1">Temps Diag (min) :</label>
+                    <label className="font-bold text-slate-600 block mb-1">Temps Diag (min) :</label>
                     <input
                       type="number"
                       placeholder="30"
                       value={formState.diagTime}
                       onChange={(e) => setFormState({ ...formState, diagTime: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 font-bold"
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-400 block mb-1">Temps Réparation (h) :</label>
+                    <label className="font-bold text-slate-600 block mb-1">Temps Réparation (h) :</label>
                     <input
                       type="number"
                       placeholder="2"
                       value={formState.repairTime}
                       onChange={(e) => setFormState({ ...formState, repairTime: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 font-bold"
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-400 block mb-1">Machine Arrêtée (h) :</label>
+                    <label className="font-bold text-slate-600 block mb-1">Machine Arrêtée (h) :</label>
                     <input
                       type="number"
                       placeholder="4"
                       value={formState.downTime}
                       onChange={(e) => setFormState({ ...formState, downTime: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 font-bold"
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-400 block mb-1">Calibration RCS ?</label>
+                    <label className="font-bold text-slate-600 block mb-1">Calibration RCS ?</label>
                     <select
                       value={formState.rcsCalibrated}
                       onChange={(e) => setFormState({ ...formState, rcsCalibrated: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 font-bold"
                     >
                       <option value="Oui">Oui (Niveau 3)</option>
                       <option value="Non">Non</option>
@@ -2361,27 +2361,27 @@ export function AssistantEpirocSt7() {
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-400 block mb-1">Observations / Commentaires :</label>
+                  <label className="font-bold text-slate-600 block mb-1">Observations / Commentaires :</label>
                   <textarea
                     rows={3}
                     placeholder="Préciser l'état physique de l'organe déposé, niveau de limaille, etc."
                     value={formState.comments}
                     onChange={(e) => setFormState({ ...formState, comments: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 font-bold"
                   />
                 </div>
 
                 {/* SIGNATURES CHOP ZONE */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-slate-900 rounded-xl border border-slate-800">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="flex items-center gap-3">
                     <input
                       type="checkbox"
                       id="meco_sign"
                       checked={formState.validationSigned}
                       onChange={(e) => setFormState({ ...formState, validationSigned: e.target.checked })}
-                      className="w-5 h-5 rounded bg-slate-950 border-slate-800 text-amber-500 focus:ring-0"
+                      className="w-5 h-5 rounded bg-white border-slate-200 text-amber-500 focus:ring-0"
                     />
-                    <label htmlFor="meco_sign" className="font-black text-white cursor-pointer">
+                    <label htmlFor="meco_sign" className="font-black text-slate-900 cursor-pointer">
                       ✍️ Signature Électronique Mécanicien validation
                     </label>
                   </div>
@@ -2391,9 +2391,9 @@ export function AssistantEpirocSt7() {
                       id="sup_sign"
                       checked={formState.supervisorSigned}
                       onChange={(e) => setFormState({ ...formState, supervisorSigned: e.target.checked })}
-                      className="w-5 h-5 rounded bg-slate-950 border-slate-800 text-amber-500 focus:ring-0"
+                      className="w-5 h-5 rounded bg-white border-slate-200 text-amber-500 focus:ring-0"
                     />
-                    <label htmlFor="sup_sign" className="font-black text-white cursor-pointer">
+                    <label htmlFor="sup_sign" className="font-black text-slate-900 cursor-pointer">
                       👨‍✈️ Contresignature Chef d'Équipe GMAO
                     </label>
                   </div>
@@ -2410,12 +2410,12 @@ export function AssistantEpirocSt7() {
 
             {/* HISTORIQUE TABLE */}
             {interventionHistory.length > 0 && (
-              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} space-y-3`}>
+              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} space-y-3`}>
                 <h3 className="text-xs font-black uppercase text-amber-500">Historique des 10 dernières fiches</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="border-b border-slate-900 bg-slate-900/40 text-[10px] font-black text-slate-500 uppercase">
+                      <tr className="border-b border-slate-200 bg-slate-50/40 text-[10px] font-black text-slate-500 uppercase">
                         <th className="py-2 px-3">Date</th>
                         <th className="py-2 px-3">Machine & Heures</th>
                         <th className="py-2 px-3">Mécano</th>
@@ -2423,14 +2423,14 @@ export function AssistantEpirocSt7() {
                         <th className="py-2 px-3 text-right">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-900 text-slate-300 font-semibold">
+                    <tbody className="divide-y divide-slate-900 text-slate-700 font-semibold">
                       {interventionHistory.map((record) => (
-                        <tr key={record.id} className="hover:bg-slate-900/20">
-                          <td className="py-3 px-3 font-mono text-white">{record.date}</td>
+                        <tr key={record.id} className="hover:bg-slate-50/20">
+                          <td className="py-3 px-3 font-mono text-slate-900">{record.date}</td>
                           <td className="py-3 px-3">{record.parkNo} ({record.machineHours}h)</td>
                           <td className="py-3 px-3">{record.mecoName}</td>
                           <td className="py-3 px-3">
-                            <span className="font-black text-white mr-2">#{record.panneNo || "N/A"}</span>
+                            <span className="font-black text-slate-900 mr-2">#{record.panneNo || "N/A"}</span>
                             {record.symptom}
                           </td>
                           <td className="py-3 px-3 text-right">
@@ -2461,7 +2461,7 @@ export function AssistantEpirocSt7() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
-              <div className="bg-red-950/60 text-white border border-red-800 rounded-2xl p-5 space-y-4">
+              <div className="bg-red-950/60 text-slate-900 border border-red-800 rounded-2xl p-5 space-y-4">
                 <h3 className="text-sm font-black uppercase text-red-200 tracking-wider flex items-center gap-2 border-b border-red-900 pb-2">
                   <ShieldAlert className="w-5 h-5 text-red-500 animate-bounce" />
                   13. Protocoles d'Urgence Vie SOU-ST7
@@ -2471,24 +2471,24 @@ export function AssistantEpirocSt7() {
                   {EPIROC_ST7_URGENCES.map((urg) => (
                     <div key={urg.title} className="p-3 bg-red-900/20 rounded-xl border border-red-900/40">
                       <span className="text-red-400 font-black uppercase block mb-1">{urg.title}</span>
-                      <p className="text-slate-200">{urg.desc}</p>
+                      <p className="text-slate-800">{urg.desc}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} space-y-4`}>
-                <h3 className="text-sm font-black uppercase text-amber-500 tracking-wider flex items-center gap-2 border-b border-slate-900 pb-2">
+              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} space-y-4`}>
+                <h3 className="text-sm font-black uppercase text-amber-500 tracking-wider flex items-center gap-2 border-b border-slate-200 pb-2">
                   <Scale className="w-5 h-5" />
                   14. Valeurs de Référence & Diagnostic Outils Pauvres
                 </h3>
 
                 <div className="space-y-3 text-xs">
                   {Object.entries(EPIROC_ST7_VALEURS).map(([key, item]) => (
-                    <div key={key} className="flex justify-between items-center py-2 border-b border-slate-900 last:border-0">
-                      <span className="text-slate-400 font-bold">{item.label} :</span>
+                    <div key={key} className="flex justify-between items-center py-2 border-b border-slate-200 last:border-0">
+                      <span className="text-slate-600 font-bold">{item.label} :</span>
                       <div className="text-right">
-                        <span className="text-white font-black block">{item.val}</span>
+                        <span className="text-slate-900 font-black block">{item.val}</span>
                         <span className="text-[10px] text-red-400 block">Alarme: {item.alerte}</span>
                       </div>
                     </div>
@@ -2500,18 +2500,18 @@ export function AssistantEpirocSt7() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
               
-              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} space-y-3`}>
+              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} space-y-3`}>
                 <h4 className="font-black text-amber-500 uppercase tracking-wider">🔧 18. Outillage Spécifique ST7</h4>
-                <ul className="space-y-1.5 font-semibold text-slate-300">
+                <ul className="space-y-1.5 font-semibold text-slate-700">
                   {EPIROC_ST7_OUTILS.map((tool, idx) => (
                     <li key={idx}>• {tool}</li>
                   ))}
                 </ul>
               </div>
 
-              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} space-y-3`}>
+              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} space-y-3`}>
                 <h4 className="font-black text-amber-500 uppercase tracking-wider">👨‍✈️ 22. Certifications & Responsabilités</h4>
-                <div className="space-y-2 font-semibold text-slate-300">
+                <div className="space-y-2 font-semibold text-slate-700">
                   <p>
                     • <strong className="text-emerald-400">Niveau 1 (Apprenti) :</strong> Entretien de routine, graissage, LOTO, filtres à air.
                   </p>
@@ -2524,14 +2524,14 @@ export function AssistantEpirocSt7() {
                 </div>
               </div>
 
-              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-800 bg-slate-950"} space-y-3`}>
+              <div className={`p-5 rounded-2xl border ${isEco ? "border-slate-300 bg-white" : "border-slate-200 bg-white"} space-y-3`}>
                 <h4 className="font-black text-amber-500 uppercase tracking-wider">🎛️ 23. Calibrations Spécifiques</h4>
-                <div className="space-y-2 font-semibold text-slate-300 leading-relaxed">
+                <div className="space-y-2 font-semibold text-slate-700 leading-relaxed">
                   <p>
-                    • <strong className="text-white">Calibration Transmission :</strong> Requise après tout remplacement de boîte, convertisseur ou capteur. (Niveau 3 uniquement).
+                    • <strong className="text-slate-900">Calibration Transmission :</strong> Requise après tout remplacement de boîte, convertisseur ou capteur. (Niveau 3 uniquement).
                   </p>
                   <p>
-                    • <strong className="text-white">Calibration Load Weighing :</strong> À faire périodiquement à l'aide d'un poids d'étalonnage connu de 6 000 kg.
+                    • <strong className="text-slate-900">Calibration Load Weighing :</strong> À faire périodiquement à l'aide d'un poids d'étalonnage connu de 6 000 kg.
                   </p>
                 </div>
               </div>
@@ -2664,14 +2664,16 @@ export function AssistantEpirocSt7() {
             display: flex;
             gap: 16px;
             padding: 16px;
-            background: #0a0a0a;
-            border-bottom: 2px solid #f59e0b;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-bottom: 3px solid #f59e0b;
             position: sticky;
             top: 0;
             z-index: 100;
             justify-content: center;
             margin-bottom: 20px;
             border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
           }
           
           .pdf-btn {
@@ -2688,14 +2690,14 @@ export function AssistantEpirocSt7() {
           
           .pdf-btn-cahier {
             background: #f59e0b;
-            color: #000;
+            color: #ffffff;
             border-color: #f59e0b;
           }
           
           .pdf-btn-manuel {
-            background: #1a1a1a;
-            color: #fff;
-            border-color: #f59e0b;
+            background: #f8fafc;
+            color: #0f172a;
+            border-color: #cbd5e1;
           }
           
           .pdf-btn:hover {
@@ -3288,7 +3290,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 24mm | f/5.6 | ISO 800 | Trépied</p>
                   <p className="mb-1"><strong>Visuel :</strong> Vue générale du ST7 côté roue avant gauche. Le mécanicien s'approche avec sa caisse à outils Epiroc rouge. Cadenassage (LOTO) enclenché et panneau d'avertissement bien visible en cabine.</p>
                   <p className="mb-1"><strong>Audio :</strong> Ambiance atelier de mine. Voix-Off : "Procédure 5.1.1.A. Remplacement des disques de frein SAHR. Arrêt moteur et LOTO appliqués."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:05] 5.1.1.A | 00:00 | ARRÊT MOTEUR — SÉCURITÉ LOTO ENCLENCHÉE</span>
                   </div>
                 </div>
@@ -3301,7 +3303,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 100mm Macro | f/4 | ISO 800 | Rail de guidage</p>
                   <p className="mb-1"><strong>Visuel :</strong> Retrait de l'écrou principal M22 à l'aide d'une clé à choc pneumatique. Positionnement précis de l'extracteur Epiroc 8234-001. Glissement sécurisé des disques usés hors du moyeu.</p>
                   <p className="mb-1"><strong>Audio :</strong> Bruit réaliste de clé pneumatique. Voix-Off : "Désassemblage sécurisé. Attention constante à la pression des ressorts internes."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:05-00:25] 5.1.1.A | 00:15 | DEPOSE DES DISQUES USÉS AVEC EXTRACTEUR</span>
                   </div>
                 </div>
@@ -3314,7 +3316,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 (Caméra embarquée sur harnais) | 4K | ISO 400</p>
                   <p className="mb-1"><strong>Visuel :</strong> Insertion des disques de friction neufs et lubrifiés. Utilisation de la clé dynamométrique Epiroc calibrée pour appliquer le couple exact de 650 Nm sur les vis de cloche.</p>
                   <p className="mb-1"><strong>Audio :</strong> Clic d'embrayage métallique net. Voix-Off : "Serrage final au couple prescrit de 650 Nm. Remontage de la protection latérale."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:25-00:45] 5.1.1.A | 00:35 | SERRAGE DÉFINITIF EN CROIX À 650 NM</span>
                   </div>
                 </div>
@@ -3352,7 +3354,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 100mm Macro | f/4 | ISO 800</p>
                   <p className="mb-1"><strong>Visuel :</strong> Raccordement du manomètre Epiroc sur la valve de l'accumulateur défectueux. Lecture d'une pression nulle ou insuffisante sous l'oeil d'un collègue.</p>
                   <p className="mb-1"><strong>Audio :</strong> Souffle d'air comprimé. Voix-Off : "Vérification de la charge résiduelle d'azote. Dépressurisation complète."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:05] 5.1.2.A | 00:00 | PURGE DE LA PRESSION RÉSIDUELLE D'AZOTE</span>
                   </div>
                 </div>
@@ -3365,7 +3367,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 sur harnais | 4K | ISO 400</p>
                   <p className="mb-1"><strong>Visuel :</strong> Utilisation d'une clé à sangle métallique robuste pour desserrer l'accumulateur. Retrait à deux mains et pose dans un bac protecteur.</p>
                   <p className="mb-1"><strong>Audio :</strong> Crissements de desserrage. Voix-Off : "Dépose sécurisée de la cartouche d'accumulateur. Préservation des filetages de base."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:05-00:20] 5.1.2.A | 00:10 | DÉPOSE DE LA CARTOUCHE D'ACCUMULATEUR</span>
                   </div>
                 </div>
@@ -3378,7 +3380,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 35mm | f/5.6 | ISO 800 | Trépied</p>
                   <p className="mb-1"><strong>Visuel :</strong> Pose de la cartouche neuve préchargée d'origine Epiroc (80 bar). Serrage final au couple de 120 Nm. Re-complètement de pression hydraulique.</p>
                   <p className="mb-1"><strong>Audio :</strong> Bruit de pompe hydraulique en arrière-plan. Voix-Off : "Mise en service de l'accumulateur neuf. Test de charge concluant."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:20-00:30] 5.1.2.A | 00:25 | ACCUMULATEUR NEUF POSÉ — TEST OK</span>
                   </div>
                 </div>
@@ -3416,7 +3418,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 24mm | f/5.6 | ISO 600 | Trépied</p>
                   <p className="mb-1"><strong>Visuel :</strong> ST7 sécurisé avec béquille d'articulation centrale déployée et verrouillée. Traces visibles d'huile rouge ATF sous la cloche de transmission.</p>
                   <p className="mb-1"><strong>Audio :</strong> Bourdonnement d'aspirateur d'air. Voix-Off : "Démontage du convertisseur Funk DF150. Machine verrouillée et sécurisée."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:10] 2.1.1.A | 00:00 | SÉCURISATION MACHINE — BÉQUILLE ARTICULATION EN PLACE</span>
                   </div>
                 </div>
@@ -3429,7 +3431,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 sur harnais avec projecteur de poitrine LED | 4K</p>
                   <p className="mb-1"><strong>Visuel :</strong> Installation de l'outil de vire-vire sur la couronne. Rotation manuelle pas-à-pas pour accéder aux vis du volant moteur. Dévissage systématique en étoile.</p>
                   <p className="mb-1"><strong>Audio :</strong> Clics de cliquet robustes. Voix-Off : "Accès aux boulons d'accouplement via la trappe de visite. Dévissage progressif en étoile."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:10-00:35] 2.1.1.A | 00:20 | DEVISSAAGE EN ETOILE DES BOULONS DE VOLANT</span>
                   </div>
                 </div>
@@ -3442,7 +3444,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 50mm | f/4 | ISO 800 | Stabilisateur DJI RS 3</p>
                   <p className="mb-1"><strong>Visuel :</strong> Élingues de levage de 2 tonnes fixées sur les anneaux du convertisseur. Dépose en douceur à l'aide d'une grue d'atelier. Exposition du plan de joint de carter net.</p>
                   <p className="mb-1"><strong>Audio :</strong> Bruit de chaîne métallique sous tension. Voix-Off : "Soutien et extraction douce. Veiller à l'absence de contact brutal avec le nez du vilebrequin."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:35-00:60] 2.1.1.A | 00:50 | EXTRACTION DOUCE AVEC GRUE ET ELINGUES</span>
                   </div>
                 </div>
@@ -3480,7 +3482,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 50mm | f/4 | ISO 800</p>
                   <p className="mb-1"><strong>Visuel :</strong> Transmission déposée sur le banc d'atelier. L'huile a été vidangée au préalable. Déboulonnage en croix de la plaque de fermeture arrière.</p>
                   <p className="mb-1"><strong>Audio :</strong> Bruit d'huile résiduelle qui s'écoule. Voix-Off : "Démontage de l'embrayage Power Shift. Retrait du carter de cloche externe."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:10] 2.2.1.A | 00:00 | OUVERTURE ET VIDANGE COMPLÈTE DE LA TRANSMISSION</span>
                   </div>
                 </div>
@@ -3493,7 +3495,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 100mm Macro | f/5.6 | ISO 1000 | Rail mobile</p>
                   <p className="mb-1"><strong>Visuel :</strong> Installation de l'extracteur mécanique à griffes Epiroc sur l'axe cannelé. Extraction progressive du tambour contenant l'empilement de disques.</p>
                   <p className="mb-1"><strong>Audio :</strong> Cliquetis de la vis de force de l'extracteur. Voix-Off : "Mise en tension de l'extracteur à griffes. Retrait axial du tambour sans déformation."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:10-00:30] 2.2.1.A | 00:15 | DEPOSE DU TAMBOUR AVEC EXTRACTEUR À GRIFFES</span>
                   </div>
                 </div>
@@ -3506,7 +3508,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 100mm Macro | f/2.8 | ISO 1200 | Focalisation manuelle</p>
                   <p className="mb-1"><strong>Visuel :</strong> Gros plan macro sur l'état d'usure des garnitures métalliques et organiques. Mise en évidence de traces de frottement ou de bleuissement.</p>
                   <p className="mb-1"><strong>Audio :</strong> VO : "Contrôle d'usure. Remplacement requis si les disques montrent des signes de surchauffe."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:30-00:50] 2.2.1.A | 00:40 | CONTRÔLE VISUEL ET MESURE DES DISQUES EN ATELIER</span>
                   </div>
                 </div>
@@ -3544,7 +3546,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 50mm | f/4 | ISO 800</p>
                   <p className="mb-1"><strong>Visuel :</strong> Cache culasse déposé. Le moteur est propre, exempt de graisse extérieure. Marquage et étiquetage LOTO électrique sur le disjoncteur général de batterie.</p>
                   <p className="mb-1"><strong>Audio :</strong> Bruit d'outils à main posés sur plateau inox. Voix-Off : "Remplacement de l'injecteur Cummins. Circuit carburant dépressurisé."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:10] 1.1.2.B | 00:00 | DEPOSE DU CACHE-CULASSE — CIRCUIT BASSE PRESSION</span>
                   </div>
                 </div>
@@ -3557,7 +3559,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 sur harnais de poitrine | 4K | ISO 400</p>
                   <p className="mb-1"><strong>Visuel :</strong> Raccordement de l'extracteur d'injecteur dédié Epiroc 8234-056 sur la tête de l'injecteur grippé. Trois coups secs appliqués pour décoller l'injecteur de son logement.</p>
                   <p className="mb-1"><strong>Audio :</strong> Impact métallique lourd et net. Voix-Off : "Extraction à l'aide de l'outil d'inertie 8234-056. Veiller à ne pas heurter la rampe de distribution."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:10-00:25] 1.1.2.B | 00:15 | EXTRACTION DE L'INJECTEUR AVEC L'OUTIL DÉDIÉ</span>
                   </div>
                 </div>
@@ -3570,7 +3572,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 100mm Macro | f/4 | ISO 600 | Trépied</p>
                   <p className="mb-1"><strong>Visuel :</strong> Nettoyage du puits au chiffon non pelucheux. Pose d'un joint en cuivre neuf, introduction de l'injecteur neuf et serrage au couple de 30 Nm avec clé dynamométrique.</p>
                   <p className="mb-1"><strong>Audio :</strong> Clic de couple. Voix-Off : "Nettoyage minutieux et changement de joint. Serrage de bride à 30 Nm."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:25-00:40] 1.1.2.B | 00:30 | JOINT NEUF POSÉ — SERRAGE BRIDE À 30 NM</span>
                   </div>
                 </div>
@@ -3608,7 +3610,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 35mm | f/4 | ISO 800</p>
                   <p className="mb-1"><strong>Visuel :</strong> Accès à la pompe située sous le berceau central. Soupapes de décharge ouvertes, consignation physique appliquée et bac de vidange d'huile placé sous les conduites.</p>
                   <p className="mb-1"><strong>Audio :</strong> Grincements de soupapes hydrauliques. Voix-Off : "Consignation hydraulique validée. Vidange préalable de l'huile résiduelle."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:10] 3.1.1.A | 00:00 | DEPRESSURISATION ET CONSIGNATION DU CIRCUIT</span>
                   </div>
                 </div>
@@ -3621,7 +3623,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 sur trépied magnétique fixé au châssis | 4K</p>
                   <p className="mb-1"><strong>Visuel :</strong> Déconnexion de la bride d'aspiration et de la conduite haute pression en acier. Utilisation de bouchons de protection étanches sur chaque orifice ouvert.</p>
                   <p className="mb-1"><strong>Audio :</strong> Clic d'ajustement de clé plate. Voix-Off : "Retrait des flexibles et de la ligne de drain. Pose immédiate de bouchons étanches de taille appropriée."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:10-00:35] 3.1.1.A | 00:15 | DÉCONNEXION DE LA BRIDE HP ET POSE DE BOUCHONS</span>
                   </div>
                 </div>
@@ -3634,7 +3636,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 50mm | f/5.6 | ISO 800</p>
                   <p className="mb-1"><strong>Visuel :</strong> Levage mécanique léger de la pompe Rexroth A10VO usée. Introduction de la pompe neuve, pré-remplie d'huile hydraulique neuve Epiroc. Serrage en croix à 140 Nm.</p>
                   <p className="mb-1"><strong>Audio :</strong> Clic de serrage d'une clé dynamométrique d'atelier. Voix-Off : "Extraction et mise en place de l'unité neuve pré-remplie d'huile propre. Serrage de bride à 140 Nm."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:35-00:55] 3.1.1.A | 00:45 | POSE DE LA NOUVELLE POMPE — SERRAGE À 140 NM</span>
                   </div>
                 </div>
@@ -3672,7 +3674,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 24mm | f/4 | ISO 800 | Trépied</p>
                   <p className="mb-1"><strong>Visuel :</strong> Bras de levage fermement calé par les béquilles d'origine Epiroc pour interdire toute chute accidentelle. Câble électrique et batterie isolés.</p>
                   <p className="mb-1"><strong>Audio :</strong> Grincements métalliques de calage. Voix-Off : "Remplacement du vérin Hoist. Bras sécurisé mécaniquement par béquille."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:10] 3.3.2.A | 00:00 | CALAGE MÉCANIQUE DU BRAS DE LEVAGE AVEC BÉQUILLE</span>
                   </div>
                 </div>
@@ -3685,7 +3687,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 sur harnais de poitrine | 4K</p>
                   <p className="mb-1"><strong>Visuel :</strong> Vérin soutenu par une sangle en polyester de 5 tonnes. Chasse-axe pneumatique employé pour extraire l'axe supérieur de chape graisseux.</p>
                   <p className="mb-1"><strong>Audio :</strong> Sons de frappe répétitifs. Voix-Off : "Extraction des axes de fixation. Sécurisation du vérin à l'aide d'élingues de levage robustes."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:10-00:30] 3.3.2.A | 00:15 | DÉPOSE DE L'AXE SUPÉRIEUR DE CHAPE AU CHASSE-AXE</span>
                   </div>
                 </div>
@@ -3698,7 +3700,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 50mm | f/5.6 | ISO 800 | Stabilisateur</p>
                   <p className="mb-1"><strong>Visuel :</strong> Guidage du vérin de levage neuf de 125 mm dans ses supports. Remplacement des circlips et graissage final de l'axe à la pompe.</p>
                   <p className="mb-1"><strong>Audio :</strong> Cliquetis de pompe à graisse. Voix-Off : "Mise en place de l'unité neuve. Graissage final et raccordement."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:30-00:45] 3.3.2.A | 00:35 | RACCORDEMENT ET GRAISSAGE FINAL DES AXES</span>
                   </div>
                 </div>
@@ -3736,7 +3738,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 35mm | f/4 | ISO 800</p>
                   <p className="mb-1"><strong>Visuel :</strong> Localisation du couvercle de filtre sur le réservoir hydraulique. Moteur à l'arrêt, LOTO appliqué sur le commutateur de batterie général.</p>
                   <p className="mb-1"><strong>Audio :</strong> Calme complet d'atelier. Voix-Off : "Remplacement du filtre de retour 12µ. Réservoir dépressurisé."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:05] 3.1.2.A | 00:00 | ARRET ET DEPRESSURISATION DE LA CUVE HYDRAULIQUE</span>
                   </div>
                 </div>
@@ -3749,7 +3751,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 sur sangle frontale | 4K | Lampe LED frontale</p>
                   <p className="mb-1"><strong>Visuel :</strong> Ouverture du couvercle avec une clé à sangle d'origine Epiroc. Retrait délicat de la cartouche 12 microns usée et saturée. Dépôt dans un sac étanche.</p>
                   <p className="mb-1"><strong>Audio :</strong> Léger glouglou d'huile. Voix-Off : "Retrait de l'élément filtrant usé. Analyse visuelle rapide de présence de limaille."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:05-00:20] 3.1.2.A | 00:10 | DEPOSE DE L'ELEMENT USÉ ET EVACUATION SECURISEE</span>
                   </div>
                 </div>
@@ -3762,7 +3764,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 100mm Macro | f/4 | ISO 800 | Trépied</p>
                   <p className="mb-1"><strong>Visuel :</strong> Lubrification du joint torique neuf à l'huile hydraulique propre. Insertion de la cartouche neuve d'origine Epiroc, fermeture manuelle ferme puis serrage à 40 Nm.</p>
                   <p className="mb-1"><strong>Audio :</strong> Bruit métallique de serrage. Voix-Off : "Joint lubrifié et cartouche neuve en place. Serrage manuel final à 40 Nm."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:20-00:30] 3.1.2.A | 00:25 | FILTRE 12µ NEUF EN PLACE — JOINT REPOSÉ ET SERRÉ</span>
                   </div>
                 </div>
@@ -3800,7 +3802,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 (Boîtier étanche sur trépied) | 4K | ISO 400</p>
                   <p className="mb-1"><strong>Visuel :</strong> Calandre arrière pivotante du ST7 ouverte. Le radiateur est visible, largement obstrué par un mélange de sédiments et d'huile. Câble d'alimentation isolé.</p>
                   <p className="mb-1"><strong>Audio :</strong> Léger bruit de ventilation d'atelier. Voix-Off : "Nettoyage du radiateur V-Tube. Éloignement des composants électriques."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:05] 1.1.3.B | 00:00 | OUVERTURE DE LA CALANDRE ARRIÈRE — ACCÈS CONSTATS</span>
                   </div>
                 </div>
@@ -3813,7 +3815,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 50mm | f/4 | ISO 800 | Stabilisateur</p>
                   <p className="mb-1"><strong>Visuel :</strong> Pulvérisation uniforme d'un produit dégraissant biodégradable Epiroc d'origine sur l'ensemble de la surface à l'aide d'un pulvérisateur manuel.</p>
                   <p className="mb-1"><strong>Audio :</strong> Chuchotement de pulvérisation. Voix-Off : "Application homogène du dégraissant Epiroc. Laisser agir 5 minutes sous surveillance d'un témoin."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:05-00:20] 1.1.3.B | 00:10 | APPLICATION DU DÉGRAISSANT ET TEMPS DE POSE</span>
                   </div>
                 </div>
@@ -3826,7 +3828,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 (Objectif grand angle étanche) | 4K | ISO 400</p>
                   <p className="mb-1"><strong>Visuel :</strong> Rinçage complet à la lance haute pression à 120 bar. Buse maintenue à une distance minimale de 30 cm et strictement perpendiculaire aux tubes de cuivre.</p>
                   <p className="mb-1"><strong>Audio :</strong> Vrombissement du jet d'eau à haute pression. Voix-Off : "Rinçage perpendiculaire strict à 120 bar. Protection des ailettes contre le pliage."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:20-00:35] 1.1.3.B | 00:25 | RINÇAGE COMPLET À LA LANCE PERPENDICULAIRE 120 BAR</span>
                   </div>
                 </div>
@@ -3864,7 +3866,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 35mm | f/4 | ISO 800</p>
                   <p className="mb-1"><strong>Visuel :</strong> Mécanicien assis en cabine ST7. Raccordement de l'adaptateur Kvaser USB-to-CAN sur le port de diagnostic de cabine d'un côté et sur le PC portable de l'autre.</p>
                   <p className="mb-1"><strong>Audio :</strong> Petit clic de connexion USB. Voix-Off : "Raccordement du matériel de diagnostic. Bus CAN opérationnel et identifié."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:10] 2.2.2.A | 00:00 | HARNAIS DE DIAGNOSTIC BRANCHÉ SUR PORT CABINE ST7</span>
                   </div>
                 </div>
@@ -3877,7 +3879,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 sur support ventouse fixé à la vitre | 4K | ISO 400</p>
                   <p className="mb-1"><strong>Visuel :</strong> Gros plan sur l'écran d'affichage RCS intégré au tableau de bord. Navigation rapide dans le menu "Service - Calibration - Transmission Funk DF150". Lancement du cycle.</p>
                   <p className="mb-1"><strong>Audio :</strong> Clics de boutons physiques. Voix-Off : "Sélection de l'onglet de recalibration. Lancement de la procédure automatisée au ralenti moteur."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:10-00:30] 2.2.2.A | 00:15 | SELECTION ET DEBUT DE PROCEDURE AUTOMATISÉE</span>
                   </div>
                 </div>
@@ -3890,7 +3892,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 100mm Macro | f/4 | ISO 600 | Trépied</p>
                   <p className="mb-1"><strong>Visuel :</strong> Affichage d'un message vert "Transmission Calibration Successful" sur l'écran RCS. Validation manuelle des données et sauvegarde des paramètres.</p>
                   <p className="mb-1"><strong>Audio :</strong> Léger signal sonore de réussite. Voix-Off : "Calibration terminée avec succès. Données sauvegardées."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:30-00:40] 2.2.2.A | 00:35 | CALIBRATION TERMINÉE ET SAUVEGARDÉE SUR LE RCS</span>
                   </div>
                 </div>
@@ -3928,7 +3930,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 24mm | f/5.6 | ISO 800 | Trépied</p>
                   <p className="mb-1"><strong>Visuel :</strong> ST7 garé à plat sur le sol bétonné rectiligne d'atelier. Le godet est posé à plat au sol, entièrement vide. Aucun obstacle à proximité immédiate.</p>
                   <p className="mb-1"><strong>Audio :</strong> Grondement sourd de moteur au ralenti. Voix-Off : "Calibration du système de pesée. Machine positionnée sur sol plan."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:05] 10.4.1.A | 00:00 | ALIGNEMENT ET MISE À ZÉRO DU GODET VIDE</span>
                   </div>
                 </div>
@@ -3941,7 +3943,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 50mm | f/4 | ISO 800 | Trépied</p>
                   <p className="mb-1"><strong>Visuel :</strong> Levage complet du godet chargé d'un bloc de béton d'étalonnage métallique de 5000 kg pesé à l'aide d'un peson externe.</p>
                   <p className="mb-1"><strong>Audio :</strong> Sifflement de l'hydraulique de levage. Voix-Off : "Levage continu de la masse d'étalonnage de 5,0 tonnes. Surveillance de la stabilité."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:05-00:20] 10.4.1.A | 00:10 | LEVAGE EN UN SEUL MOUVEMENT DE LA CHARGE ÉTALON DE 5,0 T</span>
                   </div>
                 </div>
@@ -3954,7 +3956,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 fixé par ventouse en cabine | 4K | ISO 400</p>
                   <p className="mb-1"><strong>Visuel :</strong> Saisie de la valeur exacte "5000 kg" sur le pavé numérique de l'écran RCS cabine. Enregistrement et affichage de la valeur calibrée.</p>
                   <p className="mb-1"><strong>Audio :</strong> BIP de touches. Voix-Off : "Saisie de la masse étalon de référence. Tarage et enregistrement des paramètres."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:20-00:35] 10.4.1.A | 00:25 | SAISIE DE LA VALEUR ÉTALON ET SAUVEGARDE EN CABINE</span>
                   </div>
                 </div>
@@ -3992,7 +3994,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 50mm | f/4 | ISO 800</p>
                   <p className="mb-1"><strong>Visuel :</strong> Porte cabine ouverte. Localisation du capteur inductif sur le montant. Cadenassage électrique (LOTO) en place sur le tableau divisionnaire.</p>
                   <p className="mb-1"><strong>Audio :</strong> Clic d'ouverture de porte. Voix-Off : "Remplacement du capteur de sécurité. Système électrique hors tension."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:05] 7.4.1.A | 00:00 | SÉCURITÉ CONSIGNÉE — DÉCONNEXION DU FAISCEAU CAPTEUR</span>
                   </div>
                 </div>
@@ -4005,7 +4007,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 100mm Macro | f/4 | ISO 800 | Rail de mise au point</p>
                   <p className="mb-1"><strong>Visuel :</strong> Installation du nouveau capteur inductif de sécurité. Raccordement direct sur le connecteur étanche type Deutsch DT d'origine Epiroc.</p>
                   <p className="mb-1"><strong>Audio :</strong> Clic net de verrouillage de connecteur étanche. Voix-Off : "Raccordement de la fiche Deutsch étanche d'origine. Aucun jeu n'est admis."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:05-00:15] 7.4.1.A | 00:10 | POSE DU CAPTEUR NEUF ET RACCORDEMENT DEUTSCH IP67</span>
                   </div>
                 </div>
@@ -4018,7 +4020,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 (Sangle frontale) | 4K | ISO 400</p>
                   <p className="mb-1"><strong>Visuel :</strong> Utilisation d'un jeu d'épaisseurs (jauges de calage) pour ajuster l'écartement (entrefer) entre la cible et le nez du capteur à 3,0 mm précisément.</p>
                   <p className="mb-1"><strong>Audio :</strong> Frottements légers de jauges métalliques. Voix-Off : "Réglage d'entrefer à la cale à 3,0 mm. Blocage final des écrous de calage."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:15-00:25] 7.4.1.A | 00:20 | REGLAGE PRECIS DE L'ENTREFER À 3,0 MM À LA CALE DE JAUGE</span>
                   </div>
                 </div>
@@ -4056,7 +4058,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 50mm | f/4 | ISO 800 | Trépied</p>
                   <p className="mb-1"><strong>Visuel :</strong> Caméra usée brisée à l'avant gauche. Desserrage des quatre boulons de la chape métallique de blindage en acier de 6 mm.</p>
                   <p className="mb-1"><strong>Audio :</strong> Grincements d'outils d'atelier. Voix-Off : "Remplacement du module caméra. Dépouillement du capot blindé protecteur."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:05] 7.3.1.A | 00:00 | RETRAIT DU CAPOT BLINDÉ EN ACIER DE PROTECTION 6 MM</span>
                   </div>
                 </div>
@@ -4069,7 +4071,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 100mm Macro | f/4 | ISO 800</p>
                   <p className="mb-1"><strong>Visuel :</strong> Remplacement par un module étanche d'origine Epiroc. Branchement soigné du connecteur coaxial à vis de type M12 blindé et serrage final de la bague d'étanchéité.</p>
                   <p className="mb-1"><strong>Audio :</strong> Clic d'introduction à vis. Voix-Off : "Raccordement coaxial blindé étanche M12. Assurer l'orientation et l'absence d'humidité."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:05-00:20] 7.3.1.A | 00:10 | POSE MODULE IP69K ET SERRAGE BAGUE ETANCHE M12</span>
                   </div>
                 </div>
@@ -4082,7 +4084,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 fixée en cabine | 4K | ISO 400</p>
                   <p className="mb-1"><strong>Visuel :</strong> Vue sur l'écran d'affichage cabine. Image vidéo claire s'affiche instantanément sans aucune latence à l'écran lors du démarrage système.</p>
                   <p className="mb-1"><strong>Audio :</strong> BIP système. Voix-Off : "Retour vidéo validé à l'écran. Repose finale du capot de blindage."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:20-00:30] 7.3.1.A | 00:25 | TEST REUSSI SUR ÉCRAN CABINE — IMAGE SANS LATENCE</span>
                   </div>
                 </div>
@@ -4120,7 +4122,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 24mm | f/5.6 | ISO 800 | Trépied</p>
                   <p className="mb-1"><strong>Visuel :</strong> Machine levée et reposant sur des chandelles de sécurité robustes d'atelier de 15 tonnes. Le carter de protection latérale de chaîne est retiré.</p>
                   <p className="mb-1"><strong>Audio :</strong> Souffle de soufflette à air comprimé. Voix-Off : "Ajustement de la chaîne Rock Tough. Machine stabilisée sur chandelles."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:10] 2.4.1.A | 00:00 | SÉCURISATION MACHINE SUR CHANDELLES ATELIER 15T</span>
                   </div>
                 </div>
@@ -4133,7 +4135,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 sur harnais | 4K | ISO 400</p>
                   <p className="mb-1"><strong>Visuel :</strong> Mesure de la flèche de chaîne (limite de 25 mm). Desserrage du contre-écrou et vissage de l'axe de tension à l'aide de la clé plate spéciale Epiroc.</p>
                   <p className="mb-1"><strong>Audio :</strong> Bruit d'acier et de clé à fourche lourde. Voix-Off : "Ajustement de tension. Mesure constante de la flèche résiduelle au réglet."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:10-00:35] 2.4.1.A | 00:20 | SERRAGE DU TENDEUR POUR OBTENIR UNE FLÈCHE DE 15 MM</span>
                   </div>
                 </div>
@@ -4146,7 +4148,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 50mm | f/4 | ISO 800</p>
                   <p className="mb-1"><strong>Visuel :</strong> Resserrage définitif du contre-écrou de blocage au couple de 350 Nm à l'aide d'une clé dynamométrique d'atelier lourde.</p>
                   <p className="mb-1"><strong>Audio :</strong> Fort claquement métallique de déclenchement. Voix-Off : "Contre-écrou serré au couple final de 350 Nm. Vérification manuelle de rotation."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:35-00:50] 2.4.1.A | 00:40 | VERROUILLAGE CONTRE-ÉCROU AU COUPLE DE 350 NM</span>
                   </div>
                 </div>
@@ -4184,7 +4186,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 35mm | f/5.6 | ISO 800 | Trépied</p>
                   <p className="mb-1"><strong>Visuel :</strong> Remplissage final du réservoir hydraulique principal à l'aide d'un pistolet de distribution propre avec l'huile hydraulique Epiroc d'origine.</p>
                   <p className="mb-1"><strong>Audio :</strong> Sifflement de distribution d'huile. Voix-Off : "Purge du système. Cuve hydraulique remplie d'huile d'origine à niveau max."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:00-00:10] 3.1.4.A | 00:00 | COMPLÉMENTATION INITIALE EN HUILE HYDRAULIQUE ET COUPE-BATTERIE ACTIF</span>
                   </div>
                 </div>
@@ -4197,7 +4199,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : GoPro Hero 12 sur harnais avec éclairage de poitrine LED | 4K</p>
                   <p className="mb-1"><strong>Visuel :</strong> Raccordement d'un tuyau flexible en silicone transparent sur la vis de purge du bloc de direction principal. Recueil de l'huile émulsionnée d'air dans un bocal propre.</p>
                   <p className="mb-1"><strong>Audio :</strong> Gargouillements réguliers de liquide sous pression. Voix-Off : "Purge successive des blocs. Le fluide doit s'écouler exempt de bulles."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:10-00:40] 3.1.4.A | 00:20 | PURGE JUSQU'À OBTENTION D'UN FLUIDE CLAIR ET SANS BULLE D'AIR</span>
                   </div>
                 </div>
@@ -4210,7 +4212,7 @@ export function AssistantEpirocSt7() {
                   <p className="font-mono text-[10px] text-slate-500 mb-1">Appareil : Canon R5 + RF 24-70mm @ 50mm | f/4 | ISO 800 | Stabilisé</p>
                   <p className="mb-1"><strong>Visuel :</strong> Activation continue des commandes de direction gauche et droite puis de levage du bras. L'absence de bruit de cavitation sur la pompe est vérifiée.</p>
                   <p className="mb-1"><strong>Audio :</strong> Sifflement hydraulique de fonctionnement sain. Voix-Off : "Cycles complets de rodage. Zéro bruit suspect ou fuite résiduelle."</p>
-                  <div className="plan-overlay mt-1 bg-black text-amber-400 font-mono p-1 rounded text-[10px]">
+                  <div className="plan-overlay mt-1 bg-white text-amber-400 font-mono p-1 rounded text-[10px]">
                     <span className="overlay-text font-bold">[00:40-00:60] 3.1.4.A | 00:50 | CYCLES COMPLETS DE FONCTIONNEMENT — SYSTÈME OPÉRATIONNEL</span>
                   </div>
                 </div>
@@ -4257,14 +4259,14 @@ export function AssistantEpirocSt7() {
 
           {COTES_DATA.map((section) => (
             <div key={section.id} className="cote-section mb-12" id={section.id}>
-              <h3 className="text-xl font-bold text-amber-500 border-b border-slate-700 pb-2 mb-6 uppercase tracking-wider">
+              <h3 className="text-xl font-bold text-amber-500 border-b border-slate-300 pb-2 mb-6 uppercase tracking-wider">
                 {section.title}
               </h3>
               
               {section.tables.map((tbl) => (
-                <div key={tbl.id} className="cotes-bloc p-5 bg-[#141414] border border-slate-800 rounded-lg mb-8" id={`storyboard-${tbl.id}`}>
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3 mb-4">
-                    <h4 className="font-extrabold text-md text-slate-200">
+                <div key={tbl.id} className="cotes-bloc p-5 bg-[#141414] border border-slate-200 rounded-lg mb-8" id={`storyboard-${tbl.id}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3 mb-4">
+                    <h4 className="font-extrabold text-md text-slate-800">
                       TABLEAU {tbl.id} — {tbl.title}
                     </h4>
                     <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded font-mono text-xs font-bold">
@@ -4272,32 +4274,32 @@ export function AssistantEpirocSt7() {
                     </span>
                   </div>
 
-                  <div className="overflow-x-auto rounded border border-slate-800">
+                  <div className="overflow-x-auto rounded border border-slate-200">
                     <table className="cote-table cahier-tableau w-full text-left text-xs border-collapse bg-[#0c0c0c]">
-                      <thead className="cote-thead bg-slate-900 border-b border-slate-800">
+                      <thead className="cote-thead bg-slate-50 border-b border-slate-200">
                         <tr>
-                          <th className="px-3 py-2 font-bold text-slate-400 text-[10px] uppercase tracking-wider text-center w-12 border-r border-slate-800">N°</th>
-                          <th className="px-3 py-2 font-bold text-slate-400 text-[10px] uppercase tracking-wider border-r border-slate-800">Point de contrôle</th>
-                          <th className="px-3 py-2 font-bold text-slate-400 text-[10px] uppercase tracking-wider text-center border-r border-slate-800">Nominal</th>
-                          <th className="px-3 py-2 font-bold text-slate-400 text-[10px] uppercase tracking-wider text-center border-r border-slate-800">Tolérance min</th>
-                          <th className="px-3 py-2 font-bold text-slate-400 text-[10px] uppercase tracking-wider text-center border-r border-slate-800">Tolérance max</th>
-                          <th className="px-3 py-2 font-bold text-slate-400 text-[10px] uppercase tracking-wider text-center w-16 border-r border-slate-800">Unité</th>
-                          <th className="px-3 py-2 font-bold text-slate-400 text-[10px] uppercase tracking-wider border-r border-slate-800">Instrument de mesure</th>
-                          <th className="px-3 py-2 font-bold text-slate-400 text-[10px] uppercase tracking-wider text-center w-14 border-r border-slate-800">Fréq.</th>
-                          <th className="px-3 py-2 font-bold text-slate-400 text-[10px] uppercase tracking-wider text-center">Schéma lié</th>
+                          <th className="px-3 py-2 font-bold text-slate-600 text-[10px] uppercase tracking-wider text-center w-12 border-r border-slate-200">N°</th>
+                          <th className="px-3 py-2 font-bold text-slate-600 text-[10px] uppercase tracking-wider border-r border-slate-200">Point de contrôle</th>
+                          <th className="px-3 py-2 font-bold text-slate-600 text-[10px] uppercase tracking-wider text-center border-r border-slate-200">Nominal</th>
+                          <th className="px-3 py-2 font-bold text-slate-600 text-[10px] uppercase tracking-wider text-center border-r border-slate-200">Tolérance min</th>
+                          <th className="px-3 py-2 font-bold text-slate-600 text-[10px] uppercase tracking-wider text-center border-r border-slate-200">Tolérance max</th>
+                          <th className="px-3 py-2 font-bold text-slate-600 text-[10px] uppercase tracking-wider text-center w-16 border-r border-slate-200">Unité</th>
+                          <th className="px-3 py-2 font-bold text-slate-600 text-[10px] uppercase tracking-wider border-r border-slate-200">Instrument de mesure</th>
+                          <th className="px-3 py-2 font-bold text-slate-600 text-[10px] uppercase tracking-wider text-center w-14 border-r border-slate-200">Fréq.</th>
+                          <th className="px-3 py-2 font-bold text-slate-600 text-[10px] uppercase tracking-wider text-center">Schéma lié</th>
                         </tr>
                       </thead>
                       <tbody className="cote-tbody divide-y divide-slate-800">
                         {tbl.rows.map((row) => (
-                          <tr key={row[0]} className="hover:bg-slate-900/50 transition-colors">
-                            <td className="px-3 py-2 text-center text-xs font-mono font-bold text-slate-500 bg-[#0e0e0e] border-r border-slate-800">{row[0]}</td>
-                            <td className="px-3 py-2 text-slate-300 font-medium border-r border-slate-800">{row[1]}</td>
-                            <td className="px-3 py-2 text-center font-bold text-amber-400 bg-amber-500/5 border-r border-slate-800">{row[2]}</td>
-                            <td className="px-3 py-2 text-center text-slate-400 font-mono border-r border-slate-800">{row[3]}</td>
-                            <td className="px-3 py-2 text-center text-slate-400 font-mono border-r border-slate-800">{row[4]}</td>
-                            <td className="px-3 py-2 text-center text-slate-400 font-mono border-r border-slate-800">{row[5]}</td>
-                            <td className="px-3 py-2 text-slate-300 border-r border-slate-800">{row[6]}</td>
-                            <td className="px-3 py-2 text-center border-r border-slate-800"><span className="inline-block px-1.5 py-0.5 bg-slate-900 border border-slate-800 text-slate-300 font-bold text-[10px] rounded font-mono">{row[7]}</span></td>
+                          <tr key={row[0]} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-3 py-2 text-center text-xs font-mono font-bold text-slate-500 bg-[#0e0e0e] border-r border-slate-200">{row[0]}</td>
+                            <td className="px-3 py-2 text-slate-700 font-medium border-r border-slate-200">{row[1]}</td>
+                            <td className="px-3 py-2 text-center font-bold text-amber-400 bg-amber-500/5 border-r border-slate-200">{row[2]}</td>
+                            <td className="px-3 py-2 text-center text-slate-600 font-mono border-r border-slate-200">{row[3]}</td>
+                            <td className="px-3 py-2 text-center text-slate-600 font-mono border-r border-slate-200">{row[4]}</td>
+                            <td className="px-3 py-2 text-center text-slate-600 font-mono border-r border-slate-200">{row[5]}</td>
+                            <td className="px-3 py-2 text-slate-700 border-r border-slate-200">{row[6]}</td>
+                            <td className="px-3 py-2 text-center border-r border-slate-200"><span className="inline-block px-1.5 py-0.5 bg-slate-50 border border-slate-200 text-slate-700 font-bold text-[10px] rounded font-mono">{row[7]}</span></td>
                             <td className="px-3 py-2 text-center text-[10px] font-mono text-slate-500 font-bold">{row[8]}</td>
                           </tr>
                         ))}
@@ -4305,12 +4307,12 @@ export function AssistantEpirocSt7() {
                     </table>
                   </div>
 
-                  <div className="cote-procedure mt-4 p-4 bg-slate-900/30 border border-slate-800 rounded">
-                    <h5 className="font-extrabold text-xs text-slate-300 uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-2 mb-3">
+                  <div className="cote-procedure mt-4 p-4 bg-slate-50/30 border border-slate-200 rounded">
+                    <h5 className="font-extrabold text-xs text-slate-700 uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 pb-2 mb-3">
                       <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] text-black font-bold">i</span>
                       PROCÉDURE DE CONTRÔLE — Réf: {tbl.ref}
                     </h5>
-                    <ol className="list-decimal pl-5 space-y-1.5 text-slate-300 text-xs">
+                    <ol className="list-decimal pl-5 space-y-1.5 text-slate-700 text-xs">
                       <li><strong>Préparation :</strong> {tbl.prep}</li>
                       <li><strong>Positionnement :</strong> {tbl.pos}</li>
                       <li><strong>Mesure :</strong> {tbl.mesure}</li>
@@ -4323,7 +4325,7 @@ export function AssistantEpirocSt7() {
                     <span className="diag-panne font-bold text-red-400 block text-xs">
                       ⚠️ PANNE SI HORS TOLÉRANCE : {tbl.diagnostic.panne}
                     </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2 pt-2 border-t border-slate-800 font-mono text-[10px] text-slate-400">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2 pt-2 border-t border-slate-200 font-mono text-[10px] text-slate-600">
                       <div><strong className="text-slate-500 uppercase font-sans">Réf. panne :</strong> {tbl.diagnostic.ref}</div>
                       <div><strong className="text-slate-500 uppercase font-sans">Arbre décision :</strong> {tbl.diagnostic.arbre}</div>
                       <div><strong className="text-slate-500 uppercase font-sans">Action immédiate :</strong> <span className="text-red-400">{tbl.diagnostic.action}</span></div>
@@ -4338,7 +4340,7 @@ export function AssistantEpirocSt7() {
         {/* CHAPITRE 6 : OUTILS */}
         <article id="ch6" className="cahier-chapitre">
           <h2 className="cahier-titre-chapitre">CHAPITRE 6 — FICHES TECHNIQUES DES OUTILS DE MAINTENANCE</h2>
-          <p className="cahier-intro text-slate-400 mb-8 font-medium">
+          <p className="cahier-intro text-slate-600 mb-8 font-medium">
             Catalogue de 25 outils spécifiques requis pour la maintenance préventive et corrective du chargeur Epiroc Scooptram ST7 — spécifications, procédures opérationnelles, maintenance et localisation d'atelier.
           </p>
 
@@ -4999,7 +5001,7 @@ export function AssistantEpirocSt7() {
             return (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="outil-list-container">
                 {OUTILS_LIST.map((otl) => (
-                  <div key={otl.id} className="outil-fiche bg-[#111111] border border-slate-800 rounded-lg p-5 flex flex-col justify-between hover:border-amber-500/30 transition-colors" id={`outil-${otl.id}`}>
+                  <div key={otl.id} className="outil-fiche bg-white border border-slate-200 rounded-lg p-5 flex flex-col justify-between hover:border-amber-500/30 transition-colors" id={`outil-${otl.id}`}>
                     
                     {/* En-tête */}
                     <div className="outil-header mb-4">
@@ -5009,7 +5011,7 @@ export function AssistantEpirocSt7() {
                         </span>
                         <span className="text-slate-500 font-mono text-[10px] font-bold">FICHE {otl.id}</span>
                       </div>
-                      <h4 className="font-extrabold text-sm text-slate-200 uppercase tracking-tight">{otl.name}</h4>
+                      <h4 className="font-extrabold text-sm text-slate-800 uppercase tracking-tight">{otl.name}</h4>
                       <div className="flex justify-between text-slate-500 text-[10px] font-semibold mt-1">
                         <span>{otl.cat}</span>
                         <span className="text-amber-500/70 font-mono">{otl.mfr}</span>
@@ -5017,29 +5019,29 @@ export function AssistantEpirocSt7() {
                     </div>
 
                     {/* SVG Blueprint Technique */}
-                    <div className="mb-4 rounded bg-[#0a0a0a] p-2 flex justify-center items-center border border-slate-900/60 overflow-hidden">
+                    <div className="mb-4 rounded bg-white p-2 flex justify-center items-center border border-slate-200/60 overflow-hidden">
                       <svg viewBox="0 0 200 150" className="w-full h-32" dangerouslySetInnerHTML={{ __html: otl.svg }} />
                     </div>
 
                     {/* Tableau des Spécifications */}
-                    <table className="outil-specs w-full text-left text-[11px] border-collapse border border-slate-900 bg-[#0c0c0c] mb-4">
+                    <table className="outil-specs w-full text-left text-[11px] border-collapse border border-slate-200 bg-[#0c0c0c] mb-4">
                       <tbody>
                         {otl.specs.map((spc, idx) => (
-                          <tr key={idx} className="border-b border-slate-900/60 last:border-b-0">
-                            <td className="p-1.5 font-bold text-slate-500 bg-[#121212] w-1/3 border-r border-slate-900/60">{spc[0]}</td>
-                            <td className="p-1.5 text-slate-300 font-mono text-[10px]">{spc[1]}</td>
+                          <tr key={idx} className="border-b border-slate-200/60 last:border-b-0">
+                            <td className="p-1.5 font-bold text-slate-500 bg-[#121212] w-1/3 border-r border-slate-200/60">{spc[0]}</td>
+                            <td className="p-1.5 text-slate-700 font-mono text-[10px]">{spc[1]}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
 
                     {/* Procédure d'utilisation */}
-                    <div className="outil-procedure mb-4 p-3 bg-slate-900/40 border border-slate-900/60 rounded">
-                      <h5 className="font-extrabold text-[10px] text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <div className="outil-procedure mb-4 p-3 bg-slate-50/40 border border-slate-200/60 rounded">
+                      <h5 className="font-extrabold text-[10px] text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                         <span className="flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 text-[8px] text-black font-bold">▶</span>
                         Procédure d'utilisation
                       </h5>
-                      <ol className="list-decimal pl-4 space-y-1 text-slate-300 text-[11px]">
+                      <ol className="list-decimal pl-4 space-y-1 text-slate-700 text-[11px]">
                         {otl.proc.map((step, idx) => (
                           <li key={idx}>{step}</li>
                         ))}
@@ -5047,12 +5049,12 @@ export function AssistantEpirocSt7() {
                     </div>
 
                     {/* Maintenance */}
-                    <div className="outil-maintenance mb-4 p-3 bg-amber-500/5 border border-amber-500/10 rounded text-[11px] text-slate-400">
+                    <div className="outil-maintenance mb-4 p-3 bg-amber-500/5 border border-amber-500/10 rounded text-[11px] text-slate-600">
                       <strong className="text-amber-500/80">Entretien & Étalonnage :</strong> {otl.maint}
                     </div>
 
                     {/* Localisation */}
-                    <div className="outil-localisation p-2.5 bg-emerald-500/5 border border-emerald-500/10 rounded text-[11px] text-slate-400 flex items-center gap-2">
+                    <div className="outil-localisation p-2.5 bg-emerald-500/5 border border-emerald-500/10 rounded text-[11px] text-slate-600 flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
                       <span><strong>Stockage :</strong> {otl.loc}</span>
                     </div>

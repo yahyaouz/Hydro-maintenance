@@ -10,14 +10,14 @@ export interface EpirocSt2gPanne {
 }
 
 export const EPIROC_ST2G_SYSTEMS = [
-  { id: "SYS1", label: "MOTEUR DEUTZ BF4M2012 WATER", icon: "Flame", bg: "bg-emerald-950/40 border-emerald-500/30", text: "text-emerald-500" },
-  { id: "SYS2", label: "TRANSMISSION FUNK DF100", icon: "Shuffle", bg: "bg-purple-950/40 border-purple-500/30", text: "text-purple-500" },
-  { id: "SYS3", label: "HYDRAULIQUE OPEN-CENTER", icon: "Droplets", bg: "bg-yellow-950/40 border-yellow-500/30", text: "text-yellow-500" },
-  { id: "SYS4", label: "DIRECTION & ARTICULATION", icon: "Compass", bg: "bg-blue-950/40 border-blue-500/30", text: "text-blue-500" },
-  { id: "SYS5", label: "FREINAGE DISQUES SECS", icon: "ShieldAlert", bg: "bg-rose-950/40 border-rose-500/30", text: "text-rose-500" },
-  { id: "SYS6", label: "ÉLECTRIQUE & ÉLECTRONIQUE BASIQUE", icon: "Zap", bg: "bg-slate-900 border-slate-700", text: "text-slate-300" },
-  { id: "SYS7", label: "CHÂSSIS & ROUES ST2G", icon: "Disc", bg: "bg-orange-950/40 border-orange-500/30", text: "text-orange-500" },
-  { id: "SYS8", label: "GODET, BRAS & ARTICULATION", icon: "Hammer", bg: "bg-amber-950/40 border-amber-500/30", text: "text-amber-700" }
+  { id: "SYS1", label: "MOTEUR DEUTZ BF4M2012 WATER", icon: "Flame", bg: "bg-emerald-100/60 border-emerald-200 text-emerald-800", text: "text-emerald-500" },
+  { id: "SYS2", label: "TRANSMISSION FUNK DF100", icon: "Shuffle", bg: "bg-purple-100/60 border-purple-200 text-purple-800", text: "text-purple-500" },
+  { id: "SYS3", label: "HYDRAULIQUE OPEN-CENTER", icon: "Droplets", bg: "bg-amber-100/60 border-amber-200 text-amber-800", text: "text-yellow-500" },
+  { id: "SYS4", label: "DIRECTION & ARTICULATION", icon: "Compass", bg: "bg-blue-100/60 border-blue-200 text-blue-800", text: "text-blue-500" },
+  { id: "SYS5", label: "FREINAGE DISQUES SECS", icon: "ShieldAlert", bg: "bg-rose-100/60 border-rose-200 text-rose-800", text: "text-rose-500" },
+  { id: "SYS6", label: "ÉLECTRIQUE & ÉLECTRONIQUE BASIQUE", icon: "Zap", bg: "bg-slate-100 border-slate-200 text-slate-800", text: "text-slate-300" },
+  { id: "SYS7", label: "CHÂSSIS & ROUES ST2G", icon: "Disc", bg: "bg-orange-100/60 border-orange-200 text-orange-800", text: "text-orange-500" },
+  { id: "SYS8", label: "GODET, BRAS & ARTICULATION", icon: "Hammer", bg: "bg-amber-100/60 border-amber-200 text-amber-800", text: "text-amber-700" }
 ];
 
 export const EPIROC_ST2G_GLOSSAIRE = [
