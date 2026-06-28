@@ -369,14 +369,14 @@ export const ST2D_COTES_TOLERANCES: ToleranceTable[] = [
   {
     id: "tab-5.3",
     ref: "1.1.4.A",
-    title: "M-A3 — SYSTÈME D'INJECTION MÉCANIQUE BOSCH PFR",
+    title: "M-A3 — SYSTÈME D'INJECTION MÉCANIQUE BOSCH VE", // CORRIGÉ V3 : Remplacement Bosch PFR par Bosch VE
     prep: "Déposer l'injecteur mécanique et débrancher la canalisation métallique haute pression.",
     pos: "Raccorder l'injecteur sur l'appareil de tarage manuel d'atelier.",
     mesure: "Pomper lentement jusqu'à déclenchement de l'aiguille de pulvérisation.",
     reg: "Inscrire la pression de tarage mesurée sur le certificat d'injecteur.",
     dec: "Si le tarage est inférieur à 170 bar : rajouter une cale de réglage sous le ressort interne de l'injecteur Bosch.",
     rows: [
-      { id: "007", param: "Pression d'ouverture d'injecteur Bosch PFR", nominal: "180", minVal: "170", maxVal: "190", unit: "bar", tool: "Pompe de tarage d'atelier", gmao: "Pan. 1.1.4.B" },
+      { id: "007", param: "Pression d'ouverture d'injecteur Bosch VE", nominal: "180", minVal: "170", maxVal: "190", unit: "bar", tool: "Pompe de tarage d'atelier", gmao: "Pan. 1.1.4.B" }, // CORRIGÉ V3 : Remplacement Bosch PFR par Bosch VE
       { id: "008", param: "Course de levée de l'aiguille d'injecteur", nominal: "0.20", minVal: "0.18", maxVal: "0.22", unit: "mm", tool: "Comparateur de précision vertical", gmao: "Pan. 1.1.4.B" },
       { id: "009", param: "Défaut d'étanchéité nez d'injecteur (à 160 bar)", nominal: "0", minVal: "0", maxVal: "0", unit: "goutte/min", tool: "Observation visuelle", gmao: "Pan. 1.1.4.B" }
     ]

@@ -472,127 +472,127 @@ export const EPIROC_ST2D_PANNES: EpirocSt2dPanne[] = [
     repTime: 2.0
   },
 
-  // SYSTEME 5 - FREINAGE HASR (8 pannes)
+  // SYSTEME 5 - FREINAGE TAMBOUR MÉCANIQUE À CÂBLE (8 pannes)
   {
     id: "5.1.1.A",
     system: "SYS5",
-    title: "Disques de frein de service usés sous l'épaisseur minimale",
+    title: "Garnitures de frein tambour usées sous l'épaisseur minimale (mâchoires)", // CORRIGÉ V3 : Remplacement disques HASR par garnitures de frein tambour
     severity: "ROUGE",
-    symptoms: "Le freinage de service est faible ou inefficace. Présence de copeaux de métal fin dans l'huile de différentiel.",
-    cause: "Usure naturelle des disques de friction immergés après plusieurs milliers d'heures de service en rampe.",
-    action: "Remplacer l'ensemble des disques de frein immergés HASR dans le carter de pont.",
-    repTime: 16.0
+    symptoms: "Le freinage de service est faible ou inefficace. Bruit de frottement métallique sur les tambours.", // CORRIGÉ V3 : Bruit métallique tambour au lieu de copeaux différentiel
+    cause: "Usure naturelle des garnitures organiques des mâchoires de frein à tambour après plusieurs milliers d'heures.", // CORRIGÉ V3 : Garnitures organiques mâchoires tambour au lieu de disques
+    action: "Remplacer le jeu de mâchoires de frein à tambour et ajuster le câble de commande mécanique.", // CORRIGÉ V3 : Remplacer mâchoires et ajuster câble
+    repTime: 4.0 // CORRIGÉ V3 : Remplacement mâchoires tambour plus rapide
   },
   {
     id: "5.1.1.B",
     system: "SYS5",
-    title: "Plaquettes de frein de secours/parking HASR usées",
+    title: "Câble de frein de parking détendu ou usé", // CORRIGÉ V3 : Remplacement plaquettes HASR par câble de parking détendu
     severity: "JAUNE",
-    symptoms: "Le voyant de frein de secours reste orange. Réduction de l'efficacité du maintien statique.",
-    cause: "Usure des plaquettes de frein extérieures à étrier sur l'arbre de transmission.",
-    action: "Remplacer les plaquettes de frein de secours à l'étrier et régler la course du piston.",
+    symptoms: "Le levier de frein de parking monte trop haut sans résistance. L'engin roule légèrement sur pente.", // CORRIGÉ V3 : Levier monte trop haut, roulement en pente
+    cause: "Étirement progressif du câble de frein de parking mécanique ou usure des garnitures de mâchoires.", // CORRIGÉ V3 : Étirement câble ou usure garnitures
+    action: "Remplacer le câble de frein de parking Ø 4 mm ou ajuster la tension au tendeur. Vérifier l'état des mâchoires.", // CORRIGÉ V3 : Changer câble ou ajuster tendeur
     repTime: 2.0
   },
   {
     id: "5.1.2.A",
     system: "SYS5",
-    title: "Étriers hydrauliques de frein de parking grippés",
+    title: "Mâchoires de frein tambour grippées (frein bloqué)", // CORRIGÉ V3 : Remplacement étriers hydrauliques grippés par mâchoires grippées
     severity: "ROUGE",
-    symptoms: "La machine refuse de se déplacer même lorsque le frein de parking est désactivé au tableau de bord. Surchauffe de l'étrier.",
-    cause: "Grippage des pistons d'étrier par accumulation de boue d'eau minérale corrosive.",
-    action: "Démonter l'étrier de frein, extraire les pistons de commande, nettoyer la corrosion et installer de nouveaux joints.",
+    symptoms: "La machine refuse de se déplacer même lorsque le frein de parking est relâché. Roue chaude anormalement.", // CORRIGÉ V3 : Roue chaude et frein bloqué
+    cause: "Grippage des mâchoires de frein à tambour par accumulation de poussière de mine ou corrosion des ressorts de rappel.", // CORRIGÉ V3 : Poussière de mine et corrosion ressorts
+    action: "Déposer le tambour, nettoyer les mâchoires et les ressorts de rappel, lubrifier les points de pivot. Remplacer si vitrifiées.", // CORRIGÉ V3 : Nettoyage et lubrification pivots ou remplacement mâchoires
     repTime: 4.0
   },
   {
     id: "5.1.2.B",
     system: "SYS5",
-    title: "Étriers de frein - Fuite de liquide ou d'huile hydraulique",
+    title: "Câble de frein de service effiloché ou cassé", // CORRIGÉ V3 : Remplacement fuite liquide étriers par câble effiloché/cassé
     severity: "JAUNE",
-    symptoms: "Pédale de frein de service spongieuse, niveau d'huile du circuit de charge de frein baisse régulièrement.",
-    cause: "Rupture des joints d'étanchéité de piston d'étrier.",
-    action: "Remplacer le kit de joints d'étanchéité d'étrier de frein HASR.",
+    symptoms: "Pédale de frein de service molle ou sans résistance. Freinage asymétrique (tire d'un côté).", // CORRIGÉ V3 : Pédale molle et freinage asymétrique
+    cause: "Effilochage ou rupture partielle du câble de frein mécanique à câble, ou gaine interne grippée.", // CORRIGÉ V3 : Effilochage câble ou gaine grippée
+    action: "Remplacer le câble de frein de service complet (Ø 4 mm, longueur 2.5 m) et lubrifier la gaine.", // CORRIGÉ V3 : Remplacement câble de service complet et lubrification gaine
     repTime: 3.0
   },
   {
     id: "5.2.1.A",
     system: "SYS5",
-    title: "Frein de parking de transmission usé (danger de roulement)",
+    title: "Frein de parking tambour usé (danger de roulement en rampe)", // CORRIGÉ V3 : Remplacement frein de parking de transmission par frein de parking tambour
     severity: "ROUGE",
     symptoms: "L'engin descend lentement de sa position stationnaire même lorsque le frein de parking est serré à fond.",
-    cause: "Usure ou endommagement par frottement thermique des disques de friction d'arbre.",
-    action: "Remplacer les garnitures et le disque du frein de parking de transmission.",
+    cause: "Usure des garnitures de mâchoires de frein à tambour ou câble de parking trop détendu.", // CORRIGÉ V3 : Usure garnitures mâchoires tambour ou câble détendu
+    action: "Remplacer les mâchoires de frein à tambour et ajuster la tension du câble de parking.", // CORRIGÉ V3 : Remplacement mâchoires et réglage câble
     repTime: 2.5
   },
   {
     id: "5.3.1.A",
     system: "SYS5",
-    title: "Accumulateur de frein vide ou perte de précharge d'azote",
+    title: "Ressort de rappel de mâchoires cassé ou détendu", // CORRIGÉ V3 : Remplacement accumulateur azote par ressort de rappel cassé
     severity: "ROUGE",
-    symptoms: "Les freins se bloquent de façon intempestive dès que l'on sollicite la direction, ou au démarrage.",
-    cause: "Rupture de la membrane interne de l'accumulateur ou fuite de la valve de charge d'azote.",
-    action: "Vérifier la pression de précharge d'azote (doit être de 85 bars). Remplacer l'accumulateur si la membrane est percée.",
+    symptoms: "Les freins restent partiellement engagés après relâchement de la pédale. Bruit de cliquetis au tambour.", // CORRIGÉ V3 : Freins engagés et cliquetis tambour
+    cause: "Rupture d'un ressort de rappel de mâchoire ou détente excessive par fatigue thermique.", // CORRIGÉ V3 : Rupture ressort ou fatigue thermique
+    action: "Remplacer les 4 ressorts de rappel de mâchoires (50 N) et vérifier l'alignement des mâchoires dans le tambour.", // CORRIGÉ V3 : Remplacement des 4 ressorts
     repTime: 2.0
   },
   {
     id: "5.3.2.A",
     system: "SYS5",
-    title: "Pompe de charge de freinage défectueuse",
+    title: "Tendeur de câble de frein grippé ou bloqué", // CORRIGÉ V3 : Remplacement pompe de charge de freinage par tendeur de câble grippé
     severity: "ROUGE",
-    symptoms: "Impossible de déverrouiller le frein de parking. La pression d'accumulateur reste nulle.",
-    cause: "Usure interne des engrenages de la pompe hydraulique de charge des freins.",
-    action: "Remplacer la pompe de charge hydraulique des freins et tester la valve de régulation.",
+    symptoms: "Impossible de desserrer le frein de parking au levier. Le câble reste sous tension permanente.", // CORRIGÉ V3 : Impossible de desserrer, câble sous tension
+    cause: "Grippage du tendeur de câble fileté (écrou M10) par corrosion ou accumulation de poussière.", // CORRIGÉ V3 : Grippage filetage par corrosion
+    action: "Démonter le tendeur de câble, nettoyer le filetage, lubrifier et remonter. Remplacer si filetage écrasé.", // CORRIGÉ V3 : Nettoyage filetage et lubrification ou changement tendeur
     repTime: 3.5
   },
   {
     id: "5.3.3.A",
     system: "SYS5",
-    title: "Limiteur de pression de frein déréglé",
+    title: "Réglage du câble de frein de service déréglé", // CORRIGÉ V3 : Remplacement limiteur de pression par réglage câble de service
     severity: "JAUNE",
-    symptoms: "Le freinage de service est trop agressif (blocage immédiat des roues) ou au contraire trop lent à agir.",
-    cause: "Ressort de régulateur détendu ou tiroir de valve de freinage déréglé.",
-    action: "Ajuster la valve de régulation de pression de freinage à l'aide d'un manomètre de test d'atelier.",
+    symptoms: "Le freinage de service est trop agressif (blocage immédiat des roues) ou au contraire trop mou.",
+    cause: "Tendeur de câble mal ajusté ou câble détendu, créant un jeu excessif ou une précharge trop forte.", // CORRIGÉ V3 : Tendeur mal ajusté ou câble détendu
+    action: "Ajuster la tension du câble de frein au tendeur fileté (écrou M10) pour obtenir un jeu de 2-3 mm à la pédale.", // CORRIGÉ V3 : Réglage au tendeur fileté
     repTime: 1.5
   },
 
-  // SYSTEME 6 - ÉLECTRIQUE 24V (8 pannes)
+  // SYSTEME 6 - ÉLECTRIQUE MINIMALE (5 pannes modifiées)
   {
     id: "6.1.1.A",
     system: "SYS6",
-    title: "Batteries de démarrage déchargées (démarrage impossible)",
+    title: "Démarrage manuel/pneumatique impossible (compression basse ou starter grippé)", // CORRIGÉ V3 : Remplacement batteries déchargées par démarrage impossible
     severity: "JAUNE",
-    symptoms: "Bruit de claquement du démarreur (clic-clic) et extinction totale des voyants du tableau de bord.",
-    cause: "Oubli d'activation du coupe-circuit en fin de poste ou court-circuit dans le réseau d'éclairage.",
-    action: "Mesurer la tension des batteries (doit être >24V). Recharger les batteries ou démarrer par raccordement externe.",
+    symptoms: "Le moteur ne tourne pas du tout au lanceur manuel ou au starter pneumatique. Aucune combustion.", // CORRIGÉ V3 : Pas de rotation au lanceur ou starter pneumatique
+    cause: "Compression basse due à l'usure des segments, starter pneumatique grippé, ou pression d'air insuffisante (< 6 bar).", // CORRIGÉ V3 : Usure segments, starter grippé, manque d'air
+    action: "Mesurer la compression au démarrage (min 25 bar). Vérifier le starter pneumatique et la pression d'air. Si compression < 20 bar, révision moteur.", // CORRIGÉ V3 : Mesure compression et vérification starter/air
     repTime: 0.5
   },
   {
     id: "6.1.1.B",
     system: "SYS6",
-    title: "Batteries sulfatées (perte définitive de capacité)",
+    title: "Starter pneumatique grippé ou usé", // CORRIGÉ V3 : Remplacement batteries sulfatées par starter pneumatique grippé
     severity: "JAUNE",
-    symptoms: "La batterie indique 24V à vide, mais s'effondre instantanément à moins de 12V dès qu'on actionne le démarreur.",
-    cause: "Batteries restées déchargées trop longtemps ou fin de vie utile.",
-    action: "Remplacer le jeu de deux batteries 12V raccordées en série pour reconstituer le pack 24V.",
+    symptoms: "Le starter pneumatique tourne lentement ou bloque en fin de course. Bruit d'air qui s'échappe sans action.", // CORRIGÉ V3 : Tourne lentement ou sifflement d'air
+    cause: "Usure des palettes du starter pneumatique ou grippage du pignon d'entraînement par la poussière de mine.", // CORRIGÉ V3 : Usure palettes ou pignon grippé
+    action: "Démonter le starter pneumatique, nettoyer le pignon et les palettes, lubrifier. Remplacer si usure excessive des palettes.", // CORRIGÉ V3 : Démontage, nettoyage, lubrification ou remplacement palettes
     repTime: 0.8
   },
   {
     id: "6.1.2.A",
     system: "SYS6",
-    title: "Démarreur électrique ne s'enclenche pas",
+    title: "Manette de démarrage manuelle bloquée ou grippée", // CORRIGÉ V3 : Remplacement démarreur électrique par manette manuelle bloquée
     severity: "JAUNE",
-    symptoms: "Absence de réaction totale lors de la rotation de la clé de contact, même avec des batteries pleines.",
-    cause: "Solénoïde de démarreur bloqué, charbons usés ou relais auxiliaire de démarrage HS.",
-    action: "Frapper doucement sur le corps du solénoïde pour libérer le contacteur. Si inefficace, déposer et changer le démarreur.",
+    symptoms: "La manette de démarrage manuel ne bouge pas ou reste bloquée en position arrêt.", // CORRIGÉ V3 : Manette bloquée en position arrêt
+    cause: "Grippage de la manette de démarrage par accumulation de poussière, corrosion du câble, ou ressort de rappel cassé.", // CORRIGÉ V3 : Grippage par poussière ou ressort cassé
+    action: "Nettoyer la manette et le câble de commande, lubrifier. Remplacer le ressort de rappel si cassé.", // CORRIGÉ V3 : Nettoyage manette/câble, lubrification et remplacement ressort
     repTime: 2.0
   },
   {
     id: "6.1.3.A",
     system: "SYS6",
-    title: "Alternateur ne charge pas (courroie lâche ou régulateur HS)",
+    title: "Alternateur option éclairage ne charge pas (si équipé)", // CORRIGÉ V3 : Remplacement alternateur standard par alternateur optionnel d'éclairage
     severity: "JAUNE",
-    symptoms: "La tension mesurée aux batteries moteur en marche est inférieure à 25.5V. Le voyant de charge reste allumé.",
-    cause: "Courroie d'entraînement de l'alternateur lâche/rompue ou régulateur de tension interne HS.",
-    action: "Retendre ou remplacer la courroie trapézoïdale d'alternateur. Remplacer l'alternateur si nécessaire.",
+    symptoms: "La tension mesurée au circuit éclairage est inférieure à 12V. Les phares faiblissent en charge.", // CORRIGÉ V3 : Circuit éclairage < 12V
+    cause: "Courroie d'entraînement de l'alternateur option lâche/rompue ou régulateur interne HS.", // CORRIGÉ V3 : Courroie d'alternateur option lâche/rompue
+    action: "Retendre ou remplacer la courroie trapézoïdale. Remplacer l'alternateur option si nécessaire. NOTE : La ST2D standard n'a PAS d'alternateur.", // CORRIGÉ V3 : Tension courroie ou remplacement alternateur optionnel
     repTime: 1.5
   },
   {
@@ -608,11 +608,11 @@ export const EPIROC_ST2D_PANNES: EpirocSt2dPanne[] = [
   {
     id: "6.2.2.A",
     system: "SYS6",
-    title: "Voyant de préchauffage Deutz inactif",
+    title: "Voyant de pression d'air starter inactif (si équipé starter pneumatique)", // CORRIGÉ V3 : Remplacement voyant préchauffage par voyant pression d'air starter
     severity: "JAUNE",
-    symptoms: "Aucune assistance au préchauffage par temps froid. Ampoule ou relais inopérant.",
-    cause: "Fusible de commande grillé ou relais thermique de préchauffage HS.",
-    action: "Changer le fusible de protection 15A ou remplacer le relais de puissance de préchauffage.",
+    symptoms: "Aucune indication de pression d'air au tableau de bord. Starter pneumatique inopérant.", // CORRIGÉ V3 : Pas d'indication pression d'air
+    cause: "Fusible de commande grillé ou manostat de pression d'air HS.", // CORRIGÉ V3 : Fusible grillé ou manostat d'air HS
+    action: "Changer le fusible de protection 15A ou remplacer le manostat de pression d'air (min 6 bar requis).", // CORRIGÉ V3 : Changer fusible ou manostat d'air
     repTime: 1.0
   },
   {
