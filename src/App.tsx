@@ -6,31 +6,33 @@ import {
 import { Settings } from "lucide-react";
 import { Dashboard } from "@/components/Dashboard";
 import { EnginList } from "@/components/EnginList";
-import { PannesList } from "@/components/PannesList";
-import { HeuresTravail } from "@/components/HeuresTravail";
-import { MaintenanceModule } from "@/components/MaintenanceModule";
-import { AlertesModule } from "@/components/AlertesModule";
-import { Pneumatiques } from "@/components/Pneumatiques";
-import { Consommations } from "@/components/Consommations";
-import { StockPieces } from "@/components/StockPieces";
-import { MecaniciensModule } from "@/components/MecaniciensModule";
+// NETTOYÉ : Import PannesList supprimé
+// NETTOYÉ : Import HeuresTravail supprimé
+// NETTOYÉ : Import MaintenanceModule supprimé
+// NETTOYÉ : Import AlertesModule supprimé
+// NETTOYÉ : Import Pneumatiques supprimé
+// NETTOYÉ : Import Consommations supprimé
+// NETTOYÉ : Import StockPieces supprimé
+// NETTOYÉ : Import MecaniciensModule supprimé
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
 import { LoginPage } from "@/components/auth/LoginPage";
 import { ReferentielTechnique } from "@/components/ReferentielTechnique";
 import { AssistantMecanicien } from "@/components/AssistantMecanicien";
+import Checklists from "@/components/Checklists";
+import TachesPlanning from "@/components/TachesPlanning";
+import Analyses from "@/components/Analyses";
 import { IndustrialBackdrop } from "@/components/IndustrialBackdrop";
 import { RestrictedActionModal } from "@/components/RestrictedActionModal";
 import { startViewerTrackingSession, trackViewerPageTransition } from "@/services/viewerTracking";
 
 import { seedDatabase } from "@/lib/db-seed";
 
-// Code splitting and lazy rendering for heavy analytics modules (Phase 1)
-const VisionIA = React.lazy(() => import("@/components/VisionIA").then(m => ({ default: m.VisionIA })));
-const Rapports = React.lazy(() => import("@/components/Rapports").then(m => ({ default: m.Rapports })));
-const InspectionModule = React.lazy(() => import("@/components/InspectionModule").then(m => ({ default: m.InspectionModule })));
-const MondeMaintenance = React.lazy(() => import("@/components/MondeMaintenance").then(m => ({ default: m.MondeMaintenance })));
+// NETTOYÉ : Import lazy VisionIA supprimé
+// NETTOYÉ : Import lazy Rapports supprimé
+// NETTOYÉ : Import lazy InspectionModule supprimé
+// NETTOYÉ : Import lazy MondeMaintenance supprimé
 
 function IndustrialSkeleton() {
   return (
@@ -45,7 +47,7 @@ function IndustrialSkeleton() {
   );
 }
 
-import { AdminUserManagement } from "@/components/AdminUserManagement";
+import { Admin } from "@/components/Admin";
 import { getDoc, doc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -298,22 +300,23 @@ export default function App() {
     switch(activeTab) {
       case "dashboard": return "Cockpit National d'Exploitation";
       case "engins": return "Gestion Flotte Machines de Fond";
-      case "pannes": return "Registre des Défaillances Critiques";
-      case "heures": return "Enregistrements Horométriques Engine";
-      case "vision_ia": return "Module d'Intelligence Artificielle Vision";
-      case "maintenance": return "Bons de Travail Actifs (GMAO PRO)";
-      case "alertes": return "Non-Conformités & Alerteurs";
-      case "pneus": return "Module Pneumatiques Avancé";
-      case "carburant": return "Approvisionnement & Fluides";
-      case "stock": return "Magasin de Pièces Détachées SOU-MAG";
-      case "rapports": return "Rapports & Audit Logs Informatiques";
-      case "inspection": return "Audit & Régulations Forages";
-      case "monde": return "Visualisateur SOU-GMAO Central Node";
+      // NETTOYÉ : pannes supprimé
+      // NETTOYÉ : heures supprimé
+      // NETTOYÉ : vision_ia supprimé
+      // NETTOYÉ : maintenance supprimé
+      // NETTOYÉ : alertes supprimé
+      // NETTOYÉ : pneus supprimé
+      // NETTOYÉ : carburant supprimé
+      // NETTOYÉ : stock supprimé
+      // NETTOYÉ : rapports supprimé
+      // NETTOYÉ : inspection supprimé
+      // NETTOYÉ : monde supprimé
       case "admin": return "Privilèges, Droits & Supervision";
-      case "mecaniciens": return "Suivi d'Atelier & Équipes Métier";
-      case "ma_fiche": return "Ma Fiche Praticien Souterrain";
-      case "interventions": return "Activités Spécifiques de Maintenance";
-      case "saisies": return "Saisies de Temps et BT";
+      // NETTOYÉ : mecaniciens supprimé
+      // NETTOYÉ : ma_fiche supprimé
+      // NETTOYÉ : interventions supprimé
+      // NETTOYÉ : saisies supprimé
+      case "referentiel": return "Référentiel Technique";
       case "assistant_mecanicien": return "Assistant Mécanicien - Montabert T23";
       default: return "Hydromines SOU-GMAO Platform";
     }
@@ -405,28 +408,15 @@ export default function App() {
             <React.Suspense fallback={<IndustrialSkeleton />}>
               {activeTab === "dashboard" && <Dashboard />}
               {activeTab === "engins" && <EnginList />}
-              {activeTab === "pannes" && <PannesList />}
-              {activeTab === "heures" && <HeuresTravail />}
-              {activeTab === "vision_ia" && <VisionIA />}
-              {activeTab === "maintenance" && <MaintenanceModule />}
-              {activeTab === "alertes" && <AlertesModule />}
-              {activeTab === "pneus" && <Pneumatiques />}
-              {activeTab === "carburant" && <Consommations />}
-              {activeTab === "stock" && <StockPieces />}
-              {activeTab === "rapports" && <Rapports />}
-              {activeTab === "inspection" && <InspectionModule />}
-              {activeTab === "monde" && <MondeMaintenance />}
-              {activeTab === "admin" && <AdminUserManagement />}
+              {/* NETTOYÉ : pannes, heures, vision_ia, maintenance, alertes, pneus, carburant, stock, rapports, inspection, monde, mecaniciens, ma_fiche, interventions, saisies supprimés */}
+              {activeTab === "admin" && <Admin />}
               {activeTab === "referentiel" && <ReferentielTechnique />}
-              
-              {/* MECANICIENS MODULE VIEWS */}
-              {activeTab === "mecaniciens" && <MecaniciensModule view="list" />}
-              {activeTab === "ma_fiche" && <MecaniciensModule view="ma_fiche" />}
-              {activeTab === "interventions" && <MecaniciensModule view="interventions" />}
-              {activeTab === "saisies" && <MecaniciensModule view="saisies" />}
               {activeTab === "assistant_mecanicien" && <AssistantMecanicien />}
+              {activeTab === "checklists" && <Checklists />}
+              {activeTab === "taches_planning" && <TachesPlanning />}
+              {activeTab === "analyses" && <Analyses />}
               
-              {!["dashboard", "engins", "referentiel", "pannes", "heures", "vision_ia", "maintenance", "alertes", "pneus", "carburant", "stock", "rapports", "mecaniciens", "ma_fiche", "interventions", "saisies", "declaration_panne", "import_gasoil", "inspection", "monde", "admin", "assistant_mecanicien"].includes(activeTab) && (
+              {!["dashboard", "engins", "referentiel", "admin", "assistant_mecanicien", "checklists", "taches_planning", "analyses"].includes(activeTab) && (
                 <div className="flex items-center justify-center h-full text-muted-foreground bg-white dark:bg-slate-900">
                   Module {activeTab} en cours d'implémentation...
                 </div>

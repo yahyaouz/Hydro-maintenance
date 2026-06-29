@@ -5,7 +5,7 @@ import {
   Settings, ChevronDown, LogOut, MapPin, RefreshCw,
   Users, CheckCircle2, UserIcon, FileSpreadsheet, Shield,
   Sun, Moon, PlusCircle, Sparkles, ChevronLeft, ChevronRight,
-  BookOpen
+  BookOpen, Calendar, BarChart3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -47,54 +47,21 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
   const navGroups = [
     {
       id: "SEP_SYNTHESES",
-      title: "1. Synthèses & Flotte",
+      title: "SYNTHÈSE FLOTTE", // NETTOYÉ : Renommé en SYNTHÈSE FLOTTE
       items: [
         { id: "dashboard", label: "Tableau de Bord", icon: LayoutDashboard, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","VIEWER"] },
         { id: "engins", label: "État de la Flotte", icon: Truck, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","VIEWER"] },
         { id: "referentiel", label: "Référentiel Technique", icon: BookOpen, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","SECRETAIRE","VIEWER"] },
         { id: "assistant_mecanicien", label: "Assistant Mécanicien", icon: Wrench, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","VIEWER"] },
+        { id: "taches_planning", label: "Tâches & Planning", icon: Calendar, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","VIEWER"] },
+        { id: "checklists", label: "Checklists SOU-GMAO", icon: CheckCircle2, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","VIEWER"] },
+        { id: "analyses", label: "Analyses & Rapports", icon: BarChart3, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","VIEWER"] },
       ]
     },
     {
-      id: "SEP_PLANIFICATION",
-      title: "2. Planification & Opérations",
+      id: "SEP_SYSTEME",
+      title: "SYSTÈME", // NETTOYÉ : Renommé en SYSTÈME et nettoyé des pages supprimées
       items: [
-        { id: "heures", label: "Heures de Travail", icon: Clock, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","SECRETAIRE","VIEWER"] },
-        { id: "maintenance", label: "Bons de Travail (GMAO)", icon: Wrench, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","VIEWER"] },
-        { id: "vidange", label: "Suivi Vidange", icon: PlusCircle, roles: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "VIEWER"] },
-        { id: "pannes", label: "Suivi Pannes", icon: AlertTriangle, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","VIEWER"] },
-        { id: "mecaniciens", label: "Équipe Mécanique", icon: Users, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","VIEWER"] },
-      ]
-    },
-    {
-      id: "SEP_TERRAIN",
-      title: "3. Saisies de Terrain",
-      items: [
-        { id: "declaration_panne", label: "Déclarer Panne", icon: AlertTriangle, roles: ["SECRETAIRE"] },
-        { id: "import_gasoil", label: "Import Gasoil/Huile", icon: FileSpreadsheet, roles: ["SECRETAIRE"] },
-        { id: "mes_saisies", label: "Mes Saisies", icon: FileText, roles: ["SECRETAIRE"] },
-        { id: "ma_fiche", label: "Ma Fiche Performance", icon: UserIcon, roles: ["MECANICIEN"] },
-        { id: "interventions", label: "Mes Interventions", icon: Wrench, roles: ["MECANICIEN"] },
-        { id: "saisies", label: "Vérifier Saisies", icon: CheckCircle2, roles: ["MECANICIEN"] },
-      ]
-    },
-    {
-      id: "SEP_LOGISTIQUE",
-      title: "4. Logistique & Stock",
-      items: [
-        { id: "pneus", label: "Suivi Pneumatiques", icon: Disc, roles: ["ADMIN","DIRECTION","VIEWER"] },
-        { id: "carburant", label: "Carburant & Huiles", icon: Fuel, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","VIEWER"] },
-        { id: "stock", label: "Pièces & Stock", icon: Package, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","VIEWER"] },
-        { id: "rapports", label: "Rapports & Audit", icon: FileText, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","VIEWER"] },
-      ]
-    },
-    {
-      id: "SEP_SUPERVISION",
-      title: "5. Supervision & Admin",
-      items: [
-        { id: "vision_ia", label: "VISION IA PRO", icon: Eye, roles: ["ADMIN","VIEWER"] },
-        { id: "inspection", label: "MODE INSPECTION", icon: Shield, roles: ["ADMIN","VIEWER"] },
-        { id: "monde", label: "DOCK MONDE SOU-GMAO", icon: Database, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","VIEWER"] },
         { id: "admin", label: "Configuration Système", icon: Settings, roles: ["ADMIN","VIEWER"] },
       ]
     }
