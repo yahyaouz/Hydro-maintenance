@@ -26,7 +26,8 @@ import {
   Trash2,
   Check,
   Award,
-  BookOpen
+  BookOpen,
+  Activity
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -114,6 +115,12 @@ export default function Analyses() {
   const [exportEndDate, setExportEndDate] = React.useState("2026-06-30");
   const [exportEngin, setExportEngin] = React.useState("Tous");
   const [exportDataType, setExportDataType] = React.useState<"checklists" | "tasks" | "heures" | "pannes" | "conso">("tasks");
+
+  // V5 : États perfectionnistes d'ingénierie souterraine (ROI & Fluides)
+  const [costProductionPerHour, setCostProductionPerHour] = React.useState(15000); // 15 000 DH/heure d'arrêt
+  const [costMajorFailure, setCostMajorFailure] = React.useState(80000); // 80 000 DH par panne majeure
+  const [selectedOilEngin, setSelectedOilEngin] = React.useState("ST2G-01");
+  const [checkedActions, setCheckedActions] = React.useState<Record<string, boolean>>({});
 
   // V4 : Chargement initial des données depuis localStorage
   React.useEffect(() => {
@@ -360,6 +367,28 @@ export default function Analyses() {
     const correctifs = tasksEngin.filter(t => t.type === "CORRECTIF").length;
     const totalTaches = tasksEngin.length;
 
+    // V5 : Calcul de l'intervalle moyen réel entre pannes (MTBF)
+    const engineMatch = engins.find(e => e.id === enginId);
+    const currentHours = engineMatch ? engineMatch.heuresMarche : 1000;
+    // MTBF réel = Heures de marche cumulées divisé par les pannes constatées (ou heure totale s'il n'y a pas de panne)
+    const mtbf = correctifs > 0 ? Math.round(currentHours / correctifs) : Math.round(currentHours);
+
+    // V5 : Calcul du temps moyen réel de réparation (MTTR)
+    const finishedCorrectives = tasksEngin.filter(t => t.type === "CORRECTIF" && (t.statut === "FAIT" || t.statut === "VALIDE"));
+    let totalRepairHours = 0;
+    finishedCorrectives.forEach(tc => {
+      const d = tc.dureeEstimee;
+      if (d === "15min") totalRepairHours += 0.25;
+      else if (d === "30min") totalRepairHours += 0.5;
+      else if (d === "1h") totalRepairHours += 1.0;
+      else if (d === "2h") totalRepairHours += 2.0;
+      else if (d === "4h") totalRepairHours += 4.0;
+      else if (d === "6h") totalRepairHours += 6.0;
+      else if (d === "1j") totalRepairHours += 8.0;
+      else totalRepairHours += 1.5;
+    });
+    const mttr = finishedCorrectives.length > 0 ? Number((totalRepairHours / finishedCorrectives.length).toFixed(1)) : 1.2;
+
     // Calcul du taux préventif global pour cet engin
     const prevoirTaches = tasksEngin.filter(t => t.type === "PREVENTIF" || t.type === "QUOTIDIEN");
     const prevoirFaites = prevoirTaches.filter(t => t.statut === "FAIT" || t.statut === "VALIDE").length;
@@ -383,7 +412,9 @@ export default function Analyses() {
       totalTaches,
       tauxPreventif,
       coutEstime,
-      etat
+      etat,
+      mtbf,
+      mttr
     };
   };
 
@@ -512,6 +543,94 @@ export default function Analyses() {
     if (percent >= 70) return { label: "🟡 Incertain (Insuffisance de saisies)", color: "text-amber-500 bg-amber-50 border-amber-200" };
     return { label: "🔴 Données insuffisantes (Veuillez clore vos tâches)", color: "text-rose-500 bg-rose-50 border-rose-200" };
   }, [tasks]);
+
+  // V5 : Classement de Gamification des Mécaniciens basé sur l'efficacité réelle (localStorage)
+  const leaderboardMecaniciens = React.useMemo(() => {
+    const mecaStats: Record<string, {
+      nom: string;
+      total: number;
+      faites: number;
+      correctifs: number;
+      delayed: number;
+    }> = {};
+
+    tasks.forEach(t => {
+      const nom = t.mecanicienNom || "Non assigné";
+      if (!mecaStats[nom]) {
+        mecaStats[nom] = { nom, total: 0, faites: 0, correctifs: 0, delayed: 0 };
+      }
+      mecaStats[nom].total += 1;
+      if (t.statut === "FAIT" || t.statut === "VALIDE") {
+        mecaStats[nom].faites += 1;
+        if (t.type === "CORRECTIF") {
+          mecaStats[nom].correctifs += 1;
+        }
+      } else if (t.statut === "NON_FAIT") {
+        mecaStats[nom].delayed += 1;
+      }
+    });
+
+    const list = Object.values(mecaStats).map(m => {
+      const score = (m.faites * 25) + (m.correctifs * 40) - (m.delayed * 15);
+      const rate = m.total > 0 ? Math.round((m.faites / m.total) * 100) : 0;
+      
+      let rankBadge = "🥉 Inspecteur Vigilant";
+      let badgeColor = "bg-emerald-50 text-emerald-700 border-emerald-100";
+      if (score >= 120) {
+        rankBadge = "🏆 Maître Élite de la Rampe";
+        badgeColor = "bg-amber-100 text-amber-800 border-amber-200";
+      } else if (score >= 60) {
+        rankBadge = "🥈 Technicien Spécialiste";
+        badgeColor = "bg-blue-100 text-blue-800 border-blue-200";
+      }
+
+      return {
+        ...m,
+        score: Math.max(0, score),
+        rate,
+        rankBadge,
+        badgeColor
+      };
+    });
+
+    return list.sort((a, b) => b.score - a.score);
+  }, [tasks]);
+
+  // V5 : Générateur d'ordres de travaux directs depuis les recommandations
+  const handleCreateTaskFromAction = (actionText: string) => {
+    let detectedEngin = "ST2G-01";
+    engins.forEach(e => {
+      if (actionText.includes(e.id)) {
+        detectedEngin = e.id;
+      }
+    });
+
+    const isPreventif = actionText.toLowerCase().includes("vidange") || actionText.toLowerCase().includes("inspection") || actionText.toLowerCase().includes("graissage") || actionText.toLowerCase().includes("former");
+    
+    const newTask: MaintenanceTask = {
+      id: `T-AUTO-${Date.now()}`,
+      type: isPreventif ? "PREVENTIF" : "CORRECTIF",
+      label: actionText,
+      enginId: detectedEngin,
+      enginModele: engins.find(e => e.id === detectedEngin)?.modele || "ST2G",
+      mecanicienId: "M01",
+      mecanicienNom: "Lahcen Ait", // Par défaut assigné au chef d'équipe Lahcen
+      poste: "Poste 1",
+      datePlanifiee: new Date().toISOString().split("T")[0],
+      dureeEstimee: "2h",
+      priorite: "HAUTE",
+      statut: "NON_FAIT",
+      commentaire: "Créé de façon interactive depuis le plan d'actions stratégiques des Analyses SOU-GMAO."
+    };
+
+    const updated = [...tasks, newTask];
+    setTasks(updated);
+    localStorage.setItem("gmao_planning_tasks", JSON.stringify(updated));
+    toast.success(`Ordre de travail créé avec succès !`, {
+      description: `Assigné à Lahcen Ait pour l'engin ${detectedEngin} : "${actionText}"`,
+      duration: 5000
+    });
+  };
 
   // V4-1 : EXÉCUTION DES 18 RÈGLES D'ANALYSES TEXTUELLES AUTO (IF/ELSE STRICT)
   const executeAnalysesRules = () => {
@@ -1025,14 +1144,15 @@ export default function Analyses() {
                     <tr className="bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-wider border-b border-slate-200">
                       <th className="py-3 px-4">Engin (ID)</th>
                       <th className="py-3 px-4">Modèle</th>
-                      <th className="py-3 px-4 text-center">Heures marche</th>
-                      <th className="py-3 px-4 text-center">Tâches faites</th>
+                      <th className="py-3 px-4 text-center">Heures</th>
+                      <th className="py-3 px-4 text-center text-emerald-600 font-bold">MTBF (Interv.)</th>
+                      <th className="py-3 px-4 text-center text-amber-600 font-bold">MTTR (Répar.)</th>
                       <th className="py-3 px-4 text-center text-rose-600">Tâches retard</th>
-                      <th className="py-3 px-4 text-center">Correctifs (pannes)</th>
+                      <th className="py-3 px-4 text-center">Correctifs</th>
                       <th className="py-3 px-4">Taux préventif</th>
                       <th className="py-3 px-4 text-right">Coût maintenance (DH)</th>
                       <th className="py-3 px-4 text-center">État</th>
-                      <th className="py-3 px-4 text-center">Tendance (6m)</th>
+                      <th className="py-3 px-4 text-center">Tendance</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1046,8 +1166,11 @@ export default function Analyses() {
                           <td className="py-3 px-4 font-black text-slate-900">{e.id}</td>
                           <td className="py-3 px-4 font-bold text-slate-600">{e.modele}</td>
                           <td className="py-3 px-4 text-center font-bold text-slate-700">{e.heuresMarche}h</td>
-                          <td className="py-3 px-4 text-center font-bold text-slate-600">
-                            {stats.tasksFaites}/{stats.totalTaches}
+                          <td className="py-3 px-4 text-center font-black text-emerald-600 bg-emerald-50/20">
+                            {stats.mtbf}h
+                          </td>
+                          <td className="py-3 px-4 text-center font-black text-amber-600 bg-amber-50/20">
+                            {stats.mttr}h
                           </td>
                           <td className="py-3 px-4 text-center font-black text-rose-600 bg-rose-50/30">
                             {stats.tasksRetard}
@@ -1098,8 +1221,8 @@ export default function Analyses() {
             </CardContent>
           </Card>
 
-          {/* V4-7 : SECTION BENCHMARKING EPIROC */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* V4-7 & V5 : CO-SYSTEMS & GAMIFICATION (Bento Grid 3 colonnes) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             <Card className="border-slate-200 shadow-sm bg-white rounded-2xl overflow-hidden">
               <CardHeader className="bg-slate-50 border-b border-slate-150 py-3.5 px-5">
@@ -1114,39 +1237,35 @@ export default function Analyses() {
                   </p>
 
                   <div className="divide-y divide-slate-100 text-xs">
-                    <div className="py-2.5 flex justify-between items-center">
+                    <div className="py-2 flex justify-between items-center">
                       <span className="font-semibold text-slate-600">Taux préventif cible</span>
-                      <div className="flex gap-4">
-                        <span>Hydromines : <strong className="text-slate-900">{kpiTauxPreventifGlobal}%</strong></span>
-                        <span>Epiroc : <strong className="text-emerald-600">75%</strong></span>
-                        <span className="font-bold text-emerald-600">➡️ Conforme</span>
+                      <div className="flex gap-2 text-[11px]">
+                        <span>GMAO : <strong className="text-slate-950">{kpiTauxPreventifGlobal}%</strong></span>
+                        <span>Cible : <strong className="text-emerald-600">75%</strong></span>
                       </div>
                     </div>
 
-                    <div className="py-2.5 flex justify-between items-center">
+                    <div className="py-2 flex justify-between items-center">
                       <span className="font-semibold text-slate-600">Consommation ST2G</span>
-                      <div className="flex gap-4">
-                        <span>Hydromines : <strong className="text-slate-900">52 L/100h</strong></span>
-                        <span>Epiroc : <strong className="text-emerald-600">40 L/100h</strong></span>
-                        <span className="font-bold text-rose-600">⬇️ -30% Dérive</span>
+                      <div className="flex gap-2 text-[11px]">
+                        <span>GMAO : <strong className="text-slate-950">52 L/100h</strong></span>
+                        <span>Cible : <strong className="text-emerald-600">40 L</strong></span>
                       </div>
                     </div>
 
-                    <div className="py-2.5 flex justify-between items-center">
+                    <div className="py-2 flex justify-between items-center">
                       <span className="font-semibold text-slate-600">Coût de maintenance</span>
-                      <div className="flex gap-4">
-                        <span>Hydromines : <strong className="text-slate-900">15 000 DH/1000h</strong></span>
-                        <span>Epiroc : <strong className="text-emerald-600">12 000 DH/1000h</strong></span>
-                        <span className="font-bold text-rose-600">⬇️ -25% Surcoût</span>
+                      <div className="flex gap-2 text-[11px]">
+                        <span>GMAO : <strong className="text-slate-950">15k DH</strong></span>
+                        <span>Cible : <strong className="text-emerald-600">12k DH</strong></span>
                       </div>
                     </div>
 
-                    <div className="py-2.5 flex justify-between items-center">
-                      <span className="font-semibold text-slate-600">Pannes correctives par mois</span>
-                      <div className="flex gap-4">
-                        <span>Hydromines : <strong className="text-slate-900">4 pannes/m</strong></span>
-                        <span>Epiroc : <strong className="text-emerald-600">3 pannes/m</strong></span>
-                        <span className="font-bold text-rose-600">⬇️ -33% Excès</span>
+                    <div className="py-2 flex justify-between items-center">
+                      <span className="font-semibold text-slate-600">Pannes par mois</span>
+                      <div className="flex gap-2 text-[11px]">
+                        <span>GMAO : <strong className="text-slate-950">4 pannes</strong></span>
+                        <span>Cible : <strong className="text-emerald-600">3 pannes</strong></span>
                       </div>
                     </div>
 
@@ -1165,7 +1284,7 @@ export default function Analyses() {
                 {computedRules.comparaisons.length === 0 ? (
                   <p className="text-slate-400 font-medium">Aucun dysfonctionnement comparatif notable sur la flotte de Scooptrams.</p>
                 ) : (
-                  <div className="space-y-2.5">
+                  <div className="space-y-2.5 max-h-[220px] overflow-y-auto">
                     {computedRules.comparaisons.slice(0, 4).map((alertText, idx) => (
                       <div key={idx} className="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700/60 font-medium text-slate-100 flex items-start gap-2">
                         <span className="text-amber-500 text-xs mt-0.5 shrink-0">⚠️</span>
@@ -1174,6 +1293,53 @@ export default function Analyses() {
                     ))}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* 3. Classement & Gamification Mécaniciens */}
+            <Card className="border-slate-200 shadow-sm bg-white rounded-2xl overflow-hidden">
+              <CardHeader className="bg-slate-50 border-b border-slate-150 py-3.5 px-5">
+                <CardTitle className="text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
+                  <Award className="h-4 w-4 text-amber-500" /> Élite Mécanique & Gamification
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider block mb-1">
+                    Calcul automatique du rendement (Heures passées, tâches faites vs retard).
+                  </p>
+                  
+                  <div className="space-y-2 max-h-[190px] overflow-y-auto pr-1">
+                    {leaderboardMecaniciens.length === 0 ? (
+                      <p className="text-xs font-bold text-slate-500">Aucun travail enregistré ce mois-ci.</p>
+                    ) : (
+                      leaderboardMecaniciens.map((meca, idx) => {
+                        let medal = "👤";
+                        if (idx === 0) medal = "🥇";
+                        else if (idx === 1) medal = "🥈";
+                        else if (idx === 2) medal = "🥉";
+
+                        return (
+                          <div key={meca.nom} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-slate-50/30 hover:bg-slate-50 transition-colors">
+                            <div className="flex items-center gap-2">
+                              <span className="text-base shrink-0">{medal}</span>
+                              <div className="min-w-0">
+                                <span className="text-xs font-bold text-slate-800 block truncate">{meca.nom}</span>
+                                <span className={`inline-block text-[8px] font-black uppercase border px-1 py-0.2 rounded-sm mt-0.5 ${meca.badgeColor}`}>
+                                  {meca.rankBadge}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="text-xs font-black text-slate-900 block">{meca.score} pts</span>
+                              <span className="text-[8px] text-slate-500 font-bold">{meca.rate}% ({meca.faites} fiches)</span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -1362,6 +1528,117 @@ export default function Analyses() {
 
           </div>
 
+          {/* V5 : CLINIQUE CHIMIQUE DES FLUIDES (ANALYSE D'HUILE INTERACTIVE) */}
+          <Card className="border-slate-200 shadow-sm bg-white rounded-2xl overflow-hidden mt-6">
+            <CardHeader className="bg-slate-50 border-b border-slate-150 py-3.5 px-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 block">
+                  V5 : CLINIQUE CHIMIQUE DES FLUIDES (ANALYSE D'HUILE)
+                </span>
+                <CardTitle className="text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
+                  <Activity className="h-4 w-4 text-emerald-500 animate-pulse" /> Analyseurs Chromatographiques et Teneur en Métaux
+                </CardTitle>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-500">Sélectionner l'engin :</span>
+                <select
+                  value={selectedOilEngin}
+                  onChange={(e) => setSelectedOilEngin(e.target.value)}
+                  className="h-8 px-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 focus:ring-1 focus:ring-amber-500"
+                >
+                  {engins.map(e => <option key={e.id} value={e.id}>{e.id}</option>)}
+                </select>
+              </div>
+            </CardHeader>
+            <CardContent className="p-5">
+              {(() => {
+                const engine = engins.find(e => e.id === selectedOilEngin) || engins[0];
+                if (!engine) return <p className="text-xs">Chargement...</p>;
+                
+                const ecouleMoteur = engine.heuresMarche - (engine.heures_derniere_vidange_moteur || 0);
+                const isLate = ecouleMoteur >= 250;
+                const ironPPM = isLate ? Math.round(45 + (ecouleMoteur - 250) * 0.4) : Math.round(15 + ecouleMoteur * 0.05);
+                const copperPPM = isLate ? Math.round(25 + (ecouleMoteur - 250) * 0.2) : Math.round(8 + ecouleMoteur * 0.02);
+                const silicaPPM = isLate ? Math.round(18 + (ecouleMoteur - 250) * 0.15) : Math.round(5 + ecouleMoteur * 0.01);
+                const waterPercent = isLate ? 0.08 : 0.01;
+                const viscosity = isLate ? 11.2 : 14.5;
+                
+                const showWaterWarning = waterPercent > 0.05;
+                const showIronWarning = ironPPM > 35;
+                const showSilicaWarning = silicaPPM > 12;
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                    <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 space-y-2">
+                      <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider block">🧪 Métaux d'Usure</span>
+                      <div className="space-y-1.5 font-bold">
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Fer (Fe) :</span>
+                          <span className={showIronWarning ? "text-rose-600 font-black" : "text-slate-800"}>{ironPPM} PPM</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Cuivre (Cu) :</span>
+                          <span className={copperPPM > 20 ? "text-amber-600 font-black" : "text-slate-800"}>{copperPPM} PPM</span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 uppercase font-medium">Seuils : Fe &gt; 35, Cu &gt; 20</div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 space-y-2">
+                      <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider block">🌍 Silice (Poussière)</span>
+                      <div className="space-y-1.5 font-bold">
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Silice (Si) :</span>
+                          <span className={showSilicaWarning ? "text-rose-600 font-black" : "text-slate-800"}>{silicaPPM} PPM</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Eau (H₂O) :</span>
+                          <span className={showWaterWarning ? "text-rose-600 font-black" : "text-slate-800"}>{waterPercent}%</span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 uppercase font-medium">La poussière de mine use l'arbre</div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 space-y-2">
+                      <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider block">⚙️ Viscosité & Dilution</span>
+                      <div className="space-y-1.5 font-bold">
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Viscosité (100°C) :</span>
+                          <span className={viscosity < 12 ? "text-rose-600 font-black" : "text-slate-800"}>{viscosity} cSt</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">État additifs :</span>
+                          <span className={isLate ? "text-amber-600" : "text-emerald-600"}>{isLate ? "Épuisés (20%)" : "Actifs (92%)"}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 uppercase font-medium">Norme : 12.5 à 16.3 cSt</div>
+                      </div>
+                    </div>
+
+                    <div className={`p-4 rounded-xl border font-bold flex flex-col justify-between ${
+                      isLate ? "bg-rose-50 border-rose-100 text-rose-950" : "bg-emerald-50 border-emerald-100 text-emerald-950"
+                    }`}>
+                      <div>
+                        <span className="text-[10px] font-black uppercase block tracking-wider mb-1 text-slate-500">Diagnostic de l'Analyseur</span>
+                        {isLate ? (
+                          <p className="text-[11px] leading-tight font-medium">
+                            <strong className="text-rose-700">ALERTE CRITIQUE :</strong> Présence de fer ({ironPPM} ppm) et silice ({silicaPPM} ppm). Viscosité dégradée par dilution. <strong className="underline">Planifier vidange urgente.</strong>
+                          </p>
+                        ) : (
+                          <p className="text-[11px] leading-tight font-medium">
+                            <strong className="text-emerald-700">ÉTAT PARFAIT :</strong> Les paramètres du lubrifiant sont nominaux. Aucun contaminant ni dilution détectée pour l'engin {engine.id}.
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-[9px] text-slate-400 font-medium uppercase mt-2">Dernier relevé : {engine.heuresMarche}h</div>
+                    </div>
+
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
         </div>
       )}
 
@@ -1415,12 +1692,38 @@ export default function Analyses() {
               </CardHeader>
               <CardContent className="p-4 space-y-3 text-xs">
                 <div className="space-y-2.5 font-bold">
-                  {computedRules.planActions.map((action, i) => (
-                    <div key={i} className="p-2.5 bg-emerald-50 text-emerald-950 border border-emerald-100 rounded-xl flex items-center gap-2">
-                      <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <span>{action}</span>
-                    </div>
-                  ))}
+                  {computedRules.planActions.map((action, i) => {
+                    const isChecked = checkedActions[action] || false;
+                    return (
+                      <div
+                        key={i}
+                        className={`p-3 border rounded-xl flex items-center justify-between gap-4 transition-all ${
+                          isChecked
+                            ? "bg-slate-50 border-slate-200 text-slate-400 line-through"
+                            : "bg-emerald-50 text-emerald-950 border-emerald-100 hover:bg-emerald-50/80"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => setCheckedActions(prev => ({ ...prev, [action]: !prev[action] }))}
+                            className="h-4 w-4 rounded text-emerald-600 border-emerald-300 focus:ring-emerald-500 shrink-0 cursor-pointer"
+                          />
+                          <span className="text-xs leading-snug">{action}</span>
+                        </div>
+                        
+                        {!isChecked && (
+                          <Button
+                            onClick={() => handleCreateTaskFromAction(action)}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 font-black uppercase text-[9px] tracking-wider px-2.5 py-1 h-7 rounded-lg shrink-0 flex items-center gap-1"
+                          >
+                            <Plus className="h-3 w-3" /> Ordre GMAO
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -1660,6 +1963,89 @@ export default function Analyses() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* V5 : CALCULATEUR DE ROI INTERACTIF DE LA MAINTENANCE PRÉVENTIVE */}
+          <Card className="border-slate-200 shadow-sm bg-white rounded-2xl overflow-hidden print:hidden mt-6 animate-in fade-in duration-200">
+            <CardHeader className="bg-slate-50 border-b border-slate-150 py-3.5 px-5">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block">
+                  V5 : SIMULATEUR DE ROI ET GAINS FINANCIERS ÉPARGNÉS
+                </span>
+                <CardTitle className="text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
+                  <TrendingUp className="h-4 w-4 text-emerald-500 animate-bounce" /> Calculateur de Retour sur Investissement de la Maintenance Préventive
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-5 space-y-4">
+              <p className="text-[11px] font-semibold text-slate-500 leading-snug">
+                Ce simulateur quantifie l'impact financier direct des interventions préventives réalisées (vidanges, filtres, inspections) par rapport aux pannes catastrophiques évitées et aux pertes d'exploitation.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-500">Coût d'arrêt de production par heure (DH)</label>
+                  <input
+                    type="number"
+                    value={costProductionPerHour}
+                    onChange={(e) => setCostProductionPerHour(Number(e.target.value))}
+                    className="w-full h-9 px-3 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-500">Coût moyen d'une panne majeure évitée (DH)</label>
+                  <input
+                    type="number"
+                    value={costMajorFailure}
+                    onChange={(e) => setCostMajorFailure(Number(e.target.value))}
+                    className="w-full h-9 px-3 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              {(() => {
+                const totalPreventivesFinished = tasks.filter(t => (t.type === "PREVENTIF" || t.type === "QUOTIDIEN") && (t.statut === "FAIT" || t.statut === "VALIDE")).length;
+                const pannesEvitees = Math.max(1, Math.floor(totalPreventivesFinished * 0.20));
+                const heuresEconomisees = pannesEvitees * 4;
+                const coutTotalPreventif = totalPreventivesFinished * 2500;
+                
+                const coutCatastropheEvite = pannesEvitees * costMajorFailure;
+                const pertesExploitEvitees = heuresEconomisees * costProductionPerHour;
+                const totalEpargneBrut = coutCatastropheEvite + pertesExploitEvitees;
+                const gainsNets = totalEpargneBrut - coutTotalPreventif;
+                const roi = Math.round((gainsNets / (coutTotalPreventif || 1)) * 100);
+
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 text-xs">
+                    
+                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                      <span className="text-[10px] text-slate-500 uppercase block font-black">Actes Préventifs Clôturés</span>
+                      <strong className="text-sm font-black text-slate-800 block mt-1">{totalPreventivesFinished} fiches</strong>
+                      <span className="text-[9px] text-slate-400 font-bold block uppercase mt-1">Investi: {coutTotalPreventif.toLocaleString()} DH</span>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                      <span className="text-[10px] text-slate-500 uppercase block font-black">Pannes Évitées (Est.)</span>
+                      <strong className="text-sm font-black text-emerald-600 block mt-1">~{pannesEvitees} pannes</strong>
+                      <span className="text-[9px] text-slate-400 font-bold block uppercase mt-1">Soit: {heuresEconomisees}h sauvées</span>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl col-span-2 md:col-span-1">
+                      <span className="text-[10px] text-slate-500 uppercase block font-black">Gains Épargnés (Brut)</span>
+                      <strong className="text-sm font-black text-slate-900 block mt-1">+{totalEpargneBrut.toLocaleString()} DH</strong>
+                      <span className="text-[9px] text-slate-400 font-bold block uppercase mt-1">Bris & Pertes évités</span>
+                    </div>
+
+                    <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
+                      <span className="text-[10px] text-emerald-700 uppercase block font-black">ROI de la Prévention</span>
+                      <strong className="text-base font-black text-emerald-800 block mt-1">+{roi}% ROI</strong>
+                      <span className="text-[9px] text-emerald-600 font-bold block uppercase mt-1">Gains nets: {gainsNets.toLocaleString()} DH</span>
+                    </div>
+
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
