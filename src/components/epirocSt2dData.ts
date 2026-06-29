@@ -24,13 +24,13 @@ export const EPIROC_ST2D_SYSTEMS = [
 ];
 
 export const EPIROC_ST2D_PANNES: EpirocSt2dPanne[] = [
-  // SYSTEME 1 - MOTEUR DEUTZ F6L-912W AIR REFROIDI (15 pannes)
+  // SYSTEME 1 - MOTEUR DEUTZ F4L912 AIR REFROIDI (4 CYLINDRES) // CORRIGÉ V5 : F6L→F4L912
   {
     id: "1.1.1.A",
     system: "SYS1",
     title: "Moteur ne démarre pas (pas de préchauffage, pas d'injection)",
     severity: "ROUGE",
-    symptoms: "Le démarreur tourne normalement mais aucune combustion ne se produit. Pas d'odeur d'échappement.",
+    symptoms: "Le starter pneumatique ou le lanceur manuel tourne normalement mais le moteur ne démarre pas. Pas d'odeur d'échappement.", // CORRIGÉ V5 : Pas de démarreur électrique sur F4L912
     cause: "Relais de préchauffage ou solénoïde d'arrêt de carburant défectueux/bloqué.",
     action: "Vérifier la tension au solénoïde d'arrêt d'injection. Nettoyer et ré-enclencher manuellement la tirette de coupure si grippée.",
     repTime: 1.2
@@ -120,9 +120,9 @@ export const EPIROC_ST2D_PANNES: EpirocSt2dPanne[] = [
     system: "SYS1",
     title: "Shroud (carter d'air) de refroidissement manquant ou cassé",
     severity: "JAUNE",
-    symptoms: "Température inégale entre les cylindres avant et arrière. Surchauffe localisée des cylindres 5 et 6.",
+    symptoms: "Température inégale entre les cylindres avant et arrière. Surchauffe localisée des cylindres 3 et 4.", // CORRIGÉ V5 : F4L912 = 4 cylindres, pas 6
     cause: "Tôles de guidage d'air de refroidissement mal fixées, tordues ou absentes après une intervention.",
-    action: "Réinstaller ou redresser les tôles du carter d'air pour assurer un flux d'air uniforme sur l'ensemble des 6 cylindres.",
+    action: "Réinstaller ou redresser les tôles du carter d'air pour assurer un flux d'air uniforme sur l'ensemble des 4 cylindres.", // CORRIGÉ V5 : F4L912 = 4 cylindres
     repTime: 1.0
   },
   {
@@ -176,7 +176,7 @@ export const EPIROC_ST2D_PANNES: EpirocSt2dPanne[] = [
     repTime: 5.0
   },
 
-  // SYSTEME 2 - TRANSMISSION DANA R32000 + CONVERTISSEUR C-270 (12 pannes)
+  // SYSTEME 2 - TRANSMISSION FUNK DF80 MÉCANIQUE (PAS DE CONVERTISSEUR) // CORRIGÉ V5 : Dana→Funk DF80, suppression convertisseur
   {
     id: "2.1.1.A",
     system: "SYS2",
@@ -1097,7 +1097,7 @@ export const EPIROC_ST2D_REFERENCES = {
   hydraulique_travail: { normal: "11.4 MPa (114 bar)", alarme: "< 10.0 MPa", arret: "N/A" },
   hydraulique_direction: { normal: "13.1 MPa (131 bar)", alarme: "< 11.5 MPa", arret: "N/A" },
   pression_freinage: { normal: "Mécanique à câble", alarme: "N/A", arret: "N/A" },
-  tension_batterie: { normal: "25.2V - 27.8V", alarme: "< 23.5V", arret: "< 21.0V" },
+  pression_air_starter: { normal: "6.0 - 8.0 bar", alarme: "< 6.0 bar", arret: "N/A" }, // CORRIGÉ V5 : Remplacement tension batterie (inexistante) par pression air starter
   pression_pneus: { normal: "4.5 bar (65 psi)", alarme: "N/A", arret: "N/A" },
   epaisseur_machoires_min: { normal: "8.0 mm", limite: "3.0 mm", action: "Remplacement" },
   jeu_articulation_max: { normal: "< 0.5 mm", limite: "2.0 mm", action: "Réfection pivot" }
