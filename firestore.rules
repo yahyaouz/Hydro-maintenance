@@ -97,9 +97,7 @@ service cloud.firestore {
 
     match /pannes/{panneId} {
       allow read: if true;
-      allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
-        isRole('CHEF_QUART') || isRole('OPERATEUR') || isRole('MECANICIEN')
-      );
+      allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
     }
 
     match /pieces/{pieceId} {
@@ -111,6 +109,27 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
         isRole('MECANICIEN') || isRole('CHEF_QUART') || isRole('ADMIN')
+      );
+    }
+
+    match /mecaniciens/{mecaId} {
+      allow read: if true;
+      allow write: if isSignedIn() && (
+        getUserData().role == 'ADMIN' ||
+        getUserData().role == 'RESPONSABLE_MAINTENANCE'
+      );
+    }
+
+    match /chantiers/{chantierId} {
+      allow read: if true;
+      allow write: if isSignedIn() && getUserData().role == 'ADMIN';
+    }
+
+    match /pmIntervalles/{intervalleId} {
+      allow read: if true;
+      allow write: if isSignedIn() && (
+        getUserData().role == 'ADMIN' ||
+        getUserData().role == 'RESPONSABLE_MAINTENANCE'
       );
     }
 
@@ -174,6 +193,15 @@ service cloud.firestore {
       allow create, update: if true;
       allow read: if isSignedIn() && getUserData().role == 'ADMIN';
       allow delete: if false;
+    }
+
+    match /maintenanceTasks/{taskId} {
+      allow read: if true;
+      allow create: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
+      allow update: if isSignedIn() && matchesSite(resource.data.siteId || 'SMI') && (
+        isRole('MECANICIEN') || isRole('RESPONSABLE_MAINTENANCE') || isRole('ADMIN')
+      );
+      allow delete: if isSignedIn() && isRole('ADMIN');
     }
   }
 }

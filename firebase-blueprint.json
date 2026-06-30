@@ -137,6 +137,35 @@
         "siteId": { "type": "string" }
       },
       "required": ["id", "workOrderId", "machineCode", "rootCause", "remedyAction", "durationRealHours", "siteId"]
+    },
+    "maintenanceTask": {
+      "title": "MaintenanceTask",
+      "description": "Fiche d'intervention ou tâche de maintenance préventive/corrective/quotidienne",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "enum": ["PREVENTIF", "CORRECTIF", "QUOTIDIEN"] },
+        "label": { "type": "string" },
+        "enginId": { "type": "string" },
+        "enginModele": { "type": "string" },
+        "mecanicienId": { "type": "string" },
+        "mecanicienNom": { "type": "string" },
+        "poste": { "enum": ["Poste 1", "Poste 2", "Poste 3"] },
+        "siteId": { "type": "string" },
+        "datePlanifiee": { "type": "string" },
+        "dureeEstimee": { "enum": ["15min", "30min", "1h", "2h", "4h", "6h", "1j"] },
+        "priorite": { "enum": ["CRITIQUE", "HAUTE", "NORMALE", "BASSE", "QUOTIDIENNE"] },
+        "statut": { "enum": ["FAIT", "EN_COURS", "NON_FAIT", "REPORTE", "VALIDE"] },
+        "commentaire": { "type": "string" },
+        "photo": { "type": "string" },
+        "motifReport": { "type": "string" },
+        "echeanceHeures": { "type": "number" },
+        "heuresEnginAuMoment": { "type": "number" },
+        "generatedAt": { "type": "string" },
+        "generationType": { "enum": ["AUTO_QUOTIDIEN", "AUTO_PM", "MANUEL"] },
+        "deleted": { "type": "boolean" }
+      },
+      "required": ["id", "type", "label", "enginId", "enginModele", "siteId", "datePlanifiee", "priorite", "statut", "deleted"]
     }
   },
   "firestore": {
@@ -171,6 +200,10 @@
     "rapportsFinIntervention": {
       "schema": "rapportFinIntervention",
       "description": "Collection des Rapports de Fin d'Intervention (RFI) GMAO"
+    },
+    "maintenanceTasks": {
+      "schema": "maintenanceTask",
+      "description": "Collection centrale des fiches de maintenance, de correctifs et de rondes de graissage"
     }
   }
 }

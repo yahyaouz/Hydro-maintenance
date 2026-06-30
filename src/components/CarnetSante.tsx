@@ -130,8 +130,10 @@ export function CarnetSante({ enginId, allEngins }: CarnetSanteProps) {
     (m.enginId === enginSelectionne.id || m.machineCode === enginSelectionne.matricule || m.machineId === enginSelectionne.matricule)
   );
 
-  const enginePannes = (rawPannes || []).filter(p =>
-    (p.enginId === enginSelectionne.id || p.machineId === enginSelectionne.matricule || p.matricule === enginSelectionne.matricule)
+  const enginePannes = React.useMemo(() => 
+    (rawPannes || []).filter(p => p.enginId === enginSelectionne.id && !p.deleted)
+      .sort((a, b) => new Date(b.dateDeclaration).getTime() - new Date(a.dateDeclaration).getTime()),
+    [rawPannes, enginSelectionne.id]
   );
 
   const enginePneus = (rawPneus || []).filter(p =>
@@ -228,15 +230,25 @@ export function CarnetSante({ enginId, allEngins }: CarnetSanteProps) {
 
   // Pannes
   enginePannes.forEach(p => {
+    const isCritique = p.gravite === "Critique";
+    const isElevee = p.gravite === "Élevée";
     eventsList.push({
       id: p.id,
       date: p.dateDeclaration || p.date || p.createdAt || "",
-      type: "PANNE SIGNALÉE",
-      title: p.description || p.titre || "Déclaration de Panne",
-      desc: `Gravité: ${p.severity || p.severite || "Majeure"} | Système: ${p.categorie || p.systeme || "N/A"}`,
+      type: `PANNE — ${p.statut || "DÉCLARÉE"}`,
+      title: `${p.numero || "Panne"} • ${p.categorie || "Autre"}`,
+      desc: `Symptômes: ${p.description || "N/A"} | Gravité: ${p.gravite || "Moyenne"}${p.dureeImmobilisation ? ` | Immo: ${p.dureeImmobilisation}h` : ""}${p.diagnostic ? ` | Diagnostic: ${p.diagnostic}` : ""}`,
       icon: AlertTriangle,
-      colorClass: "bg-red-50 text-red-600 border border-red-100",
-      badgeColor: "bg-red-100 text-red-800"
+      colorClass: isCritique 
+        ? "bg-red-50 text-red-700 border border-red-100" 
+        : isElevee 
+          ? "bg-orange-50 text-orange-700 border border-orange-100"
+          : "bg-amber-50 text-amber-700 border border-amber-150",
+      badgeColor: isCritique 
+        ? "bg-red-100 text-red-800" 
+        : isElevee 
+          ? "bg-orange-100 text-orange-800"
+          : "bg-amber-100 text-amber-800"
     });
   });
 
@@ -701,14 +713,19 @@ export function CarnetSante({ enginId, allEngins }: CarnetSanteProps) {
           ) : (
             <div className="space-y-3">
               {enginePannes.map((panne) => {
-                const severe = (panne.severity || panne.severite || "majeur").toLowerCase();
-                const severeClass = severe === "critique"
+                const severe = (panne.gravite || "Moyenne");
+                const isCritique = severe === "Critique";
+                const isElevee = severe === "Élevée";
+                const isFaible = severe === "Faible";
+                const severeClass = isCritique
                   ? "bg-red-50 text-red-700 border border-red-200"
-                  : severe === "mineur"
-                    ? "bg-slate-50 text-slate-600 border border-slate-200"
-                    : "bg-amber-50 text-amber-700 border border-amber-200";
+                  : isElevee
+                    ? "bg-orange-50 text-orange-700 border border-orange-200"
+                    : isFaible
+                      ? "bg-blue-50 text-blue-600 border border-blue-200"
+                      : "bg-amber-50 text-amber-700 border border-amber-200";
 
-                const downtimeHours = panne.durationMinutes ? Math.round((Number(panne.durationMinutes) / 60) * 10) / 10 : (panne.dureeHeures || null);
+                const downtimeHours = panne.dureeImmobilisation || null;
 
                 return (
                   <div key={panne.id} className="p-4 bg-white border border-slate-200 rounded-xl hover:border-slate-350 shadow-sm transition-all space-y-3.5">
@@ -716,9 +733,9 @@ export function CarnetSante({ enginId, allEngins }: CarnetSanteProps) {
                     {/* Header detail */}
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
                       <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-red-500 animate-bounce" />
+                        <AlertTriangle className={`h-4 w-4 ${isCritique ? 'text-red-600 animate-pulse' : 'text-amber-500'}`} />
                         <span className="text-xs font-black uppercase text-slate-800 font-mono">
-                          Panne ID: {panne.code || panne.id.slice(0, 6).toUpperCase()}
+                          🔧 Panne : {panne.numero || panne.id.slice(0, 8).toUpperCase()}
                         </span>
                       </div>
                       <div className="flex gap-1.5 items-center">
@@ -726,7 +743,7 @@ export function CarnetSante({ enginId, allEngins }: CarnetSanteProps) {
                           {severe}
                         </span>
                         <span className="text-[10px] font-bold font-mono text-slate-400 bg-slate-50 px-2 py-0.5 border border-slate-100/50 rounded">
-                          📅 {panne.dateDeclaration || panne.date || "N/A"}
+                          📅 {panne.dateDeclaration || "N/A"}
                         </span>
                       </div>
                     </div>
@@ -736,21 +753,30 @@ export function CarnetSante({ enginId, allEngins }: CarnetSanteProps) {
                       <p className="text-xs text-slate-800 font-black uppercase tracking-normal">
                         Symptômes : <span className="font-bold text-slate-650 normal-case">{panne.description || "Anomalie technique non documentée"}</span>
                       </p>
-                      <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
-                        <div>🔧 Organe : <span className="text-slate-700 font-bold">{panne.categorie || panne.systeme || "Générique"}</span></div>
-                        {downtimeHours && (
+                      <div className="flex flex-wrap gap-4 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
+                        <div>🔧 Catégorie : <span className="text-slate-700 font-bold">{panne.categorie || "Générique"}</span></div>
+                        <div>📊 Statut : <span className="text-indigo-600 font-black bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">{panne.statut || "DÉCLARÉE"}</span></div>
+                        {downtimeHours !== null && (
                           <div>⏱️ Arrêt : <span className="text-red-700 font-black">{downtimeHours} h</span></div>
+                        )}
+                        {panne.arretMachine && (
+                          <div className="text-red-600 font-extrabold animate-pulse">⚠️ Machine arrêtée</div>
                         )}
                       </div>
                     </div>
 
-                    {/* Correctional solution logic if verified */}
-                    {(panne.remedyAction || panne.actionCorrective || panne.solution) && (
-                      <div className="p-3 bg-slate-50 border border-slate-150 rounded-lg text-[11px] font-medium leading-relaxed text-slate-700">
-                        <strong className="text-[10px] font-black uppercase tracking-widest text-[#b8860b] block mb-1">
-                          🛠️ Action Corrective & Remède :
+                    {/* Diagnostic notes if present */}
+                    {panne.diagnostic && (
+                      <div className="p-3 bg-indigo-50/40 border border-indigo-100 rounded-lg text-[11px] font-medium leading-relaxed text-slate-700">
+                        <strong className="text-[10px] font-black uppercase tracking-widest text-indigo-800 block mb-1">
+                          🧠 Diagnostic & Notes :
                         </strong>
-                        {panne.remedyAction || panne.actionCorrective || panne.solution}
+                        {panne.diagnostic}
+                        {panne.mecanicienAssigneNom && (
+                          <div className="mt-1 text-[10px] text-slate-500">
+                            Assigné à : <span className="font-extrabold text-slate-700">{panne.mecanicienAssigneNom}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

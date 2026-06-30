@@ -1,4 +1,4 @@
-// RECONSTRUIT : Fichier de configuration système complet avec CRUD complet local-storage pour les 4 onglets : Engins, Équipe, Chantiers, Intervalles de Maintenance.
+// RECONSTRUIT : Fichier de configuration système complet avec CRUD complet Firestore pour les 4 onglets : Engins, Équipe, Chantiers, Intervalles de Maintenance.
 import * as React from "react";
 import { 
   Settings, 
@@ -27,6 +27,13 @@ import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { 
+  collection, doc, setDoc, addDoc, updateDoc, 
+  onSnapshot, query, where, orderBy,
+  writeBatch, Timestamp, getDocs
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuthStore } from '@/lib/store';
 
 // RECONSTRUIT : Interfaces TypeScript pour typer proprement les collections stockées
 interface Engin {
@@ -34,7 +41,7 @@ interface Engin {
   modele: "ST2D" | "ST2G" | "ST7" | "ST1030" | "Autre";
   marque: string;
   type: "Scooptram" | "Camion" | "Perforateur" | "Chargeuse" | "Autre";
-  chantierAssigne: string;
+  siteId: string; // standard de l'app (pas chantierAssigne)
   heuresMarche: number;
   dateEntreeService: string;
   etat: "Opérationnel" | "En maintenance" | "Hors service" | "Vendu";
@@ -49,6 +56,7 @@ interface Mecanicien {
   telephone: string;
   dateEmbauche: string;
   statut: "Actif" | "En congé" | "Inactif";
+  siteId: string; // Affectation site mécanicien
 }
 
 interface Chantier {
@@ -61,7 +69,7 @@ interface Chantier {
 }
 
 interface IntervalleMaintenance {
-  id: string; // ID auto-incrémenté ou unique
+  id: string; // ID unique docId
   typeEngin: "ST2D" | "ST2G" | "ST7" | "ST1030" | "Générique";
   operation: string;
   intervalleHeures: number;
@@ -70,39 +78,9 @@ interface IntervalleMaintenance {
   priorite: "Critique" | "Haute" | "Normale" | "Basse";
 }
 
-// RECONSTRUIT : Données de démarrage initiales (Seed par défaut)
-const INITIAL_MECA: Mecanicien[] = [
-  { id: "M001", nomComplet: "Abdellah Daoudi", poste: "Poste 1", specialite: "Moteur", telephone: "+212 611 223344", dateEmbauche: "2020-05-15", statut: "Actif" },
-  { id: "M002", nomComplet: "Lahcen Ait", poste: "Poste 2", specialite: "Hydraulique", telephone: "+212 622 334455", dateEmbauche: "2019-11-10", statut: "Actif" },
-  { id: "M003", nomComplet: "Mohamed El Amri", poste: "Poste 3", specialite: "Électrique", telephone: "+212 633 445566", dateEmbauche: "2021-02-01", statut: "Actif" },
-  { id: "M004", nomComplet: "Youssef Naciri", poste: "Poste 1", specialite: "Transmission", telephone: "+212 644 556677", dateEmbauche: "2018-04-12", statut: "Actif" },
-  { id: "M005", nomComplet: "Rachid Idrissi", poste: "Poste 2", specialite: "Généraliste", telephone: "+212 655 667788", dateEmbauche: "2022-08-20", statut: "Actif" }
-];
-
-const INITIAL_CHANTIERS: Chantier[] = [
-  { id: "SMI", nomComplet: "Société Métallurgique d'Imiter", type: "Mine souterraine", localisation: "Imiter", responsableId: "M001", statut: "Actif" },
-  { id: "OUMEJRANE", nomComplet: "Mine d'Oumejrane", type: "Mine souterraine", localisation: "Alnif", responsableId: "M002", statut: "Actif" },
-  { id: "KOUDIA", nomComplet: "Koudiat Aïcha", type: "Mine souterraine", localisation: "Marrakech", responsableId: "M003", statut: "Actif" },
-  { id: "OUANSIMI", nomComplet: "Mine d'Ouansimi", type: "Mine souterraine", localisation: "Tiznit", responsableId: "M004", statut: "Actif" },
-  { id: "BOUAZZER", nomComplet: "Mine de Bou-Azzer", type: "Mine souterraine", localisation: "Ouarzazate", responsableId: "M005", statut: "Actif" }
-];
-
-const INITIAL_ENGINS: Engin[] = [
-  { id: "E101", modele: "ST2D", marque: "Epiroc", type: "Scooptram", chantierAssigne: "SMI", heuresMarche: 1450, dateEntreeService: "2021-03-10", etat: "Opérationnel", conducteurAssigne: "Abdellah Daoudi" },
-  { id: "E102", modele: "ST2G", marque: "Epiroc", type: "Scooptram", chantierAssigne: "OUMEJRANE", heuresMarche: 2890, dateEntreeService: "2020-09-18", etat: "En maintenance", conducteurAssigne: "Lahcen Ait" },
-  { id: "E103", modele: "ST7", marque: "Epiroc", type: "Scooptram", chantierAssigne: "KOUDIA", heuresMarche: 820, dateEntreeService: "2022-12-05", etat: "Opérationnel", conducteurAssigne: "Mohamed El Amri" },
-  { id: "E104", modele: "ST1030", marque: "Epiroc", type: "Scooptram", chantierAssigne: "OUANSIMI", heuresMarche: 5200, dateEntreeService: "2017-06-25", etat: "Hors service", conducteurAssigne: "Youssef Naciri" },
-  { id: "E105", modele: "ST2G", marque: "Epiroc", type: "Scooptram", chantierAssigne: "BOUAZZER", heuresMarche: 1980, dateEntreeService: "2021-11-14", etat: "Opérationnel", conducteurAssigne: "Rachid Idrissi" }
-];
-
-const INITIAL_INTERVALLES: IntervalleMaintenance[] = [
-  { id: "I1", typeEngin: "ST2G", operation: "Huile moteur 15W-40 + filtres", intervalleHeures: 250, produitHuile: "15W-40", quantite: "8L", priorite: "Haute" },
-  { id: "I2", typeEngin: "ST2G", operation: "Filtre air secondaire + hydraulique retour", intervalleHeures: 500, produitHuile: "Filtres d'origine", quantite: "N/A", priorite: "Normale" },
-  { id: "I3", typeEngin: "ST2G", operation: "Huile hydraulique + filtres + réducteurs SAE 90", intervalleHeures: 1000, produitHuile: "ISO VG 46 / SAE 90", quantite: "12L", priorite: "Critique" },
-  { id: "I4", typeEngin: "ST2G", operation: "Huile transmission + boîte + ponts SAE 140", intervalleHeures: 2000, produitHuile: "SAE 140", quantite: "15L", priorite: "Critique" }
-];
-
 export function Admin() {
+  const { user } = useAuthStore();
+
   // RECONSTRUIT : États de navigation des onglets
   const [activeTab, setActiveTab] = React.useState<"engins" | "mecaniciens" | "chantiers" | "intervalles">("engins");
 
@@ -124,42 +102,184 @@ export function Admin() {
   // RECONSTRUIT : États de suppression et confirmation
   const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null);
 
-  // RECONSTRUIT : Chargement initial et synchronisation avec localStorage
+  // RECONSTRUIT : Indicateur visuel simple de chargement
+  const [loading, setLoading] = React.useState(true);
+
+  // RECONSTRUIT : Seeding check on load
   React.useEffect(() => {
-    const savedEngins = localStorage.getItem("gmao_engins");
-    const savedMeca = localStorage.getItem("gmao_mecaniciens");
-    const savedChantiers = localStorage.getItem("gmao_chantiers");
-    const savedIntervalles = localStorage.getItem("gmao_intervalles");
+    const checkAndSeed = async () => {
+      try {
+        const enginsRef = collection(db, 'engins');
+        const mecaRef = collection(db, 'mecaniciens');
+        const chantiersRef = collection(db, 'chantiers');
+        const pmIntervallesRef = collection(db, 'pmIntervalles');
 
-    if (savedEngins) setEngins(JSON.parse(savedEngins));
-    else {
-      setEngins(INITIAL_ENGINS);
-      localStorage.setItem("gmao_engins", JSON.stringify(INITIAL_ENGINS));
-    }
+        const [enginsSnap, mecaSnap, chantiersSnap, pmIntervallesSnap] = await Promise.all([
+          getDocs(query(enginsRef, where('deleted', '!=', true))),
+          getDocs(query(mecaRef, where('deleted', '!=', true))),
+          getDocs(query(chantiersRef, where('deleted', '!=', true))),
+          getDocs(query(pmIntervallesRef, where('deleted', '!=', true)))
+        ]);
 
-    if (savedMeca) setMecaniciens(JSON.parse(savedMeca));
-    else {
-      setMecaniciens(INITIAL_MECA);
-      localStorage.setItem("gmao_mecaniciens", JSON.stringify(INITIAL_MECA));
-    }
+        const batch = writeBatch(db);
+        let hasChanges = false;
 
-    if (savedChantiers) setChantiers(JSON.parse(savedChantiers));
-    else {
-      setChantiers(INITIAL_CHANTIERS);
-      localStorage.setItem("gmao_chantiers", JSON.stringify(INITIAL_CHANTIERS));
-    }
+        if (enginsSnap.empty) {
+          const SEED_ENGINS = [
+            { id: "ST2G-01", modele: "ST2G", marque: "Epiroc", type: "Scooptram", siteId: "SMI", heuresMarche: 1450, dateEntreeService: "2021-03-10", etat: "Opérationnel", conducteurAssigne: "Non assigné", deleted: false, updatedAt: Timestamp.now() },
+            { id: "ST2D-01", modele: "ST2D", marque: "Epiroc", type: "Scooptram", siteId: "SMI", heuresMarche: 2890, dateEntreeService: "2020-09-18", etat: "Opérationnel", conducteurAssigne: "Non assigné", deleted: false, updatedAt: Timestamp.now() },
+            { id: "ST7-01",  modele: "ST7",  marque: "Epiroc", type: "Scooptram", siteId: "KOUDIA", heuresMarche: 820, dateEntreeService: "2022-12-05", etat: "Opérationnel", conducteurAssigne: "Non assigné", deleted: false, updatedAt: Timestamp.now() },
+            { id: "ST2G-02", modele: "ST2G", marque: "Epiroc", type: "Scooptram", siteId: "OUMEJRANE", heuresMarche: 1980, dateEntreeService: "2021-11-14", etat: "Opérationnel", conducteurAssigne: "Non assigné", deleted: false, updatedAt: Timestamp.now() },
+            { id: "ST2D-02", modele: "ST2D", marque: "Epiroc", type: "Scooptram", siteId: "BOU-AZZER", heuresMarche: 5200, dateEntreeService: "2017-06-25", etat: "En maintenance", conducteurAssigne: "Non assigné", deleted: false, updatedAt: Timestamp.now() },
+          ];
+          SEED_ENGINS.forEach(item => {
+            batch.set(doc(db, 'engins', item.id), item);
+          });
+          hasChanges = true;
+        }
 
-    if (savedIntervalles) setIntervalles(JSON.parse(savedIntervalles));
-    else {
-      setIntervalles(INITIAL_INTERVALLES);
-      localStorage.setItem("gmao_intervalles", JSON.stringify(INITIAL_INTERVALLES));
-    }
+        if (mecaSnap.empty) {
+          const SEED_MECANICIENS = [
+            { id: "M001", nomComplet: "Abdellah Daoudi", poste: "Poste 1", specialite: "Moteur", telephone: "+212 611 223344", dateEmbauche: "2020-05-15", statut: "Actif", siteId: "SMI", deleted: false, updatedAt: Timestamp.now() },
+            { id: "M002", nomComplet: "Lahcen Ait", poste: "Poste 2", specialite: "Hydraulique", telephone: "+212 622 334455", dateEmbauche: "2019-11-10", statut: "Actif", siteId: "SMI", deleted: false, updatedAt: Timestamp.now() },
+            { id: "M003", nomComplet: "Mohamed El Amri", poste: "Poste 3", specialite: "Électrique", telephone: "+212 633 445566", dateEmbauche: "2021-02-01", statut: "Actif", siteId: "KOUDIA", deleted: false, updatedAt: Timestamp.now() },
+            { id: "M004", nomComplet: "Youssef Naciri", poste: "Poste 1", specialite: "Transmission", telephone: "+212 644 556677", dateEmbauche: "2018-04-12", statut: "Actif", siteId: "OUMEJRANE", deleted: false, updatedAt: Timestamp.now() },
+            { id: "M005", nomComplet: "Rachid Idrissi", poste: "Poste 2", specialite: "Généraliste", telephone: "+212 655 667788", dateEmbauche: "2022-08-20", statut: "Actif", siteId: "BOU-AZZER", deleted: false, updatedAt: Timestamp.now() },
+          ];
+          SEED_MECANICIENS.forEach(item => {
+            batch.set(doc(db, 'mecaniciens', item.id), item);
+          });
+          hasChanges = true;
+        }
+
+        if (chantiersSnap.empty) {
+          const SEED_CHANTIERS = [
+            { id: "SMI",       nomComplet: "Société Métallurgique d'Imiter", type: "Mine souterraine", localisation: "Imiter, Tinghir",   responsableId: "M001", statut: "Actif", deleted: false, updatedAt: Timestamp.now() },
+            { id: "OUMEJRANE", nomComplet: "Mine d'Oumejrane",               type: "Mine souterraine", localisation: "Oumejrane, Alnif", responsableId: "M004", statut: "Actif", deleted: false, updatedAt: Timestamp.now() },
+            { id: "KOUDIA",    nomComplet: "Koudiat Aïcha",                   type: "Mine souterraine", localisation: "Marrakech",        responsableId: "M003", statut: "Actif", deleted: false, updatedAt: Timestamp.now() },
+            { id: "OUANSIMI",  nomComplet: "Mine d'Ouansimi",                 type: "Mine souterraine", localisation: "Tiznit",           responsableId: "", statut: "Actif", deleted: false, updatedAt: Timestamp.now() },
+            { id: "BOU-AZZER", nomComplet: "Mine de Bou-Azzer",              type: "Mine souterraine", localisation: "Ouarzazate",       responsableId: "M005", statut: "Actif", deleted: false, updatedAt: Timestamp.now() },
+          ];
+          SEED_CHANTIERS.forEach(item => {
+            batch.set(doc(db, 'chantiers', item.id), item);
+          });
+          hasChanges = true;
+        }
+
+        if (pmIntervallesSnap.empty) {
+          const SEED_INTERVALLES = [
+            { typeEngin: "ST2G", operation: "Vidange moteur + filtre huile 15W-40",         intervalleHeures: 250,  produitHuile: "15W-40",       quantite: "8L",  priorite: "Haute", deleted: false, updatedAt: Timestamp.now() },
+            { typeEngin: "ST2G", operation: "Filtre air primaire + secondaire",              intervalleHeures: 500,  produitHuile: "Filtres OEM",  quantite: "N/A", priorite: "Normale", deleted: false, updatedAt: Timestamp.now() },
+            { typeEngin: "ST2G", operation: "Vidange hydraulique + filtres retour",          intervalleHeures: 1000, produitHuile: "ISO VG 46",    quantite: "12L", priorite: "Critique", deleted: false, updatedAt: Timestamp.now() },
+            { typeEngin: "ST2G", operation: "Vidange transmission + ponts SAE 140",          intervalleHeures: 2000, produitHuile: "SAE 140",      quantite: "15L", priorite: "Critique", deleted: false, updatedAt: Timestamp.now() },
+            { typeEngin: "ST2D", operation: "Vidange moteur Deutz + filtre huile",           intervalleHeures: 250,  produitHuile: "15W-40",       quantite: "6L",  priorite: "Haute", deleted: false, updatedAt: Timestamp.now() },
+            { typeEngin: "ST2D", operation: "Vidange hydraulique + filtre aspiration",       intervalleHeures: 1000, produitHuile: "ISO VG 46",    quantite: "10L", priorite: "Critique", deleted: false, updatedAt: Timestamp.now() },
+            { typeEngin: "ST7",  operation: "Vidange moteur Cummins QSB 4.5 + filtres",     intervalleHeures: 250,  produitHuile: "15W-40",       quantite: "14L", priorite: "Haute", deleted: false, updatedAt: Timestamp.now() },
+            { typeEngin: "ST7",  operation: "Vidange circuit hydraulique complet",           intervalleHeures: 1000, produitHuile: "ISO VG 46",    quantite: "50L", priorite: "Critique", deleted: false, updatedAt: Timestamp.now() },
+            { typeEngin: "ST7",  operation: "Vidange transmission + ponts Dana R32000",      intervalleHeures: 2000, produitHuile: "SAE 140",      quantite: "30L", priorite: "Critique", deleted: false, updatedAt: Timestamp.now() },
+            { typeEngin: "Générique", operation: "Graissage général pivots et articulations", intervalleHeures: 50, produitHuile: "Graisse EP2",  quantite: "N/A", priorite: "Haute", deleted: false, updatedAt: Timestamp.now() },
+            { typeEngin: "Générique", operation: "Vérification niveaux tous circuits",       intervalleHeures: 10,  produitHuile: "N/A",          quantite: "N/A", priorite: "Normale", deleted: false, updatedAt: Timestamp.now() },
+          ];
+          SEED_INTERVALLES.forEach(item => {
+            const ref = doc(collection(db, 'pmIntervalles'));
+            batch.set(ref, item);
+          });
+          hasChanges = true;
+        }
+
+        if (hasChanges) {
+          await batch.commit();
+          toast.success("Données d'initialisation (seeds) chargées dans Firestore !");
+        }
+      } catch (err: any) {
+        console.error("Erreur d'initialisation des données (seed):", err);
+        toast.error("Erreur d'initialisation des données Firestore : " + err.message);
+      }
+    };
+
+    checkAndSeed();
   }, []);
 
-  // RECONSTRUIT : Helper pour sauvegarder dans le localStorage
-  const saveToStorage = (key: string, data: any) => {
-    localStorage.setItem(key, JSON.stringify(data));
-  };
+  // RECONSTRUIT : Lecture Firestore en temps réel via onSnapshot
+  React.useEffect(() => {
+    setLoading(true);
+
+    // 1. ENGINS
+    let qEngins = query(collection(db, 'engins'), where('deleted', '!=', true));
+    if (user?.role !== 'ADMIN' && user?.role !== 'DIRECTION') {
+      qEngins = query(collection(db, 'engins'), where('deleted', '!=', true), where('siteId', '==', user?.siteId || 'SMI'));
+    }
+    const unsubEngins = onSnapshot(qEngins, (snap) => {
+      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Engin[];
+      data.sort((a: any, b: any) => {
+        const tA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt || 0);
+        const tB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt || 0);
+        return tB - tA;
+      });
+      setEngins(data);
+    }, (err) => {
+      console.error(err);
+      toast.error("Erreur de chargement des engins.");
+    });
+
+    // 2. MECANICIENS
+    let qMecaniciens = query(collection(db, 'mecaniciens'), where('deleted', '!=', true));
+    if (user?.role !== 'ADMIN' && user?.role !== 'DIRECTION') {
+      qMecaniciens = query(collection(db, 'mecaniciens'), where('deleted', '!=', true), where('siteId', '==', user?.siteId || 'SMI'));
+    }
+    const unsubMecaniciens = onSnapshot(qMecaniciens, (snap) => {
+      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Mecanicien[];
+      data.sort((a: any, b: any) => {
+        const tA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt || 0);
+        const tB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt || 0);
+        return tB - tA;
+      });
+      setMecaniciens(data);
+    }, (err) => {
+      console.error(err);
+      toast.error("Erreur de chargement des mécaniciens.");
+    });
+
+    // 3. CHANTIERS
+    const unsubChantiers = onSnapshot(query(collection(db, 'chantiers'), where('deleted', '!=', true)), (snap) => {
+      let data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Chantier[];
+      if (user?.role !== 'ADMIN' && user?.role !== 'DIRECTION') {
+        data = data.filter(c => c.id === (user?.siteId || 'SMI'));
+      }
+      data.sort((a: any, b: any) => {
+        const tA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt || 0);
+        const tB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt || 0);
+        return tB - tA;
+      });
+      setChantiers(data);
+    }, (err) => {
+      console.error(err);
+      toast.error("Erreur de chargement des chantiers.");
+    });
+
+    // 4. INTERVALLES
+    const unsubIntervalles = onSnapshot(query(collection(db, 'pmIntervalles'), where('deleted', '!=', true)), (snap) => {
+      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as IntervalleMaintenance[];
+      data.sort((a: any, b: any) => {
+        const tA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt || 0);
+        const tB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt || 0);
+        return tB - tA;
+      });
+      setIntervalles(data);
+      setLoading(false);
+    }, (err) => {
+      console.error(err);
+      toast.error("Erreur de chargement des intervalles.");
+      setLoading(false);
+    });
+
+    return () => {
+      unsubEngins();
+      unsubMecaniciens();
+      unsubChantiers();
+      unsubIntervalles();
+    };
+  }, [user]);
 
   // RECONSTRUIT : Réinitialiser la recherche lors du changement d'onglet
   React.useEffect(() => {
@@ -171,182 +291,265 @@ export function Admin() {
   // ==========================================
   // LOGIQUE DE CRUD : ENGINS
   // ==========================================
-  const handleSaveEngin = (data: Partial<Engin>) => {
+  const handleSaveEngin = async (data: Partial<Engin>) => {
     if (!data.id || !data.heuresMarche) {
       toast.error("Veuillez remplir tous les champs obligatoires.");
       return;
     }
 
-    if (editingItem) {
-      // Modification
-      const updated = engins.map(e => e.id === editingItem.id ? { ...e, ...data } as Engin : e);
-      setEngins(updated);
-      saveToStorage("gmao_engins", updated);
-      toast.success(`Engin ${data.id} mis à jour avec succès !`);
-    } else {
-      // Ajout - Vérification d'unicité du N° de Parc
-      if (engins.some(e => e.id.toLowerCase() === data.id?.toLowerCase())) {
-        toast.error(`Le N° de Parc ${data.id} existe déjà.`);
-        return;
+    try {
+      if (editingItem) {
+        const docRef = doc(db, 'engins', editingItem.id);
+        const payload = {
+          modele: data.modele || "ST2G",
+          marque: data.marque || "Epiroc",
+          type: data.type || "Scooptram",
+          siteId: data.siteId || "SMI",
+          heuresMarche: Number(data.heuresMarche) || 0,
+          dateEntreeService: data.dateEntreeService || new Date().toISOString().split('T')[0],
+          etat: data.etat || "Opérationnel",
+          conducteurAssigne: data.conducteurAssigne || "Non assigné",
+          updatedAt: Timestamp.now()
+        };
+        await updateDoc(docRef, payload);
+        toast.success(`Engin ${editingItem.id} mis à jour avec succès !`);
+      } else {
+        if (engins.some(e => e.id.toLowerCase() === data.id?.toLowerCase())) {
+          toast.error(`Le N° de Parc ${data.id} existe déjà.`);
+          return;
+        }
+        const docRef = doc(db, 'engins', data.id);
+        const payload = {
+          id: data.id,
+          modele: data.modele || "ST2G",
+          marque: data.marque || "Epiroc",
+          type: data.type || "Scooptram",
+          siteId: data.siteId || "SMI",
+          heuresMarche: Number(data.heuresMarche) || 0,
+          dateEntreeService: data.dateEntreeService || new Date().toISOString().split('T')[0],
+          etat: data.etat || "Opérationnel",
+          conducteurAssigne: data.conducteurAssigne || "Non assigné",
+          deleted: false,
+          updatedAt: Timestamp.now()
+        };
+        await setDoc(docRef, payload);
+        toast.success(`Engin ${data.id} ajouté avec succès !`);
       }
-      const newEngin: Engin = {
-        id: data.id,
-        modele: data.modele || "ST2G",
-        marque: data.marque || "Epiroc",
-        type: data.type || "Scooptram",
-        chantierAssigne: data.chantierAssigne || "SMI",
-        heuresMarche: Number(data.heuresMarche) || 0,
-        dateEntreeService: data.dateEntreeService || new Date().toISOString().split('T')[0],
-        etat: data.etat || "Opérationnel",
-        conducteurAssigne: data.conducteurAssigne || "Non assigné"
-      };
-      const updated = [...engins, newEngin];
-      setEngins(updated);
-      saveToStorage("gmao_engins", updated);
-      toast.success(`Engin ${data.id} ajouté avec succès !`);
+      setModalOpen(false);
+      setEditingItem(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erreur de connexion Firestore. Vérifiez votre réseau.");
     }
-    setModalOpen(false);
-    setEditingItem(null);
   };
 
-  const handleDeleteEngin = (id: string) => {
-    const updated = engins.filter(e => e.id !== id);
-    setEngins(updated);
-    saveToStorage("gmao_engins", updated);
-    toast.success(`L'engin ${id} a été supprimé.`);
-    setConfirmDeleteId(null);
+  const handleDeleteEngin = async (id: string) => {
+    try {
+      const docRef = doc(db, 'engins', id);
+      await updateDoc(docRef, {
+        deleted: true,
+        updatedAt: Timestamp.now()
+      });
+      toast.success(`L'engin ${id} a été supprimé.`);
+      setConfirmDeleteId(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erreur de connexion Firestore. Vérifiez votre réseau.");
+    }
   };
 
   // ==========================================
   // LOGIQUE DE CRUD : MÉCANICIENS
   // ==========================================
-  const handleSaveMecanicien = (data: Partial<Mecanicien>) => {
+  const handleSaveMecanicien = async (data: Partial<Mecanicien>) => {
     if (!data.nomComplet || !data.id) {
       toast.error("Veuillez remplir tous les champs obligatoires.");
       return;
     }
 
-    if (editingItem) {
-      const updated = mecaniciens.map(m => m.id === editingItem.id ? { ...m, ...data } as Mecanicien : m);
-      setMecaniciens(updated);
-      saveToStorage("gmao_mecaniciens", updated);
-      toast.success(`Mécanicien ${data.nomComplet} mis à jour !`);
-    } else {
-      if (mecaniciens.some(m => m.id.toLowerCase() === data.id?.toLowerCase())) {
-        toast.error(`Le matricule ${data.id} existe déjà.`);
-        return;
+    try {
+      if (editingItem) {
+        const docRef = doc(db, 'mecaniciens', editingItem.id);
+        const payload = {
+          nomComplet: data.nomComplet,
+          poste: data.poste || "Poste 1",
+          specialite: data.specialite || "Généraliste",
+          telephone: data.telephone || "",
+          dateEmbauche: data.dateEmbauche || new Date().toISOString().split('T')[0],
+          statut: data.statut || "Actif",
+          siteId: data.siteId || "SMI",
+          updatedAt: Timestamp.now()
+        };
+        await updateDoc(docRef, payload);
+        toast.success(`Mécanicien ${data.nomComplet} mis à jour !`);
+      } else {
+        if (mecaniciens.some(m => m.id.toLowerCase() === data.id?.toLowerCase())) {
+          toast.error(`Le matricule ${data.id} existe déjà.`);
+          return;
+        }
+        const docRef = doc(db, 'mecaniciens', data.id);
+        const payload = {
+          id: data.id,
+          nomComplet: data.nomComplet,
+          poste: data.poste || "Poste 1",
+          specialite: data.specialite || "Généraliste",
+          telephone: data.telephone || "",
+          dateEmbauche: data.dateEmbauche || new Date().toISOString().split('T')[0],
+          statut: data.statut || "Actif",
+          siteId: data.siteId || "SMI",
+          deleted: false,
+          updatedAt: Timestamp.now()
+        };
+        await setDoc(docRef, payload);
+        toast.success(`Mécanicien ${data.nomComplet} enregistré avec succès !`);
       }
-      const newMeca: Mecanicien = {
-        id: data.id,
-        nomComplet: data.nomComplet,
-        poste: data.poste || "Poste 1",
-        specialite: data.specialite || "Généraliste",
-        telephone: data.telephone || "",
-        dateEmbauche: data.dateEmbauche || new Date().toISOString().split('T')[0],
-        statut: data.statut || "Actif"
-      };
-      const updated = [...mecaniciens, newMeca];
-      setMecaniciens(updated);
-      saveToStorage("gmao_mecaniciens", updated);
-      toast.success(`Mécanicien ${data.nomComplet} enregistré avec succès !`);
+      setModalOpen(false);
+      setEditingItem(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erreur de connexion Firestore. Vérifiez votre réseau.");
     }
-    setModalOpen(false);
-    setEditingItem(null);
   };
 
-  const handleDeleteMecanicien = (id: string) => {
-    const meca = mecaniciens.find(m => m.id === id);
-    const updated = mecaniciens.filter(m => m.id !== id);
-    setMecaniciens(updated);
-    saveToStorage("gmao_mecaniciens", updated);
-    toast.success(`Le mécanicien ${meca?.nomComplet} a été supprimé.`);
-    setConfirmDeleteId(null);
+  const handleDeleteMecanicien = async (id: string) => {
+    try {
+      const docRef = doc(db, 'mecaniciens', id);
+      await updateDoc(docRef, {
+        deleted: true,
+        updatedAt: Timestamp.now()
+      });
+      toast.success(`Le mécanicien a été supprimé.`);
+      setConfirmDeleteId(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erreur de connexion Firestore. Vérifiez votre réseau.");
+    }
   };
 
   // ==========================================
   // LOGIQUE DE CRUD : CHANTIERS
   // ==========================================
-  const handleSaveChantier = (data: Partial<Chantier>) => {
+  const handleSaveChantier = async (data: Partial<Chantier>) => {
     if (!data.id || !data.nomComplet) {
       toast.error("Veuillez remplir tous les champs obligatoires.");
       return;
     }
 
-    if (editingItem) {
-      const updated = chantiers.map(c => c.id === editingItem.id ? { ...c, ...data } as Chantier : c);
-      setChantiers(updated);
-      saveToStorage("gmao_chantiers", updated);
-      toast.success(`Chantier ${data.nomComplet} mis à jour.`);
-    } else {
-      if (chantiers.some(c => c.id.toUpperCase() === data.id?.toUpperCase())) {
-        toast.error(`Le code chantier ${data.id} existe déjà.`);
-        return;
+    const docId = data.id.toUpperCase();
+
+    try {
+      if (editingItem) {
+        const docRef = doc(db, 'chantiers', editingItem.id);
+        const payload = {
+          nomComplet: data.nomComplet,
+          type: data.type || "Mine souterraine",
+          localisation: data.localisation || "",
+          responsableId: data.responsableId || "",
+          statut: data.statut || "Actif",
+          updatedAt: Timestamp.now()
+        };
+        await updateDoc(docRef, payload);
+        toast.success(`Chantier ${data.nomComplet} mis à jour.`);
+      } else {
+        if (chantiers.some(c => c.id.toUpperCase() === docId)) {
+          toast.error(`Le code chantier ${data.id} existe déjà.`);
+          return;
+        }
+        const docRef = doc(db, 'chantiers', docId);
+        const payload = {
+          id: docId,
+          nomComplet: data.nomComplet,
+          type: data.type || "Mine souterraine",
+          localisation: data.localisation || "",
+          responsableId: data.responsableId || "",
+          statut: data.statut || "Actif",
+          deleted: false,
+          updatedAt: Timestamp.now()
+        };
+        await setDoc(docRef, payload);
+        toast.success(`Chantier ${data.nomComplet} créé avec succès !`);
       }
-      const newChantier: Chantier = {
-        id: data.id.toUpperCase(),
-        nomComplet: data.nomComplet,
-        type: data.type || "Mine souterraine",
-        localisation: data.localisation || "",
-        responsableId: data.responsableId || "",
-        statut: data.statut || "Actif"
-      };
-      const updated = [...chantiers, newChantier];
-      setChantiers(updated);
-      saveToStorage("gmao_chantiers", updated);
-      toast.success(`Chantier ${data.nomComplet} créé avec succès !`);
+      setModalOpen(false);
+      setEditingItem(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erreur de connexion Firestore. Vérifiez votre réseau.");
     }
-    setModalOpen(false);
-    setEditingItem(null);
   };
 
-  const handleDeleteChantier = (id: string) => {
-    const updated = chantiers.filter(c => c.id !== id);
-    setChantiers(updated);
-    saveToStorage("gmao_chantiers", updated);
-    toast.success(`Le chantier ${id} a été supprimé.`);
-    setConfirmDeleteId(null);
+  const handleDeleteChantier = async (id: string) => {
+    try {
+      const docRef = doc(db, 'chantiers', id);
+      await updateDoc(docRef, {
+        deleted: true,
+        updatedAt: Timestamp.now()
+      });
+      toast.success(`Le chantier ${id} a été supprimé.`);
+      setConfirmDeleteId(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erreur de connexion Firestore. Vérifiez votre réseau.");
+    }
   };
 
   // ==========================================
   // LOGIQUE DE CRUD : INTERVALLES
   // ==========================================
-  const handleSaveIntervalle = (data: Partial<IntervalleMaintenance>) => {
+  const handleSaveIntervalle = async (data: Partial<IntervalleMaintenance>) => {
     if (!data.operation || !data.intervalleHeures) {
       toast.error("Veuillez remplir les champs obligatoires.");
       return;
     }
 
-    if (editingItem) {
-      const updated = intervalles.map(i => i.id === editingItem.id ? { ...i, ...data } as IntervalleMaintenance : i);
-      setIntervalles(updated);
-      saveToStorage("gmao_intervalles", updated);
-      toast.success("Intervalle de maintenance mis à jour.");
-    } else {
-      const newId = `I${Date.now()}`;
-      const newIntervalle: IntervalleMaintenance = {
-        id: newId,
-        typeEngin: data.typeEngin || "Générique",
-        operation: data.operation,
-        intervalleHeures: Number(data.intervalleHeures),
-        produitHuile: data.produitHuile || "N/A",
-        quantite: data.quantite || "N/A",
-        priorite: data.priorite || "Normale"
-      };
-      const updated = [...intervalles, newIntervalle];
-      setIntervalles(updated);
-      saveToStorage("gmao_intervalles", updated);
-      toast.success("Nouvel intervalle de maintenance ajouté !");
+    try {
+      if (editingItem) {
+        const docRef = doc(db, 'pmIntervalles', editingItem.id);
+        const payload = {
+          typeEngin: data.typeEngin || "Générique",
+          operation: data.operation,
+          intervalleHeures: Number(data.intervalleHeures),
+          produitHuile: data.produitHuile || "N/A",
+          quantite: data.quantite || "N/A",
+          priorite: data.priorite || "Normale",
+          updatedAt: Timestamp.now()
+        };
+        await updateDoc(docRef, payload);
+        toast.success("Intervalle de maintenance mis à jour.");
+      } else {
+        const payload = {
+          typeEngin: data.typeEngin || "Générique",
+          operation: data.operation,
+          intervalleHeures: Number(data.intervalleHeures),
+          produitHuile: data.produitHuile || "N/A",
+          quantite: data.quantite || "N/A",
+          priorite: data.priorite || "Normale",
+          deleted: false,
+          updatedAt: Timestamp.now()
+        };
+        await addDoc(collection(db, 'pmIntervalles'), payload);
+        toast.success("Nouvel intervalle de maintenance ajouté !");
+      }
+      setModalOpen(false);
+      setEditingItem(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erreur de connexion Firestore. Vérifiez votre réseau.");
     }
-    setModalOpen(false);
-    setEditingItem(null);
   };
 
-  const handleDeleteIntervalle = (id: string) => {
-    const updated = intervalles.filter(i => i.id !== id);
-    setIntervalles(updated);
-    saveToStorage("gmao_intervalles", updated);
-    toast.success("L'intervalle a été supprimé.");
-    setConfirmDeleteId(null);
+  const handleDeleteIntervalle = async (id: string) => {
+    try {
+      const docRef = doc(db, 'pmIntervalles', id);
+      await updateDoc(docRef, {
+        deleted: true,
+        updatedAt: Timestamp.now()
+      });
+      toast.success("L'intervalle a été supprimé.");
+      setConfirmDeleteId(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erreur de connexion Firestore. Vérifiez votre réseau.");
+    }
   };
 
   // ==========================================
@@ -356,14 +559,14 @@ export function Admin() {
     let csvContent = "data:text/csv;charset=utf-8,";
     
     if (activeTab === "engins") {
-      csvContent += "No Parc,Modele,Marque,Type,Chantier,Heures de Marche,Entree en Service,Etat,Conducteur\n";
+      csvContent += "No Parc,Modele,Marque,Type,Site,Heures de Marche,Entree en Service,Etat,Conducteur\n";
       engins.forEach(e => {
-        csvContent += `"${e.id}","${e.modele}","${e.marque}","${e.type}","${e.chantierAssigne}",${e.heuresMarche},"${e.dateEntreeService}","${e.etat}","${e.conducteurAssigne}"\n`;
+        csvContent += `"${e.id}","${e.modele}","${e.marque}","${e.type}","${e.siteId}",${e.heuresMarche},"${e.dateEntreeService}","${e.etat}","${e.conducteurAssigne}"\n`;
       });
     } else if (activeTab === "mecaniciens") {
-      csvContent += "Matricule,Nom Complet,Poste,Specialite,Telephone,Embauche,Statut\n";
+      csvContent += "Matricule,Nom Complet,Poste,Specialite,Telephone,Embauche,Statut,Site\n";
       mecaniciens.forEach(m => {
-        csvContent += `"${m.id}","${m.nomComplet}","${m.poste}","${m.specialite}","${m.telephone}","${m.dateEmbauche}","${m.statut}"\n`;
+        csvContent += `"${m.id}","${m.nomComplet}","${m.poste}","${m.specialite}","${m.telephone}","${m.dateEmbauche}","${m.statut}","${m.siteId || ''}"\n`;
       });
     } else if (activeTab === "chantiers") {
       csvContent += "Code,Nom Complet,Type,Localisation,Responsable,Statut\n";
@@ -396,7 +599,7 @@ export function Admin() {
     if (activeTab === "engins") {
       return engins.filter(e => {
         const matchesQuery = e.id.toLowerCase().includes(q) || e.modele.toLowerCase().includes(q) || e.conducteurAssigne.toLowerCase().includes(q);
-        const matchesChantier = filterOption1 === "Tous" || e.chantierAssigne === filterOption1;
+        const matchesChantier = filterOption1 === "Tous" || e.siteId === filterOption1;
         const matchesEtat = filterOption2 === "Tous" || e.etat === filterOption2;
         return matchesQuery && matchesChantier && matchesEtat;
       });
@@ -597,7 +800,7 @@ export function Admin() {
 
   // RECONSTRUIT : Calcul auto du nombre d'engins assignés à un chantier
   const getEnginsCountForChantier = (chantierId: string) => {
-    return engins.filter(e => e.chantierAssigne === chantierId).length;
+    return engins.filter(e => e.siteId === chantierId).length;
   };
 
   return (
@@ -815,7 +1018,12 @@ export function Admin() {
       <Card className="bg-white border-slate-200 shadow-md rounded-xl overflow-hidden">
         <CardContent className="p-0">
           
-          {filteredData.length === 0 ? (
+          {loading ? (
+            <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent"></div>
+              <p className="text-slate-400 text-xs font-mono uppercase tracking-widest">Chargement des données en cours...</p>
+            </div>
+          ) : filteredData.length === 0 ? (
             <div className="py-20 text-center text-slate-400 text-sm font-mono uppercase">
               Aucune donnée enregistrée ne correspond aux filtres appliqués.
             </div>
@@ -896,7 +1104,7 @@ export function Admin() {
                       <td className="py-4 px-4 text-slate-600 font-semibold">{e.type}</td>
                       <td className="py-4 px-4">
                         <span className="px-2 py-1 bg-slate-50 border border-slate-200 text-sky-600 rounded-lg text-xs font-mono font-bold">
-                          {e.chantierAssigne}
+                          {e.siteId}
                         </span>
                       </td>
                       <td className="py-4 px-4 text-right font-mono font-bold text-slate-700">
@@ -1223,10 +1431,10 @@ export function Admin() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-mono font-bold uppercase text-slate-500 mb-1.5">Chantier Assigné</label>
+                    <label className="block text-xs font-mono font-bold uppercase text-slate-500 mb-1.5">Site Assigné</label>
                     <select
-                      name="chantierAssigne"
-                      defaultValue={editingItem?.chantierAssigne || "SMI"}
+                      name="siteId"
+                      defaultValue={editingItem?.siteId || "SMI"}
                       className="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#4FC3F7]"
                     >
                       {chantiers.map(c => <option key={c.id} value={c.id}>{c.nomComplet} ({c.id})</option>)}
@@ -1338,6 +1546,20 @@ export function Admin() {
                       <option value="Électrique">Électrique & Systèmes embarqués</option>
                       <option value="Transmission">Transmission Dana / Funk</option>
                       <option value="Généraliste">Généraliste de fond</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-mono font-bold uppercase text-slate-600 mb-1.5">Site d'affectation</label>
+                    <select
+                      name="siteId"
+                      defaultValue={editingItem?.siteId || "SMI"}
+                      className="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#4FC3F7]"
+                    >
+                      <option value="SMI">SMI</option>
+                      <option value="OUMEJRANE">OUMEJRANE</option>
+                      <option value="KOUDIA">KOUDIA AICHA</option>
+                      <option value="OUANSIMI">OUANSIMI</option>
+                      <option value="BOU-AZZER">BOU-AZZER</option>
                     </select>
                   </div>
                   <div>

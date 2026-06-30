@@ -1,1993 +1,1580 @@
-// V3: Fichier complet de gestion des Tâches et du Planning de maintenance pour SOU-GMAO Hydromines
-// Ce module gère les tâches quotidiennes, préventives et correctives, ainsi que la planification et le suivi des performances.
+import React from 'react';
+import { 
+  Calendar, Clock, CheckCircle2, Wrench, AlertTriangle, User, Truck, Plus, 
+  Search, Filter, Share2, TrendingUp, Award, Zap, Printer, Clock3, Check, RefreshCw, Eye, ShieldCheck, Star
+} from 'lucide-react';
+import { 
+  collection, doc, addDoc, updateDoc, onSnapshot, Timestamp, getDoc 
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuthStore } from '@/lib/store';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { PageBanner } from '@/components/ui/PageBanner';
 
-import * as React from "react";
-import {
-  Calendar,
-  Clock,
-  CheckCircle2,
-  Wrench,
-  AlertTriangle,
-  User,
-  Truck,
-  Plus,
-  Trash2,
-  Search,
-  Filter,
-  Share2,
-  TrendingUp,
-  Award,
-  Zap,
-  Printer,
-  FileText,
-  Clock3,
-  Check,
-  X,
-  RefreshCw,
-  Eye,
-  Camera,
-  AlertCircle,
-  Copy,
-  ChevronLeft,
-  ChevronRight,
-  ShieldCheck,
-  Flame,
-  Star,
-  Info
-} from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { PageBanner } from "@/components/ui/PageBanner";
-import { toast } from "sonner";
-import { motion, AnimatePresence } from "motion/react";
-
-// V3: Interfaces de données
-interface Engin {
-  id: string;
-  modele: string;
-  marque: string;
-  type: string;
-  heuresMarche: number;
-  heures_derniere_vidange_moteur?: number;
-  heures_derniere_vidange_hydraulique?: number;
-  heures_derniere_vidange_transmission?: number;
-}
-
-interface Mecanicien {
-  id: string;
-  nomComplet: string;
-}
-
-interface MaintenanceTask {
-  id: string;
-  type: "PREVENTIF" | "CORRECTIF" | "QUOTIDIEN";
-  label: string;
-  enginId: string;
-  enginModele: string;
-  mecanicienId: string;
-  mecanicienNom: string;
-  poste: "Poste 1" | "Poste 2" | "Poste 3";
-  datePlanifiee: string;
-  dureeEstimee: "15min" | "30min" | "1h" | "2h" | "4h" | "6h" | "1j";
-  priorite: "CRITIQUE" | "HAUTE" | "NORMALE" | "BASSE" | "REPORTEE" | "QUOTIDIENNE";
-  statut: "FAIT" | "EN_COURS" | "NON_FAIT" | "REPORTE" | "VALIDE";
-  commentaire: string;
-  photo?: string; // base64
-  motifReport?: string;
-  dateReporte?: string;
-  echeanceHeures?: number; // Pour préventif calculé
-  heuresEcouleesAuMoment?: number;
-  isCritiqueAlerte?: boolean;
-}
+import { MaintenanceTask, Engin, Mecanicien, PmIntervalle, TaskType, TaskPriority } from './taches/types';
+import { 
+  DAILY_TASKS_COMMON, DAILY_TASKS_BY_MODEL, DAILY_TASKS_GENERIC, getDureeByOperation 
+} from './taches/constants';
+import { TaskDetailModal } from './taches/TaskDetailModal';
+import { AddTaskModal } from './taches/AddTaskModal';
+import { SignalerPanne } from './SignalerPanne';
 
 export default function TachesPlanning() {
-  // V3: Navigation par onglet
-  const [activeTab, setActiveTab] = React.useState<"taches" | "planning" | "performance">("taches");
-  const [userRole, setUserRole] = React.useState<"MECANICIEN" | "DIRECTEUR">("DIRECTEUR");
+  const { user, activeSite } = useAuthStore();
+  const isModeDirecteur = ['ADMIN', 'DIRECTION', 'RESPONSABLE_MAINTENANCE'].includes(user?.role || '');
 
-  // V3: États de données de base
+  // Base state
+  const [tasks, setTasks] = React.useState<MaintenanceTask[]>([]);
   const [engins, setEngins] = React.useState<Engin[]>([]);
   const [mecaniciens, setMecaniciens] = React.useState<Mecanicien[]>([]);
-  const [tasks, setTasks] = React.useState<MaintenanceTask[]>([]);
+  const [pmIntervalles, setPmIntervalles] = React.useState<PmIntervalle[]>([]);
 
-  // V3: Saisie "Heures du Jour" en haut de page
-  const [selectedEnginHeures, setSelectedEnginHeures] = React.useState("");
-  const [heuresSaisiesJour, setHeuresSaisiesJour] = React.useState<number | "">("");
-  const [selectedMecaHeures, setSelectedMecaHeures] = React.useState("");
-  const [selectedPosteHeures, setSelectedPosteHeures] = React.useState<"Poste 1" | "Poste 2" | "Poste 3">("Poste 1");
+  // Load flags
+  const [enginsLoaded, setEnginsLoaded] = React.useState(false);
+  const [mecaniciensLoaded, setMecaniciensLoaded] = React.useState(false);
+  const [intervallesLoaded, setIntervallesLoaded] = React.useState(false);
+  const [tasksLoaded, setTasksLoaded] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [generationRunning, setGenerationRunning] = React.useState(false);
 
-  // V3: Filtres d'affichage onglet Tâches
-  const [filterMecanicien, setFilterMecanicien] = React.useState("Tous");
-  const [filterPoste, setFilterPoste] = React.useState("Tous");
-  const [filterEngin, setFilterEngin] = React.useState("Tous");
-  const [filterType, setFilterType] = React.useState("Tous");
-  const [filterPriorite, setFilterPriorite] = React.useState("Tous");
-  const [filterDate, setFilterDate] = React.useState("Tous"); // Tous, Aujourd'hui, Hier, Cette semaine
+  // Filters and navigation
+  const [activeTab, setActiveTab] = React.useState<'tasks' | 'calendar' | 'performance' | 'pannes'>('tasks');
+  const [filterType, setFilterType] = React.useState<string>('TOUS');
+  const [filterMeca, setFilterMeca] = React.useState<string>('TOUS');
+  const [filterPoste, setFilterPoste] = React.useState<string>('TOUS');
+  const [filterDate, setFilterDate] = React.useState<string>("Aujourd'hui");
+  const [searchQuery, setSearchQuery] = React.useState<string>("");
 
-  // V3: État de planification calendrier (semaine courante)
-  const [currentWeekOffset, setCurrentWeekOffset] = React.useState(0);
-  const [calendarView, setCalendarView] = React.useState<"hebdo" | "mensuel">("hebdo");
-  const [selectedMonthOffset, setSelectedMonthOffset] = React.useState(0);
-
-  // V3: Fenêtres modales de dialogue
+  // Modal control
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
-  const [isDetailModalOpen, setIsDetailModalOpen] = React.useState(false);
-  const [activeTaskDetail, setActiveTaskDetail] = React.useState<MaintenanceTask | null>(null);
+  const [selectedTask, setSelectedTask] = React.useState<MaintenanceTask | null>(null);
 
-  // V3: Formulaire ajout de tâche manuelle
-  const [newType, setNewType] = React.useState<"PREVENTIF" | "CORRECTIF" | "QUOTIDIEN">("CORRECTIF");
-  const [newLabel, setNewLabel] = React.useState("");
-  const [newEnginId, setNewEnginId] = React.useState("");
-  const [newMecaId, setNewMecaId] = React.useState("");
-  const [newPoste, setNewPoste] = React.useState<"Poste 1" | "Poste 2" | "Poste 3">("Poste 1");
-  const [newDate, setNewDate] = React.useState(() => new Date().toISOString().split("T")[0]);
-  const [newDuree, setNewDuree] = React.useState<"15min" | "30min" | "1h" | "2h" | "4h" | "6h" | "1j">("1h");
-  const [newPrioriteManual, setNewPrioriteManual] = React.useState<"HAUTE" | "NORMALE" | "BASSE">("NORMALE");
+  // Pannes states
+  const [pannes, setPannes] = React.useState<any[]>([]);
+  const [pannesLoaded, setPannesLoaded] = React.useState(false);
+  const [isSignalerPanneOpen, setIsSignalerPanneOpen] = React.useState(false);
+  
+  // States for panne details and diagnostics
+  const [selectedPanne, setSelectedPanne] = React.useState<any | null>(null);
+  const [diagComment, setDiagComment] = React.useState('');
+  const [diagMecaId, setDiagMecaId] = React.useState('');
+  const [diagArret, setDiagArret] = React.useState(false);
+  const [isCreatingBt, setIsCreatingBt] = React.useState(false);
 
-  // V3: Logo Error Fallback
-  const [logoError, setLogoError] = React.useState(false);
+  // Calendar state
+  const [currentWeekStart, setCurrentWeekStart] = React.useState(() => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    return new Date(d.setDate(diff));
+  });
 
-  // V3: CHARGEMENT DES COMPOSANTS ET SYNC LOCAL STORAGE
+  // Handle Firestore Errors
+  const handleFirestoreError = (error: unknown, op: string) => {
+    console.error(`[Firestore Error - ${op}]:`, error);
+    toast.error(`Erreur de synchronisation (${op})`);
+  };
+
+  // Firestore Listeners
   React.useEffect(() => {
-    // 1. Charger les engins
-    const savedEngins = localStorage.getItem("gmao_engins");
-    let loadedEngins: Engin[] = [];
-    if (savedEngins) {
-      loadedEngins = JSON.parse(savedEngins);
-    } else {
-      // Données de secours
-      loadedEngins = [
-        { id: "ST2G-01", modele: "ST2G", marque: "Epiroc", type: "Scooptram", heuresMarche: 5250, heures_derniere_vidange_moteur: 5000, heures_derniere_vidange_hydraulique: 4500, heures_derniere_vidange_transmission: 4000 },
-        { id: "ST2D-02", modele: "ST2D", marque: "Epiroc", type: "Scooptram", heuresMarche: 1210, heures_derniere_vidange_moteur: 1000, heures_derniere_vidange_hydraulique: 800, heures_derniere_vidange_transmission: 500 },
-        { id: "ST7-01", modele: "ST7", marque: "Epiroc", type: "Scooptram", heuresMarche: 3850, heures_derniere_vidange_moteur: 3800, heures_derniere_vidange_hydraulique: 3000, heures_derniere_vidange_transmission: 2000 }
-      ];
-      localStorage.setItem("gmao_engins", JSON.stringify(loadedEngins));
-    }
+    // Engins
+    const unsubEngins = onSnapshot(collection(db, 'engins'), (snap) => {
+      setEngins(snap.docs.map(d => ({ id: d.id, ...d.data() } as Engin)));
+      setEnginsLoaded(true);
+    }, (err) => handleFirestoreError(err, 'Engins'));
 
-    // Veiller à ce que les champs d'intervalles de vidanges existent pour tous les engins
-    let modified = false;
-    loadedEngins = loadedEngins.map(e => {
-      let updated = { ...e };
-      if (updated.heures_derniere_vidange_moteur === undefined) {
-        updated.heures_derniere_vidange_moteur = e.heuresMarche - 150;
-        modified = true;
-      }
-      if (updated.heures_derniere_vidange_hydraulique === undefined) {
-        updated.heures_derniere_vidange_hydraulique = e.heuresMarche - 400;
-        modified = true;
-      }
-      if (updated.heures_derniere_vidange_transmission === undefined) {
-        updated.heures_derniere_vidange_transmission = e.heuresMarche - 800;
-        modified = true;
-      }
-      return updated;
-    });
-    if (modified) {
-      localStorage.setItem("gmao_engins", JSON.stringify(loadedEngins));
-    }
-    setEngins(loadedEngins);
+    // Mecaniciens
+    const unsubMecas = onSnapshot(collection(db, 'mecaniciens'), (snap) => {
+      setMecaniciens(snap.docs.map(d => ({ id: d.id, ...d.data() } as Mecanicien)));
+      setMecaniciensLoaded(true);
+    }, (err) => handleFirestoreError(err, 'Mécaniciens'));
 
-    if (loadedEngins.length > 0) {
-      setSelectedEnginHeures(loadedEngins[0].id);
-      setNewEnginId(loadedEngins[0].id);
-    }
+    // PM Intervalles
+    const unsubIntervalles = onSnapshot(collection(db, 'pmIntervalles'), (snap) => {
+      setPmIntervalles(snap.docs.map(d => ({ id: d.id, ...d.data() } as PmIntervalle)));
+      setIntervallesLoaded(true);
+    }, (err) => handleFirestoreError(err, 'Intervalles PM'));
 
-    // 2. Charger les collaborateurs mécaniciens
-    const savedMeca = localStorage.getItem("gmao_mecaniciens");
-    let loadedMeca: Mecanicien[] = [];
-    if (savedMeca) {
-      loadedMeca = JSON.parse(savedMeca);
-    } else {
-      loadedMeca = [
-        { id: "M01", nomComplet: "Lahcen Ait" },
-        { id: "M02", nomComplet: "Abdellah Daoudi" },
-        { id: "M03", nomComplet: "Mohamed El Amri" },
-        { id: "M04", nomComplet: "Youssef Naciri" }
-      ];
-      localStorage.setItem("gmao_mecaniciens", JSON.stringify(loadedMeca));
-    }
-    setMecaniciens(loadedMeca);
-    if (loadedMeca.length > 0) {
-      setSelectedMecaHeures(loadedMeca[0].nomComplet);
-      setNewMecaId(loadedMeca[0].id);
-    }
+    // Maintenance Tasks
+    const unsubTasks = onSnapshot(collection(db, 'maintenanceTasks'), (snap) => {
+      setTasks(snap.docs.map(d => ({ id: d.id, ...d.data() } as MaintenanceTask)));
+      setTasksLoaded(true);
+      setLoading(false);
+    }, (err) => handleFirestoreError(err, 'Tâches Maintenance'));
 
-    // 3. Charger les tâches (ou générer la première liste)
-    const savedTasks = localStorage.getItem("gmao_planning_tasks");
-    if (savedTasks) {
-      setTasks(JSON.parse(savedTasks));
-    } else {
-      // Générer tâches initiales
-      const defaultTasks: MaintenanceTask[] = [];
-      const todayStr = new Date().toISOString().split("T")[0];
+    // Pannes
+    const unsubPannes = onSnapshot(collection(db, 'pannes'), (snap) => {
+      setPannes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setPannesLoaded(true);
+    }, (err) => handleFirestoreError(err, 'Pannes'));
 
-      // Générer des tâches quotidiennes de graissage et niveaux pour chaque engin pour aujourd'hui
-      loadedEngins.forEach((eng, idx) => {
-        const meca = loadedMeca[idx % loadedMeca.length];
-        
-        defaultTasks.push({
-          id: `T-DAILY-1-${eng.id}`,
-          type: "QUOTIDIEN",
-          label: `Graissage pivots articulation ${eng.id}`,
-          enginId: eng.id,
-          enginModele: eng.modele,
-          mecanicienId: meca.id,
-          mecanicienNom: meca.nomComplet,
-          poste: "Poste 1",
-          datePlanifiee: todayStr,
-          dureeEstimee: "30min",
-          priorite: "QUOTIDIENNE",
-          statut: "NON_FAIT",
-          commentaire: ""
-        });
-
-        defaultTasks.push({
-          id: `T-DAILY-2-${eng.id}`,
-          type: "QUOTIDIEN",
-          label: `Vérification niveaux huile et hydraulique ${eng.id}`,
-          enginId: eng.id,
-          enginModele: eng.modele,
-          mecanicienId: meca.id,
-          mecanicienNom: meca.nomComplet,
-          poste: "Poste 1",
-          datePlanifiee: todayStr,
-          dureeEstimee: "15min",
-          priorite: "QUOTIDIENNE",
-          statut: "FAIT",
-          commentaire: "Niveau d'huile moteur correct."
-        });
-      });
-
-      // Ajouter quelques préventifs simulés en cours d'échéance
-      defaultTasks.push({
-        id: "T-PREV-1",
-        type: "PREVENTIF",
-        label: "Vidange moteur + filtres ST2G-01",
-        enginId: "ST2G-01",
-        enginModele: "ST2G",
-        mecanicienId: "M01",
-        mecanicienNom: "Lahcen Ait",
-        poste: "Poste 1",
-        datePlanifiee: todayStr,
-        dureeEstimee: "2h",
-        priorite: "HAUTE",
-        statut: "EN_COURS",
-        commentaire: "Filtres d'huile moteur retirés. Vidange en cours.",
-        echeanceHeures: 250
-      });
-
-      defaultTasks.push({
-        id: "T-CORR-1",
-        type: "CORRECTIF",
-        label: "Changement flexible vérin godet fuyard ST2D-02",
-        enginId: "ST2D-02",
-        enginModele: "ST2D",
-        mecanicienId: "M02",
-        mecanicienNom: "Abdellah Daoudi",
-        poste: "Poste 2",
-        datePlanifiee: todayStr,
-        dureeEstimee: "1h",
-        priorite: "CRITIQUE",
-        statut: "NON_FAIT",
-        commentaire: ""
-      });
-
-      localStorage.setItem("gmao_planning_tasks", JSON.stringify(defaultTasks));
-      setTasks(defaultTasks);
-    }
+    return () => {
+      unsubEngins();
+      unsubMecas();
+      unsubIntervalles();
+      unsubTasks();
+      unsubPannes();
+    };
   }, []);
 
-  // V3: Déclenchement automatique des toasts d'alertes au démarrage
+  // Multi-site permissions filtering
+  const filteredEngins = React.useMemo(() => {
+    return engins.filter(e => 
+      e.deleted !== true &&
+      e.etat !== "Hors service" && e.etat !== "Vendu" &&
+      (user?.role === 'ADMIN' || user?.role === 'DIRECTION' || e.siteId === user?.siteId) &&
+      (activeSite === 'TOUS' || e.siteId === activeSite)
+    );
+  }, [engins, user, activeSite]);
+
+  const filteredMecaniciens = React.useMemo(() => {
+    return mecaniciens.filter(m => 
+      m.deleted !== true &&
+      m.statut === "Actif" &&
+      (user?.role === 'ADMIN' || user?.role === 'DIRECTION' || m.siteId === user?.siteId) &&
+      (activeSite === 'TOUS' || m.siteId === activeSite)
+    );
+  }, [mecaniciens, user, activeSite]);
+
+  const filteredTasks = React.useMemo(() => {
+    return tasks.filter(t => 
+      t.deleted !== true &&
+      (user?.role === 'ADMIN' || user?.role === 'DIRECTION' || t.siteId === user?.siteId) &&
+      (activeSite === 'TOUS' || t.siteId === activeSite)
+    );
+  }, [tasks, user, activeSite]);
+
+  const filteredPannes = React.useMemo(() => {
+    return pannes.filter(p => 
+      p.deleted !== true &&
+      (user?.role === 'ADMIN' || user?.role === 'DIRECTION' || p.siteId === user?.siteId) &&
+      (activeSite === 'TOUS' || p.siteId === activeSite)
+    );
+  }, [pannes, user, activeSite]);
+
+  const mtbfMttrMetrics = React.useMemo(() => {
+    const siteEngins = filteredEngins;
+    const sitePannes = filteredPannes;
+    
+    // Sum engine hours
+    const totalHours = siteEngins.reduce((sum, e) => sum + (e.heuresMarche || 0), 0);
+    const totalPannesCount = sitePannes.length;
+    
+    const mtbf = totalPannesCount > 0 ? Math.round(totalHours / totalPannesCount) : totalHours;
+    
+    // Closed pannes for MTTR
+    const closedPannes = sitePannes.filter(p => p.statut === 'CLOS');
+    const totalRepairHours = closedPannes.reduce((sum, p) => sum + (Number(p.dureeImmobilisation) || 0), 0);
+    const mttr = closedPannes.length > 0 ? Math.round((totalRepairHours / closedPannes.length) * 10) / 10 : 0;
+    
+    const activePannesCount = sitePannes.filter(p => p.statut !== 'CLOS').length;
+    const critiquePannesCount = sitePannes.filter(p => p.statut !== 'CLOS' && p.gravite === 'Critique').length;
+
+    return {
+      mtbf,
+      mttr,
+      activeCount: activePannesCount,
+      critiqueCount: critiquePannesCount,
+      totalCount: totalPannesCount
+    };
+  }, [filteredEngins, filteredPannes]);
+
+  // IDEMPOTENT AUTO-GENERATION OF TASKS
   React.useEffect(() => {
-    if (tasks.length > 0) {
-      const lateCount = tasks.filter(t => t.statut === "NON_FAIT" && t.priorite === "CRITIQUE").length;
-      const warningCount = tasks.filter(t => t.statut === "NON_FAIT" && t.priorite === "HAUTE").length;
-      if (lateCount > 0 || warningCount > 0) {
-        toast.info(
-          `GMAO : ${lateCount} tâches critiques en retard et ${warningCount} tâches en pré-alerte détectées.`,
-          { duration: 4000 }
-        );
-      }
-    }
-  }, [tasks.length]);
+    if (user?.role && user.role !== 'VIEWER' && enginsLoaded && mecaniciensLoaded && intervallesLoaded && tasksLoaded && !generationRunning) {
+      const runAutoGeneration = async () => {
+        setGenerationRunning(true);
+        try {
+          const todayStr = new Date().toISOString().split('T')[0];
 
-  // V3: Mécanisme de calcul d'apparition des tâches préventives basées sur les intervalles
-  const checkAndGeneratePreventiveTasks = (updatedEngins: Engin[]) => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    let tasksCopy = [...tasks];
-    let addedAny = false;
+          // 1. Tâches Quotidiennes
+          for (const engin of filteredEngins) {
+            const hasDailyToday = tasks.some(
+              t => t.type === 'QUOTIDIEN' && t.enginId === engin.id && t.datePlanifiee === todayStr && !t.deleted
+            );
+            if (hasDailyToday) continue;
 
-    // Définition des intervalles standard de maintenance pour les calculs d'échéances
-    const INTERVAL_MOTEUR = 250;
-    const INTERVAL_HYDRAULIQUE = 1000;
-    const INTERVAL_TRANSMISSION = 2000;
+            const siteMecas = filteredMecaniciens.filter(m => m.siteId === engin.siteId);
+            if (siteMecas.length === 0) continue;
 
-    updatedEngins.forEach(eng => {
-      // Vidange Moteur : 250h
-      const ecouleMoteur = eng.heuresMarche - (eng.heures_derniere_vidange_moteur || 0);
-      const isMoteurExceeded = ecouleMoteur >= INTERVAL_MOTEUR;
-      const engineTaskLabel = `Vidange moteur + filtres ${eng.id}`;
-      const hasEngineTask = tasksCopy.some(t => t.enginId === eng.id && t.label.includes("Vidange moteur") && t.statut !== "FAIT" && t.statut !== "VALIDE");
+            const modelSpecific = DAILY_TASKS_BY_MODEL[engin.modele] || DAILY_TASKS_GENERIC;
+            const fullList = [...DAILY_TASKS_COMMON, ...modelSpecific];
 
-      if (isMoteurExceeded && !hasEngineTask) {
-        // Déterminer la priorité automatiquement
-        const priorite: MaintenanceTask["priorite"] = (ecouleMoteur >= INTERVAL_MOTEUR + 50) ? "CRITIQUE" : "HAUTE";
-        tasksCopy.push({
-          id: `T-AUTO-MOTEUR-${eng.id}-${Date.now()}`,
-          type: "PREVENTIF",
-          label: engineTaskLabel,
-          enginId: eng.id,
-          enginModele: eng.modele,
-          mecanicienId: mecaniciens[0]?.id || "M01",
-          mecanicienNom: mecaniciens[0]?.nomComplet || "Lahcen Ait",
-          poste: "Poste 1",
-          datePlanifiee: todayStr,
-          dureeEstimee: "2h",
-          priorite,
-          statut: "NON_FAIT",
-          commentaire: "",
-          echeanceHeures: INTERVAL_MOTEUR,
-          heuresEcouleesAuMoment: ecouleMoteur
-        });
-        addedAny = true;
-      }
-
-      // Vidange Hydraulique : 1000h
-      const ecouleHydr = eng.heuresMarche - (eng.heures_derniere_vidange_hydraulique || 0);
-      const isHydrExceeded = ecouleHydr >= INTERVAL_HYDRAULIQUE;
-      const hydrTaskLabel = `Vidange huile hydraulique + filtres ${eng.id}`;
-      const hasHydrTask = tasksCopy.some(t => t.enginId === eng.id && t.label.includes("Vidange huile hydraulique") && t.statut !== "FAIT" && t.statut !== "VALIDE");
-
-      if (isHydrExceeded && !hasHydrTask) {
-        const priorite: MaintenanceTask["priorite"] = (ecouleHydr >= INTERVAL_HYDRAULIQUE + 50) ? "CRITIQUE" : "HAUTE";
-        tasksCopy.push({
-          id: `T-AUTO-HYDR-${eng.id}-${Date.now()}`,
-          type: "PREVENTIF",
-          label: hydrTaskLabel,
-          enginId: eng.id,
-          enginModele: eng.modele,
-          mecanicienId: mecaniciens[1]?.id || "M02",
-          mecanicienNom: mecaniciens[1]?.nomComplet || "Abdellah Daoudi",
-          poste: "Poste 2",
-          datePlanifiee: todayStr,
-          dureeEstimee: "4h",
-          priorite,
-          statut: "NON_FAIT",
-          commentaire: "",
-          echeanceHeures: INTERVAL_HYDRAULIQUE,
-          heuresEcouleesAuMoment: ecouleHydr
-        });
-        addedAny = true;
-      }
-
-      // Vidange Transmission : 2000h
-      const ecouleTrans = eng.heuresMarche - (eng.heures_derniere_vidange_transmission || 0);
-      const isTransExceeded = ecouleTrans >= INTERVAL_TRANSMISSION;
-      const transTaskLabel = `Vidange transmission + boîte ${eng.id}`;
-      const hasTransTask = tasksCopy.some(t => t.enginId === eng.id && t.label.includes("Vidange transmission") && t.statut !== "FAIT" && t.statut !== "VALIDE");
-
-      if (isTransExceeded && !hasTransTask) {
-        const priorite: MaintenanceTask["priorite"] = (ecouleTrans >= INTERVAL_TRANSMISSION + 50) ? "CRITIQUE" : "HAUTE";
-        tasksCopy.push({
-          id: `T-AUTO-TRANS-${eng.id}-${Date.now()}`,
-          type: "PREVENTIF",
-          label: transTaskLabel,
-          enginId: eng.id,
-          enginModele: eng.modele,
-          mecanicienId: mecaniciens[0]?.id || "M01",
-          mecanicienNom: mecaniciens[0]?.nomComplet || "Lahcen Ait",
-          poste: "Poste 1",
-          datePlanifiee: todayStr,
-          dureeEstimee: "6h",
-          priorite,
-          statut: "NON_FAIT",
-          commentaire: "",
-          echeanceHeures: INTERVAL_TRANSMISSION,
-          heuresEcouleesAuMoment: ecouleTrans
-        });
-        addedAny = true;
-      }
-    });
-
-    if (addedAny) {
-      setTasks(tasksCopy);
-      localStorage.setItem("gmao_planning_tasks", JSON.stringify(tasksCopy));
-      toast.success("De nouvelles tâches d'entretien préventif ont été auto-générées suite à la mise à jour des heures.");
-    }
-  };
-
-  // V3-4: Action de saisie manuelle des heures de marche du jour
-  const handleAddHeuresJour = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedEnginHeures) {
-      toast.error("Veuillez sélectionner un engin.");
-      return;
-    }
-    if (heuresSaisiesJour === "" || heuresSaisiesJour <= 0) {
-      toast.error("Veuillez saisir un nombre d'heures supérieur à 0.");
-      return;
-    }
-
-    const currentEngins = [...engins];
-    const engIdx = currentEngins.findIndex(eg => eg.id === selectedEnginHeures);
-    if (engIdx !== -1) {
-      const oldHours = currentEngins[engIdx].heuresMarche;
-      const addedHours = Number(heuresSaisiesJour);
-      const newHours = oldHours + addedHours;
-      currentEngins[engIdx].heuresMarche = newHours;
-
-      // Persister dans les engins
-      setEngins(currentEngins);
-      localStorage.setItem("gmao_engins", JSON.stringify(currentEngins));
-      
-      toast.success(`Mise à jour réussie : ${selectedEnginHeures} est passé de ${oldHours}h à ${newHours}h (+${addedHours}h).`);
-      setHeuresSaisiesJour("");
-
-      // Lancer la routine de calcul préventif
-      checkAndGeneratePreventiveTasks(currentEngins);
-    }
-  };
-
-  // V3-5 / V3-6: Action de création d'une tâche manuelle (notamment Corrective ou Préventive)
-  const handleCreateTaskManual = () => {
-    if (!newLabel.trim()) {
-      toast.error("Veuillez saisir la description de la tâche.");
-      return;
-    }
-
-    const targetEngin = engins.find(e => e.id === newEnginId);
-    const targetMeca = mecaniciens.find(m => m.id === newMecaId);
-
-    if (!targetEngin || !targetMeca) {
-      toast.error("Erreur de sélection de l'engin ou du mécanicien.");
-      return;
-    }
-
-    // Détermination de la priorité de la tâche
-    let priorite: MaintenanceTask["priorite"] = "NORMALE";
-    if (newType === "QUOTIDIEN") {
-      priorite = "QUOTIDIENNE";
-    } else if (newType === "CORRECTIF") {
-      priorite = newPrioriteManual === "HAUTE" ? "CRITIQUE" : "NORMALE";
-    } else {
-      priorite = newPrioriteManual === "HAUTE" ? "HAUTE" : "NORMALE";
-    }
-
-    const newTask: MaintenanceTask = {
-      id: `T-MANUAL-${Date.now()}`,
-      type: newType,
-      label: newLabel.trim() + (newType === "CORRECTIF" ? " [CORRECTIF PANNE]" : ""),
-      enginId: newEnginId,
-      enginModele: targetEngin.modele,
-      mecanicienId: newMecaId,
-      mecanicienNom: targetMeca.nomComplet,
-      poste: newPoste,
-      datePlanifiee: newDate,
-      dureeEstimee: newDuree,
-      priorite,
-      statut: "NON_FAIT",
-      commentaire: ""
-    };
-
-    const updatedTasks = [newTask, ...tasks];
-    setTasks(updatedTasks);
-    localStorage.setItem("gmao_planning_tasks", JSON.stringify(updatedTasks));
-
-    toast.success("Nouvelle tâche planifiée et enregistrée avec succès.");
-    setIsAddModalOpen(false);
-    setNewLabel("");
-  };
-
-  // V3-1: Gestion du chargement de photo (1 maximum, stockée en base64)
-  const handlePhotoUpload = (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Limite dépassée : Le fichier photo ne doit pas excéder 2 Mo.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      const updatedTasks = tasks.map(t => {
-        if (t.id === taskId) {
-          return { ...t, photo: base64String };
-        }
-        return t;
-      });
-      setTasks(updatedTasks);
-      localStorage.setItem("gmao_planning_tasks", JSON.stringify(updatedTasks));
-      toast.success("Photo d'inspection attachée avec succès.");
-      if (activeTaskDetail?.id === taskId) {
-        setActiveTaskDetail(prev => prev ? { ...prev, photo: base64String } : null);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Suppression de la photo attachée
-  const removePhoto = (taskId: string) => {
-    const updatedTasks = tasks.map(t => {
-      if (t.id === taskId) {
-        const { photo, ...rest } = t;
-        return rest;
-      }
-      return t;
-    });
-    setTasks(updatedTasks);
-    localStorage.setItem("gmao_planning_tasks", JSON.stringify(updatedTasks));
-    toast.success("Photo retirée.");
-    if (activeTaskDetail?.id === taskId) {
-      setActiveTaskDetail(prev => {
-        if (!prev) return null;
-        const { photo, ...rest } = prev;
-        return rest as MaintenanceTask;
-      });
-    }
-  };
-
-  // V3-2: Mise à jour du commentaire ou statut d'une tâche
-  const handleUpdateTaskInline = (taskId: string, fields: Partial<MaintenanceTask>) => {
-    const updatedTasks = tasks.map(t => {
-      if (t.id === taskId) {
-        const updated = { ...t, ...fields };
-        
-        // Si le mécanicien coche la tâche préventive calculée en "FAIT", on met à jour l'heure de la dernière vidange correspondante dans l'engin !
-        if (fields.statut === "FAIT" || fields.statut === "VALIDE") {
-          // Déterminer de quel type de préventif il s'agit
-          const currentEngin = engins.find(eg => eg.id === t.enginId);
-          if (currentEngin) {
-            let enginModifie = false;
-            const updatedEngins = engins.map(eg => {
-              if (eg.id === t.enginId) {
-                const copy = { ...eg };
-                if (t.label.includes("Vidange moteur")) {
-                  copy.heures_derniere_vidange_moteur = eg.heuresMarche;
-                  enginModifie = true;
-                } else if (t.label.includes("Vidange huile hydraulique")) {
-                  copy.heures_derniere_vidange_hydraulique = eg.heuresMarche;
-                  enginModifie = true;
-                } else if (t.label.includes("Vidange transmission")) {
-                  copy.heures_derniere_vidange_transmission = eg.heuresMarche;
-                  enginModifie = true;
-                }
-                return copy;
-              }
-              return eg;
-            });
-
-            if (enginModifie) {
-              setEngins(updatedEngins);
-              localStorage.setItem("gmao_engins", JSON.stringify(updatedEngins));
-              toast.success(`Heures de référence vidange mises à jour pour ${t.enginId} à ${currentEngin.heuresMarche}h.`);
+            for (let idx = 0; idx < fullList.length; idx++) {
+              const def = fullList[idx];
+              const m = siteMecas[idx % siteMecas.length];
+              
+              await addDoc(collection(db, 'maintenanceTasks'), {
+                type: 'QUOTIDIEN',
+                label: `${def.label} — ${engin.id}`,
+                enginId: engin.id,
+                enginModele: engin.modele,
+                mecanicienId: m.id,
+                mecanicienNom: m.nomComplet,
+                poste: m.poste || 'Poste 1',
+                siteId: engin.siteId,
+                datePlanifiee: todayStr,
+                dureeEstimee: def.duree,
+                priorite: def.priorite,
+                statut: 'NON_FAIT',
+                commentaire: '',
+                heuresEnginAuMoment: engin.heuresMarche || 0,
+                generationType: 'AUTO_QUOTIDIEN',
+                deleted: false,
+                createdAt: Timestamp.now(),
+                updatedAt: Timestamp.now()
+              });
             }
           }
+
+          // 2. Tâches Préventives PM
+          for (const engin of filteredEngins) {
+            const modelIntervalles = pmIntervalles.filter(
+              i => i.typeEngin === engin.modele || i.typeEngin === 'Générique'
+            );
+
+            for (const intervalle of modelIntervalles) {
+              const completedTasks = tasks.filter(t => 
+                t.enginId === engin.id &&
+                t.type === 'PREVENTIF' &&
+                t.label.includes(intervalle.operation.substring(0, 20)) &&
+                (t.statut === 'FAIT' || t.statut === 'VALIDE') &&
+                !t.deleted
+              );
+              completedTasks.sort((a, b) => (b.heuresEnginAuMoment || 0) - (a.heuresEnginAuMoment || 0));
+              const lastPmHours = completedTasks[0]?.heuresEnginAuMoment || 0;
+              const hoursSinceLastPm = (engin.heuresMarche || 0) - lastPmHours;
+
+              const threshold = intervalle.intervalleHeures * 0.9;
+              if (hoursSinceLastPm >= threshold) {
+                const alreadyGenerated = tasks.some(t => 
+                  t.enginId === engin.id &&
+                  t.type === 'PREVENTIF' &&
+                  t.label.includes(intervalle.operation.substring(0, 20)) &&
+                  !['FAIT', 'VALIDE', 'REPORTE'].includes(t.statut) &&
+                  !t.deleted
+                );
+                if (alreadyGenerated) continue;
+
+                const siteMecas = filteredMecaniciens.filter(m => m.siteId === engin.siteId);
+                const assignedMeca = siteMecas[0] || filteredMecaniciens[0];
+                if (!assignedMeca) continue;
+
+                const isCritique = hoursSinceLastPm >= intervalle.intervalleHeures;
+                const priorite = isCritique ? 'CRITIQUE' : 'HAUTE';
+
+                await addDoc(collection(db, 'maintenanceTasks'), {
+                  type: 'PREVENTIF',
+                  label: `${intervalle.operation} — Échéance ${intervalle.intervalleHeures}h (Actuel: ${engin.heuresMarche}h, Dernier: ${lastPmHours}h)`,
+                  enginId: engin.id,
+                  enginModele: engin.modele,
+                  mecanicienId: assignedMeca.id,
+                  mecanicienNom: assignedMeca.nomComplet,
+                  poste: assignedMeca.poste || 'Poste 1',
+                  siteId: engin.siteId,
+                  datePlanifiee: todayStr,
+                  dureeEstimee: getDureeByOperation(intervalle.operation),
+                  priorite,
+                  statut: 'NON_FAIT',
+                  commentaire: '',
+                  heuresEnginAuMoment: engin.heuresMarche || 0,
+                  generationType: 'AUTO_PM',
+                  deleted: false,
+                  createdAt: Timestamp.now(),
+                  updatedAt: Timestamp.now()
+                });
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Auto generation failed", err);
+        } finally {
+          setGenerationRunning(false);
         }
-        
-        return updated;
+      };
+      runAutoGeneration();
+    }
+  }, [enginsLoaded, mecaniciensLoaded, intervallesLoaded, tasksLoaded, filteredEngins.length, filteredMecaniciens.length]);
+
+  // CRUD Implementations
+  const handleCreateTask = async (data: any) => {
+    try {
+      const targetEngin = filteredEngins.find(e => e.id === data.enginId);
+      const targetMeca = filteredMecaniciens.find(m => m.id === data.mecanicienId);
+      if (!targetEngin || !targetMeca) {
+        toast.error("Erreur d'affectation.");
+        return;
       }
-      return t;
-    });
 
-    setTasks(updatedTasks);
-    localStorage.setItem("gmao_planning_tasks", JSON.stringify(updatedTasks));
+      await addDoc(collection(db, 'maintenanceTasks'), {
+        ...data,
+        enginModele: targetEngin.modele,
+        mecanicienNom: targetMeca.nomComplet,
+        siteId: targetEngin.siteId,
+        statut: 'NON_FAIT',
+        commentaire: '',
+        heuresEnginAuMoment: targetEngin.heuresMarche || 0,
+        generationType: 'MANUEL',
+        deleted: false,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      });
+      toast.success("Tâche planifiée avec succès !");
+    } catch (err) {
+      handleFirestoreError(err, 'Planifier');
+    }
+  };
+
+  const handleUpdateTask = async (taskId: string, fields: Partial<MaintenanceTask>) => {
+    try {
+      await updateDoc(doc(db, 'maintenanceTasks', taskId), {
+        ...fields,
+        updatedAt: Timestamp.now()
+      });
+      toast.success("Tâche mise à jour.");
+
+      // Automatic close of associated panne when corrective task is FAIT or VALIDE
+      if (fields.statut === 'FAIT' || fields.statut === 'VALIDE') {
+        const taskSnap = await getDoc(doc(db, 'maintenanceTasks', taskId));
+        if (taskSnap.exists()) {
+          const taskData = taskSnap.data();
+          if (taskData.type === 'CORRECTIF' && taskData.panneId) {
+            await updateDoc(doc(db, 'pannes', taskData.panneId), {
+              statut: 'CLOS',
+              solution: fields.commentaire || "Fiche d'intervention validée.",
+              updatedAt: Timestamp.now()
+            });
+
+            // Put engine back to service
+            if (taskData.enginId) {
+              const enginRef = doc(db, 'engins', taskData.enginId);
+              await updateDoc(enginRef, {
+                statut: 'actif',
+                etat: 'Disponible',
+                updatedAt: Timestamp.now()
+              });
+            }
+            toast.success("La panne associée a été automatiquement clôturée et l'engin remis en service !");
+          }
+        }
+      }
+    } catch (err) {
+      handleFirestoreError(err, 'Mettre à jour');
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (!window.confirm("Supprimer définitivement cette tâche ?")) return;
+    try {
+      await updateDoc(doc(db, 'maintenanceTasks', taskId), {
+        deleted: true,
+        updatedAt: Timestamp.now()
+      });
+      toast.success("Tâche supprimée.");
+    } catch (err) {
+      handleFirestoreError(err, 'Supprimer');
+    }
+  };
+
+  // Get filtered list for UI
+  const getVisibleTasks = () => {
+    const todayStr = new Date().toISOString().split('T')[0];
     
-    // Mettre à jour l'état de la modale active s'il y a lieu
-    if (activeTaskDetail?.id === taskId) {
-      setActiveTaskDetail(prev => prev ? { ...prev, ...fields } : null);
-    }
-  };
+    return filteredTasks.filter(t => {
+      // Date Filter
+      if (filterDate === "Aujourd'hui") {
+        if (t.datePlanifiee !== todayStr) return false;
+      } else if (filterDate !== "Tous") {
+        if (t.datePlanifiee !== filterDate) return false;
+      }
 
-  // Suppression d'une tâche
-  const handleDeleteTask = (taskId: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    if (window.confirm("Voulez-vous vraiment supprimer cette tâche de planification ?")) {
-      const filtered = tasks.filter(t => t.id !== taskId);
-      setTasks(filtered);
-      localStorage.setItem("gmao_planning_tasks", JSON.stringify(filtered));
-      toast.success("Tâche retirée.");
-      setIsDetailModalOpen(false);
-    }
-  };
+      // Type Filter
+      if (filterType !== 'TOUS' && t.type !== filterType) return false;
 
-  // V3: Réassignation directe et rapide par le directeur d'une tâche à un mécanicien
-  const handleReassignTask = (taskId: string, mecaId: string) => {
-    const targetMeca = mecaniciens.find(m => m.id === mecaId);
-    if (!targetMeca) return;
+      // Mechanic Filter
+      if (filterMeca !== 'TOUS' && t.mecanicienId !== filterMeca) return false;
 
-    handleUpdateTaskInline(taskId, {
-      mecanicienId: mecaId,
-      mecanicienNom: targetMeca.nomComplet
+      // Shift Filter
+      if (filterPoste !== 'TOUS' && t.poste !== filterPoste) return false;
+
+      // Search Query
+      if (searchQuery.trim() !== "") {
+        const query = searchQuery.toLowerCase();
+        const matchesLabel = t.label.toLowerCase().includes(query);
+        const matchesEngin = t.enginId.toLowerCase().includes(query);
+        const matchesMeca = t.mecanicienNom.toLowerCase().includes(query);
+        if (!matchesLabel && !matchesEngin && !matchesMeca) return false;
+      }
+
+      return true;
     });
-    toast.success(`Tâche réassignée à ${targetMeca.nomComplet}.`);
   };
 
-  // V3: Validation par le Directeur d'une tâche complétée
-  const handleValidateTaskByDirector = (taskId: string) => {
-    handleUpdateTaskInline(taskId, { statut: "VALIDE" });
-    toast.success("Tâche approuvée et verrouillée par la Direction.");
+  // Duration utility helper
+  const getCumulativeDuration = (items: MaintenanceTask[]) => {
+    let totalMins = 0;
+    items.forEach(t => {
+      if (t.statut === 'REPORTE') return;
+      const d = t.dureeEstimee;
+      if (d === '15min') totalMins += 15;
+      else if (d === '30min') totalMins += 30;
+      else if (d === '1h') totalMins += 60;
+      else if (d === '2h') totalMins += 120;
+      else if (d === '4h') totalMins += 240;
+      else if (d === '6h') totalMins += 360;
+      else if (d === '1j') totalMins += 480;
+    });
+    const hrs = Math.floor(totalMins / 60);
+    const mins = totalMins % 60;
+    return `${hrs}h ${mins > 0 ? mins + 'min' : ''}`;
   };
 
-  // V3-3: Génération de récap SMS / Whatsapp au format exact requis
+  // WhatsApp Recap
   const handleGenerateSMSRecap = () => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const tasksToday = tasks.filter(t => t.datePlanifiee === todayStr);
+    const activeTasks = getVisibleTasks();
+    const faits = activeTasks.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
+    const total = activeTasks.length;
     
-    const countFait = tasksToday.filter(t => t.statut === "FAIT" || t.statut === "VALIDE").length;
-    const countEnCours = tasksToday.filter(t => t.statut === "EN_COURS").length;
-    const countRetard = tasksToday.filter(t => t.statut === "NON_FAIT").length;
-
-    const urgentes = tasksToday
-      .filter(t => (t.priorite === "CRITIQUE" || t.priorite === "HAUTE") && t.statut !== "FAIT" && t.statut !== "VALIDE")
-      .map(t => `${t.enginId}: ${t.label}`)
-      .join(", ") || "Aucune urgente en retard";
-
-    const anomalies = tasksToday
-      .filter(t => t.commentaire.trim().length > 0)
-      .map(t => `[${t.enginId}] ${t.commentaire}`)
-      .join(" | ") || "Rien à signaler";
-
-    const currentMeca = filterMecanicien === "Tous" ? "Toute l'équipe" : filterMecanicien;
-    const currentPoste = filterPoste === "Tous" ? "Tous Shifts" : filterPoste;
-
-    const smsText = `📋 RÉCAP JOURNÉE ${todayStr}
-✅ Faites : ${countFait} | ⏳ En cours : ${countEnCours} | ❌ Retard : ${countRetard}
-🔴 Urgentes : ${urgentes}
-📝 Anomalies : ${anomalies}
-👷 Mécanicien : ${currentMeca} | Poste : ${currentPoste}`;
-
-    navigator.clipboard.writeText(smsText);
-    toast.success("Rapport SMS copié dans le presse-papier ! Prêt à être collé dans WhatsApp.");
-  };
-
-  // Filtrage intelligent des tâches d'inspection/planning
-  const getFilteredTasks = () => {
-    return tasks.filter(t => {
-      const matchMeca = filterMecanicien === "Tous" || t.mecanicienNom === filterMecanicien;
-      const matchPoste = filterPoste === "Tous" || t.poste === filterPoste;
-      const matchEngin = filterEngin === "Tous" || t.enginId === filterEngin;
-      const matchType = filterType === "Tous" || t.type === filterType;
-      
-      let matchPriorite = true;
-      if (filterPriorite !== "Tous") {
-        matchPriorite = t.priorite === filterPriorite;
-      }
-
-      let matchDate = true;
-      if (filterDate !== "Tous") {
-        const todayStr = new Date().toISOString().split("T")[0];
-        const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-        
-        if (filterDate === "Aujourd'hui") {
-          matchDate = t.datePlanifiee === todayStr;
-        } else if (filterDate === "Hier") {
-          matchDate = t.datePlanifiee === yesterdayStr;
-        } else if (filterDate === "Cette semaine") {
-          // Filtrage simplifié sur la semaine
-          const taskTime = new Date(t.datePlanifiee).getTime();
-          const oneWeekAgo = Date.now() - 7 * 86400000;
-          matchDate = taskTime >= oneWeekAgo;
-        }
-      }
-
-      return matchMeca && matchPoste && matchEngin && matchType && matchPriorite && matchDate;
-    });
-  };
-
-  // V3: Calculateur de durée cumulée estimée pour les tâches filtrées
-  const getCumulativeDuration = (filtered: MaintenanceTask[]) => {
-    let totalMinutes = 0;
-    filtered.forEach(t => {
-      if (t.statut === "REPORTE") return; // On ne compte pas les reportées dans le travail du jour
-      
-      const dur = t.dureeEstimee;
-      if (dur === "15min") totalMinutes += 15;
-      else if (dur === "30min") totalMinutes += 30;
-      else if (dur === "1h") totalMinutes += 60;
-      else if (dur === "2h") totalMinutes += 120;
-      else if (dur === "4h") totalMinutes += 240;
-      else if (dur === "6h") totalMinutes += 360;
-      else if (dur === "1j") totalMinutes += 480; // 8 heures effectives
+    let text = `*Hydromines GMAO — Rapport de Shift (${filterDate})*\n`;
+    text += `Statut global: ${faits}/${total} effectués (${total > 0 ? Math.round(faits/total*100) : 0}%)\n\n`;
+    
+    activeTasks.forEach((t, i) => {
+      const icon = t.statut === 'FAIT' || t.statut === 'VALIDE' ? "✅" : t.statut === 'EN_COURS' ? "⏳" : t.statut === 'REPORTE' ? "❌" : "🔲";
+      text += `${i+1}. ${icon} [${t.type}] ${t.enginId} - ${t.label} (Par: ${t.mecanicienNom})\n`;
+      if (t.commentaire) text += `   _Obs: ${t.commentaire}_\n`;
     });
 
-    const hours = Math.floor(totalMinutes / 60);
-    const mins = totalMinutes % 60;
-    return `${hours}h ${mins > 0 ? mins + 'min' : ''}`;
+    navigator.clipboard.writeText(text);
+    toast.success("Rapport copié ! Prêt à être partagé.");
   };
 
-  const filteredTasks = getFilteredTasks();
-  const tasksCompletedRatio = filteredTasks.length > 0 
-    ? filteredTasks.filter(t => t.statut === "FAIT" || t.statut === "VALIDE").length 
-    : 0;
-  const tasksCompletedPercent = filteredTasks.length > 0
-    ? Math.round((tasksCompletedRatio / filteredTasks.length) * 100)
-    : 100;
-
-  // Calcul du badge de couleur pour l'onglet "Tâches"
-  const getTabAlerteStatus = () => {
-    const hasCriticalLate = tasks.some(t => t.statut === "NON_FAIT" && t.priorite === "CRITIQUE");
-    if (hasCriticalLate) return "🔴";
-    const hasHighPreAlert = tasks.some(t => t.statut === "NON_FAIT" && t.priorite === "HAUTE");
-    if (hasHighPreAlert) return "🟡";
-    return "🟢";
-  };
-
-  // V3: Générateur d'impression
-  const handlePrintPage = () => {
-    window.print();
-  };
-
-  // V3: Génération des jours pour le calendrier Hebdomadaire
+  // Calendar dates calculation
   const getWeekDays = () => {
     const days = [];
-    const baseDate = new Date();
-    // Ajuster au lundi de la semaine courante + décalage
-    const day = baseDate.getDay();
-    const diff = baseDate.getDate() - day + (day === 0 ? -6 : 1) + (currentWeekOffset * 7);
-    const monday = new Date(baseDate.setDate(diff));
-
+    const temp = new Date(currentWeekStart);
     for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      days.push(d);
+      days.push(new Date(temp));
+      temp.setDate(temp.getDate() + 1);
     }
     return days;
   };
 
-  const weekDays = getWeekDays();
+  const handlePrevWeek = () => {
+    const d = new Date(currentWeekStart);
+    d.setDate(d.getDate() - 7);
+    setCurrentWeekStart(d);
+  };
+
+  const handleNextWeek = () => {
+    const d = new Date(currentWeekStart);
+    d.setDate(d.getDate() + 7);
+    setCurrentWeekStart(d);
+  };
+
+  // Interactive dynamic PM forecast calculation (Top 3)
+  const prochainesEcheances = React.useMemo(() => {
+    return filteredEngins.map(engin => {
+      const modelIntervalles = pmIntervalles.filter(
+        i => i.typeEngin === engin.modele || i.typeEngin === 'Générique'
+      );
+      
+      return modelIntervalles.map(intervalle => {
+        const completed = filteredTasks.filter(t => 
+          t.enginId === engin.id && 
+          t.type === 'PREVENTIF' &&
+          t.label.includes(intervalle.operation.substring(0, 20)) &&
+          (t.statut === 'FAIT' || t.statut === 'VALIDE')
+        );
+        completed.sort((a, b) => (b.heuresEnginAuMoment || 0) - (a.heuresEnginAuMoment || 0));
+        const lastPmHours = completed[0]?.heuresEnginAuMoment || 0;
+        const remainingHours = intervalle.intervalleHeures - ((engin.heuresMarche || 0) - lastPmHours);
+        
+        return { enginId: engin.id, operation: intervalle.operation, remainingHours };
+      });
+    }).flat()
+      .filter(e => e.remainingHours > 0 && e.remainingHours <= 100)
+      .sort((a, b) => a.remainingHours - b.remainingHours)
+      .slice(0, 3);
+  }, [filteredEngins, pmIntervalles, filteredTasks]);
+
+  // Leaders calculations
+  const statsParMeca = React.useMemo(() => {
+    const currentMonthStr = new Date().toISOString().substring(0, 7); // YYYY-MM
+    return filteredMecaniciens.map(meca => {
+      const tasksMeca = filteredTasks.filter(t => 
+        t.mecanicienId === meca.id && 
+        t.datePlanifiee.startsWith(currentMonthStr)
+      );
+      const total = tasksMeca.length;
+      const faites = tasksMeca.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
+      const retard = tasksMeca.filter(t => 
+        t.statut === 'NON_FAIT' && 
+        t.datePlanifiee < new Date().toISOString().split('T')[0]
+      ).length;
+      const rate = total > 0 ? Math.round((faites / total) * 100) : 0;
+
+      const badges: string[] = [];
+      if (rate >= 90) badges.push('🏆 Champion');
+      if (rate >= 80) badges.push('⭐ Spécialiste');
+      if (retard === 0 && faites > 0) badges.push('🔥 Série Or');
+      else if (retard <= 2 && faites > 0) badges.push('🔥 Série Argent');
+
+      return { meca, total, faites, retard, rate, badges };
+    }).sort((a, b) => b.rate - a.rate);
+  }, [filteredMecaniciens, filteredTasks]);
+
+  const kpis = React.useMemo(() => {
+    const currentMonthStr = new Date().toISOString().substring(0, 7);
+    const tasksMois = filteredTasks.filter(t => t.datePlanifiee.startsWith(currentMonthStr));
+    const total = tasksMois.length;
+    const faites = tasksMois.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
+    const perfGlobale = total > 0 ? Math.round((faites / total) * 100) : 85;
+
+    const prev = tasksMois.filter(t => t.type === 'PREVENTIF' || t.type === 'QUOTIDIEN').length;
+    const corr = tasksMois.filter(t => t.type === 'CORRECTIF').length;
+    const totalType = prev + corr;
+    const prevPercent = totalType > 0 ? Math.round((prev / totalType) * 100) : 75;
+
+    const topNom = statsParMeca[0]?.meca.nomComplet || 'Aucun';
+    const topRate = statsParMeca[0]?.rate || 0;
+
+    return { perfGlobale, prevPercent, topNom, topRate };
+  }, [filteredTasks, statsParMeca]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 text-slate-900">
+        <div className="flex flex-col items-center gap-4">
+          <RefreshCw className="h-8 w-8 animate-spin text-slate-800" />
+          <span className="text-sm font-black uppercase tracking-wider">Chargement GMAO...</span>
+        </div>
+      </div>
+    );
+  }
+
+  const visibleTasks = getVisibleTasks();
+  const tasksFait = visibleTasks.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
+  const tasksTotal = visibleTasks.length;
+  const progressionRate = tasksTotal > 0 ? Math.round((tasksFait / tasksTotal) * 100) : 0;
 
   return (
-    <div className="space-y-6 select-none bg-slate-50 min-h-screen p-4 md:p-6 print:p-0 print:bg-white print:min-h-0">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
       
-      {/* Page Banner - Masqué lors de l'impression */}
-      <div className="print:hidden">
-        <PageBanner
-          icon={Calendar}
-          badgeLabel="SOU-GMAO V3"
-          title="TÂCHES, CORRECTIFS & PLANNING"
-          subtitle="Suivi des vidanges par calcul d'intervalles, correctifs immédiats, et pilotage des équipes."
-        >
-          <div className="flex flex-wrap gap-2 items-center">
-            {/* Toggle de simulation de rôle pour démonstration */}
-            <div className="bg-white border border-slate-200 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-xs">
-              <span className="text-[10px] font-bold text-slate-500 uppercase">Espace :</span>
-              <button
-                onClick={() => {
-                  setUserRole("MECANICIEN");
-                  toast.info("Passage en mode Vue Mécanicien (Saisie facilitée)");
-                }}
-                className={`px-2 py-1 rounded-md text-[10px] font-black uppercase transition-all ${
-                  userRole === "MECANICIEN" ? "bg-amber-500 text-slate-950" : "bg-slate-100 text-slate-600"
-                }`}
-              >
-                👷 Méca
-              </button>
-              <button
-                onClick={() => {
-                  setUserRole("DIRECTEUR");
-                  toast.info("Passage en mode Vue Directeur (Validation de travaux active)");
-                }}
-                className={`px-2 py-1 rounded-md text-[10px] font-black uppercase transition-all ${
-                  userRole === "DIRECTEUR" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"
-                }`}
-              >
-                👔 Directeur
-              </button>
-            </div>
+      {/* Banner */}
+      <PageBanner
+        icon={Calendar}
+        badgeLabel="Hydromines GMAO"
+        title="Tâches & Planning"
+        subtitle="Rondes quotidiennes, interventions préventives calculées et correctifs de shift"
+        siteLabel={activeSite}
+      >
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setIsSignalerPanneOpen(true)}
+            className="bg-rose-600 hover:bg-rose-700 text-white font-black text-xs cursor-pointer shadow-sm"
+          >
+            <AlertTriangle className="h-4 w-4 mr-1.5 animate-pulse" /> Signaler une panne
+          </Button>
+          <Button
+            onClick={handleGenerateSMSRecap}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+          >
+            <Share2 className="h-4 w-4 mr-1.5" /> Whatsapp / SMS
+          </Button>
+          <Button
+            onClick={() => window.print()}
+            variant="outline"
+            className="text-xs font-bold bg-white"
+          >
+            <Printer className="h-4 w-4 mr-1.5" /> Imprimer
+          </Button>
+        </div>
+      </PageBanner>
 
-            <Button
-              variant="outline"
-              onClick={handlePrintPage}
-              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 font-bold uppercase tracking-wider text-xs h-9"
-            >
-              <Printer className="h-4 w-4 mr-1.5" /> Imprimer
-            </Button>
-            <Button
-              onClick={handleGenerateSMSRecap}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-wider text-xs h-9"
-            >
-              <Share2 className="h-4 w-4 mr-1.5" /> WhatsApp / SMS
-            </Button>
-          </div>
-        </PageBanner>
-      </div>
+      {/* Main Body */}
+      <div className="p-4 max-w-7xl mx-auto w-full space-y-4">
+        
+        {/* Tab Selector */}
+        <div className="flex border-b border-slate-200">
+          <button
+            onClick={() => setActiveTab('tasks')}
+            className={`py-3 px-6 text-xs font-black uppercase tracking-wider transition-all border-b-2 -mb-px flex items-center gap-2 ${
+              activeTab === 'tasks' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <Clock className="h-4 w-4" /> Tâches Journalières
+          </button>
+          <button
+            onClick={() => setActiveTab('calendar')}
+            className={`py-3 px-6 text-xs font-black uppercase tracking-wider transition-all border-b-2 -mb-px flex items-center gap-2 ${
+              activeTab === 'calendar' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <Calendar className="h-4 w-4" /> Calendrier & Planning
+          </button>
+          <button
+            onClick={() => setActiveTab('performance')}
+            className={`py-3 px-6 text-xs font-black uppercase tracking-wider transition-all border-b-2 -mb-px flex items-center gap-2 ${
+              activeTab === 'performance' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <Award className="h-4 w-4" /> Performance & Gamification
+          </button>
+          <button
+            onClick={() => setActiveTab('pannes')}
+            className={`py-3 px-6 text-xs font-black uppercase tracking-wider transition-all border-b-2 -mb-px flex items-center gap-2 ${
+              activeTab === 'pannes' ? 'border-rose-600 text-rose-700' : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <AlertTriangle className="h-4 w-4 text-rose-500 animate-pulse" /> Pannes & Correctifs
+          </button>
+        </div>
 
-      {/* V3: Menu de navigation d'onglets */}
-      <div className="flex flex-wrap gap-2 print:hidden bg-white p-2 rounded-2xl border border-slate-200 shadow-xs max-w-4xl">
-        <button
-          onClick={() => setActiveTab("taches")}
-          className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-            activeTab === "taches"
-              ? "bg-amber-500 text-slate-950 shadow-md border-b-2 border-amber-600"
-              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-          }`}
-        >
-          <CheckCircle2 className="h-4 w-4 shrink-0" /> 📋 Tâches Journalières {getTabAlerteStatus()}
-        </button>
-
-        <button
-          onClick={() => setActiveTab("planning")}
-          className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-            activeTab === "planning"
-              ? "bg-amber-500 text-slate-950 shadow-md border-b-2 border-amber-600"
-              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-          }`}
-        >
-          <Calendar className="h-4 w-4 shrink-0" /> 📅 Calendrier & Planning
-        </button>
-
-        <button
-          onClick={() => setActiveTab("performance")}
-          className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-            activeTab === "performance"
-              ? "bg-amber-500 text-slate-950 shadow-md border-b-2 border-amber-600"
-              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-          }`}
-        >
-          <TrendingUp className="h-4 w-4 shrink-0" /> 📊 Performance & Gamification
-        </button>
-      </div>
-
-      {/* ============================================================ */}
-      {/* V3: SECTION SAISIE DES HEURES DU JOUR (VISIBLE DANS L'ONGLET TÂCHES) */}
-      {/* ============================================================ */}
-      {activeTab === "taches" && (
-        <Card className="border-slate-200 shadow-xs bg-slate-900 text-white rounded-2xl max-w-5xl overflow-hidden print:hidden">
-          <div className="p-5 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 block">
-                V3: SAISIE DES PARAMÈTRES ET HEURES DU JOUR
-              </span>
-              <h3 className="text-sm font-black uppercase tracking-tight text-white flex items-center gap-1.5">
-                <Clock3 className="h-4 w-4 text-amber-500" /> Saisie manuelle heures engins
-              </h3>
-            </div>
-            <span className="text-[10px] font-medium text-slate-400 bg-slate-800 px-2 py-1 rounded-md">
-              (Remplacé ultérieurement par l'import automatique plateforme carburants)
-            </span>
-          </div>
-
-          <CardContent className="p-5">
-            <form onSubmit={handleAddHeuresJour} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
-              
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Engin de la mine</label>
-                <select
-                  value={selectedEnginHeures}
-                  onChange={(e) => setSelectedEnginHeures(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-500"
-                >
-                  {engins.map(e => (
-                    <option key={e.id} value={e.id}>
-                      {e.id} - {e.modele} ({e.heuresMarche} hrs actuelles)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Heures de marche aujourd'hui</label>
-                <input
-                  type="number"
-                  placeholder="Ex: 8"
-                  value={heuresSaisiesJour}
-                  onChange={(e) => setHeuresSaisiesJour(e.target.value === "" ? "" : Number(e.target.value))}
-                  className="w-full h-10 px-3 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  min="1"
-                  max="24"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Affecté à</label>
-                <select
-                  value={selectedMecaHeures}
-                  onChange={(e) => setSelectedMecaHeures(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-500"
-                >
-                  {mecaniciens.map(m => (
-                    <option key={m.id} value={m.nomComplet}>{m.nomComplet}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <Button
-                  type="submit"
-                  className="w-full h-10 bg-amber-500 hover:bg-amber-600 border-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all"
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Enregistrer & recalculer
-                </Button>
-              </div>
-
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ============================================================ */}
-      {/* ONGLET 1: TÂCHES JOURNALIÈRES */}
-      {/* ============================================================ */}
-      {activeTab === "taches" && (
-        <div className="space-y-6 max-w-5xl">
-          
-          {/* Dashboard rapide des KPI en haut */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {/* -------------------- TAB 1: TASKS LIST -------------------- */}
+        {activeTab === 'tasks' && (
+          <div className="space-y-4">
             
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-              <span className="text-[10px] font-black uppercase text-slate-400 block mb-1">Tâches planifiées</span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-xl font-black text-slate-900">{filteredTasks.length}</span>
-                <span className="text-xs text-slate-400 font-medium">assignées</span>
-              </div>
-            </div>
+            {/* Summary Progress Card */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="bg-slate-900 text-white border-none shadow-sm md:col-span-3">
+                <CardContent className="p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="space-y-1 text-center md:text-left">
+                    <span className="text-[10px] font-bold uppercase text-amber-500 tracking-wider">Avancement du shift</span>
+                    <h3 className="text-xl font-black uppercase">{progressionRate}% Terminé</h3>
+                    <p className="text-xs text-slate-300 font-medium">
+                      {tasksFait} fiches validées / réalisées sur un total de {tasksTotal} tâches affectées
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="text-center">
+                      <span className="text-2xl font-black text-amber-500">{tasksTotal}</span>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">Fiches affectées</p>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-2xl font-black text-emerald-400">{tasksFait}</span>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">Réalisées</p>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-2xl font-black text-blue-400">{getCumulativeDuration(visibleTasks)}</span>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">Charge estimée</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-              <span className="text-[10px] font-black uppercase text-slate-400 block mb-1">Taux Réalisation</span>
-              <div className="flex items-baseline gap-1.5">
-                <span className={`text-xl font-black ${
-                  tasksCompletedPercent >= 80 ? "text-emerald-600" : tasksCompletedPercent >= 60 ? "text-amber-600" : "text-rose-600"
-                }`}>
-                  {tasksCompletedPercent}%
-                </span>
-                <span className="text-xs text-slate-400 font-medium">({tasksCompletedRatio}/{filteredTasks.length})</span>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-              <span className="text-[10px] font-black uppercase text-slate-400 block mb-1">Tâches en retard</span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xl font-black text-rose-600">
-                  {tasks.filter(t => t.statut === "NON_FAIT" && (t.priorite === "CRITIQUE" || t.priorite === "HAUTE")).length}
-                </span>
-                <span className="text-xs font-bold text-rose-500">🔴 critique</span>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-              <span className="text-[10px] font-black uppercase text-slate-400 block mb-1">Pré-alerte vidange</span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xl font-black text-amber-600">
-                  {tasks.filter(t => t.statut === "NON_FAIT" && t.priorite === "HAUTE" && t.type === "PREVENTIF").length}
-                </span>
-                <span className="text-xs font-bold text-amber-500">🟡 warning</span>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs col-span-2 md:col-span-1">
-              <span className="text-[10px] font-black uppercase text-slate-400 block mb-1">Durée cumulée</span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-xl font-black text-blue-600">
-                  {getCumulativeDuration(filteredTasks)}
-                </span>
-                <span className="text-[10px] text-slate-400 font-bold block">travail</span>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Section Filtres rapides pour le tableau */}
-          <Card className="border-slate-200 shadow-xs bg-white rounded-2xl">
-            <CardHeader className="py-3 px-5 bg-slate-55 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-              <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1">
-                <Filter className="h-4 w-4 text-amber-500" /> Filtres d'affichage dynamique
-              </CardTitle>
-              
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => {
-                    setFilterMecanicien("Tous");
-                    setFilterPoste("Tous");
-                    setFilterEngin("Tous");
-                    setFilterType("Tous");
-                    setFilterPriorite("Tous");
-                    setFilterDate("Tous");
-                  }}
-                  variant="ghost"
-                  className="text-[10px] font-bold uppercase tracking-wider h-8 text-slate-500"
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" /> Réinitialiser
-                </Button>
+              {/* Quick Action Button */}
+              <div className="flex items-stretch">
                 <Button
                   onClick={() => setIsAddModalOpen(true)}
-                  className="bg-amber-500 hover:bg-amber-600 border-amber-600 text-slate-950 font-black uppercase tracking-wider text-xs h-8"
+                  className="w-full h-full bg-amber-500 hover:bg-amber-600 border-amber-600 text-slate-950 font-black uppercase text-xs flex flex-col items-center justify-center gap-1.5 rounded-3xl transition-transform hover:-translate-y-0.5 active:translate-y-0"
                 >
-                  <Plus className="h-4 w-4 mr-1" /> Ajouter une tâche
+                  <Plus className="h-6 w-6" /> Planifier Tâche
                 </Button>
               </div>
-            </CardHeader>
-
-            <CardContent className="p-4 grid grid-cols-2 md:grid-cols-6 gap-3">
-              
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold uppercase text-slate-400">Mécanicien</label>
-                <select
-                  value={filterMecanicien}
-                  onChange={(e) => setFilterMecanicien(e.target.value)}
-                  className="w-full h-8 px-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                >
-                  <option value="Tous">Tous</option>
-                  {mecaniciens.map(m => <option key={m.id} value={m.nomComplet}>{m.nomComplet}</option>)}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold uppercase text-slate-400">Shift / Poste</label>
-                <select
-                  value={filterPoste}
-                  onChange={(e) => setFilterPoste(e.target.value)}
-                  className="w-full h-8 px-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                >
-                  <option value="Tous">Tous</option>
-                  <option value="Poste 1">Poste 1</option>
-                  <option value="Poste 2">Poste 2</option>
-                  <option value="Poste 3">Poste 3</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold uppercase text-slate-400">Machine</label>
-                <select
-                  value={filterEngin}
-                  onChange={(e) => setFilterEngin(e.target.value)}
-                  className="w-full h-8 px-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                >
-                  <option value="Tous">Tous</option>
-                  {engins.map(e => <option key={e.id} value={e.id}>{e.id}</option>)}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold uppercase text-slate-400">Type de tâche</label>
-                <select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value)}
-                  className="w-full h-8 px-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                >
-                  <option value="Tous">Tous</option>
-                  <option value="PREVENTIF">🔧 Préventif</option>
-                  <option value="CORRECTIF">🚨 Correctif</option>
-                  <option value="QUOTIDIEN">📅 Quotidien</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold uppercase text-slate-400">Priorité</label>
-                <select
-                  value={filterPriorite}
-                  onChange={(e) => setFilterPriorite(e.target.value)}
-                  className="w-full h-8 px-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                >
-                  <option value="Tous">Tous</option>
-                  <option value="CRITIQUE">🔴 Critique</option>
-                  <option value="HAUTE">🟠 Haute</option>
-                  <option value="NORMALE">🟢 Normale</option>
-                  <option value="BASSE">🔵 Basse</option>
-                  <option value="REPORTEE">⚪ Reportée</option>
-                  <option value="QUOTIDIENNE">🟣 Quotidienne</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold uppercase text-slate-400">Date planifiée</label>
-                <select
-                  value={filterDate}
-                  onChange={(e) => setFilterDate(e.target.value)}
-                  className="w-full h-8 px-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                >
-                  <option value="Tous">Toutes les dates</option>
-                  <option value="Aujourd'hui">Aujourd'hui</option>
-                  <option value="Hier">Hier</option>
-                  <option value="Cette semaine">Cette semaine</option>
-                </select>
-              </div>
-
-            </CardContent>
-          </Card>
-
-          {/* Tableau principal des tâches */}
-          <Card className="border-slate-200 shadow-md rounded-2xl bg-white overflow-hidden">
-            <CardContent className="p-0">
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-wider border-b border-slate-200">
-                      <th className="py-3 px-4">Tâche / Opération</th>
-                      <th className="py-3 px-4">Engin</th>
-                      <th className="py-3 px-4 text-center">Échéance</th>
-                      <th className="py-3 px-4 text-center">Durée</th>
-                      <th className="py-3 px-4">Responsable</th>
-                      <th className="py-3 px-4 text-center">Statut</th>
-                      <th className="py-3 px-4">Commentaire</th>
-                      <th className="py-3 px-4 text-center">Photo</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-xs">
-                    {filteredTasks.map(t => {
-                      return (
-                        <tr
-                          key={t.id}
-                          className="hover:bg-amber-50/10 cursor-pointer transition-colors group"
-                          onClick={() => {
-                            setActiveTaskDetail(t);
-                            setIsDetailModalOpen(true);
-                          }}
-                        >
-                          <td className="py-3 px-4">
-                            <div className="flex flex-col">
-                              <span className="font-bold text-slate-900 flex items-center gap-1.5">
-                                {t.type === "PREVENTIF" && "🔧 "}
-                                {t.type === "CORRECTIF" && "🚨 "}
-                                {t.type === "QUOTIDIEN" && "📅 "}
-                                {t.label}
-                              </span>
-                              <span className="text-[10px] text-slate-400 font-medium block">
-                                {t.datePlanifiee} • {t.poste}
-                              </span>
-                            </div>
-                          </td>
-
-                          <td className="py-3 px-4 font-black text-slate-800">
-                            {t.enginId}
-                          </td>
-
-                          <td className="py-3 px-4 text-center">
-                            {t.type === "PREVENTIF" && t.heuresEcouleesAuMoment ? (
-                              <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-black ${
-                                t.priorite === "CRITIQUE" ? "bg-rose-50 text-rose-700 border border-rose-100" : "bg-amber-50 text-amber-700 border border-amber-100"
-                              }`}>
-                                {t.heuresEcouleesAuMoment}h / {t.echeanceHeures}h
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 text-[10px] font-bold">—</span>
-                            )}
-                          </td>
-
-                          <td className="py-3 px-4 text-center font-bold text-slate-600">
-                            {t.dureeEstimee}
-                          </td>
-
-                          <td className="py-3 px-4">
-                            {userRole === "DIRECTEUR" ? (
-                              <select
-                                value={t.mecanicienId}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) => handleReassignTask(t.id, e.target.value)}
-                                className="h-7 px-1.5 bg-slate-50 border border-slate-250 rounded-md text-[11px] font-bold text-slate-800 focus:outline-none"
-                              >
-                                {mecaniciens.map(m => (
-                                  <option key={m.id} value={m.id}>{m.nomComplet}</option>
-                                ))}
-                              </select>
-                            ) : (
-                              <span className="font-bold text-slate-700">{t.mecanicienNom}</span>
-                            )}
-                          </td>
-
-                          <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                            <select
-                              value={t.statut}
-                              onChange={(e) => handleUpdateTaskInline(t.id, { statut: e.target.value as MaintenanceTask["statut"] })}
-                              className={`h-7 px-2 border rounded-md text-[11px] font-black uppercase ${
-                                t.statut === "FAIT" ? "bg-emerald-500 border-emerald-600 text-white" :
-                                t.statut === "VALIDE" ? "bg-blue-600 border-blue-700 text-white" :
-                                t.statut === "EN_COURS" ? "bg-amber-500 border-amber-600 text-slate-950" :
-                                t.statut === "REPORTE" ? "bg-slate-300 border-slate-400 text-slate-700" :
-                                "bg-rose-500 border-rose-600 text-white"
-                              }`}
-                            >
-                              <option value="NON_FAIT">Non Fait</option>
-                              <option value="EN_COURS">En cours</option>
-                              <option value="FAIT">Fait</option>
-                              <option value="REPORTE">Reporté</option>
-                              {userRole === "DIRECTEUR" && <option value="VALIDE">Validé</option>}
-                            </select>
-                          </td>
-
-                          <td className="py-3 px-4 text-slate-600 text-[11px]">
-                            {t.commentaire ? (
-                              <span className="line-clamp-1 italic">{t.commentaire}</span>
-                            ) : (
-                              <span className="text-slate-350 italic">Aucun commentaire...</span>
-                            )}
-                          </td>
-
-                          <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                            {t.photo ? (
-                              <div className="relative inline-block">
-                                <img
-                                  src={t.photo}
-                                  alt="Aperçu inspection"
-                                  className="h-8 w-8 rounded-md object-cover border border-slate-200"
-                                />
-                                <button
-                                  onClick={() => removePhoto(t.id)}
-                                  className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full p-0.5"
-                                  title="Retirer la photo"
-                                >
-                                  <X className="h-2.5 w-2.5" />
-                                </button>
-                              </div>
-                            ) : (
-                              <label className="cursor-pointer inline-flex items-center justify-center h-7 w-7 rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition-colors">
-                                <Camera className="h-3.5 w-3.5" />
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => handlePhotoUpload(t.id, e)}
-                                  className="hidden"
-                                />
-                              </label>
-                            )}
-                          </td>
-
-                          <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-end gap-1.5">
-                              {userRole === "DIRECTEUR" && t.statut === "FAIT" && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleValidateTaskByDirector(t.id)}
-                                  className="h-7 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[10px] font-black"
-                                >
-                                  <ShieldCheck className="h-3 w-3 mr-0.5 text-blue-700" /> Valider
-                                </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setActiveTaskDetail(t);
-                                  setIsDetailModalOpen(true);
-                                }}
-                                className="h-7 w-7 p-0 text-slate-500 hover:text-amber-500 hover:bg-slate-100 rounded-lg"
-                              >
-                                <Eye className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDeleteTask(t.id)}
-                                className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {filteredTasks.length === 0 && (
-                <div className="py-12 text-center text-slate-400">
-                  <AlertTriangle className="h-10 w-10 mx-auto text-amber-500 mb-2" />
-                  <p className="text-sm font-bold">Aucune tâche ne correspond à vos critères de filtres.</p>
-                </div>
-              )}
-
-            </CardContent>
-          </Card>
-
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* ONGLET 2: PLANNING CALENDRIER HEBDOMADAIRE */}
-      {/* ============================================================ */}
-      {activeTab === "planning" && (
-        <div className="space-y-6 max-w-5xl">
-          
-          <Card className="border-slate-200 shadow-md bg-white rounded-2xl overflow-hidden">
-            
-            {/* Header Calendrier */}
-            <CardHeader className="border-b border-slate-100 bg-slate-50 py-4 px-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                    <Calendar className="h-4.5 w-4.5 text-amber-500" /> PLANNING DE TOURNÉES ET INTERVENTIONS
-                  </CardTitle>
-                  <p className="text-[11px] text-slate-500 font-medium">
-                    Visualisation complète hebdomadaire des affectations mécaniques par jour.
-                  </p>
-                </div>
-
-                {/* Navigation de semaine */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setCurrentWeekOffset(prev => prev - 1)}
-                    className="h-8 w-8 p-0 border-slate-200 text-slate-750 hover:bg-slate-50 rounded-lg"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-xs font-black uppercase text-slate-800 bg-white border border-slate-200 px-3 py-1.5 rounded-lg min-w-[150px] text-center">
-                    {currentWeekOffset === 0 ? "Cette semaine" : `Semaine ${currentWeekOffset > 0 ? '+' + currentWeekOffset : currentWeekOffset}`}
-                  </span>
-                  <Button
-                    variant="outline"
-                    onClick={() => setCurrentWeekOffset(prev => prev + 1)}
-                    className="h-8 w-8 p-0 border-slate-200 text-slate-750 hover:bg-slate-50 rounded-lg"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setCurrentWeekOffset(0)}
-                    className="h-8 px-2.5 text-[10px] font-bold uppercase text-slate-500"
-                  >
-                    Aujourd'hui
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CardContent className="p-0">
-              
-              {/* Vue Hebdomadaire - Grid avec jours en colonnes */}
-              <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-100 text-center">
-                {weekDays.map((day, dIdx) => {
-                  const isToday = day.toISOString().split("T")[0] === new Date().toISOString().split("T")[0];
-                  return (
-                    <div
-                      key={dIdx}
-                      className={`py-3 px-2 border-r border-slate-200 last:border-0 ${
-                        isToday ? "bg-amber-500/10 border-b-2 border-b-amber-500" : ""
-                      }`}
-                    >
-                      <span className="text-[10px] font-black uppercase text-slate-400 block">
-                        {day.toLocaleDateString("fr-FR", { weekday: "short" })}
-                      </span>
-                      <span className={`text-base font-black ${isToday ? "text-amber-600 font-extrabold" : "text-slate-800"}`}>
-                        {day.getDate()}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Rangement par Mécaniciens (Lignes) */}
-              <div className="divide-y divide-slate-150">
-                {mecaniciens.map(meca => {
-                  return (
-                    <div key={meca.id} className="grid grid-cols-1 md:grid-cols-7 min-h-[110px]">
-                      
-                      {/* En-tête mobile de ligne de mécanicien */}
-                      <div className="col-span-1 md:col-span-7 bg-slate-50/50 py-1.5 px-4 border-b border-slate-100 flex items-center justify-between">
-                        <span className="text-[11px] font-black text-slate-800 flex items-center gap-1">
-                          <User className="h-3.5 w-3.5 text-amber-500" /> {meca.nomComplet}
-                        </span>
-                        <span className="text-[9px] font-bold text-slate-400 bg-white border border-slate-200 px-1.5 py-0.5 rounded-md">
-                          {tasks.filter(t => t.mecanicienId === meca.id && t.statut !== "FAIT" && t.statut !== "VALIDE").length} en attente
-                        </span>
-                      </div>
-
-                      {/* Case pour chaque jour de la semaine */}
-                      {weekDays.map((day, dIdx) => {
-                        const dayStr = day.toISOString().split("T")[0];
-                        const dayTasks = tasks.filter(t => t.mecanicienId === meca.id && t.datePlanifiee === dayStr);
-
-                        return (
-                          <div
-                            key={dIdx}
-                            className="p-2 border-r border-slate-100 last:border-r-0 flex flex-col gap-1.5 bg-white hover:bg-slate-50/30 min-h-[90px]"
-                          >
-                            {dayTasks.map(task => {
-                              // Couleur de priorité
-                              let priorityColor = "bg-slate-100 text-slate-700 border-slate-200";
-                              if (task.priorite === "CRITIQUE") priorityColor = "bg-rose-50 text-rose-700 border-rose-100";
-                              else if (task.priorite === "HAUTE") priorityColor = "bg-amber-50 text-amber-700 border-amber-100";
-                              else if (task.priorite === "QUOTIDIENNE") priorityColor = "bg-purple-50 text-purple-700 border-purple-100";
-                              else if (task.priorite === "BASSE") priorityColor = "bg-blue-50 text-blue-700 border-blue-100";
-
-                              return (
-                                <div
-                                  key={task.id}
-                                  onClick={() => {
-                                    setActiveTaskDetail(task);
-                                    setIsDetailModalOpen(true);
-                                  }}
-                                  className={`p-1.5 rounded-lg border text-[10px] font-bold cursor-pointer hover:shadow-xs transition-shadow ${priorityColor}`}
-                                >
-                                  <div className="flex justify-between items-start gap-1">
-                                    <span className="font-extrabold truncate max-w-[80px]">{task.enginId}</span>
-                                    <span className="text-[8px] font-light">{task.dureeEstimee}</span>
-                                  </div>
-                                  <p className="line-clamp-2 text-slate-600 mt-0.5 leading-tight font-medium">
-                                    {task.label}
-                                  </p>
-                                </div>
-                              );
-                            })}
-
-                            {dayTasks.length === 0 && (
-                              <div className="flex-1 flex items-center justify-center text-[9px] text-slate-300 italic font-medium">
-                                Libre
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-
-                    </div>
-                  );
-                })}
-              </div>
-
-            </CardContent>
-          </Card>
-
-          {/* V3: Bloc prévisionnel intelligent */}
-          <Card className="border-slate-200 shadow-xs bg-slate-900 text-slate-100 rounded-2xl p-5">
-            <h4 className="text-xs font-black uppercase tracking-wider text-amber-500 mb-2.5 flex items-center gap-1">
-              <Zap className="h-3.5 w-3.5 text-amber-500 animate-pulse" /> V3 : ALGO DE PRÉVISION INTELLIGENTE DU PLANNING
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-bold">
-              <div className="bg-slate-800 p-3.5 rounded-xl border border-slate-700/60">
-                <span className="text-slate-400 block text-[10px] uppercase mb-1">ST2G-01 (Vidange préventive)</span>
-                <p className="text-white leading-relaxed font-bold">
-                  Dans environ 32h de marche : Vidange hydraulique majeure planifiée (Estimation 4h).
-                </p>
-              </div>
-              <div className="bg-slate-800 p-3.5 rounded-xl border border-slate-700/60">
-                <span className="text-slate-400 block text-[10px] uppercase mb-1">ST2D-02 (Inspection freins)</span>
-                <p className="text-white leading-relaxed font-bold">
-                  Dans environ 45h de marche : Vérification de l'épaisseur des disques (Estimation 1h).
-                </p>
-              </div>
-              <div className="bg-slate-800 p-3.5 rounded-xl border border-slate-700/60">
-                <span className="text-slate-400 block text-[10px] uppercase mb-1">Taux Préventif de la flotte</span>
-                <p className="text-white leading-relaxed font-bold">
-                  Statut de protection : <span className="text-emerald-400">92% conforme</span>. Les intervalles d'inspection préviennent les pannes.
-                </p>
-              </div>
-            </div>
-          </Card>
-
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* ONGLET 3: PERFORMANCE & GAMIFICATION */}
-      {/* ============================================================ */}
-      {activeTab === "performance" && (
-        <div className="space-y-6 max-w-5xl">
-          
-          {/* Cartes Performance en haut */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            
-            <Card className="border-slate-200 shadow-xs bg-white p-5 rounded-2xl flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-                <Award className="h-6 w-6" />
-              </div>
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">Performance Globale</span>
-                <span className="text-2xl font-black text-slate-900">84.5%</span>
-                <span className="text-[10px] font-bold text-emerald-600 block">Objectif &gt;80% atteint</span>
-              </div>
-            </Card>
-
-            <Card className="border-slate-200 shadow-xs bg-white p-5 rounded-2xl flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                <Flame className="h-6 w-6 text-emerald-500" />
-              </div>
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">Série Record</span>
-                <span className="text-2xl font-black text-slate-900">12 Jours</span>
-                <span className="text-[10px] font-bold text-slate-500 block">Sans aucun retard d'échéance</span>
-              </div>
-            </Card>
-
-            <Card className="border-slate-200 shadow-xs bg-white p-5 rounded-2xl flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                <Wrench className="h-6 w-6" />
-              </div>
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">Ratio Préventif</span>
-                <span className="text-2xl font-black text-slate-900">78% / 22%</span>
-                <span className="text-[10px] font-bold text-blue-600 block">Préventif vs Correctif (Panne)</span>
-              </div>
-            </Card>
-
-            <Card className="border-slate-200 shadow-xs bg-white p-5 rounded-2xl flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
-                <User className="h-6 w-6 text-purple-500" />
-              </div>
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">Mécanicien du mois</span>
-                <span className="text-sm font-black text-slate-900 block truncate">Abdellah Daoudi</span>
-                <span className="text-[10px] font-bold text-purple-600 block">Taux réalisation de 95%</span>
-              </div>
-            </Card>
-
-          </div>
-
-          {/* Tableau de suivi des équipes mécaniciens */}
-          <Card className="border-slate-200 shadow-md bg-white rounded-2xl overflow-hidden">
-            <CardHeader className="border-b border-slate-100 bg-slate-50 py-4 px-6 flex justify-between items-center">
-              <div>
-                <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                  <Award className="h-4.5 w-4.5 text-amber-500" /> CLASSEMENT ET SUIVI DE PERFORMANCE COKCPIT
-                </CardTitle>
-                <p className="text-[11px] text-slate-500 font-medium">
-                  Statistiques issues du localStorage et des validations de tournées quotidiennes.
-                </p>
-              </div>
-              <span className="text-[10px] font-mono text-slate-400">Période : Ce mois</span>
-            </CardHeader>
-
-            <CardContent className="p-0">
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-wider border-b border-slate-200">
-                      <th className="py-3 px-4">Mécanicien</th>
-                      <th className="py-3 px-4">Poste standard</th>
-                      <th className="py-3 px-4 text-center">Tâches Faites</th>
-                      <th className="py-3 px-4 text-center">En retard</th>
-                      <th className="py-3 px-4">Progression CSS de réalisation</th>
-                      <th className="py-3 px-4">Badges de Gamification obtenus</th>
-                      <th className="py-3 px-4 text-center">Tendance</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-xs">
-                    
-                    {/* Mécanicien 1 */}
-                    <tr className="hover:bg-slate-50/50">
-                      <td className="py-3.5 px-4 font-bold text-slate-800">Abdellah Daoudi</td>
-                      <td className="py-3.5 px-4 text-slate-500 font-medium">Poste 1</td>
-                      <td className="py-3.5 px-4 text-center font-bold text-slate-800">45 / 50</td>
-                      <td className="py-3.5 px-4 text-center font-bold text-rose-600">2</td>
-                      <td className="py-3.5 px-4">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-black text-slate-800">90%</span>
-                          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div className="bg-emerald-500 h-2 rounded-full" style={{ width: "90%" }}></div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="flex gap-1">
-                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-orange-50 text-orange-700 border border-orange-100 rounded-full text-[9px] font-black" title="Série de 10 jours sans retard">
-                            🔥 Série Argent
-                          </span>
-                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[9px] font-black" title="Plus de 100 tâches de préventif réalisées">
-                            ⭐ Préventif
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-bold text-emerald-600">▲ ⬆️</td>
-                    </tr>
-
-                    {/* Mécanicien 2 */}
-                    <tr className="hover:bg-slate-50/50">
-                      <td className="py-3.5 px-4 font-bold text-slate-800">Lahcen Ait</td>
-                      <td className="py-3.5 px-4 text-slate-500 font-medium">Poste 1</td>
-                      <td className="py-3.5 px-4 text-center font-bold text-slate-800">38 / 50</td>
-                      <td className="py-3.5 px-4 text-center font-bold text-rose-600">5</td>
-                      <td className="py-3.5 px-4">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-black text-slate-800">76%</span>
-                          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div className="bg-amber-500 h-2 rounded-full" style={{ width: "76%" }}></div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="flex gap-1">
-                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[9px] font-black">
-                            ⭐ Préventif Bronze
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-bold text-rose-600">▼ ⬇️</td>
-                    </tr>
-
-                    {/* Mécanicien 3 */}
-                    <tr className="hover:bg-slate-50/50">
-                      <td className="py-3.5 px-4 font-bold text-slate-800">Mohamed El Amri</td>
-                      <td className="py-3.5 px-4 text-slate-500 font-medium">Poste 2</td>
-                      <td className="py-3.5 px-4 text-center font-bold text-slate-800">42 / 50</td>
-                      <td className="py-3.5 px-4 text-center font-bold text-rose-600">3</td>
-                      <td className="py-3.5 px-4">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-black text-slate-800">84%</span>
-                          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div className="bg-emerald-500 h-2 rounded-full" style={{ width: "84%" }}></div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="flex gap-1">
-                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full text-[9px] font-black">
-                            🏆 Champion
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-bold text-slate-400">▬ ➡️</td>
-                    </tr>
-
-                    {/* Mécanicien 4 */}
-                    <tr className="hover:bg-slate-50/50">
-                      <td className="py-3.5 px-4 font-bold text-slate-800">Youssef Naciri</td>
-                      <td className="py-3.5 px-4 text-slate-500 font-medium">Poste 3</td>
-                      <td className="py-3.5 px-4 text-center font-bold text-slate-800">20 / 25</td>
-                      <td className="py-3.5 px-4 text-center font-bold text-rose-600">1</td>
-                      <td className="py-3.5 px-4">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-black text-slate-800">80%</span>
-                          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div className="bg-emerald-500 h-2 rounded-full" style={{ width: "80%" }}></div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="flex gap-1">
-                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-orange-50 text-orange-700 border border-orange-100 rounded-full text-[9px] font-black">
-                            🔥 Série Bronze
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-bold text-emerald-600">▲ ⬆️</td>
-                    </tr>
-
-                  </tbody>
-                </table>
-              </div>
-
-            </CardContent>
-          </Card>
-
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* V3: FENÊTRE MODALE DE DIALOGUE - DETAIL D'UNE TÂCHE */}
-      {/* ============================================================ */}
-      {isDetailModalOpen && activeTaskDetail && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-slate-800">
-            
-            {/* Header */}
-            <div className="bg-slate-900 text-white p-5 border-b border-slate-800 flex justify-between items-center">
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-amber-500 block mb-0.5">
-                  Fiche Detail inspection
-                </span>
-                <h3 className="text-sm font-black uppercase tracking-tight">
-                  Tâche : {activeTaskDetail.id}
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsDetailModalOpen(false)}
-                className="h-8 w-8 rounded-full hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
 
-            {/* Content */}
-            <div className="p-6 space-y-4 text-xs">
-              
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold uppercase text-slate-400 block">Description</span>
-                <p className="text-sm font-bold text-slate-900">{activeTaskDetail.label}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">Engin / Modèle</span>
-                  <p className="font-black text-slate-900">{activeTaskDetail.enginId} ({activeTaskDetail.enginModele})</p>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">Durée estimée</span>
-                  <p className="font-bold text-slate-700">{activeTaskDetail.dureeEstimee}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">Date / Shift</span>
-                  <p className="font-bold text-slate-700">{activeTaskDetail.datePlanifiee} - {activeTaskDetail.poste}</p>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">Mécanicien</span>
-                  <p className="font-bold text-slate-700">{activeTaskDetail.mecanicienNom}</p>
-                </div>
-              </div>
-
-              {/* Statut de la tâche */}
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold uppercase text-slate-400 block">État / Statut d'exécution</span>
-                <div className="flex gap-2">
-                  {(["NON_FAIT", "EN_COURS", "FAIT", "REPORTE"] as const).map(st => (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={() => handleUpdateTaskInline(activeTaskDetail.id, { statut: st })}
-                      className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${
-                        activeTaskDetail.statut === st
-                          ? "bg-slate-900 text-white border-slate-950 shadow-xs"
-                          : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                      }`}
-                    >
-                      {st === "NON_FAIT" && "Non fait"}
-                      {st === "EN_COURS" && "En cours"}
-                      {st === "FAIT" && "Fait"}
-                      {st === "REPORTE" && "Reporté"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* V3-2: Zone d'édition du commentaire avec limite stricte de 250 caractères */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-bold uppercase text-slate-400">Commentaire / Anomalie (Max 250 caractères)</span>
-                  <span className="text-[10px] font-mono text-slate-400">{activeTaskDetail.commentaire.length}/250</span>
-                </div>
-                <textarea
-                  value={activeTaskDetail.commentaire}
-                  onChange={(e) => {
-                    const value = e.target.value.slice(0, 250);
-                    handleUpdateTaskInline(activeTaskDetail.id, { commentaire: value });
-                  }}
-                  rows={3}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  placeholder="Inscrivez les observations techniques ou d'anomalies..."
-                />
-              </div>
-
-              {/* Gestion de la Photo */}
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold uppercase text-slate-400 block">Photo d'inspection attachée</span>
-                {activeTaskDetail.photo ? (
-                  <div className="relative border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
-                    <img
-                      src={activeTaskDetail.photo}
-                      alt="Inspection"
-                      className="w-full h-32 object-contain"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removePhoto(activeTaskDetail.id)}
-                      className="absolute top-2 right-2 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-1.5 shadow-md transition-colors"
-                      title="Supprimer la photo"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl p-4 bg-slate-50 hover:bg-slate-100/50 cursor-pointer transition-colors">
-                    <Camera className="h-6 w-6 text-slate-400 mb-1" />
-                    <span className="text-[10px] font-bold text-slate-500">Ajouter une photo justificative</span>
-                    <span className="text-[8px] text-slate-400 mt-0.5">Max 1 photo, 2 Mo</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handlePhotoUpload(activeTaskDetail.id, e)}
-                      className="hidden"
-                    />
+            {/* Filters Bar */}
+            <Card className="bg-white border border-slate-200">
+              <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 items-end">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                    <Filter className="h-3 w-3" /> Type
                   </label>
-                )}
-              </div>
-
-            </div>
-
-            {/* Actions de validation Directeur */}
-            <div className="bg-slate-50 p-4 border-t border-slate-150 flex justify-between gap-3">
-              <Button
-                variant="outline"
-                onClick={() => handleDeleteTask(activeTaskDetail.id)}
-                className="border-rose-200 text-rose-600 bg-white hover:bg-rose-50"
-              >
-                Supprimer
-              </Button>
-
-              <div className="flex gap-2">
-                {userRole === "DIRECTEUR" && activeTaskDetail.statut === "FAIT" && (
-                  <Button
-                    onClick={() => {
-                      handleValidateTaskByDirector(activeTaskDetail.id);
-                      setIsDetailModalOpen(false);
-                    }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-black"
-                  >
-                    <ShieldCheck className="h-4 w-4 mr-1" /> Valider Fiche
-                  </Button>
-                )}
-                <Button
-                  onClick={() => setIsDetailModalOpen(false)}
-                  className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
-                >
-                  Fermer
-                </Button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* V3: FENÊTRE MODALE DE DIALOGUE - AJOUT DE TÂCHE MANUELLE */}
-      {/* ============================================================ */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-slate-800">
-            
-            <div className="bg-slate-900 text-white p-5 border-b border-slate-800 flex justify-between items-center">
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-amber-500 block mb-0.5">
-                  Planification manuelle
-                </span>
-                <h3 className="text-sm font-black uppercase tracking-tight">
-                  ➕ Créer une tâche
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="h-8 w-8 rounded-full hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4 text-xs">
-              
-              {/* Type de tâche */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase text-slate-400 block">Type d'entretien</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["PREVENTIF", "CORRECTIF", "QUOTIDIEN"] as const).map(type => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => {
-                        setNewType(type);
-                        if (type === "QUOTIDIEN") {
-                          setNewLabel("Graissage pivots");
-                        } else if (type === "CORRECTIF") {
-                          setNewLabel("Réparation fuite flexible hydraulique");
-                        } else {
-                          setNewLabel("Vidange préventive");
-                        }
-                      }}
-                      className={`py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${
-                        newType === type
-                          ? "bg-slate-900 text-white border-slate-950"
-                          : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                      }`}
-                    >
-                      {type === "PREVENTIF" ? "🔧 Prév" : type === "CORRECTIF" ? "🚨 Correctif" : "📅 Quotid"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Description de la tâche */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase text-slate-400 block">Description de l'intervention</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Vidange moteur ou réparation fuite hydraulique..."
-                  value={newLabel}
-                  onChange={(e) => setNewLabel(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                />
-              </div>
-
-              {/* Engin compatible */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase text-slate-400 block">Sélection de l'engin</label>
-                <select
-                  value={newEnginId}
-                  onChange={(e) => setNewEnginId(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                >
-                  {engins.map(e => (
-                    <option key={e.id} value={e.id}>{e.id} - {e.modele}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Affectation mécanicien */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase text-slate-400 block">Mécanicien en charge</label>
-                <select
-                  value={newMecaId}
-                  onChange={(e) => setNewMecaId(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                >
-                  {mecaniciens.map(m => (
-                    <option key={m.id} value={m.id}>{m.nomComplet}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Shift et Date */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase text-slate-400 block">Poste / Quart</label>
                   <select
-                    value={newPoste}
-                    onChange={(e) => setNewPoste(e.target.value as any)}
-                    className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    className="w-full h-9 px-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
                   >
+                    <option value="TOUS">Tous les types</option>
+                    <option value="PREVENTIF">🔩 Préventifs (PM)</option>
+                    <option value="CORRECTIF">🚨 Correctifs</option>
+                    <option value="QUOTIDIEN">📅 Quotidiens</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                    <User className="h-3 w-3" /> Intervenant
+                  </label>
+                  <select
+                    value={filterMeca}
+                    onChange={(e) => setFilterMeca(e.target.value)}
+                    className="w-full h-9 px-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
+                  >
+                    <option value="TOUS">Tous les agents</option>
+                    {filteredMecaniciens.map(m => (
+                      <option key={m.id} value={m.id}>{m.nomComplet}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                    <Clock3 className="h-3 w-3" /> Shift / Poste
+                  </label>
+                  <select
+                    value={filterPoste}
+                    onChange={(e) => setFilterPoste(e.target.value)}
+                    className="w-full h-9 px-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
+                  >
+                    <option value="TOUS">Tous les shifts</option>
                     <option value="Poste 1">Poste 1</option>
                     <option value="Poste 2">Poste 2</option>
                     <option value="Poste 3">Poste 3</option>
                   </select>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase text-slate-400 block">Date prévue</label>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                    <Calendar className="h-3 w-3" /> Échéance
+                  </label>
+                  <select
+                    value={filterDate}
+                    onChange={(e) => setFilterDate(e.target.value)}
+                    className="w-full h-9 px-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
+                  >
+                    <option value="Aujourd'hui">Aujourd'hui</option>
+                    <option value="Tous">Toutes les dates</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1 relative">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                    <Search className="h-3 w-3" /> Rechercher
+                  </label>
                   <input
-                    type="date"
-                    value={newDate}
-                    onChange={(e) => setNewDate(e.target.value)}
-                    className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Machine, libellé, agent..."
+                    className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none"
                   />
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              {/* V3-6: Durée estimée d'intervention */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase text-slate-400 block font-black">Durée estimée de l'intervention</label>
-                <select
-                  value={newDuree}
-                  onChange={(e) => setNewDuree(e.target.value as any)}
-                  className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
+            {/* Tasks Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {visibleTasks.map(task => (
+                <Card
+                  key={task.id}
+                  onClick={() => setSelectedTask(task)}
+                  className="bg-white border border-slate-200 rounded-3xl hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col text-xs"
                 >
-                  <option value="15min">15 Minutes</option>
-                  <option value="30min">30 Minutes</option>
-                  <option value="1h">1 Heure</option>
-                  <option value="2h">2 Heures</option>
-                  <option value="4h">4 Heures</option>
-                  <option value="6h">6 Heures</option>
-                  <option value="1j">1 Jour complet (8h)</option>
-                </select>
-              </div>
+                  <CardHeader className="p-4 pb-2 border-b border-slate-100 flex flex-row items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${
+                          task.type === 'PREVENTIF' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' :
+                          task.type === 'CORRECTIF' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                          'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                        }`}>
+                          {task.type}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${
+                          task.priorite === 'CRITIQUE' ? 'bg-red-500 text-white animate-pulse' :
+                          task.priorite === 'HAUTE' ? 'bg-amber-500 text-slate-950' :
+                          'bg-slate-100 text-slate-600'
+                        }`}>
+                          {task.priorite}
+                        </span>
+                      </div>
+                      <h4 className="font-black text-slate-900 tracking-tight line-clamp-2">
+                        {task.label}
+                      </h4>
+                    </div>
+                  </CardHeader>
 
-              {/* Niveau de Priorité de départ */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase text-slate-400 block">Priorité manuelle</label>
-                <select
-                  value={newPrioriteManual}
-                  onChange={(e) => setNewPrioriteManual(e.target.value as any)}
-                  className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
-                >
-                  <option value="BASSE">Basse (Simple vérification)</option>
-                  <option value="NORMALE">Normale (Planification classique)</option>
-                  <option value="HAUTE">Haute (Cruciale mécanique)</option>
-                </select>
-              </div>
+                  <CardContent className="p-4 flex-1 flex flex-col justify-between gap-3">
+                    <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500">
+                      <div className="flex items-center gap-1 font-bold">
+                        <Truck className="h-3 w-3 text-slate-400" /> {task.enginId} ({task.enginModele})
+                      </div>
+                      <div className="flex items-center gap-1 font-bold">
+                        <User className="h-3 w-3 text-slate-400" /> {task.mecanicienNom}
+                      </div>
+                      <div className="flex items-center gap-1 font-bold">
+                        <Clock className="h-3 w-3 text-slate-400" /> {task.dureeEstimee}
+                      </div>
+                      <div className="flex items-center gap-1 font-bold">
+                        <Clock3 className="h-3 w-3 text-slate-400" /> {task.poste}
+                      </div>
+                    </div>
 
-            </div>
+                    <div className="flex items-center justify-between border-t border-slate-50 pt-3">
+                      <span className="text-[9px] text-slate-400 font-bold">{task.datePlanifiee}</span>
+                      
+                      <div className="flex items-center gap-1">
+                        <span className={`px-2 py-1 rounded-xl text-[9px] font-black uppercase ${
+                          task.statut === 'VALIDE' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                          task.statut === 'FAIT' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                          task.statut === 'EN_COURS' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                          task.statut === 'REPORTE' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                          'bg-slate-50 text-slate-500 border border-slate-100'
+                        }`}>
+                          {task.statut === 'VALIDE' ? '🛡️ Validé' :
+                           task.statut === 'FAIT' ? '✅ Fait' :
+                           task.statut === 'EN_COURS' ? '⏳ En cours' :
+                           task.statut === 'REPORTE' ? '❌ Reporté' :
+                           '🔲 À faire'}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
 
-            <div className="bg-slate-50 p-4 border-t border-slate-150 flex justify-end gap-2.5">
-              <Button
-                variant="outline"
-                onClick={() => setIsAddModalOpen(false)}
-                className="border-slate-200 text-slate-600 bg-white hover:bg-slate-100"
-              >
-                Annuler
-              </Button>
-              <Button
-                onClick={handleCreateTaskManual}
-                className="bg-amber-500 hover:bg-amber-600 border-amber-600 text-slate-950 font-black"
-              >
-                Enregistrer la tâche
-              </Button>
+              {visibleTasks.length === 0 && (
+                <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-400 gap-2 bg-white rounded-3xl border border-slate-150">
+                  <AlertTriangle className="h-8 w-8 text-slate-300" />
+                  <p className="font-black text-xs uppercase tracking-wider text-slate-500">Aucune tâche trouvée</p>
+                  <p className="text-[10px] text-slate-400 font-medium">Modifiez vos critères de filtrage</p>
+                </div>
+              )}
             </div>
 
           </div>
-        </div>
+        )}
+
+        {/* -------------------- TAB 2: CALENDAR PLANNING -------------------- */}
+        {activeTab === 'calendar' && (
+          <div className="space-y-4">
+            
+            {/* Intel PM Forecast Card */}
+            <Card className="bg-slate-900 text-white border-none shadow-sm overflow-hidden">
+              <CardContent className="p-5 flex flex-col md:flex-row items-center justify-between gap-5">
+                <div className="space-y-1 max-w-lg text-center md:text-left">
+                  <span className="text-[10px] font-bold uppercase text-amber-500 tracking-wider flex items-center justify-center md:justify-start gap-1">
+                    <Zap className="h-3.5 w-3.5" /> Algo de Prévision Intelligente
+                  </span>
+                  <h3 className="text-sm font-black uppercase">🔥 Prochaines Fiches PM (Échéances &lt; 100 Heures)</h3>
+                  <p className="text-xs text-slate-300 font-medium">
+                    Calcul en direct basé sur les heures de marche réelles des engins et l'historique des derniers préventifs validés sur Firestore
+                  </p>
+                </div>
+                <div className="flex gap-4 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+                  {prochainesEcheances.map((ech, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-slate-800 border border-slate-700/80 p-3 rounded-2xl flex flex-col gap-1 min-w-[160px]"
+                    >
+                      <span className="text-[10px] font-black uppercase text-amber-400">{ech.enginId}</span>
+                      <p className="text-[10px] text-white font-black truncate">{ech.operation}</p>
+                      <span className="text-[9px] font-bold text-rose-400 mt-1">
+                        Dû dans <strong className="text-white">{Math.round(ech.remainingHours)}h</strong>
+                      </span>
+                    </div>
+                  ))}
+                  {prochainesEcheances.length === 0 && (
+                    <div className="text-slate-400 text-xs font-bold py-2 px-4 bg-slate-800/50 rounded-2xl">
+                      Aucune PM critique immédiate (&lt; 100h)
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Navigation Weeks */}
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handlePrevWeek} className="text-xs font-bold">
+                  Précédent
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleNextWeek} className="text-xs font-bold">
+                  Suivant
+                </Button>
+              </div>
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                Semaine du {currentWeekStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+            </div>
+
+            {/* Grid Calendar */}
+            <Card className="bg-white border border-slate-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs min-w-[900px]">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-200 text-slate-600 font-black uppercase text-[10px]">
+                      <th className="p-4 border-r border-slate-200 w-44">Mécanicien</th>
+                      {getWeekDays().map((day, idx) => (
+                        <th key={idx} className="p-4 border-r border-slate-200 text-center">
+                          {day.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredMecaniciens.map(meca => (
+                      <tr key={meca.id} className="border-b border-slate-150 hover:bg-slate-50/50">
+                        <td className="p-4 border-r border-slate-200 font-black text-slate-800">
+                          {meca.nomComplet}
+                          <span className="block text-[9px] font-bold text-slate-400 mt-0.5">{meca.specialite || "Moteur"}</span>
+                        </td>
+                        {getWeekDays().map((day, idx) => {
+                          const dayStr = day.toISOString().split('T')[0];
+                          const dayTasks = filteredTasks.filter(
+                            t => t.mecanicienId === meca.id && t.datePlanifiee === dayStr && !t.deleted
+                          );
+
+                          return (
+                            <td key={idx} className="p-2 border-r border-slate-200 align-top min-h-[100px] h-24">
+                              <div className="space-y-1">
+                                {dayTasks.map(task => (
+                                  <div
+                                    key={task.id}
+                                    onClick={() => setSelectedTask(task)}
+                                    className={`p-1.5 rounded-xl border cursor-pointer hover:scale-102 transition-transform duration-100 ${
+                                      task.statut === 'VALIDE' ? 'bg-blue-50/70 text-blue-800 border-blue-200' :
+                                      task.statut === 'FAIT' ? 'bg-emerald-50/70 text-emerald-800 border-emerald-200' :
+                                      task.statut === 'REPORTE' ? 'bg-rose-50/70 text-rose-800 border-rose-200' :
+                                      'bg-slate-50/70 text-slate-700 border-slate-200'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between text-[8px] font-black mb-0.5 uppercase">
+                                      <span className="truncate max-w-[50px]">{task.enginId}</span>
+                                      <span>{task.poste === 'Poste 1' ? 'P1' : task.poste === 'Poste 2' ? 'P2' : 'P3'}</span>
+                                    </div>
+                                    <p className="text-[9px] font-bold line-clamp-1 truncate">{task.label}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+          </div>
+        )}
+
+        {/* -------------------- TAB 3: PERFORMANCE -------------------- */}
+        {activeTab === 'performance' && (
+          <div className="space-y-4">
+            
+            {/* Gamification Counters */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="bg-white border border-slate-200 shadow-xs">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="h-10 w-10 bg-indigo-50 border border-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">Taux de Shift</span>
+                    <h3 className="text-lg font-black text-slate-800">{kpis.perfGlobale}%</h3>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border border-slate-200 shadow-xs">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="h-10 w-10 bg-amber-50 border border-amber-100 rounded-full flex items-center justify-center text-amber-500 animate-bounce">
+                    <Star className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">Prophète du Mois</span>
+                    <h3 className="text-sm font-black text-slate-800 truncate">{kpis.topNom}</h3>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border border-slate-200 shadow-xs">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="h-10 w-10 bg-emerald-50 border border-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+                    <Award className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">Score Moyen d'exécution</span>
+                    <h3 className="text-lg font-black text-slate-800">{kpis.topRate}%</h3>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border border-slate-200 shadow-xs">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="h-10 w-10 bg-slate-900 border border-slate-800 rounded-full flex items-center justify-center text-amber-500">
+                    <Zap className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">Ratio Préventif / Correctif</span>
+                    <h3 className="text-lg font-black text-slate-800">{kpis.prevPercent}% / {100 - kpis.prevPercent}%</h3>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Leaderboard Table */}
+            <Card className="bg-white border border-slate-200 overflow-hidden rounded-3xl shadow-sm">
+              <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50">
+                <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-600">
+                  🏆 Classement des Mécaniciens — Efficacité Mensuelle
+                </CardTitle>
+              </CardHeader>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-200 text-slate-600 font-black uppercase text-[9px]">
+                      <th className="p-4">Rang</th>
+                      <th className="p-4">Intervenant</th>
+                      <th className="p-4 text-center">Fiches Réalisées</th>
+                      <th className="p-4 text-center">Taux d'Éradication</th>
+                      <th className="p-4 text-center">Retards Cumulés</th>
+                      <th className="p-4">Badges & Gamification</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statsParMeca.map((stat, idx) => (
+                      <tr key={stat.meca.id} className="border-b border-slate-150 hover:bg-slate-50/50">
+                        <td className="p-4 font-black text-slate-600">
+                          {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`}
+                        </td>
+                        <td className="p-4 font-black text-slate-800 flex items-center gap-2">
+                          <div className="h-7 w-7 bg-slate-900 rounded-full flex items-center justify-center text-white font-black text-[9px]">
+                            {stat.meca.nomComplet.substring(0, 2)}
+                          </div>
+                          <div>
+                            {stat.meca.nomComplet}
+                            <span className="block text-[8px] font-bold text-slate-400">{stat.meca.specialite || "Hydraulique"}</span>
+                          </div>
+                        </td>
+                        <td className="p-4 text-center font-bold text-slate-700">
+                          {stat.faites} / {stat.total}
+                        </td>
+                        <td className="p-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <span className="font-black text-slate-800">{stat.rate}%</span>
+                            <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-slate-900" style={{ width: `${stat.rate}%` }} />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className={`font-black uppercase px-2 py-0.5 rounded-full text-[9px] ${
+                            stat.retard > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+                          }`}>
+                            {stat.retard} retards
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex gap-1.5">
+                            {stat.badges.map((badge, bidx) => (
+                              <span key={bidx} className="bg-slate-900 text-amber-400 border border-slate-800 font-bold px-2 py-0.5 rounded-xl text-[9px]">
+                                {badge}
+                              </span>
+                            ))}
+                            {stat.badges.length === 0 && (
+                              <span className="text-slate-400 text-[10px]">Pas encore de badge de shift</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+          </div>
+        )}
+
+        {/* -------------------- TAB 4: PANNES & CORRECTIFS -------------------- */}
+        {activeTab === 'pannes' && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            {/* KPIs */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-left">
+              <Card className="bg-white border border-slate-200 shadow-xs">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                    mtbfMttrMetrics.activeCount > 0 ? 'bg-rose-50 text-rose-600 border border-rose-100 animate-pulse' : 'bg-slate-50 text-slate-500'
+                  }`}>
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">Pannes Actives</span>
+                    <h3 className="text-lg font-black text-slate-800">
+                      {mtbfMttrMetrics.activeCount} <span className="text-xs text-slate-400 font-bold">/ {mtbfMttrMetrics.totalCount}</span>
+                    </h3>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border border-slate-200 shadow-xs">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="h-10 w-10 bg-amber-50 border border-amber-100 rounded-full flex items-center justify-center text-[#b8860b]">
+                    <Zap className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">Fiabilité (MTBF)</span>
+                    <h3 className="text-lg font-black text-slate-800">{mtbfMttrMetrics.mtbf} <span className="text-xs text-slate-400 font-bold">h</span></h3>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border border-slate-200 shadow-xs">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="h-10 w-10 bg-indigo-50 border border-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+                    <Clock3 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">Réparabilité (MTTR)</span>
+                    <h3 className="text-lg font-black text-slate-800">{mtbfMttrMetrics.mttr} <span className="text-xs text-slate-400 font-bold">h</span></h3>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border border-slate-200 shadow-xs">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="h-10 w-10 bg-emerald-50 border border-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">Taux de Résilience</span>
+                    <h3 className="text-lg font-black text-slate-800">
+                      {mtbfMttrMetrics.totalCount > 0 
+                        ? Math.round(((mtbfMttrMetrics.totalCount - mtbfMttrMetrics.activeCount) / mtbfMttrMetrics.totalCount) * 100) 
+                        : 100}%
+                    </h3>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Split layout: List on Left, Detail & Actions on Right */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+              
+              {/* Left Col: list of pannes */}
+              <div className="lg:col-span-5 flex flex-col gap-3">
+                <Card className="bg-white border border-slate-200 shadow-sm flex flex-col flex-1 p-4 space-y-3 min-h-[500px]">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <Search className="h-4 w-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Rechercher une panne..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full text-xs font-semibold text-slate-800 placeholder-slate-400 bg-transparent focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto space-y-2 max-h-[550px] pr-1">
+                    {filteredPannes.filter(p => {
+                      if (!searchQuery) return true;
+                      const q = searchQuery.toLowerCase();
+                      return (p.numero?.toLowerCase().includes(q) || 
+                              p.description?.toLowerCase().includes(q) || 
+                              p.categorie?.toLowerCase().includes(q) ||
+                              p.enginId?.toLowerCase().includes(q));
+                    }).map(panne => {
+                      const isSelected = selectedPanne?.id === panne.id;
+                      const isCritique = panne.gravite === 'Critique';
+                      const isElevee = panne.gravite === 'Élevée';
+                      const badgeColor = isCritique 
+                        ? 'bg-red-50 text-red-700 border-red-150' 
+                        : isElevee 
+                          ? 'bg-orange-50 text-orange-700 border-orange-150'
+                          : 'bg-amber-50 text-amber-700 border-amber-150';
+
+                      return (
+                        <div
+                          key={panne.id}
+                          onClick={() => {
+                            setSelectedPanne(panne);
+                            setDiagComment(panne.diagnostic || '');
+                            setDiagMecaId(panne.mecanicienAssigne || '');
+                            setDiagArret(panne.arretMachine || false);
+                          }}
+                          className={`p-3.5 rounded-xl border transition-all cursor-pointer text-left space-y-2 ${
+                            isSelected 
+                              ? 'border-rose-500 bg-rose-50/40 shadow-sm' 
+                              : 'border-slate-200 bg-white hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="font-mono font-black uppercase text-slate-800">
+                              🔧 {panne.numero || panne.id.slice(0, 8).toUpperCase()}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full font-black uppercase tracking-wider text-[8.5px] border ${badgeColor}`}>
+                              {panne.gravite}
+                            </span>
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-black text-slate-900 leading-tight line-clamp-1">{panne.description}</p>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">
+                              Engin : <span className="text-slate-800 font-extrabold">{panne.enginId}</span> • Organe : <span className="text-slate-800 font-extrabold">{panne.categorie}</span>
+                            </p>
+                          </div>
+
+                          <div className="flex justify-between items-center border-t border-slate-100 pt-2 text-[9px] font-bold text-slate-400 font-mono">
+                            <span>📅 {panne.dateDeclaration ? panne.dateDeclaration.split('T')[0] : 'N/A'}</span>
+                            <span className={`px-1.5 py-0.5 rounded uppercase font-black tracking-widest text-[8.5px] ${
+                              panne.statut === 'CLOS' ? 'bg-emerald-100 text-emerald-800' :
+                              panne.statut === 'EN_REPARATION' ? 'bg-indigo-100 text-indigo-800 animate-pulse' :
+                              panne.statut === 'DIAGNOSTIQUE' ? 'bg-amber-100 text-amber-800' :
+                              'bg-red-100 text-red-800 animate-pulse'
+                            }`}>
+                              {panne.statut}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {filteredPannes.length === 0 && (
+                      <div className="py-16 text-center text-slate-400 space-y-2 uppercase font-black text-xs">
+                        <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto animate-bounce" />
+                        <p>Zéro panne active enregistrée ! ✓</p>
+                        <p className="text-[10px] font-bold text-slate-400">Le parc opère en sécurité nominale.</p>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+
+              {/* Right Col: Details & actions workflow */}
+              <div className="lg:col-span-7">
+                <Card className="bg-white border border-slate-200 shadow-sm p-5 space-y-6 flex flex-col justify-between h-full min-h-[500px]">
+                  {selectedPanne ? (
+                    <div className="space-y-6 text-xs text-left">
+                      
+                      {/* Sub-Header */}
+                      <div className="border-b border-slate-100 pb-4 flex justify-between items-start gap-4">
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-black uppercase text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full tracking-widest animate-pulse">
+                            {selectedPanne.statut}
+                          </span>
+                          <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+                            Incident : {selectedPanne.numero}
+                          </h3>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                            Déclaré par : <span className="text-slate-700 font-black">{selectedPanne.declareParNom}</span> le {selectedPanne.dateDeclaration?.replace('T', ' ').substring(0, 16)}
+                          </p>
+                        </div>
+                        
+                        {selectedPanne.photo && (
+                          <div className="w-16 h-16 rounded-xl border border-slate-200 overflow-hidden bg-slate-50 cursor-pointer hover:scale-105 transition-transform">
+                            <img 
+                              src={selectedPanne.photo} 
+                              alt="Anomalie" 
+                              className="w-full h-full object-cover" 
+                              referrerPolicy="no-referrer"
+                              onClick={() => window.open(selectedPanne.photo)}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Info Cards Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 border border-slate-100 p-3 rounded-2xl">
+                        <div>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase block">Engin concerné</span>
+                          <span className="font-extrabold text-slate-900">{selectedPanne.enginId} ({selectedPanne.enginModele || "ST2G"})</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase block">Organe affecté</span>
+                          <span className="font-extrabold text-slate-900">{selectedPanne.categorie}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase block">État Machine</span>
+                          <span className={`font-black uppercase flex items-center gap-1 ${selectedPanne.arretMachine ? 'text-red-600 animate-pulse' : 'text-emerald-600'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${selectedPanne.arretMachine ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                            {selectedPanne.arretMachine ? 'Arrêt Immédiat' : 'En Service'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Symptoms */}
+                      <div className="p-3 bg-red-50/30 border border-red-100 rounded-xl space-y-1">
+                        <span className="text-[9px] font-black uppercase text-red-700 tracking-wider">Symptômes déclarés :</span>
+                        <p className="font-medium text-slate-800 leading-relaxed text-sm">{selectedPanne.description}</p>
+                      </div>
+
+                      {/* Workflow Actions Section */}
+                      <div className="border-t border-slate-100 pt-4 space-y-4">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-[#b8860b]">
+                          ⚙️ Cycle de Traitement Correctif
+                        </h4>
+
+                        {/* STEP 1: Assigner & Diagnostiquer */}
+                        {selectedPanne.statut === 'DECLAREE' && (
+                          <div className="bg-amber-50/50 border border-amber-100 p-4 rounded-xl space-y-3.5">
+                            <span className="text-[10px] font-black uppercase text-amber-800">Étape 1 : Affectation & Diagnostic Terrain</span>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-bold text-slate-500 uppercase block">Mécanicien Assigné *</label>
+                                <select
+                                  value={diagMecaId}
+                                  onChange={(e) => setDiagMecaId(e.target.value)}
+                                  className="w-full h-9 px-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none"
+                                >
+                                  <option value="">Sélectionner un intervenant...</option>
+                                  {filteredMecaniciens.map(m => (
+                                    <option key={m.id} value={m.id}>{m.nomComplet} ({m.specialite || "Mécanique"})</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-bold text-slate-500 uppercase block">Arrêt de production ?</label>
+                                <div className="flex items-center h-9">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={diagArret} 
+                                    onChange={(e) => setDiagArret(e.target.checked)}
+                                    className="mr-2 h-4 w-4 rounded cursor-pointer" 
+                                  />
+                                  <span className="font-bold text-slate-700 uppercase cursor-pointer select-none">Confirmer arrêt</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-bold text-slate-500 uppercase block">Note de Diagnostic * (Symptômes & Actions requis)</label>
+                              <textarea
+                                value={diagComment}
+                                onChange={(e) => setDiagComment(e.target.value)}
+                                placeholder="Saisir les remarques du diagnostic..."
+                                className="w-full h-14 p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none text-xs font-medium"
+                              />
+                            </div>
+
+                            <Button
+                              onClick={async () => {
+                                if (!diagMecaId) { toast.error("Veuillez assigner un mécanicien."); return; }
+                                if (diagComment.length < 5) { toast.error("Veuillez saisir une note de diagnostic."); return; }
+                                try {
+                                  const meca = filteredMecaniciens.find(m => m.id === diagMecaId);
+                                  await updateDoc(doc(db, 'pannes', selectedPanne.id), {
+                                    statut: 'DIAGNOSTIQUE',
+                                    mecanicienAssigne: diagMecaId,
+                                    mecanicienAssigneNom: meca?.nomComplet || 'Inconnu',
+                                    diagnostic: diagComment,
+                                    arretMachine: diagArret,
+                                    updatedAt: Timestamp.now()
+                                  });
+                                  toast.success("Diagnostic enregistré ! Panne passée à l'étape suivante.");
+                                  setSelectedPanne(prev => ({ 
+                                    ...prev, 
+                                    statut: 'DIAGNOSTIQUE', 
+                                    mecanicienAssigne: diagMecaId,
+                                    mecanicienAssigneNom: meca?.nomComplet || 'Inconnu',
+                                    diagnostic: diagComment,
+                                    arretMachine: diagArret
+                                  }));
+                                } catch (err) {
+                                  toast.error("Erreur d'affectation.");
+                                }
+                              }}
+                              className="bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[10px] py-1 px-4 h-8"
+                            >
+                              Valider le Diagnostic
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* STEP 2: Créer un BT Correctif */}
+                        {selectedPanne.statut === 'DIAGNOSTIQUE' && (
+                          <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-xl space-y-3.5">
+                            <span className="text-[10px] font-black uppercase text-indigo-800">Étape 2 : Planification du Bon de Travail (BT) Correctif</span>
+                            
+                            <div className="p-3 bg-white border border-slate-100 rounded-lg space-y-1">
+                              <p className="font-bold text-slate-700">📋 Note de Diagnostic :</p>
+                              <p className="text-slate-600">{selectedPanne.diagnostic}</p>
+                              <p className="text-[10px] text-slate-400 font-medium">Assigné à : <span className="font-bold text-slate-600">{selectedPanne.mecanicienAssigneNom}</span></p>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 pt-2">
+                              <Button
+                                disabled={isCreatingBt}
+                                onClick={async () => {
+                                  setIsCreatingBt(true);
+                                  try {
+                                    const formattedDate = new Date().toISOString().split('T')[0];
+                                    await addDoc(collection(db, 'maintenanceTasks'), {
+                                      label: `CORRECTIF • ${selectedPanne.numero} — ${selectedPanne.description}`,
+                                      enginId: selectedPanne.enginId,
+                                      enginModele: selectedPanne.enginModele || "ST2G",
+                                      mecanicienNom: selectedPanne.mecanicienAssigneNom,
+                                      mecanicienId: selectedPanne.mecanicienAssigne,
+                                      siteId: selectedPanne.siteId,
+                                      type: 'CORRECTIF',
+                                      priorite: selectedPanne.gravite === 'Critique' ? 'CRITIQUE' : selectedPanne.gravite === 'Élevée' ? 'HAUTE' : 'HAUTE',
+                                      datePlanifiee: formattedDate,
+                                      poste: 'Poste 1',
+                                      dureeEstimee: '2 h',
+                                      panneId: selectedPanne.id,
+                                      statut: 'NON_FAIT',
+                                      commentaire: '',
+                                      heuresEnginAuMoment: 0,
+                                      generationType: 'MANUEL',
+                                      deleted: false,
+                                      createdAt: Timestamp.now(),
+                                      updatedAt: Timestamp.now()
+                                    });
+
+                                    await updateDoc(doc(db, 'pannes', selectedPanne.id), {
+                                      statut: 'EN_REPARATION',
+                                      updatedAt: Timestamp.now()
+                                    });
+
+                                    toast.success("Bon de Travail (BT) Correctif créé et assigné !");
+                                    setSelectedPanne(prev => ({ ...prev, statut: 'EN_REPARATION' }));
+                                  } catch (err) {
+                                    console.error(err);
+                                    toast.error("Erreur de création du BT.");
+                                  } finally {
+                                    setIsCreatingBt(false);
+                                  }
+                                }}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-[10px] h-8"
+                              >
+                                {isCreatingBt ? 'Génération...' : '🛠️ Générer le BT Correctif'}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* STEP 3: En cours de réparation / Résolution */}
+                        {selectedPanne.statut === 'EN_REPARATION' && (
+                          <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl space-y-3.5 text-center py-6">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping inline-block mr-2" />
+                            <span className="text-[10px] font-black uppercase text-emerald-800">Intervention en cours sur le terrain</span>
+                            <p className="text-slate-600 mt-2">La panne est en cours de traitement. Elle sera automatiquement clôturée dès que la tâche corrective associée sera validée ou marquée comme réalisée par le mécanicien.</p>
+                          </div>
+                        )}
+
+                        {/* Direct manual closing button (Always available for manager) */}
+                        {selectedPanne.statut !== 'CLOS' && isModeDirecteur && (
+                          <div className="border-t border-dashed border-slate-200 pt-4 space-y-3">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-[#b8860b] block">Clôture Manuelle d'Urgence</span>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-bold text-slate-500 uppercase block">Durée d'Immobilisation (Heures) *</label>
+                                <input
+                                  type="number"
+                                  min={0.5}
+                                  max={120}
+                                  step={0.5}
+                                  id="diagImmo"
+                                  placeholder="Ex: 4"
+                                  className="w-full h-9 px-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-bold text-slate-500 uppercase block">Remède / Solution apportée *</label>
+                                <input
+                                  type="text"
+                                  id="diagSolution"
+                                  placeholder="Ex: Remplacement du flexible de direction"
+                                  className="w-full h-9 px-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            <Button
+                              onClick={async () => {
+                                const hoursInput = document.getElementById('diagImmo') as HTMLInputElement;
+                                const solutionInput = document.getElementById('diagSolution') as HTMLInputElement;
+                                if (!hoursInput || !solutionInput) return;
+                                
+                                const hours = Number(hoursInput.value);
+                                const solution = solutionInput.value;
+                                if (!hours || hours <= 0) { toast.error("Veuillez renseigner une durée d'arrêt valide."); return; }
+                                if (solution.length < 5) { toast.error("Veuillez renseigner le remède apporté."); return; }
+
+                                try {
+                                  await updateDoc(doc(db, 'pannes', selectedPanne.id), {
+                                    statut: 'CLOS',
+                                    dureeImmobilisation: hours,
+                                    solution: solution,
+                                    updatedAt: Timestamp.now()
+                                  });
+
+                                  // Remettre l'engin en service
+                                  if (selectedPanne.enginId) {
+                                    const enginRef = doc(db, 'engins', selectedPanne.enginId);
+                                    await updateDoc(enginRef, {
+                                      statut: 'actif',
+                                      etat: 'Disponible',
+                                      updatedAt: Timestamp.now()
+                                    });
+                                  }
+
+                                  toast.success("Panne résolue et engin remis en service nominal !");
+                                  setSelectedPanne(null);
+                                } catch (err) {
+                                  toast.error("Erreur de clôture.");
+                                }
+                              }}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase text-[10px] w-full"
+                            >
+                              ✅ Clôturer et remettre l'engin en service nominal
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* CASE: Panne est CLÔTURÉE */}
+                        {selectedPanne.statut === 'CLOS' && (
+                          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left space-y-2">
+                            <span className="text-[10px] font-black uppercase text-slate-500">Incident clôturé ✓</span>
+                            <p className="font-bold text-slate-800">✅ Solution appliquée :</p>
+                            <p className="text-slate-600 font-medium">{selectedPanne.solution || "Aucune note"}</p>
+                            {selectedPanne.dureeImmobilisation && (
+                              <p className="text-[10px] text-red-600 font-mono font-bold uppercase">⏱️ Durée d'Immobilisation : {selectedPanne.dureeImmobilisation} Heures</p>
+                            )}
+                          </div>
+                        )}
+
+                      </div>
+
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex flex-col justify-center items-center text-slate-400 gap-2 font-mono py-16">
+                      <AlertTriangle className="h-8 w-8 text-slate-300" />
+                      <p className="font-black text-xs uppercase tracking-wider text-slate-500">Sélectionner un incident</p>
+                      <p className="text-[10px] text-slate-400 font-medium">Cliquez sur une panne à gauche pour afficher son workflow</p>
+                    </div>
+                  )}
+                </Card>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* Modals components */}
+      <SignalerPanne
+        isOpen={isSignalerPanneOpen}
+        onClose={() => setIsSignalerPanneOpen(false)}
+      />
+
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          isOpen={!!selectedTask}
+          onClose={() => setSelectedTask(null)}
+          isModeDirecteur={isModeDirecteur}
+          onUpdateTask={handleUpdateTask}
+          onDeleteTask={handleDeleteTask}
+        />
+      )}
+
+      {isAddModalOpen && (
+        <AddTaskModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          engins={filteredEngins}
+          mecaniciens={filteredMecaniciens}
+          onCreateTask={handleCreateTask}
+        />
       )}
 
     </div>

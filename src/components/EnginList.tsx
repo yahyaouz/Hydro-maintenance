@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import { useCollection } from "@/hooks/useCollection";
 import { PageBanner } from "@/components/ui/PageBanner";
 import { CarnetSante } from "@/components/CarnetSante";
+import { SignalerPanne } from "./SignalerPanne";
 
 // Specs mappings for the three categories
 export const ENGIN_SPECS: Record<string, { godet: string; reservoir: string; transmission: string; hauteur: string }> = {
@@ -91,6 +92,8 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
   const [activeTab, setActiveTab] = React.useState<"LHD" | "VL" | "PERFORATEUR" | "CARNET">("LHD");
   const [carnetEnginId, setCarnetEnginId] = React.useState<string | null>(null);
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [isSignalerPanneOpen, setIsSignalerPanneOpen] = React.useState(false);
+  const [panneEnginPrefill, setPanneEnginPrefill] = React.useState<string | undefined>(undefined);
   const [statusFilter, setStatusFilter] = React.useState<string | null>(null);
   const [sortBy, setSortBy] = React.useState<"matricule" | "heures" | "dispo">("matricule");
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
@@ -1351,15 +1354,10 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                     Carnet de Santé →
                   </button>
                   <button
-                    disabled={isPanne}
-                    onClick={() => handleDeclarePanne(equip.id, equip.matricule)}
-                    className={`text-xs font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all duration-155 ${
-                      isPanne
-                        ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                        : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100/55 cursor-pointer shadow-sm"
-                    }`}
+                    onClick={() => { setPanneEnginPrefill(equip.id); setIsSignalerPanneOpen(true); }}
+                    className="text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100/55 cursor-pointer shadow-sm flex items-center gap-1 transition-all"
                   >
-                    {isPanne ? "En Panne" : "Déclarer Panne"}
+                    <AlertTriangle className="h-3 w-3 text-rose-600 animate-pulse" /> Signaler Panne
                   </button>
                 </div>
               </Card>
@@ -1470,15 +1468,10 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                     Carnet de Santé →
                   </button>
                   <button
-                    disabled={isPanne}
-                    onClick={() => handleDeclarePanne(equip.id, equip.matricule)}
-                    className={`text-xs font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all duration-155 ${
-                      isPanne
-                        ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                        : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100/55 cursor-pointer shadow-sm"
-                    }`}
+                    onClick={() => { setPanneEnginPrefill(equip.id); setIsSignalerPanneOpen(true); }}
+                    className="text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100/55 cursor-pointer shadow-sm flex items-center gap-1 transition-all"
                   >
-                    {isPanne ? "En Panne" : "Déclarer Panne"}
+                    <AlertTriangle className="h-3 w-3 text-rose-600 animate-pulse" /> Signaler Panne
                   </button>
                 </div>
               </Card>
@@ -1599,15 +1592,10 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                     Carnet de Santé →
                   </button>
                   <button
-                    disabled={isPanne}
-                    onClick={() => handleDeclarePanne(equip.id, equip.matricule)}
-                    className={`text-xs font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all duration-155 ${
-                      isPanne
-                        ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                        : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100/55 cursor-pointer shadow-sm"
-                    }`}
+                    onClick={() => { setPanneEnginPrefill(equip.id); setIsSignalerPanneOpen(true); }}
+                    className="text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100/55 cursor-pointer shadow-sm flex items-center gap-1 transition-all"
                   >
-                    {isPanne ? "En Panne" : "Déclarer Panne"}
+                    <AlertTriangle className="h-3 w-3 text-rose-600 animate-pulse" /> Signaler Panne
                   </button>
                 </div>
               </Card>
@@ -2144,6 +2132,12 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
           </div>
         </div>
       )}
+
+      <SignalerPanne 
+        isOpen={isSignalerPanneOpen} 
+        onClose={() => setIsSignalerPanneOpen(false)}
+        enginIdPrefill={panneEnginPrefill}
+      />
 
     </div>
   );
