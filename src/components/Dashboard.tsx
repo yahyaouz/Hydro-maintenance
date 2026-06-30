@@ -50,7 +50,11 @@ import {
   Line,
   Cell,
   PieChart,
-  Pie
+  Pie,
+  Legend,
+  AreaChart,
+  Area,
+  ComposedChart
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -173,6 +177,22 @@ export function Dashboard() {
   const { activeSite, density } = useAuthStore();
   const isCompact = density === 'compact';
   const [isSignalerPanneOpen, setIsSignalerPanneOpen] = React.useState(false);
+
+  const getNormalizedStatus = React.useCallback((e: any) => {
+    if (e.status) {
+      const s = e.status.toUpperCase();
+      if (s === 'DISPONIBLE' || s === 'OPÉRATIONNEL' || s === 'OPERATIONNEL') return 'DISPONIBLE';
+      if (s === 'EN_MAINTENANCE' || s === 'MAINTENANCE') return 'EN_MAINTENANCE';
+      if (s === 'EN_PANNE' || s === 'HORS SERVICE' || s === 'HORS_SERVICE' || s === 'ARRÊT' || s === 'ARRET') return 'EN_PANNE';
+      return s;
+    }
+    if (e.etat) {
+      if (e.etat === "Opérationnel") return "DISPONIBLE";
+      if (e.etat === "En maintenance") return "EN_MAINTENANCE";
+      if (e.etat === "Hors service" || e.etat === "En panne") return "EN_PANNE";
+    }
+    return "DISPONIBLE"; // fallback
+  }, []);
   
   // Real scalable Firestore collection subscriptions
   const { data: enginsLive, loading: enginsLoading } = useCollection<any>('engins');
@@ -211,18 +231,19 @@ export function Dashboard() {
   const avgDispo = React.useMemo(() => {
     if (filteredEngins.length === 0) return 0;
     const totalDispo = filteredEngins.reduce((acc, curr) => {
-      const val = Number(curr.dispo !== undefined ? curr.dispo : (curr.status === 'DISPONIBLE' ? 100 : 0));
+      const status = getNormalizedStatus(curr);
+      const val = Number(curr.dispo !== undefined ? curr.dispo : (status === 'DISPONIBLE' ? 100 : status === 'EN_MAINTENANCE' ? 50 : 0));
       return acc + val;
     }, 0);
     return Math.round(totalDispo / filteredEngins.length);
-  }, [filteredEngins]);
+  }, [filteredEngins, getNormalizedStatus]);
 
   // Operational cost estimation based on standard mine indicators
   const coutIndispo24H = React.useMemo(() => {
-    const arrEngins = filteredEngins.filter(e => e.status === 'EN_PANNE').length;
-    const maintEngins = filteredEngins.filter(e => e.status === 'EN_MAINTENANCE').length;
+    const arrEngins = filteredEngins.filter(e => getNormalizedStatus(e) === 'EN_PANNE').length;
+    const maintEngins = filteredEngins.filter(e => getNormalizedStatus(e) === 'EN_MAINTENANCE').length;
     return (arrEngins * 450000 + maintEngins * 200000) * 24;
-  }, [filteredEngins]);
+  }, [filteredEngins, getNormalizedStatus]);
 
   // Backlog BT Critique
   const backlogCritical = React.useMemo(() => {
@@ -548,8 +569,8 @@ export function Dashboard() {
           </div>
 
           <div className="p-1.5 bg-slate-50 border border-slate-100 rounded text-[9px] font-mono text-slate-600 flex items-center justify-between">
-            <span className="text-red-600 font-bold">🔴 {filteredEngins.filter(e => e.status === 'EN_PANNE').length} Arrêts</span>
-            <span className="text-amber-600 font-bold">🟠 {filteredEngins.filter(e => e.status === 'EN_MAINTENANCE').length} Maint.</span>
+            <span className="text-red-600 font-bold">🔴 {filteredEngins.filter(e => getNormalizedStatus(e) === 'EN_PANNE').length} Arrêts</span>
+            <span className="text-amber-600 font-bold">🟠 {filteredEngins.filter(e => getNormalizedStatus(e) === 'EN_MAINTENANCE').length} Maint.</span>
           </div>
         </motion.div>
 
@@ -645,12 +666,12 @@ export function Dashboard() {
           </span>
           
           <div className="flex items-center gap-6 text-[11px] font-mono text-slate-700 py-0.5">
-            {filteredEngins.filter(e => e.status === 'EN_PANNE').length === 0 ? (
+            {filteredEngins.filter(e => getNormalizedStatus(e) === 'EN_PANNE').length === 0 ? (
               <span className="text-emerald-600 font-bold shrink-0 text-xs">
                 ✓ Aucune panne active signalée.
               </span>
             ) : (
-              filteredEngins.filter(e => e.status === 'EN_PANNE').map(e => (
+              filteredEngins.filter(e => getNormalizedStatus(e) === 'EN_PANNE').map(e => (
                 <span key={e.id} className="flex items-center gap-1 bg-red-50 border border-red-100 rounded px-2 py-0.5 text-xs text-red-650 font-extrabold shrink-0">
                   ⚠️ EN_PANNE: {e.code || e.id} ({e.siteId || 'MI'}) - Diagnostic requis
                 </span>
@@ -671,383 +692,672 @@ export function Dashboard() {
         </div>
       </motion.div>
 
-      {/* A. Dynamic Core Analytical Grid */}
-      <div className="grid gap-4 grid-cols-1 xl:grid-cols-3">
-        
-        {/* Horizontal PM Compliance Bar Chart */}
-        <motion.div variants={itemVariants} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm xl:col-span-2 overflow-hidden space-y-4">
-          <div className="border-b border-slate-100 pb-3 flex justify-between items-center">
-            <div>
-              <h4 className="text-xs font-mono font-black uppercase text-slate-800 tracking-wide">COMPLIANCE PM PAR CHANTIER</h4>
-              <p className="text-[10px] text-slate-500 mt-0.5 leading-none">Comparatif réel de la discipline de maintenance préventive</p>
-            </div>
-            <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[8.5px] font-mono">RÉEL FIRESTORE</Badge>
+      {activeSite === "TOUS" ? (
+        // ==========================================
+        // SECTION GLOBAL CORPORATE (ALL SITES VIEW)
+        // ==========================================
+        <>
+          {/* A. Dynamic Core Analytical Grid */}
+          <div className="grid gap-4 grid-cols-1 xl:grid-cols-3">
+            {/* Horizontal PM Compliance Bar Chart */}
+            <motion.div variants={itemVariants} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm xl:col-span-2 overflow-hidden space-y-4">
+              <div className="border-b border-slate-100 pb-3 flex justify-between items-center">
+                <div>
+                  <h4 className="text-xs font-mono font-black uppercase text-slate-800 tracking-wide">COMPLIANCE PM PAR CHANTIER</h4>
+                  <p className="text-[10px] text-slate-500 mt-0.5 leading-none">Comparatif réel de la discipline de maintenance préventive</p>
+                </div>
+                <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[8.5px] font-mono">RÉEL FIRESTORE</Badge>
+              </div>
+
+              <div className="h-[240px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={complianceParSite}
+                    layout="vertical"
+                    margin={{ top: 10, right: 30, left: 10, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" horizontal={true} vertical={false} />
+                    <XAxis type="number" domain={[0, 100]} stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis dataKey="code" type="category" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                    <RechartsTooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload as ComplianceSite;
+                          return (
+                            <div className="bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-white font-sans text-xs shadow-lg space-y-1">
+                              <p className="font-extrabold uppercase text-amber-400">{data.code}</p>
+                              <p>Taux de Compliance : <span className="font-mono font-black text-[#ffd700]">{data.complianceScore}%</span></p>
+                              <p className="text-slate-400">PM réalisés à temps : <span className="font-mono font-bold text-emerald-400">{data.faitesATemps}</span> / <span className="font-mono font-bold">{data.totalPM}</span></p>
+                              <p className="text-slate-400">PM en retard critique : <span className="font-mono font-bold text-red-400">{data.enRetardCritique}</span></p>
+                              <p className="text-slate-400">Dette OT Critique : <span className="font-mono font-bold">{data.backlogCritique}</span></p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="complianceScore" radius={[0, 4, 4, 0]} barSize={16}>
+                      {complianceParSite.map((entry, index) => {
+                        const barColor = entry.risk === 'CRITIQUE' ? '#DC2626' : entry.risk === 'VIGILANCE' ? '#D97706' : '#059669';
+                        return <Cell key={`cell-${index}`} fill={barColor} />;
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
+
+            {/* Real-time calculated reliability dashboard metrics */}
+            <motion.div variants={itemVariants} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+              <div className="border-b border-slate-100 pb-3">
+                <h4 className="text-xs font-mono font-black uppercase text-slate-800">MÉTRIQUES DE FIABILITÉ RÉELLES</h4>
+                <p className="text-[10px] text-slate-500 mt-0.5 leading-none">Diagnostic global temps-réel issu des opérations closes</p>
+              </div>
+              
+              <div className="my-4 space-y-4 font-mono text-[11px]">
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center text-slate-700 font-bold">
+                    <span>MTBF FIRESTORE</span>
+                    <span className={fiabiliteMetrics.mtbf ? "text-emerald-600" : "text-slate-450"}>
+                      {fiabiliteMetrics.mtbf ? `${fiabiliteMetrics.mtbf} h` : "DONNÉES INSUFFISANTES"}
+                    </span>
+                  </div>
+                  <Progress value={fiabiliteMetrics.mtbf ? Math.min(100, (Number(fiabiliteMetrics.mtbf) / 150) * 100) : 0} className="h-1 bg-slate-100 animate-pulse" />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center text-slate-700 font-bold">
+                    <span>MTTR ESTIMÉ</span>
+                    <span className={fiabiliteMetrics.mttr ? "text-amber-600" : "text-slate-450"}>
+                      {fiabiliteMetrics.mttr ? `${fiabiliteMetrics.mttr} h` : "EN COURS D'ACQUISITION"}
+                    </span>
+                  </div>
+                  <Progress value={fiabiliteMetrics.mttr ? Math.min(100, (Number(fiabiliteMetrics.mttr) / 6) * 100) : 0} className="h-1 bg-slate-100" />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center text-slate-700 font-bold">
+                    <span>INTÉGRITÉ DU SYSTÈME</span>
+                    <span className="text-emerald-600 font-black">100% OPÉRATIONNEL</span>
+                  </div>
+                  <Progress value={100} className="h-1 bg-slate-100" />
+                </div>
+              </div>
+
+              <p className="text-[9px] italic text-slate-550 leading-tight">
+                *Les terminaux de fond d'exploitation répliquent chronologiquement via notre passerelle sans perte d'état. Les métriques MTBF/MTTR s'actualisent dynamiquement lors de la clôture des bons d'intervention.
+              </p>
+            </motion.div>
           </div>
 
-          <div className="h-[240px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={complianceParSite}
-                layout="vertical"
-                margin={{ top: 10, right: 30, left: 10, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" horizontal={true} vertical={false} />
-                <XAxis type="number" domain={[0, 100]} stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis dataKey="code" type="category" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                <RechartsTooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload as ComplianceSite;
+          {/* 📋 CONTRÔLE DES PERFORMANCES FLOTTE & ALERTES ACTIVES */}
+          <motion.div variants={itemVariants} className="space-y-3">
+            <h3 className={`font-black text-slate-500 uppercase tracking-widest font-mono flex items-center gap-1.5 ${isCompact ? "text-[10px]" : "text-xs"}`}>
+              <span>📋</span> CONTRÔLE DES PERFORMANCES FLOTTE & ALERTES ACTIVES
+            </h3>
+
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+              {/* Card 1: MTBF & MTTR */}
+              <Card className="bg-white border-slate-200 rounded-2xl shadow-sm flex flex-col justify-between p-4">
+                <CardHeader className="p-0 pb-2">
+                  <span className="text-[10px] font-mono font-extrabold text-blue-600 uppercase flex items-center gap-1">
+                    ⚙️ FIABILITÉ OPÉRATIONNELLE DU PARC
+                  </span>
+                </CardHeader>
+                <CardContent className="p-0 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-slate-50 p-2 rounded border border-slate-100 text-center">
+                      <span className="text-[9px] text-slate-500 font-mono block">MTBF MOYEN</span>
+                      <span className="text-base font-black font-mono text-emerald-600">
+                        {fiabiliteMetrics.mtbf ? `${fiabiliteMetrics.mtbf} h` : "—"}
+                      </span>
+                      <span className="text-[8px] text-slate-400 block mt-0.5">Heures de marche</span>
+                    </div>
+                    <div className="bg-slate-50 p-2 rounded border border-slate-100 text-center">
+                      <span className="text-[9px] text-slate-500 font-mono block">MTTR MOYEN</span>
+                      <span className="text-base font-black font-mono text-amber-600">
+                        {fiabiliteMetrics.mttr ? `${fiabiliteMetrics.mttr} h` : "—"}
+                      </span>
+                      <span className="text-[8px] text-slate-400 block mt-0.5">Temps moyen rés.</span>
+                    </div>
+                  </div>
+                  <div className="text-[8.5px] font-mono leading-tight text-slate-550 bg-slate-50 p-2 rounded border border-slate-100">
+                    <span className="font-bold text-slate-700">Source :</span> Calculé sur {fiabiliteMetrics.totalClosed} ordre(s) de travail clos.
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Card 2: Alerte Engins Directs */}
+              <Card className="bg-white border-slate-200 rounded-2xl shadow-sm flex flex-col justify-between p-4">
+                <CardHeader className="p-0 pb-2">
+                  <span className="text-[10px] font-mono font-extrabold text-red-600 uppercase flex items-center gap-1">
+                    ⚠️ ALERTES ENGINS ACTIFS (ARRÊTÉS)
+                  </span>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className={`space-y-1 overflow-y-auto max-h-[120px]`}>
+                    {filteredEngins.filter(e => getNormalizedStatus(e) === 'EN_PANNE' || getNormalizedStatus(e) === 'EN_MAINTENANCE' || getNormalizedStatus(e) === 'DÉGRADÉ').length === 0 ? (
+                      <div className="text-[10px] text-emerald-600 font-mono py-2 text-center">
+                        ✓ Aucun engin en panne ou déclassé.
+                      </div>
+                    ) : (
+                      filteredEngins.filter(e => getNormalizedStatus(e) === 'EN_PANNE' || getNormalizedStatus(e) === 'EN_MAINTENANCE' || getNormalizedStatus(e) === 'DÉGRADÉ').slice(0, 3).map(e => {
+                        const s = getNormalizedStatus(e);
+                        const statusColors = {
+                          EN_PANNE: "bg-red-50 text-red-600 border-red-100",
+                          EN_MAINTENANCE: "bg-amber-50 text-amber-600 border-amber-100",
+                          DÉGRADÉ: "bg-amber-50 text-amber-705 border-amber-100"
+                        };
+                        return (
+                          <div key={e.id} className="p-1.5 bg-slate-50 border border-slate-100 rounded flex items-center justify-between gap-1 text-[9px] font-mono">
+                            <span className="font-extrabold text-slate-800">{e.code || e.id}</span>
+                            <span className="text-slate-400">({e.siteId})</span>
+                            <span className={`px-1 rounded border text-[8px] font-black uppercase ${statusColors[s] || 'bg-slate-100 text-slate-500'}`}>
+                              {s === 'EN_PANNE' ? '🔴 ARRÊT' : s === 'EN_MAINTENANCE' ? '🟠 MAINT' : '🟡 DEGRADÉ'}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Card 3: Backlog validation Responsable & Ratio */}
+              <Card className="bg-white border-slate-200 rounded-2xl shadow-sm flex flex-col justify-between p-4">
+                <CardHeader className="p-0 pb-1">
+                  <span className="text-[10px] font-mono font-extrabold text-teal-600 uppercase flex items-center gap-1">
+                    📂 VALIDATIONS ET DISCIPLINE DU MOIS
+                  </span>
+                </CardHeader>
+                <CardContent className="p-0 space-y-1.5 font-mono text-[9.5px]">
+                  <div className="flex items-center justify-between border-b pb-1 border-slate-100">
+                    <span className="text-slate-500">Attente validation (+48h) :</span>
+                    <span className={`font-bold ${tachesEnAttenteValidation.length > 0 ? "text-red-600 animate-pulse" : "text-emerald-600"}`}>
+                      {tachesEnAttenteValidation.length} tâche{tachesEnAttenteValidation.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-b pb-1 border-slate-100">
+                    <span className="text-slate-500">Ratio Préventif / Correctif :</span>
+                    <span className="text-slate-900 font-bold">
+                      {ratioPreventifCorrectif.preventifPct}% / {ratioPreventifCorrectif.correctifPct}%
+                    </span>
+                  </div>
+                  <div className="text-[8px] text-slate-400 leading-tight">
+                    Calculé sur {ratioPreventifCorrectif.total} intervention{ratioPreventifCorrectif.total > 1 ? 's' : ''} closes ce mois-ci.
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </motion.div>
+
+          {/* CORE SUPERVISION CHARTS (Corporate) */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            {/* DISPONIBILITE ET ANALYTICS TRENDS */}
+            <Card className="bg-white border-slate-200 lg:col-span-4 rounded-2xl shadow-sm">
+              <CardHeader className="border-b border-slate-100 pb-3">
+                <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">Progression Disponibilité & Discipline Préventive</CardTitle>
+                <CardDescription className="text-slate-500 text-xs">Calcul exact sur les 7 derniers jours sur {activeSite}</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4 pl-2">
+                <div className="h-[285px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={tendance7Jours}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.15)" vertical={false} />
+                      <XAxis dataKey="day" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} domain={[0, 100]} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: "#1e293b", borderColor: "#334155" }} labelStyle={{ color: "#fff" }} />
+                      <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
+                      <Line 
+                        type="monotone" 
+                        dataKey="taux" 
+                        stroke="#D4A017" 
+                        strokeWidth={3} 
+                        name="Réalisation (%)" 
+                        dot={{ r: 4 }} 
+                        connectNulls={false}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="prev" 
+                        stroke="#10b981" 
+                        strokeWidth={2} 
+                        name="Compliance PM (%)" 
+                        strokeDasharray="5 5" 
+                        connectNulls={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* FLEET REPARTITION PIE GRAPH */}
+            <Card className="bg-white border-slate-200 lg:col-span-3 rounded-2xl shadow-sm">
+              <CardHeader className="border-b border-slate-100 pb-3">
+                <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">Répartition Statuts Parc ({filteredEngins.length} Engins)</CardTitle>
+                <CardDescription className="text-slate-500 text-xs">Diagnostic de l'état mécanique global</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="h-[180px] w-full flex justify-center items-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "Disponible", value: filteredEngins.filter(e => getNormalizedStatus(e) === 'DISPONIBLE').length || 0, color: "#10b981" },
+                          { name: "Maintenance", value: filteredEngins.filter(e => getNormalizedStatus(e) === 'EN_MAINTENANCE').length || 0, color: "#f59e0b" },
+                          { name: "En Panne", value: filteredEngins.filter(e => getNormalizedStatus(e) === 'EN_PANNE').length || 0, color: "#ef4444" },
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={70}
+                        paddingAngle={3}
+                        dataKey="value"
+                      >
+                        {[
+                          { color: "#10b981" },
+                          { color: "#f59e0b" },
+                          { color: "#ef4444" },
+                        ].map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip contentStyle={{ backgroundColor: "#1e293b", borderColor: "#334155" }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+                  <div className="p-2 bg-slate-50 border border-slate-100 rounded-xl">
+                    <p className="text-[9.5px] text-emerald-600 font-bold uppercase tracking-wider font-mono">Dispo</p>
+                    <p className="text-base font-black text-slate-900 font-mono mt-0.5">{filteredEngins.filter(e => getNormalizedStatus(e) === 'DISPONIBLE').length}</p>
+                  </div>
+                  <div className="p-2 bg-slate-50 border border-slate-100 rounded-xl">
+                    <p className="text-[9.5px] text-amber-600 font-bold uppercase tracking-wider font-mono">Maint</p>
+                    <p className="text-base font-black text-slate-900 font-mono mt-0.5">{filteredEngins.filter(e => getNormalizedStatus(e) === 'EN_MAINTENANCE').length}</p>
+                  </div>
+                  <div className="p-2 bg-slate-50 border border-slate-100 rounded-xl text-red-500">
+                    <p className="text-[9.5px] text-red-600 font-bold uppercase tracking-wider font-mono">Panne</p>
+                    <p className="text-base font-black text-slate-900 font-mono mt-0.5">{filteredEngins.filter(e => getNormalizedStatus(e) === 'EN_PANNE').length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* NEW GRAPH: MULTI-SITE FLEET STATUS COMPARE (GOD LEVEL Stacked Bar) */}
+          <motion.div variants={itemVariants}>
+            <Card className="bg-white border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+              <CardHeader className="border-b border-slate-100 pb-3 flex justify-between items-center">
+                <div>
+                  <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">RÉPARTITION CAPACITÉ FLOTTE PAR SITE</CardTitle>
+                  <CardDescription className="text-slate-500 text-xs">Comparaison directe du statut opérationnel des machines par exploitation</CardDescription>
+                </div>
+                <Badge className="bg-blue-50 text-blue-700 border border-blue-100 text-[8.5px] font-mono uppercase">PAR CHANTIER</Badge>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="h-[280px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={SITES_LIST.map(siteCode => {
+                        const siteEngins = (enginsLive || []).filter(e => e.siteId === siteCode);
+                        return {
+                          site: siteCode,
+                          Disponible: siteEngins.filter(e => getNormalizedStatus(e) === 'DISPONIBLE').length,
+                          Maintenance: siteEngins.filter(e => getNormalizedStatus(e) === 'EN_MAINTENANCE').length,
+                          En_Panne: siteEngins.filter(e => getNormalizedStatus(e) === 'EN_PANNE').length,
+                        };
+                      })}
+                      margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
+                      <XAxis dataKey="site" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: "#1e293b", borderColor: "#334155" }} labelStyle={{ color: "#fff" }} />
+                      <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
+                      <Bar dataKey="Disponible" stackId="a" fill="#10b981" maxBarSize={30} />
+                      <Bar dataKey="Maintenance" stackId="a" fill="#f59e0b" maxBarSize={30} />
+                      <Bar dataKey="En_Panne" stackId="a" fill="#ef4444" maxBarSize={30} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* HEATMAP & ATELIER CAPACITY */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* DISPONIBILITE TACTICAL HEATMAP GRID */}
+            <Card className="bg-white border-slate-200 rounded-2xl relative overflow-hidden shadow-sm">
+              <CardHeader className="border-b border-slate-100 pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">Heatmap de Disponibilité d'Engins</CardTitle>
+                    <CardDescription className="text-slate-500 text-xs">Cliquez sur un engin pour tester le cadenassage</CardDescription>
+                  </div>
+                  <Badge className="bg-cyan-50 text-cyan-700 text-[8.5px] font-mono border border-cyan-100 uppercase">TACTIQUE</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {filteredEngins.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500 text-xs uppercase font-mono">Aucun engin disponible sur {activeSite}</div>
+                ) : (
+                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+                    {filteredEngins.map(e => {
+                      const val = Number(e.dispo !== undefined ? e.dispo : (getNormalizedStatus(e) === 'DISPONIBLE' ? 100 : 0));
+                      let cellBg = "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-[0_0_8px_rgba(16,185,129,0.02)]";
+                      const s = getNormalizedStatus(e);
+                      if (s === 'EN_PANNE') cellBg = "bg-red-50 border-red-200 text-red-650 shadow-[0_0_8px_rgba(239,68,68,0.02)]";
+                      if (s === 'EN_MAINTENANCE') cellBg = "bg-amber-50 border-amber-200 text-amber-700 shadow-[0_0_8px_rgba(245,158,11,0.02)]";
+                      
                       return (
-                        <div className="bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-white font-sans text-xs shadow-lg space-y-1">
-                          <p className="font-extrabold uppercase text-amber-400">{data.code}</p>
-                          <p>Taux de Compliance : <span className="font-mono font-black text-[#ffd700]">{data.complianceScore}%</span></p>
-                          <p className="text-slate-400">PM réalisés à temps : <span className="font-mono font-bold text-emerald-400">{data.faitesATemps}</span> / <span className="font-mono font-bold">{data.totalPM}</span></p>
-                          <p className="text-slate-400">PM en retard critique : <span className="font-mono font-bold text-red-400">{data.enRetardCritique}</span></p>
-                          <p className="text-slate-400">Dette OT Critique : <span className="font-mono font-bold">{data.backlogCritique}</span></p>
+                        <div 
+                          key={e.id}
+                          className={`h-14 p-2.5 rounded-xl border flex flex-col justify-between cursor-pointer transition-all hover:scale-105 active:scale-95 select-none ${cellBg}`}
+                          onClick={() => {
+                            const message = `Engin [${e.code || e.id}] - Site ${e.siteId || 'SMI'} : Actuellement ${s} à ${val}% de disponibilité estimée par l'atelier.`;
+                            toast.info(message, { duration: 5000 });
+                          }}
+                        >
+                          <span className="text-[10.5px] font-black font-mono tracking-wider truncate leading-tight">{e.code || e.id}</span>
+                          <span className="text-[9.5px] font-black text-slate-500 uppercase leading-none">{val}%</span>
                         </div>
                       );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="complianceScore" radius={[0, 4, 4, 0]} barSize={16}>
-                  {complianceParSite.map((entry, index) => {
-                    const barColor = entry.risk === 'CRITIQUE' ? '#DC2626' : entry.risk === 'VIGILANCE' ? '#D97706' : '#059669';
-                    return <Cell key={`cell-${index}`} fill={barColor} />;
-                  })}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-
-        {/* Real-time calculated reliability dashboard metrics */}
-        <motion.div variants={itemVariants} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
-          <div className="border-b border-slate-100 pb-3">
-            <h4 className="text-xs font-mono font-black uppercase text-slate-800">MÉTRIQUES DE FIABILITÉ RÉELLES</h4>
-            <p className="text-[10px] text-slate-500 mt-0.5 leading-none">Diagnostic global temps-réel issu des opérations closes</p>
-          </div>
-          
-          <div className="my-4 space-y-4 font-mono text-[11px]">
-            <div className="space-y-1">
-              <div className="flex justify-between items-center text-slate-700 font-bold">
-                <span>MTBF FIRESTORE</span>
-                <span className={fiabiliteMetrics.mtbf ? "text-emerald-600" : "text-slate-450"}>
-                  {fiabiliteMetrics.mtbf ? `${fiabiliteMetrics.mtbf} h` : "DONNÉES INSUFFISANTES"}
-                </span>
-              </div>
-              <Progress value={fiabiliteMetrics.mtbf ? Math.min(100, (Number(fiabiliteMetrics.mtbf) / 150) * 100) : 0} className="h-1 bg-slate-100 animate-pulse" />
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex justify-between items-center text-slate-700 font-bold">
-                <span>MTTR ESTIMÉ</span>
-                <span className={fiabiliteMetrics.mttr ? "text-amber-600" : "text-slate-450"}>
-                  {fiabiliteMetrics.mttr ? `${fiabiliteMetrics.mttr} h` : "EN COURS D'ACQUISITION"}
-                </span>
-              </div>
-              <Progress value={fiabiliteMetrics.mttr ? Math.min(100, (Number(fiabiliteMetrics.mttr) / 6) * 100) : 0} className="h-1 bg-slate-100" />
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex justify-between items-center text-slate-700 font-bold">
-                <span>INTÉGRITÉ DU SYSTÈME</span>
-                <span className="text-emerald-600 font-black">100% OPÉRATIONNEL</span>
-              </div>
-              <Progress value={100} className="h-1 bg-slate-100" />
-            </div>
-          </div>
-
-          <p className="text-[9px] italic text-slate-550 leading-tight">
-            *Les terminaux de fond d'exploitation répliquent chronologiquement via notre passerelle sans perte d'état. Les métriques MTBF/MTTR s'actualisent dynamiquement lors de la clôture des bons d'intervention.
-          </p>
-        </motion.div>
-      </div>
-
-      {/* 📋 CONTRÔLE DES PERFORMANCES FLOTTE & ALERTES ACTIVES */}
-      <motion.div variants={itemVariants} className="space-y-3">
-        <h3 className={`font-black text-slate-500 uppercase tracking-widest font-mono flex items-center gap-1.5 ${isCompact ? "text-[10px]" : "text-xs"}`}>
-          <span>📋</span> CONTRÔLE DES PERFORMANCES FLOTTE & ALERTES ACTIVES
-        </h3>
-
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-          {/* Card 1: MTBF & MTTR */}
-          <Card className="bg-white border-slate-200 rounded-2xl shadow-sm flex flex-col justify-between p-4">
-            <CardHeader className="p-0 pb-2">
-              <span className="text-[10px] font-mono font-extrabold text-blue-600 uppercase flex items-center gap-1">
-                ⚙️ FIABILITÉ OPÉRATIONNELLE DU PARC
-              </span>
-            </CardHeader>
-            <CardContent className="p-0 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-slate-50 p-2 rounded border border-slate-100 text-center">
-                  <span className="text-[9px] text-slate-500 font-mono block">MTBF MOYEN</span>
-                  <span className="text-base font-black font-mono text-emerald-600">
-                    {fiabiliteMetrics.mtbf ? `${fiabiliteMetrics.mtbf} h` : "—"}
-                  </span>
-                  <span className="text-[8px] text-slate-400 block mt-0.5">Heures de marche</span>
-                </div>
-                <div className="bg-slate-50 p-2 rounded border border-slate-100 text-center">
-                  <span className="text-[9px] text-slate-500 font-mono block">MTTR MOYEN</span>
-                  <span className="text-base font-black font-mono text-amber-600">
-                    {fiabiliteMetrics.mttr ? `${fiabiliteMetrics.mttr} h` : "—"}
-                  </span>
-                  <span className="text-[8px] text-slate-400 block mt-0.5">Temps moyen rés.</span>
-                </div>
-              </div>
-              <div className="text-[8.5px] font-mono leading-tight text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
-                <span className="font-bold text-slate-700">Source :</span> Calculé sur {fiabiliteMetrics.totalClosed} ordre(s) de travail clos.
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Card 2: Alerte Engins Directs */}
-          <Card className="bg-white border-slate-200 rounded-2xl shadow-sm flex flex-col justify-between p-4">
-            <CardHeader className="p-0 pb-2">
-              <span className="text-[10px] font-mono font-extrabold text-red-600 uppercase flex items-center gap-1">
-                ⚠️ ALERTES ENGINS ACTIFS (ARRÊTÉS)
-              </span>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className={`space-y-1 overflow-y-auto max-h-[120px]`}>
-                {filteredEngins.filter(e => e.status === 'EN_PANNE' || e.status === 'EN_MAINTENANCE' || e.status === 'DÉGRADÉ').length === 0 ? (
-                  <div className="text-[10px] text-emerald-600 font-mono py-2 text-center">
-                    ✓ Aucun engin en panne ou déclassé.
+                    })}
                   </div>
-                ) : (
-                  filteredEngins.filter(e => e.status === 'EN_PANNE' || e.status === 'EN_MAINTENANCE' || e.status === 'DÉGRADÉ').slice(0, 3).map(e => {
-                    const statusColors = {
-                      EN_PANNE: "bg-red-50 text-red-600 border-red-100",
-                      EN_MAINTENANCE: "bg-amber-50 text-amber-600 border-amber-100",
-                      DÉGRADÉ: "bg-amber-50 text-amber-705 border-amber-100"
-                    };
-                    return (
-                      <div key={e.id} className="p-1.5 bg-slate-50 border border-slate-100 rounded flex items-center justify-between gap-1 text-[9px] font-mono">
-                        <span className="font-extrabold text-slate-800">{e.code || e.id}</span>
-                        <span className="text-slate-400">({e.siteId})</span>
-                        <span className={`px-1 rounded border text-[8px] font-black uppercase ${statusColors[e.status] || 'bg-slate-100 text-slate-500'}`}>
-                          {e.status === 'EN_PANNE' ? '🔴 ARRÊT' : e.status === 'EN_MAINTENANCE' ? '🟠 MAINT' : '🟡 DEGRADÉ'}
-                        </span>
-                      </div>
-                    );
-                  })
                 )}
-              </div>
-            </CardContent>
-          </Card>
+                <div className="flex gap-4 mt-4 text-[9.5px] font-black uppercase text-slate-500 font-mono flex-wrap">
+                  <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-emerald-500"></span> ACTIF (85%-100%)</span>
+                  <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-amber-500"></span> CORRECTION (60%-84%)</span>
+                  <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-red-500"></span> EN ARRET (0%-59%)</span>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Card 3: Backlog validation Responsable & Ratio */}
-          <Card className="bg-white border-slate-200 rounded-2xl shadow-sm flex flex-col justify-between p-4">
-            <CardHeader className="p-0 pb-1">
-              <span className="text-[10px] font-mono font-extrabold text-teal-600 uppercase flex items-center gap-1">
-                📂 VALIDATIONS ET DISCIPLINE DU MOIS
-              </span>
-            </CardHeader>
-            <CardContent className="p-0 space-y-1.5 font-mono text-[9.5px]">
-              <div className="flex items-center justify-between border-b pb-1 border-slate-100">
-                <span className="text-slate-500">Attente validation (+48h) :</span>
-                <span className={`font-bold ${tachesEnAttenteValidation.length > 0 ? "text-red-600 animate-pulse" : "text-emerald-600"}`}>
-                  {tachesEnAttenteValidation.length} tâche{tachesEnAttenteValidation.length > 1 ? 's' : ''}
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-b pb-1 border-slate-100">
-                <span className="text-slate-500">Ratio Préventif / Correctif :</span>
-                <span className="text-slate-900 font-bold">
-                  {ratioPreventifCorrectif.preventifPct}% / {ratioPreventifCorrectif.correctifPct}%
-                </span>
-              </div>
-              <div className="text-[8px] text-slate-400 leading-tight">
-                Calculé sur {ratioPreventifCorrectif.total} intervention{ratioPreventifCorrectif.total > 1 ? 's' : ''} closes ce mois-ci.
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </motion.div>
-
-      {/* CORE SUPERVISION CHARTS */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        
-        {/* DISPONIBILITE ET ANALYTICS TRENDS */}
-        <Card className="bg-white border-slate-200 lg:col-span-4 rounded-2xl shadow-sm">
-          <CardHeader className="border-b border-slate-100 pb-3">
-            <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">Progression Disponibilité & Discipline Préventive</CardTitle>
-            <CardDescription className="text-slate-500 text-xs">Calcul exact sur les 7 derniers jours sur {activeSite}</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-4 pl-2">
-            <div className="h-[285px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={tendance7Jours}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.15)" vertical={false} />
-                  <XAxis dataKey="day" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} domain={[0, 100]} />
-                  <RechartsTooltip contentStyle={{ backgroundColor: "#1e293b", borderColor: "#334155" }} labelStyle={{ color: "#fff" }} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="taux" 
-                    stroke="#D4A017" 
-                    strokeWidth={3} 
-                    name="Taux de Réalisation (%)" 
-                    dot={{ r: 4 }} 
-                    connectNulls={false}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="prev" 
-                    stroke="#10b981" 
-                    strokeWidth={2} 
-                    name="Compliance PM (%)" 
-                    strokeDasharray="5 5" 
-                    connectNulls={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* FLEET REPARTITION PIE GRAPH */}
-        <Card className="bg-white border-slate-200 lg:col-span-3 rounded-2xl shadow-sm">
-          <CardHeader className="border-b border-slate-100 pb-3">
-            <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">Répartition Statuts Parc ({filteredEngins.length} Engins)</CardTitle>
-            <CardDescription className="text-slate-500 text-xs">Diagnostic de l'état mécanique sur {activeSite}</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="h-[180px] w-full flex justify-center items-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: "Disponible", value: filteredEngins.filter(e => e.status === 'DISPONIBLE').length || 0, color: "#10b981" },
-                      { name: "Maintenance", value: filteredEngins.filter(e => e.status === 'EN_MAINTENANCE').length || 0, color: "#f59e0b" },
-                      { name: "En Panne", value: filteredEngins.filter(e => e.status === 'EN_PANNE').length || 0, color: "#ef4444" },
-                    ]}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {[
-                      { color: "#10b981" },
-                      { color: "#f59e0b" },
-                      { color: "#ef4444" },
-                    ].map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip contentStyle={{ backgroundColor: "#1e293b", borderColor: "#334155" }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            
-            <div className="grid grid-cols-3 gap-2 mt-4 text-center">
-              <div className="p-2 bg-slate-50 border border-slate-100 rounded-xl">
-                <p className="text-[9.5px] text-emerald-600 font-bold uppercase tracking-wider font-mono">Dispo</p>
-                <p className="text-base font-black text-slate-900 font-mono mt-0.5">{filteredEngins.filter(e => e.status === 'DISPONIBLE').length}</p>
-              </div>
-              <div className="p-2 bg-slate-50 border border-slate-100 rounded-xl">
-                <p className="text-[9.5px] text-amber-600 font-bold uppercase tracking-wider font-mono">Maint</p>
-                <p className="text-base font-black text-slate-900 font-mono mt-0.5">{filteredEngins.filter(e => e.status === 'EN_MAINTENANCE').length}</p>
-              </div>
-              <div className="p-2 bg-slate-50 border border-slate-100 rounded-xl text-red-500">
-                <p className="text-[9.5px] text-red-600 font-bold uppercase tracking-wider font-mono">Panne</p>
-                <p className="text-base font-black text-slate-900 font-mono mt-0.5">{filteredEngins.filter(e => e.status === 'EN_PANNE').length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-      </div>
-
-      {/* HEATMAP OF DISPONIBILITÉ */}
-      <div className="grid gap-4 md:grid-cols-2">
-        
-        {/* DISPONIBILITE TACTICAL HEATMAP GRID */}
-        <Card className="bg-white border-slate-200 rounded-2xl relative overflow-hidden shadow-sm">
-          <CardHeader className="border-b border-slate-100 pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">Heatmap de Disponibilité d'Engins</CardTitle>
-                <CardDescription className="text-slate-500 text-xs">Cliquez sur un engin pour tester le cadenassage</CardDescription>
-              </div>
-              <Badge className="bg-cyan-50 text-cyan-700 text-[8.5px] font-mono border border-cyan-100 uppercase">TACTIQUE</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            {filteredEngins.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 text-xs uppercase font-mono">Aucun engin disponible sur {activeSite}</div>
-            ) : (
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
-                {filteredEngins.map(e => {
-                  const val = Number(e.dispo !== undefined ? e.dispo : (e.status === 'DISPONIBLE' ? 100 : 0));
-                  let cellBg = "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-[0_0_8px_rgba(16,185,129,0.02)]";
-                  if (e.status === 'EN_PANNE') cellBg = "bg-red-550/5 border-red-200 text-red-600 shadow-[0_0_8px_rgba(239,68,68,0.02)]";
-                  if (e.status === 'EN_MAINTENANCE') cellBg = "bg-amber-50 border-amber-200 text-amber-700 shadow-[0_0_8px_rgba(245,158,11,0.02)]";
+            {/* WORKSHOP LOADS ACROSS ALL SECTORS */}
+            <Card className="bg-white border border-slate-200 rounded-2xl shadow-sm">
+              <CardHeader className="border-b border-slate-100 pb-3">
+                <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">Remplissage des Ateliers par Mine</CardTitle>
+                <CardDescription className="text-slate-500 text-xs">Évaluation en temps réel d'encombrement des équipes du fond</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-3.5">
+                {workshopCapacityList.map(s => {
+                  const hasData = s.capacityRatio !== null;
+                  let barColor = "bg-[#4FC3F7]";
+                  if (hasData && s.capacityRatio! >= 80) barColor = "bg-red-500";
+                  else if (hasData && s.capacityRatio! >= 50) barColor = "bg-amber-500";
                   
                   return (
-                    <div 
-                      key={e.id}
-                      className={`h-14 p-2.5 rounded-xl border flex flex-col justify-between cursor-pointer transition-all hover:scale-105 active:scale-95 select-none ${cellBg}`}
-                      onClick={() => {
-                        const message = `Engin [${e.code || e.id}] - Site ${e.siteId || 'SMI'} : Actuellement ${e.status} à ${val}% de disponibilité estimée par l'atelier.`;
-                        toast.info(message, { duration: 5000 });
-                      }}
-                    >
-                      <span className="text-[10.5px] font-black font-mono tracking-wider truncate leading-tight">{e.code || e.id}</span>
-                      <span className="text-[9.5px] font-black text-slate-500 uppercase leading-none">{val}%</span>
+                    <div key={s.siteCode} className="space-y-1">
+                      <div className="flex justify-between items-center text-xs font-mono font-black uppercase text-slate-700">
+                        <span className="flex items-center gap-1.5">
+                          <span className={`h-1.5 w-1.5 rounded-full ${hasData && s.capacityRatio! >= 80 ? 'bg-red-500 animate-ping' : hasData && s.capacityRatio! >= 50 ? 'bg-amber-500' : 'bg-emerald-400'}`}></span>
+                          {s.siteCode === 'SMI' ? 'SMI CHANTIERS' : s.siteCode}
+                        </span>
+                        <span className="text-slate-500">
+                          {hasData ? `${s.activeInterventions} Interventions • ${s.capacityRatio}%` : "Pas de données"}
+                        </span>
+                      </div>
+                      <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/45">
+                        {hasData ? (
+                          <div className={`h-full rounded-full ${barColor}`} style={{ width: `${s.capacityRatio}%` }}></div>
+                        ) : (
+                          <div className="h-full rounded-full bg-slate-200/40 border-dashed border-2 border-slate-350"></div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
-              </div>
-            )}
-            <div className="flex gap-4 mt-4 text-[9.5px] font-black uppercase text-slate-500 font-mono flex-wrap">
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-emerald-500"></span> ACTIF (85%-100%)</span>
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-amber-500"></span> CORRECTION (60%-84%)</span>
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-red-500"></span> EN ARRET (0%-59%)</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* WORKSHOP LOADS ACROSS ALL SECTORS */}
-        <Card className="bg-white border border-slate-200 rounded-2xl shadow-sm">
-          <CardHeader className="border-b border-slate-100 pb-3">
-            <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">Remplissage des Ateliers par Mine</CardTitle>
-            <CardDescription className="text-slate-500 text-xs">Évaluation en temps réel d'encombrement des équipes du fond</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-3.5">
-            {workshopCapacityList.map(s => {
-              const hasData = s.capacityRatio !== null;
-              let barColor = "bg-[#4FC3F7]";
-              if (hasData && s.capacityRatio! >= 80) barColor = "bg-red-500";
-              else if (hasData && s.capacityRatio! >= 50) barColor = "bg-amber-500";
-              
-              return (
-                <div key={s.siteCode} className="space-y-1">
-                  <div className="flex justify-between items-center text-xs font-mono font-black uppercase text-slate-700">
-                    <span className="flex items-center gap-1.5">
-                      <span className={`h-1.5 w-1.5 rounded-full ${hasData && s.capacityRatio! >= 80 ? 'bg-red-500 animate-ping' : hasData && s.capacityRatio! >= 50 ? 'bg-amber-500' : 'bg-emerald-400'}`}></span>
-                      {s.siteCode === 'SMI' ? 'SMI CHANTIERS' : s.siteCode}
-                    </span>
-                    <span className="text-slate-500">
-                      {hasData ? `${s.activeInterventions} Interventions • ${s.capacityRatio}%` : "Pas de données"}
-                    </span>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      ) : (
+        // ==========================================
+        // SECTION SITES SPÉCIFIQUES (SINGLE SITE VIEW)
+        // ==========================================
+        <>
+          {/* COMPARATIF INTER-ENGINS (GOD LEVEL COMBO CHART) */}
+          <motion.div variants={itemVariants}>
+            <Card className="bg-white border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+              <CardHeader className="border-b border-slate-100 pb-3 flex justify-between items-center">
+                <div>
+                  <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">COMPARATIF ANALYTIQUE INTER-ENGINS</CardTitle>
+                  <CardDescription className="text-slate-500 text-xs">Heures de marche (Barres, axe gauche) vs Taux de Disponibilité estimé (Ligne, axe droit)</CardDescription>
+                </div>
+                <Badge className="bg-indigo-50 text-indigo-700 border border-indigo-100 text-[8.5px] font-mono uppercase">VUE TACTIQUE</Badge>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {filteredEngins.length === 0 ? (
+                  <div className="h-[250px] flex items-center justify-center text-slate-400 font-mono text-xs uppercase">
+                    Aucune donnée d'engin sur ce chantier
                   </div>
-                  <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/45">
-                    {hasData ? (
-                      <div className={`h-full rounded-full ${barColor}`} style={{ width: `${s.capacityRatio}%` }}></div>
+                ) : (
+                  <div className="h-[320px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart
+                        data={filteredEngins.map(e => ({
+                          name: e.code || e.id,
+                          "Heures de Marche": e.heuresMarche || 0,
+                          "Disponibilité %": e.dispo !== undefined ? e.dispo : (getNormalizedStatus(e) === 'DISPONIBLE' ? 100 : getNormalizedStatus(e) === 'EN_MAINTENANCE' ? 50 : 0)
+                        }))}
+                        margin={{ top: 10, right: -5, left: -10, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
+                        <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                        <YAxis yAxisId="left" stroke="#6366f1" fontSize={11} tickLine={false} axisLine={false} label={{ value: 'Heures de Marche', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fontSize: '10px', fill: '#6366f1', fontWeight: 'bold' } }} />
+                        <YAxis yAxisId="right" orientation="right" domain={[0, 100]} stroke="#10b981" fontSize={11} tickLine={false} axisLine={false} label={{ value: 'Disponibilité %', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fontSize: '10px', fill: '#10b981', fontWeight: 'bold' } }} />
+                        <RechartsTooltip contentStyle={{ backgroundColor: "#1e293b", borderColor: "#334155" }} labelStyle={{ color: "#fff" }} />
+                        <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
+                        <Bar yAxisId="left" dataKey="Heures de Marche" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={35} />
+                        <Line yAxisId="right" type="monotone" dataKey="Disponibilité %" stroke="#10b981" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* TWO COLUMN GRID FOR DETAILED TACTICAL MONITORING */}
+          <div className="grid gap-4 grid-cols-1 xl:grid-cols-3">
+            
+            {/* HEATMAP OF DISPONIBILITÉ (Single Site) */}
+            <motion.div variants={itemVariants} className="xl:col-span-1">
+              <Card className="bg-white border-slate-200 rounded-2xl relative overflow-hidden h-full shadow-sm">
+                <CardHeader className="border-b border-slate-100 pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">Heatmap de Disponibilité</CardTitle>
+                      <CardDescription className="text-slate-500 text-xs">Parc machine de l'exploitation</CardDescription>
+                    </div>
+                    <Badge className="bg-cyan-50 text-cyan-700 text-[8.5px] font-mono border border-cyan-100 uppercase">ÉTAT MACHINE</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4 flex flex-col justify-between h-[calc(100%-65px)]">
+                  {filteredEngins.length === 0 ? (
+                    <div className="p-8 text-center text-slate-500 text-xs uppercase font-mono">Aucun engin sur {activeSite}</div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2.5 overflow-y-auto max-h-[220px] pr-1">
+                      {filteredEngins.map(e => {
+                        const val = Number(e.dispo !== undefined ? e.dispo : (getNormalizedStatus(e) === 'DISPONIBLE' ? 100 : 0));
+                        let cellBg = "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-[0_0_8px_rgba(16,185,129,0.02)]";
+                        const s = getNormalizedStatus(e);
+                        if (s === 'EN_PANNE') cellBg = "bg-red-50 border-red-200 text-red-650 shadow-[0_0_8px_rgba(239,68,68,0.02)]";
+                        if (s === 'EN_MAINTENANCE') cellBg = "bg-amber-50 border-amber-200 text-amber-700 shadow-[0_0_8px_rgba(245,158,11,0.02)]";
+                        
+                        return (
+                          <div 
+                            key={e.id}
+                            className={`h-14 p-2 rounded-xl border flex flex-col justify-between cursor-pointer transition-all hover:scale-105 active:scale-95 select-none ${cellBg}`}
+                            onClick={() => {
+                              const message = `Engin [${e.code || e.id}] - Site ${e.siteId || 'SMI'} : Actuellement ${s} à ${val}% de disponibilité estimée par l'atelier.`;
+                              toast.info(message, { duration: 5000 });
+                            }}
+                          >
+                            <span className="text-[10px] font-black font-mono tracking-wider truncate leading-tight">{e.code || e.id}</span>
+                            <span className="text-[9px] font-black text-slate-500 uppercase leading-none">{val}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="flex gap-2.5 mt-4 text-[8.5px] font-black uppercase text-slate-500 font-mono flex-wrap border-t pt-3">
+                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-emerald-500"></span> DISPO</span>
+                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-amber-500"></span> MAINT</span>
+                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-red-500"></span> PANNE</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* DETAILED ROSTER ENGINE PROGRESS (GOD LEVEL UI LIST) */}
+            <motion.div variants={itemVariants} className="xl:col-span-2">
+              <Card className="bg-white border-slate-200 rounded-2xl shadow-sm h-full overflow-hidden">
+                <CardHeader className="border-b border-slate-100 pb-3 flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">ÉTAT MÉCANIQUE DÉTAILLÉ DE LA FLOTTE</CardTitle>
+                    <CardDescription className="text-slate-500 text-xs">Suivi individuel et indicateurs de performance</CardDescription>
+                  </div>
+                  <Badge variant="outline" className="text-[8px] font-mono border-slate-200 text-slate-500 uppercase">
+                    {filteredEngins.length} Machines
+                  </Badge>
+                </CardHeader>
+                <CardContent className="pt-4 p-0">
+                  <div className="divide-y divide-slate-100 max-h-[290px] overflow-y-auto">
+                    {filteredEngins.length === 0 ? (
+                      <div className="p-8 text-center text-slate-500 text-xs uppercase font-mono">Aucun engin enregistré</div>
                     ) : (
-                      <div className="h-full rounded-full bg-slate-200/40 border-dashed border-2 border-slate-350"></div>
+                      filteredEngins.map(e => {
+                        const s = getNormalizedStatus(e);
+                        const dispoPct = e.dispo !== undefined ? e.dispo : (s === 'DISPONIBLE' ? 100 : s === 'EN_MAINTENANCE' ? 50 : 0);
+                        return (
+                          <div key={e.id} className="p-3.5 hover:bg-slate-50/60 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-xl border ${
+                                s === 'DISPONIBLE' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' :
+                                s === 'EN_MAINTENANCE' ? 'bg-amber-50 border-amber-100 text-amber-600' :
+                                'bg-red-50 border-red-100 text-red-600'
+                              }`}>
+                                <Truck className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono font-black text-slate-900 text-xs tracking-wider">{e.code || e.id}</span>
+                                  <span className="text-[9.5px] font-bold text-slate-500 uppercase">{e.marque || e.brand || ''} {e.modele || e.type}</span>
+                                </div>
+                                <div className="text-[9.5px] text-slate-500 font-mono mt-0.5">
+                                  Cumul : <span className="font-bold text-slate-700">{e.heuresMarche || 0} H</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-4 justify-between sm:justify-end">
+                              <div className="text-right hidden sm:block">
+                                <span className="text-[9px] text-slate-400 font-bold block uppercase font-mono">Disponibilité</span>
+                                <span className={`text-xs font-black font-mono ${dispoPct >= 85 ? 'text-emerald-600' : dispoPct >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{dispoPct}%</span>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider ${
+                                s === 'DISPONIBLE' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                s === 'EN_MAINTENANCE' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                'bg-red-50 text-red-700 border-red-200'
+                              }`}>
+                                {s === 'DISPONIBLE' ? 'Opérationnel' : s === 'EN_MAINTENANCE' ? 'Maintenance' : 'Hors Service'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
                     )}
                   </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
 
-      </div>
+          {/* CHRONIQUE ET REPARTITION (Single Site) */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            {/* DISPONIBILITE ET ANALYTICS TRENDS */}
+            <Card className="bg-white border-slate-200 lg:col-span-4 rounded-2xl shadow-sm">
+              <CardHeader className="border-b border-slate-100 pb-3">
+                <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">Progression Disponibilité & Discipline Préventive</CardTitle>
+                <CardDescription className="text-slate-500 text-xs">Calcul exact sur les 7 derniers jours sur {activeSite}</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4 pl-2">
+                <div className="h-[285px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={tendance7Jours}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.15)" vertical={false} />
+                      <XAxis dataKey="day" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} domain={[0, 100]} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: "#1e293b", borderColor: "#334155" }} labelStyle={{ color: "#fff" }} />
+                      <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
+                      <Line 
+                        type="monotone" 
+                        dataKey="taux" 
+                        stroke="#D4A017" 
+                        strokeWidth={3} 
+                        name="Réalisation (%)" 
+                        dot={{ r: 4 }} 
+                        connectNulls={false}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="prev" 
+                        stroke="#10b981" 
+                        strokeWidth={2} 
+                        name="Compliance PM (%)" 
+                        strokeDasharray="5 5" 
+                        connectNulls={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* ATELIER CAPACITY & MTTR */}
+            <Card className="bg-white border-slate-200 lg:col-span-3 rounded-2xl shadow-sm flex flex-col justify-between">
+              <CardHeader className="border-b border-slate-100 pb-3">
+                <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">Vigilance & Métriques Fiabilité Site</CardTitle>
+                <CardDescription className="text-slate-500 text-xs">Analyse locale d'arrêt et réactivité mécanique</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 text-center">
+                    <span className="text-[10px] text-slate-500 font-mono block uppercase">MTBF LOCAL</span>
+                    <span className="text-lg font-black font-mono text-emerald-600 block mt-1">
+                      {fiabiliteMetrics.mtbf ? `${fiabiliteMetrics.mtbf} h` : "—"}
+                    </span>
+                    <span className="text-[9px] text-slate-400 block mt-0.5">Moyenne de marche</span>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 text-center">
+                    <span className="text-[10px] text-slate-500 font-mono block uppercase">MTTR LOCAL</span>
+                    <span className="text-lg font-black font-mono text-amber-600 block mt-1">
+                      {fiabiliteMetrics.mttr ? `${fiabiliteMetrics.mttr} h` : "—"}
+                    </span>
+                    <span className="text-[9px] text-slate-400 block mt-0.5">Résolution panne</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 border border-slate-100 rounded-2xl space-y-2.5">
+                  <span className="text-[10px] font-mono font-extrabold text-indigo-600 block uppercase">
+                    🛠️ CHARGE DE L'ÉQUIPE ATELIER
+                  </span>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] font-mono text-slate-600">
+                      <span>Remplissage capacité :</span>
+                      <span className="font-bold text-slate-800">{workshopLoad}%</span>
+                    </div>
+                    <Progress value={workshopLoad} className="h-1.5 bg-slate-100" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
 
       <SignalerPanne 
         isOpen={isSignalerPanneOpen} 

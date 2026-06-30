@@ -24,6 +24,7 @@ export interface MaintenanceTask {
   photo?: string;
   motifReport?: string;
   heuresEnginAuMoment?: number;
+  echeanceHeures?: number;
   generationType?: 'AUTO_QUOTIDIEN' | 'AUTO_PM' | 'MANUEL';
   deleted?: boolean;
   createdAt: any;

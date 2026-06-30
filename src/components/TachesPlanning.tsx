@@ -279,6 +279,7 @@ export default function TachesPlanning() {
                   priorite,
                   statut: 'NON_FAIT',
                   commentaire: '',
+                  echeanceHeures: intervalle.intervalleHeures,
                   heuresEnginAuMoment: engin.heuresMarche || 0,
                   generationType: 'AUTO_PM',
                   deleted: false,
@@ -351,8 +352,7 @@ export default function TachesPlanning() {
             if (taskData.enginId) {
               const enginRef = doc(db, 'engins', taskData.enginId);
               await updateDoc(enginRef, {
-                statut: 'actif',
-                etat: 'Disponible',
+                etat: 'Opérationnel',
                 updatedAt: Timestamp.now()
               });
             }
@@ -1406,7 +1406,7 @@ export default function TachesPlanning() {
                                       priorite: selectedPanne.gravite === 'Critique' ? 'CRITIQUE' : selectedPanne.gravite === 'Élevée' ? 'HAUTE' : 'HAUTE',
                                       datePlanifiee: formattedDate,
                                       poste: 'Poste 1',
-                                      dureeEstimee: '2 h',
+                                      dureeEstimee: selectedPanne.gravite === 'Critique' ? '4h' : selectedPanne.gravite === 'Élevée' ? '2h' : '1h',
                                       panneId: selectedPanne.id,
                                       statut: 'NON_FAIT',
                                       commentaire: '',
@@ -1500,8 +1500,7 @@ export default function TachesPlanning() {
                                   if (selectedPanne.enginId) {
                                     const enginRef = doc(db, 'engins', selectedPanne.enginId);
                                     await updateDoc(enginRef, {
-                                      statut: 'actif',
-                                      etat: 'Disponible',
+                                      etat: 'Opérationnel',
                                       updatedAt: Timestamp.now()
                                     });
                                   }

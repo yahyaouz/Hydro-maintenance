@@ -298,8 +298,8 @@ export default function App() {
   // Dynamic header titles
   const getTabTitle = () => {
     switch(activeTab) {
-      case "dashboard": return "Cockpit National d'Exploitation";
-      case "engins": return "Gestion Flotte Machines de Fond";
+      case "dashboard": return "Supervision Flotte";
+      case "engins": return "Gestion du Parc";
       // NETTOYÉ : pannes supprimé
       // NETTOYÉ : heures supprimé
       // NETTOYÉ : vision_ia supprimé
@@ -311,14 +311,14 @@ export default function App() {
       // NETTOYÉ : rapports supprimé
       // NETTOYÉ : inspection supprimé
       // NETTOYÉ : monde supprimé
-      case "admin": return "Privilèges, Droits & Supervision";
+      case "admin": return "Privilèges & Droits";
       // NETTOYÉ : mecaniciens supprimé
       // NETTOYÉ : ma_fiche supprimé
       // NETTOYÉ : interventions supprimé
       // NETTOYÉ : saisies supprimé
       case "referentiel": return "Référentiel Technique";
-      case "assistant_mecanicien": return "Assistant Mécanicien - Montabert T23";
-      default: return "Hydromines SOU-GMAO Platform";
+      case "assistant_mecanicien": return "Assistant Mécanicien";
+      default: return "Hydromines GMAO";
     }
   };
 
@@ -364,13 +364,11 @@ export default function App() {
             </div>
           </div>
 
-          {/* Centered title demanded in ETAPE 3 */}
-          <div className="hidden lg:flex items-center justify-center gap-1.5 absolute left-1/2 -translate-x-1/2 transform">
-            <span className="text-xs tracking-wider text-[#0F172A] font-black uppercase">ESPACE TECHNIQUE</span>
-            <span className="text-xs tracking-wider text-[#B8860B] font-extrabold uppercase">MAINTENANCE</span>
-            <span className="text-slate-350 mx-1">|</span>
-            <span className="text-[#00BFFF] font-black uppercase">HYDRO</span>
-            <span className="text-[#9E1A1A] font-black uppercase -ml-1">MINES</span>
+          {/* Centered title simplified */}
+          <div className="hidden lg:flex items-center justify-center gap-1.5 absolute left-1/2 -translate-x-1/2 transform text-xs font-black uppercase tracking-widest text-slate-800 font-sans">
+            <span>HYDROMINES</span>
+            <span className="text-slate-400 font-normal">•</span>
+            <span className="text-slate-500 font-medium">GMAO</span>
           </div>
 
           {/* Connected telemetry widgetry */}
@@ -383,7 +381,7 @@ export default function App() {
                 : "bg-rose-50 text-[#9E1A1A] border-rose-100"
             )}>
               <Activity className={cn("h-3.5 w-3.5", networkOnline ? "text-emerald-500 animate-pulse" : "text-[#9E1A1A] animate-bounce")} />
-              <span>{networkOnline ? "Réseau Souterrain OK" : "Atelier Hors-ligne"}</span>
+              <span>{networkOnline ? "Réseau OK" : "Hors-ligne"}</span>
             </div>
 
             {/* Notification trigger bell */}

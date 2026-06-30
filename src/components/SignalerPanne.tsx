@@ -51,7 +51,7 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill }: SignalerPanne
     if (user.role === 'ADMIN' || user.role === 'DIRECTION') {
       return engins;
     }
-    return engins.filter((e: any) => e.site === user.siteId);
+    return engins.filter((e: any) => e.siteId === user.siteId);
   }, [engins, user]);
 
   // Auto pre-select first engine if there are filtered engins and enginId is not set
@@ -118,8 +118,8 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill }: SignalerPanne
       const newPanne = {
         numero,
         enginId,
-        enginModele: selectedEngin?.modele || selectedEngin?.brand || '',
-        siteId: selectedEngin?.site || user.siteId,
+        enginModele: selectedEngin?.modele || selectedEngin?.marque || '',
+        siteId: selectedEngin?.siteId || user.siteId,
         categorie,
         gravite,
         statut: 'DECLAREE',
@@ -136,10 +136,9 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill }: SignalerPanne
 
       await addDoc(collection(db, 'pannes'), newPanne);
 
-      // Si arrêt machine : mettre à jour le statut de l'engin
+      // Si arrêt machine : mettre à jour l'état de l'engin
       if (arretMachine) {
         await updateDoc(doc(db, 'engins', enginId), {
-          statut: 'maintenance',
           etat: 'En maintenance',
           updatedAt: Timestamp.now()
         });
@@ -148,10 +147,10 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill }: SignalerPanne
       // Créer la notification pour le responsable du site
       useNotificationStore.getState().addNotification({
         type: gravite === 'Critique' ? 'CRITIQUE' : gravite === 'Élevée' ? 'MAJEUR' : 'AVERTISSEMENT',
-        title: `NOUVELLE PANNE • ${selectedEngin?.matricule || enginId}`,
+        title: `NOUVELLE PANNE • ${selectedEngin?.id || enginId}`,
         message: `${categorie} — ${description.substring(0, 80)}${description.length > 80 ? '...' : ''}`,
         triggerSource: 'PANNE_TERRAIN',
-        siteId: selectedEngin?.site || user.siteId
+        siteId: selectedEngin?.siteId || user.siteId
       });
 
       toast.success(`Panne ${numero} signalée avec succès.`);
@@ -238,7 +237,7 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill }: SignalerPanne
                   <option value="">Sélectionner un engin...</option>
                   {filteredEngins.map((e: any) => (
                     <option key={e.id} value={e.id}>
-                      [{e.matricule}] — {e.brand || e.marque || ''} {e.modele || e.type} ({e.site})
+                      [{e.id}] — {e.marque || ''} {e.modele || e.type} ({e.siteId})
                     </option>
                   ))}
                 </select>
