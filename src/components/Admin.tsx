@@ -1108,7 +1108,7 @@ export function Admin() {
                         </span>
                       </td>
                       <td className="py-4 px-4 text-right font-mono font-bold text-slate-700">
-                        {e.heuresMarche.toLocaleString()} hrs
+                        {(e.heuresMarche || 0).toLocaleString()} hrs
                       </td>
                       <td className="py-4 px-4 text-xs text-slate-500 font-mono">{e.dateEntreeService}</td>
                       <td className="py-4 px-4 text-slate-600 text-xs font-medium">{e.conducteurAssigne}</td>

@@ -166,6 +166,29 @@
         "deleted": { "type": "boolean" }
       },
       "required": ["id", "type", "label", "enginId", "enginModele", "siteId", "datePlanifiee", "priorite", "statut", "deleted"]
+    },
+    "checklist": {
+      "title": "Checklist",
+      "description": "Fiche d'inspection ou checklist enregistrée pour un engin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "enum": ["CONDUCTEUR", "MAINTENANCE", "SECURITE"] },
+        "date": { "type": "string" },
+        "heure": { "type": "string" },
+        "enginId": { "type": "string" },
+        "enginModele": { "type": "string" },
+        "signataire": { "type": "string" },
+        "signataireId": { "type": "string" },
+        "poste": { "enum": ["Poste 1", "Poste 2", "Poste 3"] },
+        "siteId": { "type": "string" },
+        "items": { "type": "object" },
+        "commentaires": { "type": "object" },
+        "timestamp": { "type": "number" },
+        "deleted": { "type": "boolean" },
+        "createdAt": { "type": "object" }
+      },
+      "required": ["id", "type", "date", "heure", "enginId", "enginModele", "signataire", "poste", "siteId", "items", "commentaires", "timestamp", "deleted"]
     }
   },
   "firestore": {
@@ -204,6 +227,10 @@
     "maintenanceTasks": {
       "schema": "maintenanceTask",
       "description": "Collection centrale des fiches de maintenance, de correctifs et de rondes de graissage"
+    },
+    "checklists": {
+      "schema": "checklist",
+      "description": "Collection des checklists et inspections de sécurité/conducteur/maintenance"
     }
   }
 }

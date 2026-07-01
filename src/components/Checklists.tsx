@@ -1,6 +1,6 @@
 // CHECKLIST : Module de gestion des checklists SOU-GMAO pour Hydromines
 // Ce fichier gère trois types de listes d'inspection : Conducteur, Maintenance (mécanicien) et Sécurité mensuelle.
-// Les données sont persistées localement dans localStorage et synchronisées avec les engins et collaborateurs existants.
+// Les données sont persistées dans Firestore.
 
 import * as React from "react";
 import { 
@@ -29,6 +29,11 @@ import { PageBanner } from "@/components/ui/PageBanner";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 
+import { collection, addDoc, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import { useCollection } from '@/hooks/useCollection';
+import { useAuthStore } from '@/lib/store';
+
 // Types
 interface Engin {
   id: string;
@@ -36,11 +41,15 @@ interface Engin {
   marque: string;
   type: string;
   heuresMarche: number;
+  siteId?: string;
 }
 
 interface Mecanicien {
   id: string;
   nomComplet: string;
+  siteId?: string;
+  deleted?: boolean;
+  statut?: string;
 }
 
 interface ChecklistItem {
@@ -57,20 +66,65 @@ interface ChecklistSubmission {
   enginId: string;
   enginModele: string;
   signataire: string;
+  signataireId?: string;
   poste: string;
+  siteId?: string;
   items: { [itemId: string]: "OK" | "KO" | "NONE" };
   commentaires: string | { [sectionId: string]: string };
   timestamp: number;
+  deleted?: boolean;
+}
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
 }
 
 export default function Checklists() {
   // Onglet actif : conducteur, maintenance, securite, historique
   const [activeTab, setActiveTab] = React.useState<"conducteur" | "maintenance" | "securite" | "historique">("conducteur");
-
-  // Données de base
-  const [engins, setEngins] = React.useState<Engin[]>([]);
-  const [mecaniciens, setMecaniciens] = React.useState<Mecanicien[]>([]);
-  const [submissions, setSubmissions] = React.useState<ChecklistSubmission[]>([]);
 
   // Formulaire d'en-tête global
   const [selectedEngin, setSelectedEngin] = React.useState("");
@@ -96,101 +150,55 @@ export default function Checklists() {
   // LOGO Hydromines fallback helper
   const [logoError, setLogoError] = React.useState(false);
 
-  // CHARGEMENT INITIAL DES DONNÉES
-  React.useEffect(() => {
-    // Engins existants
-    const savedEngins = localStorage.getItem("gmao_engins");
-    if (savedEngins) {
-      setEngins(JSON.parse(savedEngins));
-    } else {
-      const initialEngins = [
-        { id: "E101", modele: "ST2D", marque: "Epiroc", type: "Scooptram", heuresMarche: 1450 },
-        { id: "E102", modele: "ST2G", marque: "Epiroc", type: "Scooptram", heuresMarche: 2890 },
-        { id: "E103", modele: "ST7", marque: "Epiroc", type: "Scooptram", heuresMarche: 820 },
-        { id: "E104", modele: "ST1030", marque: "Epiroc", type: "Scooptram", heuresMarche: 5200 },
-        { id: "E105", modele: "ST2G", marque: "Epiroc", type: "Scooptram", heuresMarche: 1980 }
-      ];
-      setEngins(initialEngins);
-    }
+  // Read collections from Firestore
+  const { user, activeSite } = useAuthStore();
+  const { data: rawEngins, loading: enginsLoading } = useCollection<any>('engins');
+  const { data: rawMecaniciens, loading: mecaniciensLoading } = useCollection<any>('mecaniciens');
+  const { data: rawSubmissions, loading: submissionsLoading } = useCollection<any>('checklists', [], { orderByField: 'timestamp', orderByDirection: 'desc' });
 
-    // Collaborateurs existants
-    const savedMeca = localStorage.getItem("gmao_mecaniciens");
-    if (savedMeca) {
-      setMecaniciens(JSON.parse(savedMeca));
-    } else {
-      const initialMeca = [
-        { id: "M001", nomComplet: "Abdellah Daoudi" },
-        { id: "M002", nomComplet: "Lahcen Ait" },
-        { id: "M003", nomComplet: "Mohamed El Amri" },
-        { id: "M004", nomComplet: "Youssef Naciri" },
-        { id: "M005", nomComplet: "Rachid Idrissi" }
-      ];
-      setMecaniciens(initialMeca);
+  // Filtrer selon le rôle et le site
+  const engins = React.useMemo(() => {
+    if (!rawEngins) return [];
+    const actifs = rawEngins.filter((e: any) => !e.deleted && e.etat !== 'Hors service' && e.etat !== 'Vendu');
+    if (user?.role === 'ADMIN' || user?.role === 'DIRECTION') {
+      return activeSite === 'TOUS' ? actifs : actifs.filter((e: any) => e.siteId === activeSite);
     }
+    return actifs.filter((e: any) => e.siteId === user?.siteId);
+  }, [rawEngins, user, activeSite]);
 
-    // Soumissions checklists
-    const savedSubmissions = localStorage.getItem("gmao_checklists_submissions");
-    if (savedSubmissions) {
-      setSubmissions(JSON.parse(savedSubmissions));
-    } else {
-      // Quelques fausses données historiques pour peupler
-      const initialSubs: ChecklistSubmission[] = [
-        {
-          id: "CHK-1719600000",
-          type: "CONDUCTEUR",
-          date: "2026-06-28",
-          heure: "08:15",
-          enginId: "E101",
-          enginModele: "ST2D",
-          signataire: "Abdellah Daoudi",
-          poste: "Poste 1",
-          items: {
-            "C_A1": "OK", "C_A2": "OK", "C_A3": "OK",
-            "C_B1": "OK", "C_B2": "OK", "C_B3": "OK",
-            "C_C1": "OK", "C_C2": "OK", "C_C3": "OK",
-            "C_D1": "OK", "C_D2": "OK", "C_D3": "OK",
-            "C_E1": "OK", "C_E2": "OK", "C_E3": "OK"
-          },
-          commentaires: "Rien à signaler. Machine opérationnelle.",
-          timestamp: 1719600000000
-        },
-        {
-          id: "CHK-1719605000",
-          type: "MAINTENANCE",
-          date: "2026-06-28",
-          heure: "10:30",
-          enginId: "E102",
-          enginModele: "ST2G",
-          signataire: "Lahcen Ait",
-          poste: "Poste 2",
-          items: {
-            "M_A1": "OK", "M_A2": "OK", "M_A3": "OK", "M_A4": "OK", "M_A5": "OK",
-            "M_B1": "OK", "M_B2": "OK", "M_B3": "KO", "M_B4": "OK",
-            "M_C1": "OK", "M_C2": "OK", "M_C3": "OK", "M_C4": "OK", "M_C5": "OK",
-            "M_D1": "OK", "M_D2": "OK", "M_D3": "OK", "M_D4": "OK",
-            "M_E1": "OK", "M_E2": "OK", "M_E3": "OK", "M_E4": "OK",
-            "M_F1": "OK", "M_F2": "OK", "M_F3": "OK", "M_F4": "OK"
-          },
-          commentaires: {
-            "SECTION B": "Légère fuite d'huile constatée sur le pont arrière droit."
-          },
-          timestamp: 1719605000000
+  const mecaniciens = React.useMemo(() => {
+    if (!rawMecaniciens) return [];
+    const actifs = rawMecaniciens.filter((m: any) => !m.deleted && m.statut === 'Actif');
+    if (user?.role === 'ADMIN' || user?.role === 'DIRECTION') {
+      return activeSite === 'TOUS' ? actifs : actifs.filter((m: any) => m.siteId === activeSite);
+    }
+    return actifs.filter((m: any) => m.siteId === user?.siteId);
+  }, [rawMecaniciens, user, activeSite]);
+
+  const submissions = React.useMemo(() => {
+    if (!rawSubmissions) return [];
+    return rawSubmissions
+      .filter((s: any) => !s.deleted)
+      .filter((s: any) => {
+        if (user?.role === 'ADMIN' || user?.role === 'DIRECTION') {
+          return activeSite === 'TOUS' || s.siteId === activeSite;
         }
-      ];
-      setSubmissions(initialSubs);
-      localStorage.setItem("gmao_checklists_submissions", JSON.stringify(initialSubs));
-    }
-  }, []);
+        return s.siteId === user?.siteId;
+      })
+      .sort((a: any, b: any) => b.timestamp - a.timestamp);
+  }, [rawSubmissions, user, activeSite]);
+
+  const selectedEnginData = engins.find(e => e.id === selectedEngin);
 
   // Définir la valeur de départ des sélections d'en-tête
   React.useEffect(() => {
-    if (engins.length > 0 && !selectedEngin) {
+    if (engins.length > 0 && (!selectedEngin || !engins.some(e => e.id === selectedEngin))) {
       setSelectedEngin(engins[0].id);
     }
-    if (mecaniciens.length > 0 && !selectedSignataire) {
+    if (mecaniciens.length > 0 && (!selectedSignataire || !mecaniciens.some(m => m.nomComplet === selectedSignataire))) {
       setSelectedSignataire(mecaniciens[0].nomComplet);
     }
-  }, [engins, mecaniciens]);
+  }, [engins, mecaniciens, selectedEngin, selectedSignataire]);
 
   // Réinitialiser les champs de saisie d'en-tête
   const resetHeader = () => {
@@ -345,7 +353,7 @@ export default function Checklists() {
   };
 
   // Validation et soumission de la checklist active
-  const handleSaveChecklist = () => {
+  const handleSaveChecklist = async () => {
     const currentType = activeTab === "conducteur" ? "CONDUCTEUR" : activeTab === "maintenance" ? "MAINTENANCE" : "SECURITE";
     const currentItems = activeTab === "conducteur" ? itemsConducteur : activeTab === "maintenance" ? itemsMaintenance : itemsSecurite;
     
@@ -362,47 +370,87 @@ export default function Checklists() {
     }
 
     const matchedEngin = engins.find(e => e.id === selectedEngin);
-    const enginModele = matchedEngin ? matchedEngin.modele : "ST2G";
+    const enginModele = matchedEngin?.modele || "Inconnu";
+    const siteId = matchedEngin?.siteId || user?.siteId || "SMI";
 
-    const newSubmission: ChecklistSubmission = {
-      id: `CHK-${Date.now()}`,
-      type: currentType,
-      date: selectedDate,
-      heure: selectedHeure,
-      enginId: selectedEngin,
-      enginModele,
-      signataire: signataireFinal,
-      poste: selectedPoste,
-      items: { ...formStates },
-      commentaires: currentType === "MAINTENANCE" ? { ...sectionCommentaires } : singleCommentaire,
-      timestamp: Date.now()
-    };
+    try {
+      const docRef = await addDoc(collection(db, 'checklists'), {
+        type: currentType,
+        date: selectedDate,
+        heure: selectedHeure,
+        enginId: selectedEngin,
+        enginModele,
+        signataire: signataireFinal,
+        signataireId: user?.uid || null,
+        poste: selectedPoste,
+        siteId,
+        items: { ...formStates },
+        commentaires: currentType === "MAINTENANCE" ? { ...sectionCommentaires } : singleCommentaire,
+        timestamp: Date.now(),
+        deleted: false,
+        createdAt: Timestamp.now()
+      });
 
-    const updatedSubmissions = [newSubmission, ...submissions];
-    setSubmissions(updatedSubmissions);
-    localStorage.setItem("gmao_checklists_submissions", JSON.stringify(updatedSubmissions));
+      // Simuler un objet soumission pour viewingSubmission (depuis les données locales, pas besoin de re-fetch)
+      const newSub: ChecklistSubmission = {
+        id: docRef.id,
+        type: currentType,
+        date: selectedDate,
+        heure: selectedHeure,
+        enginId: selectedEngin,
+        enginModele,
+        signataire: signataireFinal,
+        signataireId: user?.uid || undefined,
+        poste: selectedPoste,
+        siteId,
+        items: { ...formStates },
+        commentaires: currentType === "MAINTENANCE" ? { ...sectionCommentaires } : singleCommentaire,
+        timestamp: Date.now()
+      };
 
-    toast.success(`Checklist ${currentType} enregistrée avec succès !`);
-    
-    // Si c'est maintenance, on propose d'ouvrir la vue d'impression
-    if (currentType === "MAINTENANCE") {
-      setViewingSubmission(newSubmission);
-    } else {
-      // Redirection historique
-      setActiveTab("historique");
+      toast.success(`Checklist ${currentType} enregistrée dans Firestore !`);
+      
+      // Si c'est maintenance, on propose d'ouvrir la vue d'impression
+      if (currentType === "MAINTENANCE") {
+        setViewingSubmission(newSub);
+      } else {
+        // Redirection historique
+        setActiveTab("historique");
+      }
+
+      // Reset form
+      resetFormState(currentType);
+      resetHeader();
+
+    } catch (err: any) {
+      console.error(err);
+      if (err?.code === 'permission-denied' || err?.message?.includes('permission')) {
+        handleFirestoreError(err, OperationType.WRITE, 'checklists');
+      } else {
+        toast.warning("Réseau indisponible. La checklist sera synchronisée automatiquement dès la reconnexion.", { duration: 5000 });
+      }
     }
   };
 
   // Suppression d'un historique
-  const handleDeleteSubmission = (id: string, e: React.MouseEvent) => {
+  const handleDeleteSubmission = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer cette fiche d'inspection ?")) {
-      const filtered = submissions.filter(s => s.id !== id);
-      setSubmissions(filtered);
-      localStorage.setItem("gmao_checklists_submissions", JSON.stringify(filtered));
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette fiche d'inspection ?")) return;
+    
+    try {
+      await updateDoc(doc(db, 'checklists', id), {
+        deleted: true
+      });
       toast.success("Inspection supprimée.");
       if (viewingSubmission?.id === id) {
         setViewingSubmission(null);
+      }
+    } catch (err: any) {
+      console.error(err);
+      if (err?.code === 'permission-denied' || err?.message?.includes('permission')) {
+        handleFirestoreError(err, OperationType.DELETE, `checklists/${id}`);
+      } else {
+        toast.error("Erreur lors de la suppression.");
       }
     }
   };
@@ -473,43 +521,42 @@ export default function Checklists() {
       return;
     }
 
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "ID,Type,Date,Heure,Engin,Modele,Signataire,Poste,Statut_Items,Commentaires\n";
+    const rows = [
+      'ID;Type;Date;Heure;Engin;Modele;Signataire;Poste;Site;Conformes;Defauts;Total',
+      ...submissions.map(s => {
+        const total = Object.keys(s.items || {}).length;
+        const conformes = Object.values(s.items || {}).filter(v => v === "OK").length;
+        const defauts = Object.values(s.items || {}).filter(v => v === "KO").length;
+        return `"${s.id}";"${s.type}";"${s.date}";"${s.heure}";"${s.enginId}";"${s.enginModele}";"${s.signataire}";"${s.poste}";"${s.siteId || ''}";"${conformes}";"${defauts}";"${total}"`;
+      })
+    ];
 
-    submissions.forEach(s => {
-      const itemsStr = Object.entries(s.items).map(([k, v]) => `${k}:${v}`).join("; ");
-      const commStr = typeof s.commentaires === "string" 
-        ? s.commentaires 
-        : Object.entries(s.commentaires).map(([k, v]) => `${k}:${v}`).join("; ");
-      
-      const row = [
-        s.id,
-        s.type,
-        s.date,
-        s.heure,
-        s.enginId,
-        s.enginModele,
-        `"${s.signataire.replace(/"/g, '""')}"`,
-        s.poste,
-        `"${itemsStr}"`,
-        `"${commStr.replace(/"/g, '""')}"`
-      ].join(",");
-      
-      csvContent += row + "\n";
-    });
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `GMAO_Checklists_Export_${new Date().toISOString().split("T")[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("Exportation CSV lancée !");
+    const csvContent = '\uFEFF' + rows.join('\n'); // BOM UTF-8 pour Excel
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `GMAO_Checklists_${activeSite}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Export CSV téléchargé !");
   };
 
+  const isLoading = enginsLoading || submissionsLoading || !rawEngins;
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-white min-h-[300px]">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-slate-500 text-xs font-medium">Chargement Firestore...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 select-none bg-slate-50 min-h-screen p-4 md:p-6 print:p-0 print:bg-white print:min-h-0">
+    <div className="space-y-6 select-none bg-white min-h-screen p-4 md:p-6 print:p-0 print:bg-white print:min-h-0">
       
       {/* Banner - Cache lors de l'impression */}
       <div className="print:hidden">
@@ -616,12 +663,21 @@ export default function Checklists() {
                   className="w-full h-10 px-3 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-500"
                 >
                   <option value="">Sélectionner l'engin</option>
-                  {engins.map(e => (
-                    <option key={e.id} value={e.id}>
-                      {e.id} - {e.modele} ({e.heuresMarche} hrs)
-                    </option>
-                  ))}
+                  {engins.length === 0 ? (
+                    <option value="" disabled>Aucun engin disponible — Configurez Admin d'abord</option>
+                  ) : (
+                    engins.map(e => (
+                      <option key={e.id} value={e.id}>
+                        {e.id} - {e.modele} ({e.heuresMarche || 0} hrs)
+                      </option>
+                    ))
+                  )}
                 </select>
+                {selectedEnginData && (
+                  <p className="text-[10px] text-amber-400 font-bold mt-1">
+                    📍 Site : {selectedEnginData.siteId}
+                  </p>
+                )}
               </div>
 
               {/* CONTRÔLEUR / SIGNATAIRE */}
@@ -634,9 +690,13 @@ export default function Checklists() {
                   onChange={(e) => setSelectedSignataire(e.target.value)}
                   className="w-full h-10 px-3 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-500"
                 >
-                  {mecaniciens.map(m => (
-                    <option key={m.id} value={m.nomComplet}>{m.nomComplet}</option>
-                  ))}
+                  {mecaniciens.length === 0 ? (
+                    <option value="" disabled>Aucun mécanicien disponible</option>
+                  ) : (
+                    mecaniciens.map(m => (
+                      <option key={m.id} value={m.nomComplet}>{m.nomComplet}</option>
+                    ))
+                  )}
                   <option value="Autre">Saisie manuelle...</option>
                 </select>
               </div>

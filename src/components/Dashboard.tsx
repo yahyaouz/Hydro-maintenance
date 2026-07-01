@@ -60,6 +60,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAuthStore } from "@/lib/store";
 import { useCollection } from "@/hooks/useCollection";
+import { SiteID } from "@/types";
 import { toast } from "sonner";
 import { OfflineQueueManager } from "@/services/offlineQueueManager";
 
@@ -83,12 +84,14 @@ function FleetHealthCapsule({
   site, 
   isCompact, 
   isActiveSite,
-  hasSelection
+  hasSelection,
+  onClick
 }: { 
   site: ComplianceSite; 
   isCompact: boolean; 
   isActiveSite: boolean;
   hasSelection: boolean;
+  onClick?: () => void;
 }) {
   const ringColor = site.risk === 'CRITIQUE' ? '#DC2626' : site.risk === 'VIGILANCE' ? '#D97706' : '#059669';
   const svgSize = isCompact ? 68 : 84;
@@ -98,9 +101,9 @@ function FleetHealthCapsule({
   const offset = circumference - (site.complianceScore / 100) * circumference;
   const center = svgSize / 2;
 
-  const opacity = hasSelection && !isActiveSite ? 'opacity-50 hover:opacity-80' : 'opacity-100';
+  const opacity = hasSelection && !isActiveSite ? 'opacity-40 hover:opacity-75 scale-98' : 'opacity-100 scale-100 font-extrabold';
   const borderStyle = isActiveSite 
-    ? 'border-amber-500 ring-2 ring-amber-500/10 shadow-md bg-gradient-to-b from-white to-amber-50/5' 
+    ? 'border-amber-500 ring-4 ring-amber-500/15 shadow-lg bg-amber-50/10' 
     : site.risk === 'CRITIQUE' 
       ? 'border-red-200 bg-red-50/5' 
       : 'border-slate-200 bg-white';
@@ -109,8 +112,9 @@ function FleetHealthCapsule({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02 }}
-      className={`flex flex-col items-center justify-between text-center p-3 sm:p-4 rounded-2xl border transition-all duration-300 ${opacity} ${borderStyle}`}
+      whileHover={{ scale: 1.04 }}
+      onClick={onClick}
+      className={`flex flex-col items-center justify-between text-center p-3 sm:p-4 rounded-2xl border transition-all duration-350 cursor-pointer ${opacity} ${borderStyle}`}
     >
       <div className="relative flex items-center justify-center">
         <svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`}>
@@ -174,7 +178,7 @@ function FleetHealthCapsule({
 }
 
 export function Dashboard() {
-  const { activeSite, density } = useAuthStore();
+  const { activeSite, setActiveSite, user, density } = useAuthStore();
   const isCompact = density === 'compact';
   const [isSignalerPanneOpen, setIsSignalerPanneOpen] = React.useState(false);
 
@@ -479,8 +483,11 @@ export function Dashboard() {
       <PageBanner
         icon={LayoutDashboard}
         badgeLabel="Hydromines GMAO"
-        title="Tableau de Bord"
-        subtitle="Surveillance en temps réel de la flotte et des opérations de maintenance"
+        title={activeSite === 'TOUS' ? "Tableau de Bord" : `Cockpit Tactique • ${activeSite}`}
+        subtitle={activeSite === 'TOUS' 
+          ? "Surveillance en temps réel de la flotte et des opérations de maintenance" 
+          : `Indicateurs de performance, pannes actives et conformité préventive du chantier ${activeSite}`
+        }
         siteLabel={activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
       >
         <Button
@@ -503,7 +510,10 @@ export function Dashboard() {
               SANTÉ FLOTTE — 5 CHANTIERS SOU-GMAO
             </h3>
             <p className="text-[10px] sm:text-xs text-slate-500 font-medium uppercase tracking-wide">
-              Discipline préventive et niveau de vigilance opérationnelle par site d'exploitation
+              {["ADMIN", "DIRECTION"].includes(user?.role || "") 
+                ? "Cliquez sur une capsule pour filtrer instantanément l'intégralité du système par chantier"
+                : "Discipline préventive et niveau de vigilance opérationnelle du chantier"
+              }
             </p>
           </div>
           <Badge variant="outline" className="text-[9px] font-mono border-slate-200 text-slate-600 bg-slate-50 uppercase">
@@ -512,15 +522,31 @@ export function Dashboard() {
         </div>
 
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-5">
-          {complianceParSite.map((site) => (
-            <FleetHealthCapsule 
-              key={site.code} 
-              site={site} 
-              isCompact={isCompact} 
-              isActiveSite={activeSite === 'TOUS' || activeSite === site.code}
-              hasSelection={activeSite !== 'TOUS'}
-            />
-          ))}
+          {complianceParSite.map((site) => {
+            const isAllowedToChangeSite = ["ADMIN", "DIRECTION"].includes(user?.role || "");
+            return (
+              <FleetHealthCapsule 
+                key={site.code} 
+                site={site} 
+                isCompact={isCompact} 
+                isActiveSite={activeSite === 'TOUS' || activeSite === site.code}
+                hasSelection={activeSite !== 'TOUS'}
+                onClick={() => {
+                  if (isAllowedToChangeSite) {
+                    const targetSite = (activeSite === site.code ? 'TOUS' : site.code) as SiteID;
+                    setActiveSite(targetSite);
+                    if (targetSite === 'TOUS') {
+                      toast.info("Affichage global (tous les sites)", { duration: 3000 });
+                    } else {
+                      toast.success(`Chantier sélectionné : ${site.code} • Analyse en cours...`, { duration: 3000 });
+                    }
+                  } else {
+                    toast.error(`Accès restreint : Votre profil est affecté au chantier ${user?.siteId || 'SMI'}`, { duration: 3000 });
+                  }
+                }}
+              />
+            );
+          })}
         </div>
       </motion.div>
 
@@ -1118,6 +1144,122 @@ export function Dashboard() {
         // SECTION SITES SPÉCIFIQUES (SINGLE SITE VIEW)
         // ==========================================
         <>
+          {/* SYNTHÈSE OPÉRATIONNELLE DU SITE (LEVEL GOD TACTICAL SECTION) */}
+          <motion.div 
+            variants={itemVariants} 
+            className="grid gap-4 grid-cols-1 md:grid-cols-3"
+          >
+            {/* 1. État d'avancement des bons de travail du site */}
+            <Card className="bg-white border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+              <CardHeader className="p-0 pb-2">
+                <span className="text-[10px] font-mono font-extrabold text-amber-600 uppercase flex items-center gap-1.5">
+                  <Wrench className="h-3.5 w-3.5 text-amber-600 animate-pulse" /> BONS DE TRAVAIL & INTERVENTIONS ({filteredOrders.length})
+                </span>
+              </CardHeader>
+              <CardContent className="p-0 space-y-2">
+                <div className="grid grid-cols-3 gap-1.5 font-mono text-[10px] text-center">
+                  <div className="bg-slate-50 p-1.5 rounded border border-slate-100">
+                    <span className="text-slate-400 block text-[8px] font-bold">À FAIRE</span>
+                    <span className="text-slate-900 font-extrabold">{filteredOrders.filter(o => o.status === 'À_FAIRE' || o.status === 'A_FAIRE').length}</span>
+                  </div>
+                  <div className="bg-blue-50/50 p-1.5 rounded border border-blue-100">
+                    <span className="text-blue-500 block text-[8px] font-bold">EN COURS</span>
+                    <span className="text-blue-700 font-extrabold">{filteredOrders.filter(o => o.status === 'EN_COURS' || o.status === 'PIÈCES_ATTRIBUÉES').length}</span>
+                  </div>
+                  <div className="bg-emerald-50/50 p-1.5 rounded border border-emerald-100">
+                    <span className="text-emerald-500 block text-[8px] font-bold">RESOLU</span>
+                    <span className="text-emerald-700 font-extrabold">{filteredOrders.filter(o => o.status === 'RÉSOLU' || o.status === 'CLOS').length}</span>
+                  </div>
+                </div>
+                {/* Dernier BT ouvert */}
+                {filteredOrders.filter(o => o.status !== 'CLOS' && o.status !== 'RÉSOLU').length > 0 ? (
+                  <div className="bg-amber-50/50 border border-amber-200/60 rounded-xl p-2.5 text-[9.5px] font-mono space-y-1">
+                    <div className="flex justify-between font-black text-amber-800">
+                      <span>DERNIER ORDRE OUVERT :</span>
+                      <span>#{filteredOrders.filter(o => o.status !== 'CLOS' && o.status !== 'RÉSOLU')[0].id?.slice(-5)}</span>
+                    </div>
+                    <p className="text-slate-600 leading-tight font-medium truncate">
+                      {filteredOrders.filter(o => o.status !== 'CLOS' && o.status !== 'RÉSOLU')[0].title || filteredOrders.filter(o => o.status !== 'CLOS' && o.status !== 'RÉSOLU')[0].description}
+                    </p>
+                    <div className="flex justify-between text-[8px] text-slate-400">
+                      <span>Engin : {filteredOrders.filter(o => o.status !== 'CLOS' && o.status !== 'RÉSOLU')[0].enginId}</span>
+                      <span>Priorité : <span className="text-red-650 font-bold uppercase">{filteredOrders.filter(o => o.status !== 'CLOS' && o.status !== 'RÉSOLU')[0].severity || 'Moyen'}</span></span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-[9.5px] text-emerald-600 font-mono py-4 text-center bg-emerald-50/30 rounded-xl border border-emerald-100 flex flex-col items-center justify-center min-h-[50px]">
+                    ✓ Aucun bon de travail en attente
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 2. Pannes récurrentes ou en cours */}
+            <Card className="bg-white border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+              <CardHeader className="p-0 pb-2">
+                <span className="text-[10px] font-mono font-extrabold text-red-650 uppercase flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 text-red-600 animate-bounce" /> PANNES ACTIVES SUR SITE ({filteredPannes.length})
+                </span>
+              </CardHeader>
+              <CardContent className="p-0 space-y-2">
+                {filteredPannes.length > 0 ? (
+                  <div className="space-y-1.5 max-h-[110px] overflow-y-auto">
+                    {filteredPannes.slice(0, 2).map((p, idx) => (
+                      <div key={p.id || idx} className="bg-slate-50 border border-slate-100 rounded-xl p-2 text-[9.5px] font-mono flex flex-col justify-between">
+                        <div className="flex justify-between items-center">
+                          <span className="font-extrabold text-slate-950">{p.enginId}</span>
+                          <span className="text-[8px] bg-red-50 text-red-600 border border-red-100 px-1 py-0.2 rounded font-black uppercase">{p.priorite || 'VIGILANCE'}</span>
+                        </div>
+                        <p className="text-slate-600 font-medium truncate mt-0.5">{p.description || p.message || 'Signalement de panne'}</p>
+                        <span className="text-[8px] text-slate-400 mt-1 block">Déclaré : {p.datePanne || p.timestamp || 'Récemment'}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-[9.5px] text-emerald-600 font-mono py-4 text-center bg-emerald-50/30 rounded-xl border border-emerald-100 flex flex-col items-center justify-center min-h-[85px]">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500 mb-1" />
+                    <span className="font-bold">SITUATION TOTALE STABLE</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 3. Activité de planification / Planning du jour */}
+            <Card className="bg-white border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+              <CardHeader className="p-0 pb-2">
+                <span className="text-[10px] font-mono font-extrabold text-indigo-600 uppercase flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-indigo-600" /> PLANNING PRÉVENTIF ACTIF ({filteredTasks.length} tâches)
+                </span>
+              </CardHeader>
+              <CardContent className="p-0 space-y-2">
+                {filteredTasks.filter(t => t.statut === 'NON_FAIT').length > 0 ? (
+                  <div className="space-y-1.5 max-h-[110px] overflow-y-auto">
+                    {filteredTasks.filter(t => t.statut === 'NON_FAIT').slice(0, 2).map((t, idx) => (
+                      <div key={t.id || idx} className="bg-slate-50 border border-slate-100 rounded-xl p-2 text-[9.5px] font-mono">
+                        <div className="flex justify-between items-center mb-0.5">
+                          <span className="font-extrabold text-slate-950">{t.enginId}</span>
+                          <Badge variant="outline" className="text-[7.5px] font-mono px-1 border-slate-200 text-slate-500 uppercase">
+                            {t.type}
+                          </Badge>
+                        </div>
+                        <p className="text-slate-600 font-bold truncate leading-tight">{t.label}</p>
+                        <div className="flex justify-between items-center mt-1 text-[8px] text-slate-400">
+                          <span>Échéance : <span className="font-extrabold text-slate-600">{t.echeanceHeures || 250}h</span></span>
+                          <span className="text-amber-600 font-bold">{t.priorite || 'Moyen'}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-[9.5px] text-indigo-600 font-mono py-4 text-center bg-indigo-50/30 rounded-xl border border-indigo-100 flex flex-col items-center justify-center min-h-[85px]">
+                    <CheckCircle2 className="h-5 w-5 text-indigo-500 mb-1" />
+                    <span className="font-bold">TOUS LES PM SONT À JOUR</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
           {/* COMPARATIF INTER-ENGINS (GOD LEVEL COMBO CHART) */}
           <motion.div variants={itemVariants}>
             <Card className="bg-white border-slate-200 rounded-2xl shadow-sm overflow-hidden">
