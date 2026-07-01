@@ -13,9 +13,11 @@ interface SignalerPanneProps {
   isOpen: boolean;
   onClose: () => void;
   enginIdPrefill?: string;
+  descriptionPrefill?: string;
+  gravitePrefill?: "Critique" | "Élevée" | "Moyenne" | "Faible";
 }
 
-export function SignalerPanne({ isOpen, onClose, enginIdPrefill }: SignalerPanneProps) {
+export function SignalerPanne({ isOpen, onClose, enginIdPrefill, descriptionPrefill, gravitePrefill }: SignalerPanneProps) {
   const { user } = useAuthStore();
   const { data: engins } = useCollection<any>('engins');
 
@@ -36,13 +38,13 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill }: SignalerPanne
     }
     // Reset other fields on open
     if (isOpen) {
-      setDescription('');
+      setDescription(descriptionPrefill || '');
       setPhoto(null);
       setArretMachine(false);
-      setGravite('Moyenne');
+      setGravite(gravitePrefill || 'Moyenne');
       setCategorie('Mécanique');
     }
-  }, [isOpen, enginIdPrefill]);
+  }, [isOpen, enginIdPrefill, descriptionPrefill, gravitePrefill]);
 
   // Filter engins by user site
   const filteredEngins = React.useMemo(() => {

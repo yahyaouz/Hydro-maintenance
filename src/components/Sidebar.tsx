@@ -133,7 +133,6 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
       id: "operations",
       title: "OPÉRATIONS DE TERRAIN",
       items: [
-        { id: "assistant_mecanicien", label: "Assistant Mécanicien", icon: Wrench, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","VIEWER"] },
         { id: "taches_planning", label: "Tâches & Planning", icon: Calendar, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","VIEWER"] },
         { id: "checklists", label: "Checklists SOU-GMAO", icon: CheckCircle2, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","VIEWER"] },
       ]
@@ -142,13 +141,24 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
       id: "systeme",
       title: "SYSTÈME",
       items: [
+        { 
+          id: "guide_reparation", 
+          label: "Guide de Réparation", 
+          icon: BookOpen, 
+          roles: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "MECANICIEN"], 
+          onClick: () => window.open("https://guide-pannes.hydromines.ma", "_blank") 
+        },
         { id: "admin", label: "Configuration Système", icon: Settings, roles: ["ADMIN","VIEWER"] },
       ]
     }
   ];
 
-  const handlePageSelect = React.useCallback((tabId: string) => {
-    setActiveTab(tabId);
+  const handlePageSelect = React.useCallback((item: any) => {
+    if (item.onClick) {
+      item.onClick();
+      return;
+    }
+    setActiveTab(item.id);
     if (onClose) onClose();
   }, [setActiveTab, onClose]);
 
@@ -380,8 +390,8 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
                                 ? "bg-amber-500/8 dark:bg-amber-500/12 text-amber-600 dark:text-amber-400 font-bold" 
                                 : "text-slate-650 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-50/75 dark:hover:bg-slate-900/60"
                             )}
-                            onClick={() => handlePageSelect(item.id)}
-                            title={item.label}
+                            onClick={() => handlePageSelect(item)}
+                            title={item.id === "guide_reparation" ? "Plateforme de guide de réparation — disponible prochainement" : item.label}
                           >
                             <item.icon className={cn(
                               "h-5 w-5 shrink-0 transition-transform duration-350",
@@ -420,7 +430,8 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
                                       ? "bg-amber-500/8 dark:bg-amber-500/12 text-amber-600 dark:text-amber-400 font-black border-l-4 border-amber-500 rounded-l-none pl-2 shadow-2xs" 
                                       : "text-slate-650 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-50/75 dark:hover:bg-slate-900/60"
                                   )}
-                                  onClick={() => handlePageSelect(item.id)}
+                                  onClick={() => handlePageSelect(item)}
+                                  title={item.id === "guide_reparation" ? "Plateforme de guide de réparation — disponible prochainement" : item.label}
                                 >
                                   <item.icon className={cn(
                                     "h-4 w-4 shrink-0 transition-transform duration-350",

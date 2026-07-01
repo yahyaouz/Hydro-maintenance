@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
 import { LoginPage } from "@/components/auth/LoginPage";
 import { ReferentielTechnique } from "@/components/ReferentielTechnique";
-import { AssistantMecanicien } from "@/components/AssistantMecanicien";
 import Checklists from "@/components/Checklists";
 import TachesPlanning from "@/components/TachesPlanning";
 import Analyses from "@/components/Analyses";
@@ -317,7 +316,6 @@ export default function App() {
       // NETTOYÉ : interventions supprimé
       // NETTOYÉ : saisies supprimé
       case "referentiel": return "Référentiel Technique";
-      case "assistant_mecanicien": return "Assistant Mécanicien";
       default: return "Hydromines GMAO";
     }
   };
@@ -409,12 +407,11 @@ export default function App() {
               {/* NETTOYÉ : pannes, heures, vision_ia, maintenance, alertes, pneus, carburant, stock, rapports, inspection, monde, mecaniciens, ma_fiche, interventions, saisies supprimés */}
               {activeTab === "admin" && <Admin />}
               {activeTab === "referentiel" && <ReferentielTechnique />}
-              {activeTab === "assistant_mecanicien" && <AssistantMecanicien />}
               {activeTab === "checklists" && <Checklists />}
               {activeTab === "taches_planning" && <TachesPlanning />}
               {activeTab === "analyses" && <Analyses />}
               
-              {!["dashboard", "engins", "referentiel", "admin", "assistant_mecanicien", "checklists", "taches_planning", "analyses"].includes(activeTab) && (
+              {!["dashboard", "engins", "referentiel", "admin", "checklists", "taches_planning", "analyses"].includes(activeTab) && (
                 <div className="flex items-center justify-center h-full text-muted-foreground bg-white dark:bg-slate-900">
                   Module {activeTab} en cours d'implémentation...
                 </div>
