@@ -4,10 +4,11 @@ import {
   Search, Filter, Share2, TrendingUp, Award, Zap, Printer, Clock3, Check, RefreshCw, Eye, ShieldCheck, Star
 } from 'lucide-react';
 import { 
-  collection, doc, addDoc, updateDoc, onSnapshot, Timestamp, getDoc 
+  collection, doc, addDoc, updateDoc, Timestamp, getDoc 
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuthStore } from '@/lib/store';
+import { useCollection } from '@/hooks/useCollection';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -25,18 +26,39 @@ export default function TachesPlanning() {
   const { user, activeSite } = useAuthStore();
   const isModeDirecteur = ['ADMIN', 'DIRECTION', 'RESPONSABLE_MAINTENANCE'].includes(user?.role || '');
 
-  // Base state
-  const [tasks, setTasks] = React.useState<MaintenanceTask[]>([]);
-  const [engins, setEngins] = React.useState<Engin[]>([]);
-  const [mecaniciens, setMecaniciens] = React.useState<Mecanicien[]>([]);
-  const [pmIntervalles, setPmIntervalles] = React.useState<PmIntervalle[]>([]);
+  // Firestore collections queries with real-time useCollection hook
+  const { data: engins, loading: enginsLoading } = useCollection<Engin>('engins');
+  const { data: usersFirestore, loading: usersLoading } = useCollection<any>('users');
+  const { data: tasks, loading: tasksLoading } = useCollection<MaintenanceTask>('maintenanceTasks', [], { 
+    orderByField: 'datePlanifiee', 
+    orderByDirection: 'desc' 
+  });
+  const { data: pmIntervalles, loading: pmIntervallesLoading } = useCollection<PmIntervalle>('config/intervalles');
+  const { data: pannes, loading: pannesLoading } = useCollection<any>('pannes');
 
-  // Load flags
-  const [enginsLoaded, setEnginsLoaded] = React.useState(false);
-  const [mecaniciensLoaded, setMecaniciensLoaded] = React.useState(false);
-  const [intervallesLoaded, setIntervallesLoaded] = React.useState(false);
-  const [tasksLoaded, setTasksLoaded] = React.useState(false);
-  const [loading, setLoading] = React.useState(true);
+  // Dynamically derive mechanics from users collection where role is MECANICIEN
+  const mecaniciens = React.useMemo(() => {
+    if (!usersFirestore) return [];
+    return usersFirestore
+      .filter((u: any) => u.role === 'MECANICIEN' && u.deleted !== true)
+      .map((u: any) => ({
+        id: u.uid || u.id,
+        nomComplet: u.displayName || u.nomComplet || 'Mécanicien',
+        poste: u.poste || 'Poste 1',
+        specialite: u.specialite || 'Général',
+        siteId: u.siteId,
+        statut: u.statut || 'Actif',
+        deleted: u.deleted || false
+      }));
+  }, [usersFirestore]);
+
+  // Load flags derived from useCollection
+  const enginsLoaded = !enginsLoading;
+  const mecaniciensLoaded = !usersLoading;
+  const intervallesLoaded = !pmIntervallesLoading;
+  const tasksLoaded = !tasksLoading;
+  const pannesLoaded = !pannesLoading;
+  const loading = enginsLoading || usersLoading || tasksLoading || pmIntervallesLoading || pannesLoading;
   const [generationRunning, setGenerationRunning] = React.useState(false);
 
   // Filters and navigation
@@ -50,10 +72,6 @@ export default function TachesPlanning() {
   // Modal control
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [selectedTask, setSelectedTask] = React.useState<MaintenanceTask | null>(null);
-
-  // Pannes states
-  const [pannes, setPannes] = React.useState<any[]>([]);
-  const [pannesLoaded, setPannesLoaded] = React.useState(false);
   const [isSignalerPanneOpen, setIsSignalerPanneOpen] = React.useState(false);
   
   // States for panne details and diagnostics
@@ -76,48 +94,6 @@ export default function TachesPlanning() {
     console.error(`[Firestore Error - ${op}]:`, error);
     toast.error(`Erreur de synchronisation (${op})`);
   };
-
-  // Firestore Listeners
-  React.useEffect(() => {
-    // Engins
-    const unsubEngins = onSnapshot(collection(db, 'engins'), (snap) => {
-      setEngins(snap.docs.map(d => ({ id: d.id, ...d.data() } as Engin)));
-      setEnginsLoaded(true);
-    }, (err) => handleFirestoreError(err, 'Engins'));
-
-    // Mecaniciens
-    const unsubMecas = onSnapshot(collection(db, 'mecaniciens'), (snap) => {
-      setMecaniciens(snap.docs.map(d => ({ id: d.id, ...d.data() } as Mecanicien)));
-      setMecaniciensLoaded(true);
-    }, (err) => handleFirestoreError(err, 'Mécaniciens'));
-
-    // PM Intervalles
-    const unsubIntervalles = onSnapshot(collection(db, 'pmIntervalles'), (snap) => {
-      setPmIntervalles(snap.docs.map(d => ({ id: d.id, ...d.data() } as PmIntervalle)));
-      setIntervallesLoaded(true);
-    }, (err) => handleFirestoreError(err, 'Intervalles PM'));
-
-    // Maintenance Tasks
-    const unsubTasks = onSnapshot(collection(db, 'maintenanceTasks'), (snap) => {
-      setTasks(snap.docs.map(d => ({ id: d.id, ...d.data() } as MaintenanceTask)));
-      setTasksLoaded(true);
-      setLoading(false);
-    }, (err) => handleFirestoreError(err, 'Tâches Maintenance'));
-
-    // Pannes
-    const unsubPannes = onSnapshot(collection(db, 'pannes'), (snap) => {
-      setPannes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setPannesLoaded(true);
-    }, (err) => handleFirestoreError(err, 'Pannes'));
-
-    return () => {
-      unsubEngins();
-      unsubMecas();
-      unsubIntervalles();
-      unsubTasks();
-      unsubPannes();
-    };
-  }, []);
 
   // Multi-site permissions filtering
   const filteredEngins = React.useMemo(() => {
