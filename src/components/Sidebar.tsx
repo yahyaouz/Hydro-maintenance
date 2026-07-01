@@ -221,41 +221,19 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
         {/* Top Logo and Header */}
         <div className="p-4 pb-3 flex items-center justify-between border-b border-slate-50 dark:border-slate-900/40 shrink-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md relative z-10">
           {!isCollapsed ? (
-            <div className="flex items-center gap-2.5">
-              <div className="relative">
-                <HydrominesLogo size={38} className="shrink-0 transition-transform duration-300 hover:rotate-6" />
-                <span className={cn(
-                  "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-950 transition-colors duration-500",
-                  isOnline ? "bg-emerald-500" : "bg-amber-500"
-                )} />
-              </div>
+            <div className="flex items-center gap-4">
+              <HydrominesLogo size={96} className="shrink-0 transition-transform duration-300 hover:rotate-6" />
               <div className="flex flex-col">
-                <h1 className="text-base font-black tracking-tighter flex items-center gap-0.5 leading-none">
+                <h1 className="text-xl md:text-2xl font-black tracking-tighter flex flex-col leading-none">
                   <span className="text-[#02A2DE] font-black tracking-tight">HYDRO</span>
                   <span className="text-[#AC1E23] font-black tracking-tight">MINES</span>
                 </h1>
-                <div className="flex items-center gap-1.5 mt-1.5 leading-none">
-                  <span className="text-[8px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest">
-                    SOU-GMAO
-                  </span>
-                  <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-700" />
-                  <span className={cn(
-                    "text-[8px] font-black uppercase tracking-wider px-1 py-0.2 rounded transition-all duration-300",
-                    siteStyle.bg, siteStyle.text
-                  )}>
-                    {activeSite === 'TOUS' ? 'GLOBAL' : activeSite}
-                  </span>
-                </div>
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center w-full gap-2 relative">
-              <div className="relative cursor-pointer" onClick={() => setIsCollapsed(false)}>
-                <HydrominesLogo size={36} />
-                <span className={cn(
-                  "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white dark:border-slate-950",
-                  isOnline ? "bg-emerald-500" : "bg-amber-500"
-                )} />
+              <div className="cursor-pointer" onClick={() => setIsCollapsed(false)}>
+                <HydrominesLogo size={44} />
               </div>
               <span className={cn(
                 "text-[7px] font-black px-1 rounded uppercase tracking-tighter leading-none mt-0.5",
