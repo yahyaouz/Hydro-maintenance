@@ -432,56 +432,9 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
 
         {/* Footer Fixe - PREMIUM PANEL */}
         <div className="p-3.5 border-t border-slate-50 dark:border-slate-900/40 shrink-0 bg-white dark:bg-slate-950 mt-auto space-y-3 relative z-10 shadow-md">
-          {/* Density selection */}
-          {!isCollapsed && (
-            <div className="space-y-1 pb-2 border-b border-slate-50 dark:border-slate-900/30">
-              <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-1">DENSITÉ SOU-GMAO</span>
-              <div className="grid grid-cols-3 gap-1">
-                {(['compact', 'standard', 'large'] as const).map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => {
-                      setDensity(d);
-                      toast.info(`Espace calibré en mode ${d.toUpperCase()}`);
-                    }}
-                    className={cn(
-                      "h-6 rounded-md text-[8px] font-black uppercase tracking-wider transition-all border cursor-pointer",
-                      density === d
-                        ? "bg-slate-950 text-white border-slate-950 dark:bg-white dark:text-slate-950 dark:border-white font-black shadow-xs"
-                        : "bg-white text-slate-600 border-slate-100 hover:bg-slate-50/60 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 dark:hover:bg-slate-800"
-                    )}
-                  >
-                    {d === 'compact' ? 'COMP' : d === 'standard' ? 'STD' : 'LARG'}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Theme switcher */}
-          <div className={cn("flex", isCollapsed ? "justify-center" : "")}>
-            <Button 
-              variant="outline" 
-              size={isCollapsed ? "icon" : "sm"} 
-              className={cn(
-                "w-full text-left justify-start gap-2.5 text-[8px] font-black uppercase tracking-widest h-8 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 border-slate-100 dark:border-slate-900 rounded-lg shadow-2xs",
-                isCollapsed && "justify-center h-8 w-8"
-              )}
-              onClick={() => {
-                setTheme(theme === 'light' ? 'dark' : 'light');
-                toast.success(`Mode ${theme === 'light' ? 'SOMBRE' : 'CLAIR'} activé`);
-              }}
-            >
-              {theme === 'light' ? <Moon className="h-3.5 w-3.5 text-slate-500" /> : <Sun className="h-3.5 w-3.5 text-amber-500 animate-spin" style={{ animationDuration: '6s' }} />}
-              {!isCollapsed && (
-                <span>MODE {theme === 'light' ? 'SOMBRE' : 'CLAIR'}</span>
-              )}
-            </Button>
-          </div>
-
           {/* User profile */}
           <div className={cn(
-            "flex items-center gap-2.5 py-1.5 border-t border-slate-50 dark:border-slate-900/30",
+            "flex items-center gap-2.5 py-1.5",
             isCollapsed ? "justify-center" : ""
           )}>
             <Avatar className="h-9 w-9 border border-slate-100 dark:border-slate-850 shadow-sm shrink-0 bg-slate-50 dark:bg-slate-900 ring-2 ring-transparent group-hover:ring-amber-500/25 transition-all">

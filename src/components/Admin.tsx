@@ -1308,7 +1308,7 @@ export function Admin() {
               ⚠️ CONFIRMER LA SUPPRESSION
             </h3>
             <p className="text-slate-600 text-sm leading-relaxed mb-6">
-              Êtes-vous absolument sûr de vouloir supprimer cet élément ? Cette action est irréversible et supprimera définitivement les données du stockage local.
+              Êtes-vous absolument sûr de vouloir supprimer cet élément ? Cette action est irréversible et supprimera définitivement les données de Firestore.
             </p>
             <div className="flex gap-3 justify-end">
               <Button

@@ -22,8 +22,6 @@ import { ReferentielTechnique } from "@/components/ReferentielTechnique";
 import Checklists from "@/components/Checklists";
 import TachesPlanning from "@/components/TachesPlanning";
 import Analyses from "@/components/Analyses";
-import { IndustrialBackdrop } from "@/components/IndustrialBackdrop";
-import { RestrictedActionModal } from "@/components/RestrictedActionModal";
 import { startViewerTrackingSession, trackViewerPageTransition } from "@/services/viewerTracking";
 
 import { seedDatabase } from "@/lib/db-seed";
@@ -179,7 +177,7 @@ function AwaitingApprovalScreen() {
 
 import { useNotificationStore } from "@/services/notificationStore";
 import { OfflineQueueManager } from "@/services/offlineQueueManager";
-import { Bell, Wifi, WifiOff, Activity, BadgeAlert, Calendar, CheckSquare, Layers, AlertCircle, Info, CheckCheck, Trash2 } from "lucide-react";
+import { Bell, Wifi, WifiOff, Activity, BadgeAlert, Calendar, CheckSquare, Layers, AlertCircle, Info, CheckCheck, Trash2, Moon, Sun } from "lucide-react";
 
 export default function App() {
   const [activeTab, setActiveTab] = React.useState("dashboard");
@@ -395,6 +393,22 @@ export default function App() {
                 </span>
               )}
             </button>
+
+            {/* Mode Sombre / Clair toggle */}
+            <button
+              onClick={() => {
+                setTheme(theme === 'light' ? 'dark' : 'light');
+                toast.success(`Mode ${theme === 'light' ? 'SOMBRE' : 'CLAIR'} activé`);
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-100 bg-white text-slate-700 hover:bg-sky-50/50 transition-all cursor-pointer"
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? (
+                <Moon className="h-4 w-4 text-slate-500" />
+              ) : (
+                <Sun className="h-4 w-4 text-amber-500 animate-spin" style={{ animationDuration: '6s' }} />
+              )}
+            </button>
           </div>
         </header>
 
@@ -544,7 +558,6 @@ export default function App() {
       </AnimatePresence>
 
       <Toaster position="top-right" />
-      <RestrictedActionModal />
     </div>
   );
 }

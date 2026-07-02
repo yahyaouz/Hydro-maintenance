@@ -23,9 +23,9 @@ const getInitialTheme = (): 'light' | 'dark' => {
 const getInitialDensity = (): 'compact' | 'standard' | 'large' => {
   try {
     const raw = localStorage.getItem('sg_density');
-    return (raw === 'large' ? 'large' : raw === 'standard' ? 'standard' : 'compact');
+    return (raw === 'large' ? 'large' : raw === 'compact' ? 'compact' : 'standard');
   } catch {
-    return 'compact';
+    return 'standard';
   }
 };
 

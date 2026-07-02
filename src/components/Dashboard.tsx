@@ -178,8 +178,8 @@ function FleetHealthCapsule({
 }
 
 export function Dashboard() {
-  const { activeSite, setActiveSite, user, density } = useAuthStore();
-  const isCompact = density === 'compact';
+  const { activeSite, setActiveSite, user } = useAuthStore();
+  const isCompact = false;
   const [isSignalerPanneOpen, setIsSignalerPanneOpen] = React.useState(false);
 
   const getNormalizedStatus = React.useCallback((e: any) => {
