@@ -22,9 +22,11 @@ import { ReferentielTechnique } from "@/components/ReferentielTechnique";
 import Checklists from "@/components/Checklists";
 import TachesPlanning from "@/components/TachesPlanning";
 import Analyses from "@/components/Analyses";
+// V4-ALERTES: Import Alertes page component
+import { Alertes } from "@/components/Alertes";
+// V4-IMPORT: Import ImportConfig page component
+import { ImportConfig } from "@/components/ImportConfig";
 import { startViewerTrackingSession, trackViewerPageTransition } from "@/services/viewerTracking";
-
-import { seedDatabase } from "@/lib/db-seed";
 
 // NETTOYÉ : Import lazy VisionIA supprimé
 // NETTOYÉ : Import lazy Rapports supprimé
@@ -182,7 +184,6 @@ import { Bell, Wifi, WifiOff, Activity, BadgeAlert, Calendar, CheckSquare, Layer
 export default function App() {
   const [activeTab, setActiveTab] = React.useState("dashboard");
   const { isAuthenticated, user, setUser, theme, setTheme, activeSite } = useAuthStore();
-  const [isSeeding, setIsSeeding] = React.useState(false);
 
   // Notifications State Management
   const [showNotifications, setShowNotifications] = React.useState(false);
@@ -198,13 +199,6 @@ export default function App() {
       document.documentElement.classList.remove("dark");
     }
   }, [theme]);
-
-  React.useEffect(() => {
-    if (isAuthenticated && !isSeeding) {
-       setIsSeeding(true);
-       seedDatabase().finally(() => setIsSeeding(false));
-    }
-  }, [isAuthenticated, isSeeding]);
 
   // Network heartbeat and offline queue monitoring
   React.useEffect(() => {
@@ -296,6 +290,8 @@ export default function App() {
   const getTabTitle = () => {
     switch(activeTab) {
       case "dashboard": return "Supervision Flotte";
+      // V4-ALERTES: Set dynamic header title for Alertes page
+      case "alertes": return "Alertes & Vigilance Métier";
       case "engins": return "Gestion du Parc";
       // NETTOYÉ : pannes supprimé
       // NETTOYÉ : heures supprimé
@@ -417,7 +413,11 @@ export default function App() {
           <div className="relative z-10 w-full h-full p-6">
             <React.Suspense fallback={<IndustrialSkeleton />}>
               {activeTab === "dashboard" && <Dashboard />}
+              {/* V4-ALERTES: Render Alertes page component */}
+              {activeTab === "alertes" && <Alertes />}
               {activeTab === "engins" && <EnginList />}
+              {/* V4-IMPORT: Render ImportConfig component */}
+              {activeTab === "import_config" && <ImportConfig />}
               {/* NETTOYÉ : pannes, heures, vision_ia, maintenance, alertes, pneus, carburant, stock, rapports, inspection, monde, mecaniciens, ma_fiche, interventions, saisies supprimés */}
               {activeTab === "admin" && <Admin />}
               {activeTab === "referentiel" && <ReferentielTechnique />}
@@ -425,7 +425,7 @@ export default function App() {
               {activeTab === "taches_planning" && <TachesPlanning />}
               {activeTab === "analyses" && <Analyses />}
               
-              {!["dashboard", "engins", "referentiel", "admin", "checklists", "taches_planning", "analyses"].includes(activeTab) && (
+              {!["dashboard", "alertes", "engins", "referentiel", "admin", "checklists", "taches_planning", "analyses", "import_config"].includes(activeTab) && (
                 <div className="flex items-center justify-center h-full text-muted-foreground bg-white dark:bg-slate-900">
                   Module {activeTab} en cours d'implémentation...
                 </div>

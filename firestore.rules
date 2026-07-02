@@ -213,5 +213,22 @@ service cloud.firestore {
       );
       allow delete: if isSignedIn() && isRole('ADMIN');
     }
+
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if isSignedIn() && (
+        getUserData().role == 'ADMIN' ||
+        getUserData().role == 'RESPONSABLE_MAINTENANCE'
+      );
+
+      match /history/{logId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && (
+          getUserData().role == 'ADMIN' ||
+          getUserData().role == 'RESPONSABLE_MAINTENANCE'
+        );
+        allow update, delete: if isSignedIn() && isRole('ADMIN');
+      }
+    }
   }
 }

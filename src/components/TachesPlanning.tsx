@@ -4,7 +4,7 @@ import {
   Search, Filter, Share2, TrendingUp, Award, Zap, Printer, Clock3, Check, RefreshCw, Eye, ShieldCheck, Star
 } from 'lucide-react';
 import { 
-  collection, doc, addDoc, updateDoc, Timestamp, getDoc 
+  collection, doc, addDoc, updateDoc, Timestamp, getDoc, setDoc, runTransaction
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuthStore } from '@/lib/store';
@@ -157,9 +157,12 @@ export default function TachesPlanning() {
     };
   }, [filteredEngins, filteredPannes]);
 
-  // IDEMPOTENT AUTO-GENERATION OF TASKS
+  // V4-FIRESTORE: IDEMPOTENT AUTO-GENERATION OF TASKS
   React.useEffect(() => {
-    if (user?.role && user.role !== 'VIEWER' && enginsLoaded && mecaniciensLoaded && intervallesLoaded && tasksLoaded && !generationRunning) {
+    // V4-FIRESTORE: Limit generation strictly to ADMIN, DIRECTION, and RESPONSABLE_MAINTENANCE
+    const isAuthorizedToGenerate = user?.role && ['ADMIN', 'DIRECTION', 'RESPONSABLE_MAINTENANCE'].includes(user.role);
+    
+    if (isAuthorizedToGenerate && enginsLoaded && mecaniciensLoaded && intervallesLoaded && tasksLoaded && !generationRunning) {
       const runAutoGeneration = async () => {
         setGenerationRunning(true);
         try {
@@ -167,10 +170,8 @@ export default function TachesPlanning() {
 
           // 1. Tâches Quotidiennes
           for (const engin of filteredEngins) {
-            const hasDailyToday = tasks.some(
-              t => t.type === 'QUOTIDIEN' && t.enginId === engin.id && t.datePlanifiee === todayStr && !t.deleted
-            );
-            if (hasDailyToday) continue;
+            // V4-FIRESTORE: Ignore temp engins from offline queue until they are replayed/resolved
+            if (engin.id.startsWith('temp_')) continue;
 
             const siteMecas = filteredMecaniciens.filter(m => m.siteId === engin.siteId);
             if (siteMecas.length === 0) continue;
@@ -182,7 +183,17 @@ export default function TachesPlanning() {
               const def = fullList[idx];
               const m = siteMecas[idx % siteMecas.length];
               
-              await addDoc(collection(db, 'maintenanceTasks'), {
+              // V4-FIRESTORE: Deterministic ID pattern: daily_${enginId}_${date}_${label}
+              const cleanLabel = def.label.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+              const taskId = `daily_${engin.id}_${todayStr}_${cleanLabel}`;
+
+              const hasDailyToday = tasks.some(
+                t => t.id === taskId && !t.deleted
+              );
+              if (hasDailyToday) continue;
+
+              await setDoc(doc(db, 'maintenanceTasks', taskId), {
+                id: taskId,
                 type: 'QUOTIDIEN',
                 label: `${def.label} — ${engin.id}`,
                 enginId: engin.id,
@@ -201,12 +212,15 @@ export default function TachesPlanning() {
                 deleted: false,
                 createdAt: Timestamp.now(),
                 updatedAt: Timestamp.now()
-              });
+              }, { merge: true });
             }
           }
 
           // 2. Tâches Préventives PM
           for (const engin of filteredEngins) {
+            // V4-FIRESTORE: Ignore temp engins from offline queue
+            if (engin.id.startsWith('temp_')) continue;
+
             const modelIntervalles = pmIntervalles.filter(
               i => i.typeEngin === engin.modele || i.typeEngin === 'Générique'
             );
@@ -225,13 +239,11 @@ export default function TachesPlanning() {
 
               const threshold = intervalle.intervalleHeures * 0.9;
               if (hoursSinceLastPm >= threshold) {
-                const alreadyGenerated = tasks.some(t => 
-                  t.enginId === engin.id &&
-                  t.type === 'PREVENTIF' &&
-                  t.label.includes(intervalle.operation.substring(0, 20)) &&
-                  !['FAIT', 'VALIDE', 'REPORTE'].includes(t.statut) &&
-                  !t.deleted
-                );
+                // V4-FIRESTORE: Deterministic ID pattern: pm_${enginId}_${type}_${heures}
+                const cleanOp = intervalle.operation.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+                const taskId = `pm_${engin.id}_${cleanOp}_${intervalle.intervalleHeures}`;
+
+                const alreadyGenerated = tasks.some(t => t.id === taskId && !t.deleted);
                 if (alreadyGenerated) continue;
 
                 const siteMecas = filteredMecaniciens.filter(m => m.siteId === engin.siteId);
@@ -241,7 +253,8 @@ export default function TachesPlanning() {
                 const isCritique = hoursSinceLastPm >= intervalle.intervalleHeures;
                 const priorite = isCritique ? 'CRITIQUE' : 'HAUTE';
 
-                await addDoc(collection(db, 'maintenanceTasks'), {
+                await setDoc(doc(db, 'maintenanceTasks', taskId), {
+                  id: taskId,
                   type: 'PREVENTIF',
                   label: `${intervalle.operation} — Échéance ${intervalle.intervalleHeures}h (Actuel: ${engin.heuresMarche}h, Dernier: ${lastPmHours}h)`,
                   enginId: engin.id,
@@ -261,7 +274,7 @@ export default function TachesPlanning() {
                   deleted: false,
                   createdAt: Timestamp.now(),
                   updatedAt: Timestamp.now()
-                });
+                }, { merge: true });
               }
             }
           }
@@ -273,7 +286,7 @@ export default function TachesPlanning() {
       };
       runAutoGeneration();
     }
-  }, [enginsLoaded, mecaniciensLoaded, intervallesLoaded, tasksLoaded, filteredEngins.length, filteredMecaniciens.length]);
+  }, [user, enginsLoaded, mecaniciensLoaded, intervallesLoaded, tasksLoaded, filteredEngins.length, filteredMecaniciens.length]);
 
   // CRUD Implementations
   const handleCreateTask = async (data: any) => {
@@ -304,38 +317,62 @@ export default function TachesPlanning() {
     }
   };
 
+  // V4-FIRESTORE: Atomic transaction for task updates, engine states, and corrective panne closures
   const handleUpdateTask = async (taskId: string, fields: Partial<MaintenanceTask>) => {
     try {
-      await updateDoc(doc(db, 'maintenanceTasks', taskId), {
-        ...fields,
-        updatedAt: Timestamp.now()
-      });
-      toast.success("Tâche mise à jour.");
+      const taskRef = doc(db, 'maintenanceTasks', taskId);
 
-      // Automatic close of associated panne when corrective task is FAIT or VALIDE
-      if (fields.statut === 'FAIT' || fields.statut === 'VALIDE') {
-        const taskSnap = await getDoc(doc(db, 'maintenanceTasks', taskId));
-        if (taskSnap.exists()) {
-          const taskData = taskSnap.data();
+      await runTransaction(db, async (transaction) => {
+        // 1. Fetch current task state atomically
+        const taskSnap = await transaction.get(taskRef);
+        if (!taskSnap.exists()) {
+          throw new Error("La tâche n'existe pas dans Firestore.");
+        }
+        const taskData = taskSnap.data() as any;
+
+        // 2. Prepare task updates
+        const taskUpdates = {
+          ...fields,
+          updatedAt: Timestamp.now()
+        };
+        transaction.update(taskRef, taskUpdates);
+
+        // 3. Handle downstream status updates atomically when completed
+        const isCompletedNow = fields.statut === 'FAIT' || fields.statut === 'VALIDE';
+        if (isCompletedNow) {
+          // A. Corrective task completion -> close associated panne & set engine back to Operational
           if (taskData.type === 'CORRECTIF' && taskData.panneId) {
-            await updateDoc(doc(db, 'pannes', taskData.panneId), {
+            const panneRef = doc(db, 'pannes', taskData.panneId);
+            transaction.update(panneRef, {
               statut: 'CLOS',
               solution: fields.commentaire || "Fiche d'intervention validée.",
               updatedAt: Timestamp.now()
             });
 
-            // Put engine back to service
             if (taskData.enginId) {
               const enginRef = doc(db, 'engins', taskData.enginId);
-              await updateDoc(enginRef, {
+              transaction.update(enginRef, {
                 etat: 'Opérationnel',
                 updatedAt: Timestamp.now()
               });
             }
-            toast.success("La panne associée a été automatiquement clôturée et l'engin remis en service !");
+          }
+
+          // B. Preventive task completion -> synchronize and put engine back to Operational
+          if (taskData.type === 'PREVENTIF' && taskData.enginId) {
+            const enginRef = doc(db, 'engins', taskData.enginId);
+            const enginSnap = await transaction.get(enginRef);
+            if (enginSnap.exists()) {
+              transaction.update(enginRef, {
+                etat: 'Opérationnel',
+                updatedAt: Timestamp.now()
+              });
+            }
           }
         }
-      }
+      });
+
+      toast.success("Tâche mise à jour avec succès (Transaction V4 validée) !");
     } catch (err) {
       handleFirestoreError(err, 'Mettre à jour');
     }

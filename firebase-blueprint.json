@@ -231,6 +231,14 @@
     "checklists": {
       "schema": "checklist",
       "description": "Collection des checklists et inspections de sécurité/conducteur/maintenance"
+    },
+    "config": {
+      "schema": "object",
+      "description": "Collection de configuration globale du système"
+    },
+    "config/imports/history": {
+      "schema": "object",
+      "description": "Sous-collection de traçabilité des exécutions d'import de données externes"
     }
   }
 }

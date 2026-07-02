@@ -118,6 +118,8 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
       title: "ANALYSES & SUPERVISION",
       items: [
         { id: "dashboard", label: "Tableau de Bord", icon: LayoutDashboard, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","VIEWER"] },
+        // V4-ALERTES: Adding Alertes tab to the main navigation
+        { id: "alertes", label: "Alertes", icon: AlertTriangle, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","VIEWER"] },
         { id: "analyses", label: "Analyses & Rapports", icon: BarChart3, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","VIEWER"] },
       ]
     },
@@ -148,6 +150,8 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
           roles: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "MECANICIEN"], 
           onClick: () => window.open("https://guide-pannes.hydromines.ma", "_blank") 
         },
+        // V4-IMPORT: Add ImportConfig route to the system group
+        { id: "import_config", label: "Configuration Imports", icon: Database, roles: ["ADMIN", "RESPONSABLE_MAINTENANCE"] },
         { id: "admin", label: "Configuration Système", icon: Settings, roles: ["ADMIN","VIEWER"] },
       ]
     }
