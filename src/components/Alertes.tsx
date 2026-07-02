@@ -487,7 +487,8 @@ export function Alertes() {
       >
         <div className="flex gap-2">
           {generationRunning && (
-            <span className="flex items-center gap-1 text-[10px] font-mono font-bold text-amber-500 animate-pulse bg-amber-50 px-2.5 py-1 rounded-md border border-amber-100">
+            /* V4-TYPO: replaced text-[10px] and font-mono with text-caption */
+            <span className="flex items-center gap-1 text-caption font-bold text-amber-500 animate-pulse bg-amber-50 px-2.5 py-1 rounded-md border border-amber-100">
               <RefreshCw className="h-3 w-3 animate-spin" /> ÉVALUATION...
             </span>
           )}
@@ -496,7 +497,8 @@ export function Alertes() {
               variant="destructive"
               size="sm"
               onClick={handlePurgeArchived}
-              className="text-[10px] font-bold font-mono tracking-wider uppercase h-8 px-3"
+              /* V4-TYPO: replaced text-[10px] and font-mono with text-caption and font-sans */
+              className="text-caption font-bold tracking-wider uppercase h-8 px-3"
             >
               <Trash2 className="h-3.5 w-3.5 mr-1" /> Purger les Archives
             </Button>
@@ -509,7 +511,8 @@ export function Alertes() {
         <Card className="bg-white border border-gray-100 hover:shadow-md transition-all rounded-[14px]">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-extrabold">Active Alerts</p>
+              {/* V4-TYPO: replaced text-[10px] and font-mono with text-caption and font-sans */}
+              <p className="text-caption font-sans text-slate-400 uppercase tracking-wider font-extrabold">Active Alerts</p>
               <h3 className="text-2xl font-black text-slate-800 mt-1">{counts.active}</h3>
             </div>
             <div className="p-2.5 rounded-xl bg-yellow-50 text-yellow-600">
@@ -521,7 +524,8 @@ export function Alertes() {
         <Card className="bg-white border border-gray-100 hover:shadow-md transition-all rounded-[14px]">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-extrabold">Risques Critiques</p>
+              {/* V4-TYPO: replaced text-[10px] and font-mono with text-caption and font-sans */}
+              <p className="text-caption font-sans text-slate-400 uppercase tracking-wider font-extrabold">Risques Critiques</p>
               <h3 className={cn("text-2xl font-black mt-1", counts.critical > 0 ? "text-rose-600 animate-pulse" : "text-slate-800")}>
                 {counts.critical}
               </h3>
@@ -535,7 +539,8 @@ export function Alertes() {
         <Card className="bg-white border border-gray-100 hover:shadow-md transition-all rounded-[14px]">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-extrabold">Alertes Acquittées</p>
+              {/* V4-TYPO: replaced text-[10px] and font-mono with text-caption and font-sans */}
+              <p className="text-caption font-sans text-slate-400 uppercase tracking-wider font-extrabold">Alertes Acquittées</p>
               <h3 className="text-2xl font-black text-slate-800 mt-1">{counts.vue}</h3>
             </div>
             <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
@@ -547,7 +552,8 @@ export function Alertes() {
         <Card className="bg-white border border-gray-100 hover:shadow-md transition-all rounded-[14px]">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-extrabold">Alertes Traitées</p>
+              {/* V4-TYPO: replaced text-[10px] and font-mono with text-caption and font-sans */}
+              <p className="text-caption font-sans text-slate-400 uppercase tracking-wider font-extrabold">Alertes Traitées</p>
               <h3 className="text-2xl font-black text-slate-800 mt-1">{counts.traitee}</h3>
             </div>
             <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600">
@@ -559,7 +565,8 @@ export function Alertes() {
         <Card className="bg-white border border-gray-100 hover:shadow-md transition-all rounded-[14px]">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-extrabold">Historique Archivé</p>
+              {/* V4-TYPO: replaced text-[10px] and font-mono with text-caption and font-sans */}
+              <p className="text-caption font-sans text-slate-400 uppercase tracking-wider font-extrabold">Historique Archivé</p>
               <h3 className="text-2xl font-black text-slate-800 mt-1">{counts.archivee}</h3>
             </div>
             <div className="p-2.5 rounded-xl bg-slate-50 text-slate-600">
@@ -586,7 +593,8 @@ export function Alertes() {
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
                 className={cn(
-                  "px-3.5 py-1.5 rounded-md text-[10.5px] font-black uppercase tracking-wider transition-all cursor-pointer",
+                  /* V4-TYPO: replaced text-[10.5px] with text-caption */
+                  "px-3.5 py-1.5 rounded-md text-caption font-black uppercase tracking-wider transition-all cursor-pointer",
                   activeFilter === filter
                     ? "bg-white text-slate-900 shadow-xs font-extrabold border border-slate-100"
                     : "text-slate-500 hover:text-slate-800"
@@ -602,11 +610,12 @@ export function Alertes() {
         <div className="flex flex-wrap items-center gap-3">
           {/* Severity selector */}
           <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-            <span className="text-[9px] font-mono font-black text-slate-450 uppercase px-1">Gravité:</span>
+            {/* V4-TYPO: replaced text-[9px] and font-mono with text-caption and font-sans */}
+            <span className="text-caption font-sans font-black text-slate-450 uppercase px-1">Gravité:</span>
             <select
               value={severityFilter}
               onChange={(e) => setSeverityFilter(e.target.value as any)}
-              className="bg-transparent text-[10px] font-bold text-slate-700 outline-none border-0 cursor-pointer p-0"
+              className="bg-transparent text-caption font-bold text-slate-700 outline-none border-0 cursor-pointer p-0"
             >
               <option value="ALL">TOUTES</option>
               <option value="YELLOW">JAUNE (SEUIL MÉTROLOGIQUE)</option>
@@ -623,7 +632,7 @@ export function Alertes() {
               placeholder="Rechercher une alerte..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8.5 pr-4 py-1.5 w-48 sm:w-60 bg-slate-50 border border-slate-100 rounded-lg text-[10.5px] focus:outline-none focus:ring-1 focus:ring-amber-500 font-bold"
+              className="pl-8.5 pr-4 py-1.5 w-48 sm:w-60 bg-slate-50 border border-slate-100 rounded-lg text-caption focus:outline-none focus:ring-1 focus:ring-amber-500 font-bold"
             />
           </div>
 
@@ -634,7 +643,7 @@ export function Alertes() {
                 variant="outline"
                 size="sm"
                 onClick={() => handleBulkAction('VUE')}
-                className="text-[9px] font-black uppercase tracking-widest h-8"
+                className="text-caption font-black uppercase tracking-widest h-8"
               >
                 <CheckCheck className="h-3 w-3 mr-1" /> Tout acquitter
               </Button>
@@ -654,7 +663,8 @@ export function Alertes() {
           <div className="flex flex-col items-center justify-center h-64 bg-slate-50/30 rounded-2xl border-2 border-dashed border-slate-150 p-6 text-center">
             <Inbox className="h-10 w-10 text-slate-300 mb-2.5" />
             <h4 className="text-xs font-black uppercase tracking-widest text-slate-700">Aucune alerte correspondante</h4>
-            <p className="text-[10px] text-slate-500 uppercase mt-1">Tous les indicateurs et seuils techniques sont actuellement stables sur ce chantier.</p>
+            {/* V4-TYPO: replaced text-[10px] with text-caption */}
+            <p className="text-caption text-slate-500 uppercase mt-1">Tous les indicateurs et seuils techniques sont actuellement stables sur ce chantier.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -677,44 +687,48 @@ export function Alertes() {
                         ? isCritical 
                           ? "border-l-4 border-l-rose-500 border-rose-100 bg-rose-50/5 hover:shadow-md" 
                           : "border-l-4 border-l-yellow-500 border-yellow-100 bg-yellow-50/5 hover:shadow-md"
-                        : "border-slate-200 opacity-70",
-                      isFlashing && "animate-[pulse_1.8s_infinite] ring-2 ring-rose-500/20"
+                        : "border-slate-200 opacity-70"
                     )}
                   >
                     {/* Top line with status indicators and tags */}
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
                         <span className={cn(
-                          "text-[8px] font-mono font-black uppercase px-2 py-0.5 rounded-full border tracking-wider",
+                          /* V4-TYPO: replaced text-[8px] with text-tech (since alert code is a tech code) */
+                          "text-tech font-mono font-black uppercase px-2 py-0.5 rounded-full border tracking-wider",
                           isCritical
                             ? "bg-rose-50 text-rose-600 border-rose-100"
                             : "bg-yellow-50 text-yellow-600 border-yellow-100"
                         )}>
                           {alert.code}
                         </span>
-                        <span className="text-[8px] font-mono font-black bg-slate-50 text-slate-500 border border-slate-100 px-2 py-0.5 rounded-full tracking-wider uppercase">
+                        {/* V4-TYPO: replaced text-[8px] with text-tech (site ID is tech data) */}
+                        <span className="text-tech font-mono font-black bg-slate-50 text-slate-500 border border-slate-100 px-2 py-0.5 rounded-full tracking-wider uppercase">
                           {alert.siteId}
                         </span>
                       </div>
                       
-                      <span className="text-[8.5px] font-mono text-slate-450 uppercase font-black">
+                      {/* V4-TYPO: replaced text-[8.5px] and font-mono with text-caption and font-sans */}
+                      <span className="text-caption font-sans text-slate-450 uppercase font-black">
                         {new Date(alert.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                       </span>
                     </div>
-
+ 
                     {/* Core Body */}
                     <div className="space-y-1">
                       <h4 className="text-sm font-black uppercase text-slate-800 tracking-wide flex items-center gap-1.5">
                         {isFlashing && <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping shrink-0" />}
                         {alert.title}
                       </h4>
-                      <p className="text-[10.5px] text-slate-500 font-medium leading-relaxed font-sans">
+                      {/* V4-TYPO: replaced text-[10.5px] with text-body */}
+                      <p className="text-body text-slate-500 font-medium leading-relaxed font-sans">
                         {alert.message}
                       </p>
                     </div>
-
+ 
                     {/* Metadata indicators */}
-                    <div className="flex items-center gap-3 text-[9px] font-mono text-slate-450 border-t border-slate-50 pt-2.5">
+                    {/* V4-TYPO: replaced text-[9px] and font-mono with text-caption and font-sans */}
+                    <div className="flex items-center gap-3 text-caption font-sans text-slate-450 border-t border-slate-50 pt-2.5">
                       <span className="flex items-center gap-1 font-bold uppercase">
                         STATUS: <span className={cn(
                           "font-black",
@@ -728,9 +742,7 @@ export function Alertes() {
                       <span className="uppercase font-bold">Mail: {alert.emailSent ? 'ENVOYÉ' : 'PRÉPARÉ'}</span>
                       <span>•</span>
                       <span className="uppercase font-bold">SMS: {alert.smsSent ? 'ENVOYÉ' : 'PRÉPARÉ'}</span>
-                    </div>
-
-                    {/* Action Panel */}
+                    </div>                      {/* Action Panel */}
                     <div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-3 mt-1.5">
                       {/* Left: Action transitions */}
                       <div className="flex gap-1">
@@ -739,7 +751,8 @@ export function Alertes() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleTransition(alert.id, alert.status, 'VUE')}
-                            className="text-[9px] font-black tracking-widest h-8 px-2.5 text-slate-650 hover:text-blue-500"
+                            /* V4-TYPO: replaced text-[9px] with text-caption */
+                            className="text-caption font-black tracking-widest h-8 px-2.5 text-slate-650 hover:text-blue-500"
                           >
                             <Eye className="h-3 w-3 mr-1" /> Acquitter
                           </Button>
@@ -749,7 +762,8 @@ export function Alertes() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleTransition(alert.id, alert.status, 'TRAITEE')}
-                            className="text-[9px] font-black tracking-widest h-8 px-2.5 text-slate-650 hover:text-emerald-500"
+                            /* V4-TYPO: replaced text-[9px] with text-caption */
+                            className="text-caption font-black tracking-widest h-8 px-2.5 text-slate-650 hover:text-emerald-500"
                           >
                             <Check className="h-3 w-3 mr-1" /> Traitée
                           </Button>
@@ -759,7 +773,8 @@ export function Alertes() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleTransition(alert.id, alert.status, 'ARCHIVEE')}
-                            className="text-[9px] font-black tracking-widest h-8 px-2.5 text-slate-650 hover:text-slate-800"
+                            /* V4-TYPO: replaced text-[9px] with text-caption */
+                            className="text-caption font-black tracking-widest h-8 px-2.5 text-slate-650 hover:text-slate-800"
                           >
                             <Inbox className="h-3 w-3 mr-1" /> Archiver
                           </Button>
@@ -769,19 +784,21 @@ export function Alertes() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleTransition(alert.id, alert.status, 'ACTIVE')}
-                            className="text-[9px] font-black tracking-widest h-8 px-2.5 text-slate-650 hover:text-amber-500"
+                            /* V4-TYPO: replaced text-[9px] with text-caption */
+                            className="text-caption font-black tracking-widest h-8 px-2.5 text-slate-650 hover:text-amber-500"
                           >
                             <RefreshCw className="h-3 w-3 mr-1" /> Réactiver
                           </Button>
                         )}
                       </div>
-
+ 
                       {/* Right: Contextual physical button based on rule */}
                       {alert.status === 'ACTIVE' && (
                         <Button
                           onClick={() => handleContextualAction(alert)}
                           className={cn(
-                            "text-[9px] font-black tracking-widest uppercase h-8 px-3 border-none",
+                            /* V4-TYPO: replaced text-[9px] with text-caption */
+                            "text-caption font-black tracking-widest uppercase h-8 px-3 border-none",
                             isCritical 
                               ? "bg-rose-600 hover:bg-rose-700 text-white" 
                               : "bg-amber-500 hover:bg-amber-600 text-white"
@@ -818,7 +835,8 @@ export function Alertes() {
         </CardHeader>
         <CardContent className="p-4">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-[10px]">
+            {/* V4-TYPO: replaced text-[10px] with text-caption and font-sans */}
+            <table className="w-full text-left border-collapse text-caption font-sans">
               <thead>
                 <tr className="border-b border-slate-100 text-slate-450 uppercase font-black tracking-wider">
                   <th className="pb-2">Code Règle</th>
@@ -828,54 +846,58 @@ export function Alertes() {
                   <th className="pb-2">Action Centrale Programmée</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 text-slate-650 font-medium font-mono">
+              {/* V4-TYPO: replaced font-mono on entire tbody with targeted fonts */}
+              <tbody className="divide-y divide-slate-50 text-slate-650 font-medium">
                 <tr>
-                  <td className="py-2.5 font-bold text-slate-800">PM_OVERDUE</td>
+                  {/* V4-TYPO: rule code is tech data, so keep font-mono with text-tech */}
+                  <td className="py-2.5 font-bold font-mono text-tech text-slate-800">PM_OVERDUE</td>
                   <td>Maintenance préventive dépassée</td>
-                  <td>Heures cumulées &gt; intervalle PM</td>
-                  <td><span className="inline-flex items-center gap-1 text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full text-[8.5px] border border-yellow-100 font-black">🟡 JAUNE</span></td>
+                  {/* V4-TYPO: numbers are tech data, so font-mono + text-tech */}
+                  <td className="font-mono text-tech">Heures cumulées &gt; intervalle PM</td>
+                  {/* V4-TYPO: replaced text-[8.5px] with text-caption */}
+                  <td><span className="inline-flex items-center gap-1 text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full text-caption border border-yellow-100 font-black">🟡 JAUNE</span></td>
                   <td>Génération automatique de Bon de Travail (BT) planifié</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 font-bold text-slate-800">PM_CRITICAL</td>
+                  <td className="py-2.5 font-bold font-mono text-tech text-slate-800">PM_CRITICAL</td>
                   <td>Maintenance préventive très dépassée</td>
-                  <td>Heures cumulées &gt; 110% de l'intervalle PM</td>
-                  <td><span className="inline-flex items-center gap-1 text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full text-[8.5px] border border-rose-100 font-black">🔴 ROUGE</span></td>
+                  <td className="font-mono text-tech">Heures cumulées &gt; 110% de l'intervalle PM</td>
+                  <td><span className="inline-flex items-center gap-1 text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full text-caption border border-rose-100 font-black">🔴 ROUGE</span></td>
                   <td>Escalade immédiate au Responsable Maintenance (email/SMS simulés)</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 font-bold text-slate-800">PANNE_24H</td>
+                  <td className="py-2.5 font-bold font-mono text-tech text-slate-800">PANNE_24H</td>
                   <td>Panne non traitée</td>
-                  <td>Statut panne ≠ CLOS après 24 heures d'immobilisation</td>
-                  <td><span className="inline-flex items-center gap-1 text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full text-[8.5px] border border-rose-100 font-black">🔴 ROUGE</span></td>
+                  <td className="font-mono text-tech">Statut panne ≠ CLOS après 24 heures d'immobilisation</td>
+                  <td><span className="inline-flex items-center gap-1 text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full text-caption border border-rose-100 font-black">🔴 ROUGE</span></td>
                   <td>Rappel de piquet, escalade et notification d'urgence</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 font-bold text-slate-800">PANNE_48H</td>
+                  <td className="py-2.5 font-bold font-mono text-tech text-slate-800">PANNE_48H</td>
                   <td>Panne critique non traitée</td>
-                  <td>Sévérité "Critique" + statut ≠ CLOS après 48 heures</td>
-                  <td><span className="inline-flex items-center gap-1 text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full text-[8.5px] border border-rose-100 font-black animate-pulse">🚨 CLIGNOTANT</span></td>
+                  <td className="font-mono text-tech">Sévérité "Critique" + statut ≠ CLOS après 48 heures</td>
+                  <td><span className="inline-flex items-center gap-1 text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full text-caption border border-rose-100 font-black animate-pulse">🚨 CLIGNOTANT</span></td>
                   <td>Alerte majeure opérationnelle, SMS direct prioritaire d'astreinte</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 font-bold text-slate-800">PIECE_STOCK_BAS</td>
+                  <td className="py-2.5 font-bold font-mono text-tech text-slate-800">PIECE_STOCK_BAS</td>
                   <td>Stock pièce insuffisant</td>
-                  <td>Quantité physique disponible &lt; seuil minimum de sécurité</td>
-                  <td><span className="inline-flex items-center gap-1 text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full text-[8.5px] border border-yellow-100 font-black">🟡 JAUNE</span></td>
+                  <td className="font-mono text-tech">Quantité physique disponible &lt; seuil minimum de sécurité</td>
+                  <td><span className="inline-flex items-center gap-1 text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full text-caption border border-yellow-100 font-black">🟡 JAUNE</span></td>
                   <td>Génération d'une demande de réapprovisionnement magasinier</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 font-bold text-slate-800">GASOIL_ANORMAL</td>
+                  <td className="py-2.5 font-bold font-mono text-tech text-slate-800">GASOIL_ANORMAL</td>
                   <td>Consommation anormale</td>
-                  <td>Consommation instantanée (L/h) &gt; moyenne historique + 30%</td>
-                  <td><span className="inline-flex items-center gap-1 text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full text-[8.5px] border border-yellow-100 font-black">🟡 JAUNE</span></td>
+                  <td className="font-mono text-tech">Consommation instantanée (L/h) &gt; moyenne historique + 30%</td>
+                  <td><span className="inline-flex items-center gap-1 text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full text-caption border border-yellow-100 font-black">🟡 JAUNE</span></td>
                   <td>Demande d'investigation moteur pour déceler fuite ou anomalie</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 font-bold text-slate-800">ENGIN_INACTIF</td>
+                  <td className="py-2.5 font-bold font-mono text-tech text-slate-800">ENGIN_INACTIF</td>
                   <td>Engin sans activité</td>
-                  <td>Absence de mise à jour de données d'heures &gt; 7 jours</td>
-                  <td><span className="inline-flex items-center gap-1 text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full text-[8.5px] border border-yellow-100 font-black">🟡 JAUNE</span></td>
+                  <td className="font-mono text-tech">Absence de mise à jour de données d'heures &gt; 7 jours</td>
+                  <td><span className="inline-flex items-center gap-1 text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full text-caption border border-yellow-100 font-black">🟡 JAUNE</span></td>
                   <td>Vérification physique requise sur chantier de production</td>
                 </tr>
               </tbody>

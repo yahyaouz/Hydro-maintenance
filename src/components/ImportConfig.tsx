@@ -435,7 +435,8 @@ export function ImportConfig() {
 
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">
+                    {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                    <label className="text-caption font-sans font-black uppercase tracking-widest text-slate-500 block">
                       URL de l'API Distante
                     </label>
                     <div className="relative">
@@ -460,7 +461,8 @@ export function ImportConfig() {
 
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
                     <div className="md:col-span-8 space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">
+                      {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                      <label className="text-caption font-sans font-black uppercase tracking-widest text-slate-500 block">
                         Jeton d'autorisation / Clé API (Optionnel)
                       </label>
                       <div className="relative">
@@ -484,7 +486,8 @@ export function ImportConfig() {
                     </div>
 
                     <div className="md:col-span-4 space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">
+                      {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                      <label className="text-caption font-sans font-black uppercase tracking-widest text-slate-500 block">
                         Fréquence d'import
                       </label>
                       <div className="relative">
@@ -518,7 +521,8 @@ export function ImportConfig() {
                   <h3 className="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
                     <Database className="w-4 h-4" /> 2. Mapping des champs (Externe ➔ Firestore)
                   </h3>
-                  <div className="flex items-center gap-1 text-[10px] text-slate-450 font-bold font-mono">
+                  {/* V4-TYPO: replaced text-[10px] with text-tech */}
+                  <div className="flex items-center gap-1 text-tech text-slate-450 font-bold font-mono">
                     <Info className="w-3.5 h-3.5 text-slate-400" /> Sens unique
                   </div>
                 </div>
@@ -537,7 +541,8 @@ export function ImportConfig() {
                           <span className="text-[11px] font-black uppercase tracking-wide text-slate-700 dark:text-slate-350 block">
                             Code Engin
                           </span>
-                          <span className="text-[10px] text-slate-400 block font-mono">
+                          {/* V4-TYPO: replaced text-[10px] with text-tech */}
+                          <span className="text-tech text-slate-400 block font-mono">
                             Modèle : string (ex: ST7-01)
                           </span>
                         </div>
@@ -570,7 +575,8 @@ export function ImportConfig() {
                           <span className="text-[11px] font-black uppercase tracking-wide text-slate-700 dark:text-slate-350 block">
                             Index Heures de marche
                           </span>
-                          <span className="text-[10px] text-slate-400 block font-mono">
+                          {/* V4-TYPO: replaced text-[10px] with text-tech */}
+                          <span className="text-tech text-slate-400 block font-mono">
                             Modèle : number (Heures)
                           </span>
                         </div>
@@ -603,7 +609,8 @@ export function ImportConfig() {
                           <span className="text-[11px] font-black uppercase tracking-wide text-slate-700 dark:text-slate-350 block">
                             Consommation Gasoil
                           </span>
-                          <span className="text-[10px] text-slate-400 block font-mono">
+                          {/* V4-TYPO: replaced text-[10px] with text-tech */}
+                          <span className="text-tech text-slate-400 block font-mono">
                             Modèle : number (Liters)
                           </span>
                         </div>
@@ -638,7 +645,8 @@ export function ImportConfig() {
                           <span className="text-[11px] font-black uppercase tracking-wide text-slate-700 dark:text-slate-350 block">
                             Code Pièce (Réf)
                           </span>
-                          <span className="text-[10px] text-slate-400 block font-mono">
+                          {/* V4-TYPO: replaced text-[10px] with text-tech */}
+                          <span className="text-tech text-slate-400 block font-mono">
                             Modèle : string (ex: FILT-HYD-04)
                           </span>
                         </div>
@@ -671,7 +679,8 @@ export function ImportConfig() {
                           <span className="text-[11px] font-black uppercase tracking-wide text-slate-700 dark:text-slate-350 block">
                             Désignation Pièce
                           </span>
-                          <span className="text-[10px] text-slate-400 block font-mono">
+                          {/* V4-TYPO: replaced text-[10px] with text-tech */}
+                          <span className="text-tech text-slate-400 block font-mono">
                             Modèle : string (Nom complet)
                           </span>
                         </div>
@@ -704,7 +713,8 @@ export function ImportConfig() {
                           <span className="text-[11px] font-black uppercase tracking-wide text-slate-700 dark:text-slate-350 block">
                             Quantité en stock
                           </span>
-                          <span className="text-[10px] text-slate-400 block font-mono">
+                          {/* V4-TYPO: replaced text-[10px] with text-tech */}
+                          <span className="text-tech text-slate-400 block font-mono">
                             Modèle : number (Unitaire)
                           </span>
                         </div>
@@ -737,7 +747,8 @@ export function ImportConfig() {
                           <span className="text-[11px] font-black uppercase tracking-wide text-slate-700 dark:text-slate-350 block">
                             Valeur unitaire
                           </span>
-                          <span className="text-[10px] text-slate-400 block font-mono">
+                          {/* V4-TYPO: replaced text-[10px] with text-tech */}
+                          <span className="text-tech text-slate-400 block font-mono">
                             Modèle : number (MAD / Pièce)
                           </span>
                         </div>
@@ -770,7 +781,8 @@ export function ImportConfig() {
                           <span className="text-[11px] font-black uppercase tracking-wide text-slate-700 dark:text-slate-350 block">
                             Quantité consommée
                           </span>
-                          <span className="text-[10px] text-slate-400 block font-mono">
+                          {/* V4-TYPO: replaced text-[10px] with text-tech */}
+                          <span className="text-tech text-slate-400 block font-mono">
                             Modèle : number (Par bon de sortie)
                           </span>
                         </div>
@@ -796,21 +808,18 @@ export function ImportConfig() {
                           />
                         </div>
                       </div>
-                    </>
-                  )}
+                    </>)}
                 </div>
-              </div>
-
-            </CardContent>
-
-            {/* V4-IMPORT: Action Footer */}
+                </div>
+              </CardContent>
+               {/* V4-IMPORT: Action Footer */}
             <div className="bg-slate-50 dark:bg-slate-950/40 p-4 border-t border-slate-100 dark:border-slate-900 flex flex-wrap gap-3 items-center justify-between">
               <div className="flex items-center gap-2">
                 <Button
                   onClick={handleTestConnection}
                   disabled={testing}
                   variant="outline"
-                  className="bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 hover:text-amber-500 font-bold uppercase text-[10px] tracking-wider px-4 py-4 rounded-xl cursor-pointer shrink-0"
+                  className="bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 hover:text-amber-500 font-bold uppercase text-caption tracking-wider px-4 py-4 rounded-xl cursor-pointer shrink-0"
                 >
                   {testing ? <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Wifi className="w-3.5 h-3.5 mr-1.5 text-amber-500" />}
                   Tester la Connexion
@@ -821,7 +830,7 @@ export function ImportConfig() {
                     onClick={handleTriggerManualImport}
                     disabled={importing}
                     variant="outline"
-                    className="bg-slate-150 border-slate-300 hover:bg-slate-200 dark:bg-slate-850 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-bold uppercase text-[10px] tracking-wider px-4 py-4 rounded-xl cursor-pointer shrink-0"
+                    className="bg-slate-150 border-slate-300 hover:bg-slate-200 dark:bg-slate-850 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-bold uppercase text-caption tracking-wider px-4 py-4 rounded-xl cursor-pointer shrink-0"
                   >
                     {importing ? <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Play className="w-3.5 h-3.5 mr-1.5 text-sky-500" />}
                     Déclencher l'Import
@@ -829,7 +838,8 @@ export function ImportConfig() {
                 )}
               </div>
 
-              <div className="text-[10px] font-mono text-slate-400 font-semibold">
+              {/* V4-TYPO: replaced text-[10px] with text-tech */}
+              <div className="text-tech font-mono text-slate-400 font-semibold">
                 Dernière modification : {config[activeTab].frequency === "temps_reel" ? "Auto (Temps Réel)" : "Batch Planifié"}
               </div>
             </div>
@@ -852,7 +862,8 @@ export function ImportConfig() {
                     {diagnosisModal.status === "success" ? <ShieldCheck className="w-4.5 h-4.5 text-emerald-500" /> : <AlertTriangle className="w-4.5 h-4.5 text-amber-500" />}
                     Rapport de diagnostic
                   </CardTitle>
-                  <p className="text-[10px] text-slate-500 font-mono font-semibold truncate max-w-[280px]">
+                  {/* V4-TYPO: replaced text-[10px] with text-tech */}
+                  <p className="text-tech text-slate-500 font-mono font-semibold truncate max-w-[280px]">
                     {diagnosisModal.url}
                   </p>
                 </div>
@@ -868,7 +879,8 @@ export function ImportConfig() {
                   {diagnosisModal.message}
                 </p>
 
-                <div className="grid grid-cols-2 gap-2 text-[10px] font-mono bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-100 dark:border-slate-850">
+                {/* V4-TYPO: replaced text-[10px] with text-tech */}
+                <div className="grid grid-cols-2 gap-2 text-tech font-mono bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-100 dark:border-slate-850">
                   <div>
                     <span className="text-slate-450 block">TEMPS DE RÉPONSE :</span>
                     <span className="font-bold text-amber-500">{diagnosisModal.latency} ms</span>
@@ -881,10 +893,12 @@ export function ImportConfig() {
 
                 {diagnosisModal.payloadSample && (
                   <div className="space-y-1.5">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 block">
+                    {/* V4-TYPO: replaced text-[9px] and font-mono with text-caption and font-sans */}
+                    <span className="text-caption font-sans font-black uppercase tracking-widest text-slate-500 block">
                       Exemple de payload JSON simulé (pour mapping) :
                     </span>
-                    <pre className="text-[9px] font-mono bg-slate-950 text-slate-300 p-2.5 rounded-lg overflow-x-auto max-h-36 shadow-inner leading-normal">
+                    {/* V4-TYPO: replaced text-[9px] with text-tech */}
+                    <pre className="text-tech font-mono bg-slate-950 text-slate-300 p-2.5 rounded-lg overflow-x-auto max-h-36 shadow-inner leading-normal">
                       {JSON.stringify(diagnosisModal.payloadSample, null, 2)}
                     </pre>
                   </div>
@@ -900,11 +914,13 @@ export function ImportConfig() {
                 <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
                   <Activity className="w-4 h-4 text-sky-500" /> Historique d'importation
                 </CardTitle>
-                <CardDescription className="text-[10px] mt-0.5">
+                {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                <CardDescription className="text-caption mt-0.5">
                   Journal d'activité des synchronisations d'APIs.
                 </CardDescription>
               </div>
-              <span className="text-[9px] font-mono bg-slate-100 dark:bg-slate-900 text-slate-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+              {/* V4-TYPO: replaced text-[9px] with text-tech */}
+              <span className="text-tech font-mono bg-slate-100 dark:bg-slate-900 text-slate-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
                 COUPÉ À 25
               </span>
             </CardHeader>
@@ -913,15 +929,18 @@ export function ImportConfig() {
               {historyLoading ? (
                 <div className="flex items-center justify-center p-8 gap-2">
                   <RefreshCw className="w-4 h-4 text-slate-400 animate-spin" />
-                  <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Lecture du log...</span>
+                  {/* V4-TYPO: replaced text-[10px] with text-tech */}
+                  <span className="text-tech uppercase font-mono tracking-wider text-slate-400">Lecture du log...</span>
                 </div>
               ) : !historyLogs || historyLogs.length === 0 ? (
                 <div className="p-8 text-center space-y-2">
                   <Database className="w-8 h-8 text-slate-300 mx-auto" />
-                  <p className="text-[11px] text-slate-400 uppercase tracking-wider font-mono font-bold">
+                  {/* V4-TYPO: replaced text-[11px] and font-mono with text-caption and font-sans */}
+                  <p className="text-caption text-slate-400 uppercase tracking-wider font-sans font-bold">
                     Aucun historique d'import trouvé
                   </p>
-                  <p className="text-[10px] text-slate-450">
+                  {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                  <p className="text-caption text-slate-450">
                     Déclenchez un import manuel pour initier un log.
                   </p>
                 </div>
@@ -943,10 +962,12 @@ export function ImportConfig() {
                     return (
                       <div key={log.id} className="p-3.5 hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors space-y-1.5">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-black font-mono text-slate-500">
+                          {/* V4-TYPO: replaced text-[10px] with text-tech */}
+                          <span className="text-tech font-black font-mono text-slate-500">
                             {formattedDate}
                           </span>
-                          <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 bg-slate-100 dark:bg-slate-900 text-slate-650 rounded">
+                          {/* V4-TYPO: replaced text-[9px] and font-mono with text-caption and font-sans */}
+                          <span className="text-caption font-sans font-black uppercase tracking-wider px-1.5 py-0.2 bg-slate-100 dark:bg-slate-900 text-slate-650 rounded">
                             {log.platform === "carburants" ? "Carburants" : "Magasinier"}
                           </span>
                           <div className="ml-auto shrink-0">
@@ -958,14 +979,16 @@ export function ImportConfig() {
                           <p className="text-[11px] font-black text-slate-800 dark:text-slate-100 leading-tight">
                             {log.elementsImported}
                           </p>
-                          <p className="text-[10px] text-slate-450 leading-relaxed font-medium">
+                          {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                          <p className="text-caption text-slate-450 leading-relaxed font-medium">
                             {log.message}
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-[9px] font-mono text-slate-400 font-bold uppercase pt-1">
+                        {/* V4-TYPO: replaced text-[9px] with text-tech */}
+                        <div className="flex items-center gap-1.5 text-tech font-mono text-slate-400 font-bold uppercase pt-1">
                           <span>Opérateur :</span>
-                          <span className="text-slate-500 dark:text-slate-300">{log.operator}</span>
+                          <span className="text-slate-500 dark:text-slate-350">{log.operator}</span>
                         </div>
                       </div>
                     );

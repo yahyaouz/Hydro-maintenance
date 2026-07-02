@@ -667,11 +667,13 @@ export default function TachesPlanning() {
                     </div>
                     <div className="text-center">
                       <span className="text-2xl font-black text-emerald-400">{tasksFait}</span>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase">Réalisées</p>
+                      {/* V4-TYPO: replaced text-[9px] with text-caption and font-sans */}
+                      <p className="text-caption font-sans font-bold text-slate-400 uppercase">Réalisées</p>
                     </div>
                     <div className="text-center">
                       <span className="text-2xl font-black text-blue-400">{getCumulativeDuration(visibleTasks)}</span>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase">Charge estimée</p>
+                      {/* V4-TYPO: replaced text-[9px] with text-caption and font-sans */}
+                      <p className="text-caption font-sans font-bold text-slate-400 uppercase">Charge estimée</p>
                     </div>
                   </div>
                 </CardContent>
@@ -692,7 +694,8 @@ export default function TachesPlanning() {
             <Card className="bg-white border border-slate-200">
               <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 items-end">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                  {/* V4-TYPO: replaced text-[10px] with text-caption and font-sans */}
+                  <label className="text-caption font-sans font-bold text-slate-400 uppercase flex items-center gap-1">
                     <Filter className="h-3 w-3" /> Type
                   </label>
                   <select
@@ -708,7 +711,8 @@ export default function TachesPlanning() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                  {/* V4-TYPO: replaced text-[10px] with text-caption and font-sans */}
+                  <label className="text-caption font-sans font-bold text-slate-400 uppercase flex items-center gap-1">
                     <User className="h-3 w-3" /> Intervenant
                   </label>
                   <select
@@ -724,7 +728,8 @@ export default function TachesPlanning() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                  {/* V4-TYPO: replaced text-[10px] with text-caption and font-sans */}
+                  <label className="text-caption font-sans font-bold text-slate-400 uppercase flex items-center gap-1">
                     <Clock3 className="h-3 w-3" /> Shift / Poste
                   </label>
                   <select
@@ -740,7 +745,8 @@ export default function TachesPlanning() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                  {/* V4-TYPO: replaced text-[10px] with text-caption and font-sans */}
+                  <label className="text-caption font-sans font-bold text-slate-400 uppercase flex items-center gap-1">
                     <Calendar className="h-3 w-3" /> Échéance
                   </label>
                   <select
@@ -754,7 +760,8 @@ export default function TachesPlanning() {
                 </div>
 
                 <div className="space-y-1 relative">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                  {/* V4-TYPO: replaced text-[10px] with text-caption and font-sans */}
+                  <label className="text-caption font-sans font-bold text-slate-400 uppercase flex items-center gap-1">
                     <Search className="h-3 w-3" /> Rechercher
                   </label>
                   <input
@@ -779,14 +786,16 @@ export default function TachesPlanning() {
                   <CardHeader className="p-4 pb-2 border-b border-slate-100 flex flex-row items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-1.5 mb-1.5">
-                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${
+                        {/* V4-TYPO: replaced text-[8px] with text-caption and font-sans */}
+                        <span className={`px-2 py-0.5 rounded-full text-caption font-sans font-black uppercase ${
                           task.type === 'PREVENTIF' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' :
                           task.type === 'CORRECTIF' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
                           'bg-emerald-50 text-emerald-700 border border-emerald-100'
                         }`}>
                           {task.type}
                         </span>
-                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${
+                        {/* V4-TYPO: replaced text-[8px] with text-caption and font-sans */}
+                        <span className={`px-2 py-0.5 rounded-full text-caption font-sans font-black uppercase ${
                           task.priorite === 'CRITIQUE' ? 'bg-red-500 text-white animate-pulse' :
                           task.priorite === 'HAUTE' ? 'bg-amber-500 text-slate-950' :
                           'bg-slate-100 text-slate-600'
@@ -801,7 +810,8 @@ export default function TachesPlanning() {
                   </CardHeader>
 
                   <CardContent className="p-4 flex-1 flex flex-col justify-between gap-3">
-                    <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500">
+                    {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                    <div className="grid grid-cols-2 gap-2 text-caption text-slate-500">
                       <div className="flex items-center gap-1 font-bold">
                         <Truck className="h-3 w-3 text-slate-400" /> {task.enginId} ({task.enginModele})
                       </div>
@@ -817,10 +827,12 @@ export default function TachesPlanning() {
                     </div>
 
                     <div className="flex items-center justify-between border-t border-slate-50 pt-3">
-                      <span className="text-[9px] text-slate-400 font-bold">{task.datePlanifiee}</span>
+                      {/* V4-TYPO: replaced text-[9px] with text-tech */}
+                      <span className="text-tech text-slate-400 font-bold">{task.datePlanifiee}</span>
                       
                       <div className="flex items-center gap-1">
-                        <span className={`px-2 py-1 rounded-xl text-[9px] font-black uppercase ${
+                        {/* V4-TYPO: replaced text-[9px] with text-caption and font-sans */}
+                        <span className={`px-2 py-1 rounded-xl text-caption font-sans font-black uppercase ${
                           task.statut === 'VALIDE' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
                           task.statut === 'FAIT' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                           task.statut === 'EN_COURS' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
@@ -843,7 +855,8 @@ export default function TachesPlanning() {
                 <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-400 gap-2 bg-white rounded-3xl border border-slate-150">
                   <AlertTriangle className="h-8 w-8 text-slate-300" />
                   <p className="font-black text-xs uppercase tracking-wider text-slate-500">Aucune tâche trouvée</p>
-                  <p className="text-[10px] text-slate-400 font-medium">Modifiez vos critères de filtrage</p>
+                  {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                  <p className="text-caption text-slate-400 font-medium">Modifiez vos critères de filtrage</p>
                 </div>
               )}
             </div>
@@ -859,7 +872,8 @@ export default function TachesPlanning() {
             <Card className="bg-slate-900 text-white border-none shadow-sm overflow-hidden">
               <CardContent className="p-5 flex flex-col md:flex-row items-center justify-between gap-5">
                 <div className="space-y-1 max-w-lg text-center md:text-left">
-                  <span className="text-[10px] font-bold uppercase text-amber-500 tracking-wider flex items-center justify-center md:justify-start gap-1">
+                  {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                  <span className="text-caption font-bold uppercase text-amber-500 tracking-wider flex items-center justify-center md:justify-start gap-1">
                     <Zap className="h-3.5 w-3.5" /> Algo de Prévision Intelligente
                   </span>
                   <h3 className="text-sm font-black uppercase">🔥 Prochaines Fiches PM (Échéances &lt; 100 Heures)</h3>
@@ -873,9 +887,10 @@ export default function TachesPlanning() {
                       key={idx}
                       className="bg-slate-800 border border-slate-700/80 p-3 rounded-2xl flex flex-col gap-1 min-w-[160px]"
                     >
-                      <span className="text-[10px] font-black uppercase text-amber-400">{ech.enginId}</span>
-                      <p className="text-[10px] text-white font-black truncate">{ech.operation}</p>
-                      <span className="text-[9px] font-bold text-rose-400 mt-1">
+                      {/* V4-TYPO: replaced text-[10px] and text-[9px] with text-caption/text-tech */}
+                      <span className="text-caption font-black uppercase text-amber-400">{ech.enginId}</span>
+                      <p className="text-caption text-white font-black truncate">{ech.operation}</p>
+                      <span className="text-tech font-bold text-rose-400 mt-1">
                         Dû dans <strong className="text-white">{Math.round(ech.remainingHours)}h</strong>
                       </span>
                     </div>
@@ -909,7 +924,8 @@ export default function TachesPlanning() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-xs min-w-[900px]">
                   <thead>
-                    <tr className="bg-slate-100 border-b border-slate-200 text-slate-600 font-black uppercase text-[10px]">
+                    {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                    <tr className="bg-slate-100 border-b border-slate-200 text-slate-600 font-black uppercase text-caption">
                       <th className="p-4 border-r border-slate-200 w-44">Mécanicien</th>
                       {getWeekDays().map((day, idx) => (
                         <th key={idx} className="p-4 border-r border-slate-200 text-center">
@@ -923,7 +939,8 @@ export default function TachesPlanning() {
                       <tr key={meca.id} className="border-b border-slate-150 hover:bg-slate-50/50">
                         <td className="p-4 border-r border-slate-200 font-black text-slate-800">
                           {meca.nomComplet}
-                          <span className="block text-[9px] font-bold text-slate-400 mt-0.5">{meca.specialite || "Moteur"}</span>
+                          {/* V4-TYPO: replaced text-[9px] with text-caption and font-sans */}
+                          <span className="block text-caption font-sans font-bold text-slate-400 mt-0.5">{meca.specialite || "Moteur"}</span>
                         </td>
                         {getWeekDays().map((day, idx) => {
                           const dayStr = day.toISOString().split('T')[0];
@@ -945,11 +962,12 @@ export default function TachesPlanning() {
                                       'bg-slate-50/70 text-slate-700 border-slate-200'
                                     }`}
                                   >
-                                    <div className="flex items-center justify-between text-[8px] font-black mb-0.5 uppercase">
+                                    {/* V4-TYPO: replaced text-[8px] and text-[9px] with text-tech/text-caption */}
+                                    <div className="flex items-center justify-between text-tech font-black mb-0.5 uppercase">
                                       <span className="truncate max-w-[50px]">{task.enginId}</span>
                                       <span>{task.poste === 'Poste 1' ? 'P1' : task.poste === 'Poste 2' ? 'P2' : 'P3'}</span>
                                     </div>
-                                    <p className="text-[9px] font-bold line-clamp-1 truncate">{task.label}</p>
+                                    <p className="text-caption font-sans font-bold line-clamp-1 truncate">{task.label}</p>
                                   </div>
                                 ))}
                               </div>
@@ -978,7 +996,8 @@ export default function TachesPlanning() {
                     <TrendingUp className="h-5 w-5" />
                   </div>
                   <div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase">Taux de Shift</span>
+                    {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                    <span className="text-caption font-bold text-slate-400 uppercase">Taux de Shift</span>
                     <h3 className="text-lg font-black text-slate-800">{kpis.perfGlobale}%</h3>
                   </div>
                 </CardContent>
@@ -990,7 +1009,8 @@ export default function TachesPlanning() {
                     <Star className="h-5 w-5" />
                   </div>
                   <div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase">Prophète du Mois</span>
+                    {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                    <span className="text-caption font-bold text-slate-400 uppercase">Prophète du Mois</span>
                     <h3 className="text-sm font-black text-slate-800 truncate">{kpis.topNom}</h3>
                   </div>
                 </CardContent>
@@ -1002,7 +1022,8 @@ export default function TachesPlanning() {
                     <Award className="h-5 w-5" />
                   </div>
                   <div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase">Score Moyen d'exécution</span>
+                    {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                    <span className="text-caption font-bold text-slate-400 uppercase">Score Moyen d'exécution</span>
                     <h3 className="text-lg font-black text-slate-800">{kpis.topRate}%</h3>
                   </div>
                 </CardContent>
@@ -1014,7 +1035,8 @@ export default function TachesPlanning() {
                     <Zap className="h-5 w-5" />
                   </div>
                   <div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase">Ratio Préventif / Correctif</span>
+                    {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                    <span className="text-caption font-bold text-slate-400 uppercase">Ratio Préventif / Correctif</span>
                     <h3 className="text-lg font-black text-slate-800">{kpis.prevPercent}% / {100 - kpis.prevPercent}%</h3>
                   </div>
                 </CardContent>
@@ -1031,7 +1053,8 @@ export default function TachesPlanning() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-xs">
                   <thead>
-                    <tr className="bg-slate-100 border-b border-slate-200 text-slate-600 font-black uppercase text-[9px]">
+                    {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                    <tr className="bg-slate-100 border-b border-slate-200 text-slate-600 font-black uppercase text-caption">
                       <th className="p-4">Rang</th>
                       <th className="p-4">Intervenant</th>
                       <th className="p-4 text-center">Fiches Réalisées</th>
@@ -1047,12 +1070,14 @@ export default function TachesPlanning() {
                           {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`}
                         </td>
                         <td className="p-4 font-black text-slate-800 flex items-center gap-2">
-                          <div className="h-7 w-7 bg-slate-900 rounded-full flex items-center justify-center text-white font-black text-[9px]">
+                          {/* V4-TYPO: replaced text-[9px] with text-tech */}
+                          <div className="h-7 w-7 bg-slate-900 rounded-full flex items-center justify-center text-white font-black text-tech">
                             {stat.meca.nomComplet.substring(0, 2)}
                           </div>
                           <div>
                             {stat.meca.nomComplet}
-                            <span className="block text-[8px] font-bold text-slate-400">{stat.meca.specialite || "Hydraulique"}</span>
+                            {/* V4-TYPO: replaced text-[8px] with text-caption and font-sans */}
+                            <span className="block text-caption font-sans font-bold text-slate-400">{stat.meca.specialite || "Hydraulique"}</span>
                           </div>
                         </td>
                         <td className="p-4 text-center font-bold text-slate-700">
@@ -1067,7 +1092,8 @@ export default function TachesPlanning() {
                           </div>
                         </td>
                         <td className="p-4 text-center">
-                          <span className={`font-black uppercase px-2 py-0.5 rounded-full text-[9px] ${
+                          {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                          <span className={`font-black uppercase px-2 py-0.5 rounded-full text-caption ${
                             stat.retard > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
                           }`}>
                             {stat.retard} retards
@@ -1076,12 +1102,12 @@ export default function TachesPlanning() {
                         <td className="p-4">
                           <div className="flex gap-1.5">
                             {stat.badges.map((badge, bidx) => (
-                              <span key={bidx} className="bg-slate-900 text-amber-400 border border-slate-800 font-bold px-2 py-0.5 rounded-xl text-[9px]">
+                              <span key={bidx} className="bg-slate-900 text-amber-400 border border-slate-800 font-bold px-2 py-0.5 rounded-xl text-caption">
                                 {badge}
                               </span>
                             ))}
                             {stat.badges.length === 0 && (
-                              <span className="text-slate-400 text-[10px]">Pas encore de badge de shift</span>
+                              <span className="text-slate-400 text-caption">Pas encore de badge de shift</span>
                             )}
                           </div>
                         </td>
@@ -1108,7 +1134,8 @@ export default function TachesPlanning() {
                     <AlertTriangle className="h-5 w-5" />
                   </div>
                   <div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase">Pannes Actives</span>
+                    {/* V4-TYPO: replaced text-[9px] with text-caption and font-sans */}
+                    <span className="text-caption font-sans font-bold text-slate-400 uppercase">Pannes Actives</span>
                     <h3 className="text-lg font-black text-slate-800">
                       {mtbfMttrMetrics.activeCount} <span className="text-xs text-slate-400 font-bold">/ {mtbfMttrMetrics.totalCount}</span>
                     </h3>
@@ -1122,7 +1149,8 @@ export default function TachesPlanning() {
                     <Zap className="h-5 w-5" />
                   </div>
                   <div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase">Fiabilité (MTBF)</span>
+                    {/* V4-TYPO: replaced text-[9px] with text-caption and font-sans */}
+                    <span className="text-caption font-sans font-bold text-slate-400 uppercase">Fiabilité (MTBF)</span>
                     <h3 className="text-lg font-black text-slate-800">{mtbfMttrMetrics.mtbf} <span className="text-xs text-slate-400 font-bold">h</span></h3>
                   </div>
                 </CardContent>
@@ -1134,7 +1162,8 @@ export default function TachesPlanning() {
                     <Clock3 className="h-5 w-5" />
                   </div>
                   <div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase">Réparabilité (MTTR)</span>
+                    {/* V4-TYPO: replaced text-[9px] with text-caption and font-sans */}
+                    <span className="text-caption font-sans font-bold text-slate-400 uppercase">Réparabilité (MTTR)</span>
                     <h3 className="text-lg font-black text-slate-800">{mtbfMttrMetrics.mttr} <span className="text-xs text-slate-400 font-bold">h</span></h3>
                   </div>
                 </CardContent>
@@ -1146,7 +1175,8 @@ export default function TachesPlanning() {
                     <CheckCircle2 className="h-5 w-5" />
                   </div>
                   <div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase">Taux de Résilience</span>
+                    {/* V4-TYPO: replaced text-[9px] with text-caption and font-sans */}
+                    <span className="text-caption font-sans font-bold text-slate-400 uppercase">Taux de Résilience</span>
                     <h3 className="text-lg font-black text-slate-800">
                       {mtbfMttrMetrics.totalCount > 0 
                         ? Math.round(((mtbfMttrMetrics.totalCount - mtbfMttrMetrics.activeCount) / mtbfMttrMetrics.totalCount) * 100) 
@@ -1207,25 +1237,29 @@ export default function TachesPlanning() {
                               : 'border-slate-200 bg-white hover:bg-slate-50'
                           }`}
                         >
-                          <div className="flex justify-between items-center text-[10px]">
+                          {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                          <div className="flex justify-between items-center text-caption">
                             <span className="font-mono font-black uppercase text-slate-800">
                               🔧 {panne.numero || panne.id.slice(0, 8).toUpperCase()}
                             </span>
-                            <span className={`px-2 py-0.5 rounded-full font-black uppercase tracking-wider text-[8.5px] border ${badgeColor}`}>
+                            {/* V4-TYPO: replaced text-[8.5px] with text-tech */}
+                            <span className={`px-2 py-0.5 rounded-full font-black uppercase tracking-wider text-tech border ${badgeColor}`}>
                               {panne.gravite}
                             </span>
                           </div>
 
                           <div>
                             <p className="text-xs font-black text-slate-900 leading-tight line-clamp-1">{panne.description}</p>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">
+                            {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                            <p className="text-caption text-slate-500 font-bold uppercase tracking-wider mt-1">
                               Engin : <span className="text-slate-800 font-extrabold">{panne.enginId}</span> • Organe : <span className="text-slate-800 font-extrabold">{panne.categorie}</span>
                             </p>
                           </div>
 
-                          <div className="flex justify-between items-center border-t border-slate-100 pt-2 text-[9px] font-bold text-slate-400 font-mono">
+                          {/* V4-TYPO: replaced text-[9px] and text-[8.5px] with text-tech */}
+                          <div className="flex justify-between items-center border-t border-slate-100 pt-2 text-tech font-bold text-slate-400 font-mono">
                             <span>📅 {panne.dateDeclaration ? panne.dateDeclaration.split('T')[0] : 'N/A'}</span>
-                            <span className={`px-1.5 py-0.5 rounded uppercase font-black tracking-widest text-[8.5px] ${
+                            <span className={`px-1.5 py-0.5 rounded uppercase font-black tracking-widest text-tech ${
                               panne.statut === 'CLOS' ? 'bg-emerald-100 text-emerald-800' :
                               panne.statut === 'EN_REPARATION' ? 'bg-indigo-100 text-indigo-800 animate-pulse' :
                               panne.statut === 'DIAGNOSTIQUE' ? 'bg-amber-100 text-amber-800' :
@@ -1242,7 +1276,8 @@ export default function TachesPlanning() {
                       <div className="py-16 text-center text-slate-400 space-y-2 uppercase font-black text-xs">
                         <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto animate-bounce" />
                         <p>Zéro panne active enregistrée ! ✓</p>
-                        <p className="text-[10px] font-bold text-slate-400">Le parc opère en sécurité nominale.</p>
+                        {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                        <p className="text-caption font-bold text-slate-400">Le parc opère en sécurité nominale.</p>
                       </div>
                     )}
                   </div>
@@ -1258,13 +1293,15 @@ export default function TachesPlanning() {
                       {/* Sub-Header */}
                       <div className="border-b border-slate-100 pb-4 flex justify-between items-start gap-4">
                         <div className="space-y-1">
-                          <span className="text-[9px] font-black uppercase text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full tracking-widest animate-pulse">
+                          {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                          <span className="text-caption font-black uppercase text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full tracking-widest animate-pulse">
                             {selectedPanne.statut}
                           </span>
                           <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">
                             Incident : {selectedPanne.numero}
                           </h3>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                          {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                          <p className="text-caption text-slate-400 font-bold uppercase tracking-wider">
                             Déclaré par : <span className="text-slate-700 font-black">{selectedPanne.declareParNom}</span> le {selectedPanne.dateDeclaration?.replace('T', ' ').substring(0, 16)}
                           </p>
                         </div>
@@ -1285,15 +1322,18 @@ export default function TachesPlanning() {
                       {/* Info Cards Grid */}
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 border border-slate-100 p-3 rounded-2xl">
                         <div>
-                          <span className="text-[9px] text-slate-400 font-bold uppercase block">Engin concerné</span>
+                          {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                          <span className="text-caption text-slate-400 font-bold uppercase block">Engin concerné</span>
                           <span className="font-extrabold text-slate-900">{selectedPanne.enginId} ({selectedPanne.enginModele || "ST2G"})</span>
                         </div>
                         <div>
-                          <span className="text-[9px] text-slate-400 font-bold uppercase block">Organe affecté</span>
+                          {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                          <span className="text-caption text-slate-400 font-bold uppercase block">Organe affecté</span>
                           <span className="font-extrabold text-slate-900">{selectedPanne.categorie}</span>
                         </div>
                         <div>
-                          <span className="text-[9px] text-slate-400 font-bold uppercase block">État Machine</span>
+                          {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                          <span className="text-caption text-slate-400 font-bold uppercase block">État Machine</span>
                           <span className={`font-black uppercase flex items-center gap-1 ${selectedPanne.arretMachine ? 'text-red-600 animate-pulse' : 'text-emerald-600'}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${selectedPanne.arretMachine ? 'bg-red-500' : 'bg-emerald-500'}`} />
                             {selectedPanne.arretMachine ? 'Arrêt Immédiat' : 'En Service'}
@@ -1303,24 +1343,28 @@ export default function TachesPlanning() {
 
                       {/* Symptoms */}
                       <div className="p-3 bg-red-50/30 border border-red-100 rounded-xl space-y-1">
-                        <span className="text-[9px] font-black uppercase text-red-700 tracking-wider">Symptômes déclarés :</span>
+                        {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                        <span className="text-caption font-black uppercase text-red-700 tracking-wider">Symptômes déclarés :</span>
                         <p className="font-medium text-slate-800 leading-relaxed text-sm">{selectedPanne.description}</p>
                       </div>
 
                       {/* Workflow Actions Section */}
                       <div className="border-t border-slate-100 pt-4 space-y-4">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-[#b8860b]">
+                        {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                        <h4 className="text-caption font-black uppercase tracking-widest text-[#b8860b]">
                           ⚙️ Cycle de Traitement Correctif
                         </h4>
 
                         {/* STEP 1: Assigner & Diagnostiquer */}
                         {selectedPanne.statut === 'DECLAREE' && (
                           <div className="bg-amber-50/50 border border-amber-100 p-4 rounded-xl space-y-3.5">
-                            <span className="text-[10px] font-black uppercase text-amber-800">Étape 1 : Affectation & Diagnostic Terrain</span>
+                            {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                            <span className="text-caption font-black uppercase text-amber-800">Étape 1 : Affectation & Diagnostic Terrain</span>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <div className="space-y-1">
-                                <label className="text-[9px] font-bold text-slate-500 uppercase block">Mécanicien Assigné *</label>
+                                {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                                <label className="text-caption font-bold text-slate-500 uppercase block">Mécanicien Assigné *</label>
                                 <select
                                   value={diagMecaId}
                                   onChange={(e) => setDiagMecaId(e.target.value)}
@@ -1333,7 +1377,8 @@ export default function TachesPlanning() {
                                 </select>
                               </div>
                               <div className="space-y-1">
-                                <label className="text-[9px] font-bold text-slate-500 uppercase block">Arrêt de production ?</label>
+                                {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                                <label className="text-caption font-bold text-slate-500 uppercase block">Arrêt de production ?</label>
                                 <div className="flex items-center h-9">
                                   <input 
                                     type="checkbox" 
@@ -1347,7 +1392,8 @@ export default function TachesPlanning() {
                             </div>
 
                             <div className="space-y-1">
-                              <label className="text-[9px] font-bold text-slate-500 uppercase block">Note de Diagnostic * (Symptômes & Actions requis)</label>
+                              {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                              <label className="text-caption font-bold text-slate-500 uppercase block">Note de Diagnostic * (Symptômes & Actions requis)</label>
                               <textarea
                                 value={diagComment}
                                 onChange={(e) => setDiagComment(e.target.value)}
@@ -1383,7 +1429,7 @@ export default function TachesPlanning() {
                                   toast.error("Erreur d'affectation.");
                                 }
                               }}
-                              className="bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[10px] py-1 px-4 h-8"
+                              className="bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-caption py-1 px-4 h-8"
                             >
                               Valider le Diagnostic
                             </Button>
@@ -1393,12 +1439,14 @@ export default function TachesPlanning() {
                         {/* STEP 2: Créer un BT Correctif */}
                         {selectedPanne.statut === 'DIAGNOSTIQUE' && (
                           <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-xl space-y-3.5">
-                            <span className="text-[10px] font-black uppercase text-indigo-800">Étape 2 : Planification du Bon de Travail (BT) Correctif</span>
+                            {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                            <span className="text-caption font-black uppercase text-indigo-800">Étape 2 : Planification du Bon de Travail (BT) Correctif</span>
                             
                             <div className="p-3 bg-white border border-slate-100 rounded-lg space-y-1">
                               <p className="font-bold text-slate-700">📋 Note de Diagnostic :</p>
                               <p className="text-slate-600">{selectedPanne.diagnostic}</p>
-                              <p className="text-[10px] text-slate-400 font-medium">Assigné à : <span className="font-bold text-slate-600">{selectedPanne.mecanicienAssigneNom}</span></p>
+                              {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                              <p className="text-caption text-slate-400 font-medium">Assigné à : <span className="font-bold text-slate-600">{selectedPanne.mecanicienAssigneNom}</span></p>
                             </div>
 
                             <div className="flex flex-wrap gap-2 pt-2">
@@ -1435,7 +1483,7 @@ export default function TachesPlanning() {
                                       updatedAt: Timestamp.now()
                                     });
 
-                                    toast.success("Bon de Travail (BT) Correctif créé et assigné !");
+                                    toast.success("Bon de Travail (BT) Correctif créé and assigné !");
                                     setSelectedPanne(prev => ({ ...prev, statut: 'EN_REPARATION' }));
                                   } catch (err) {
                                     console.error(err);
@@ -1444,7 +1492,7 @@ export default function TachesPlanning() {
                                     setIsCreatingBt(false);
                                   }
                                 }}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-[10px] h-8"
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-caption h-8"
                               >
                                 {isCreatingBt ? 'Génération...' : '🛠️ Générer le BT Correctif'}
                               </Button>
@@ -1456,7 +1504,8 @@ export default function TachesPlanning() {
                         {selectedPanne.statut === 'EN_REPARATION' && (
                           <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl space-y-3.5 text-center py-6">
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping inline-block mr-2" />
-                            <span className="text-[10px] font-black uppercase text-emerald-800">Intervention en cours sur le terrain</span>
+                            {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                            <span className="text-caption font-black uppercase text-emerald-800">Intervention en cours sur le terrain</span>
                             <p className="text-slate-600 mt-2">La panne est en cours de traitement. Elle sera automatiquement clôturée dès que la tâche corrective associée sera validée ou marquée comme réalisée par le mécanicien.</p>
                           </div>
                         )}
@@ -1464,11 +1513,13 @@ export default function TachesPlanning() {
                         {/* Direct manual closing button (Always available for manager) */}
                         {selectedPanne.statut !== 'CLOS' && isModeDirecteur && (
                           <div className="border-t border-dashed border-slate-200 pt-4 space-y-3">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-[#b8860b] block">Clôture Manuelle d'Urgence</span>
+                            {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                            <span className="text-caption font-black uppercase tracking-widest text-[#b8860b] block">Clôture Manuelle d'Urgence</span>
                             
                             <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-1">
-                                <label className="text-[9px] font-bold text-slate-500 uppercase block">Durée d'Immobilisation (Heures) *</label>
+                                {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                                <label className="text-caption font-bold text-slate-500 uppercase block">Durée d'Immobilisation (Heures) *</label>
                                 <input
                                   type="number"
                                   min={0.5}
@@ -1480,7 +1531,8 @@ export default function TachesPlanning() {
                                 />
                               </div>
                               <div className="space-y-1">
-                                <label className="text-[9px] font-bold text-slate-500 uppercase block">Remède / Solution apportée *</label>
+                                {/* V4-TYPO: replaced text-[9px] with text-caption */}
+                                <label className="text-caption font-bold text-slate-500 uppercase block">Remède / Solution apportée *</label>
                                 <input
                                   type="text"
                                   id="diagSolution"
@@ -1534,11 +1586,12 @@ export default function TachesPlanning() {
                         {/* CASE: Panne est CLÔTURÉE */}
                         {selectedPanne.statut === 'CLOS' && (
                           <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left space-y-2">
-                            <span className="text-[10px] font-black uppercase text-slate-500">Incident clôturé ✓</span>
+                            {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                            <span className="text-caption font-black uppercase text-slate-500">Incident clôturé ✓</span>
                             <p className="font-bold text-slate-800">✅ Solution appliquée :</p>
                             <p className="text-slate-600 font-medium">{selectedPanne.solution || "Aucune note"}</p>
                             {selectedPanne.dureeImmobilisation && (
-                              <p className="text-[10px] text-red-600 font-mono font-bold uppercase">⏱️ Durée d'Immobilisation : {selectedPanne.dureeImmobilisation} Heures</p>
+                              <p className="text-caption text-red-600 font-mono font-bold uppercase">⏱️ Durée d'Immobilisation : {selectedPanne.dureeImmobilisation} Heures</p>
                             )}
                           </div>
                         )}
@@ -1550,7 +1603,8 @@ export default function TachesPlanning() {
                     <div className="flex-1 flex flex-col justify-center items-center text-slate-400 gap-2 font-mono py-16">
                       <AlertTriangle className="h-8 w-8 text-slate-300" />
                       <p className="font-black text-xs uppercase tracking-wider text-slate-500">Sélectionner un incident</p>
-                      <p className="text-[10px] text-slate-400 font-medium">Cliquez sur une panne à gauche pour afficher son workflow</p>
+                      {/* V4-TYPO: replaced text-[10px] with text-caption */}
+                      <p className="text-caption text-slate-400 font-medium">Cliquez sur une panne à gauche pour afficher son workflow</p>
                     </div>
                   )}
                 </Card>

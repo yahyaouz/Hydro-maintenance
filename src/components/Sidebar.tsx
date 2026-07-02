@@ -240,7 +240,8 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
                 <HydrominesLogo size={44} />
               </div>
               <span className={cn(
-                "text-[7px] font-black px-1 rounded uppercase tracking-tighter leading-none mt-0.5",
+                /* V4-TYPO: replaced text-[7px] with text-tech */
+                "text-tech font-black px-1 rounded uppercase tracking-tighter leading-none mt-0.5",
                 siteStyle.bg, siteStyle.text
               )}>
                 {activeSite === 'TOUS' ? 'GBL' : activeSite.substring(0, 3)}
@@ -285,7 +286,8 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
                 <MapPin className="w-4.5 h-4.5 animate-bounce" style={{ animationDuration: '3s' }} />
               </div>
               <div className="flex-1 overflow-hidden min-w-0">
-                <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5 leading-none">
+                {/* V4-TYPO: replaced text-[9px] with text-caption and font-sans */}
+                <span className="text-caption font-sans font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5 leading-none">
                   CHANTIER SÉLECTIONNÉ
                 </span>
                 {["ADMIN", "DIRECTION"].includes(user?.role || "") ? (
@@ -341,7 +343,8 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
                           : "text-slate-400 hover:text-slate-750 dark:hover:text-slate-200"
                       )}
                     >
-                      <h3 className="text-[9.5px] font-black tracking-widest uppercase flex items-center gap-1.5">
+                      {/* V4-TYPO: replaced text-[9.5px] with text-caption and font-sans */}
+                      <h3 className="text-caption font-sans font-black tracking-widest uppercase flex items-center gap-1.5">
                         <span className={cn(
                           "w-1 h-1 rounded-full transition-all duration-350",
                           hasActiveItem ? "bg-amber-500 scale-125" : "bg-slate-300 dark:bg-slate-700"
@@ -442,14 +445,16 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
             isCollapsed ? "justify-center" : ""
           )}>
             <Avatar className="h-9 w-9 border border-slate-100 dark:border-slate-850 shadow-sm shrink-0 bg-slate-50 dark:bg-slate-900 ring-2 ring-transparent group-hover:ring-amber-500/25 transition-all">
-              <AvatarFallback className="text-slate-855 text-[10.5px] font-black bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">
+              {/* V4-TYPO: replaced text-[10.5px] with text-caption */}
+              <AvatarFallback className="text-slate-855 text-caption font-black bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">
                 {user?.displayName?.split(" ").map(n => n[0]).join("") || "HM"}
               </AvatarFallback>
             </Avatar>
             {!isCollapsed && (
               <div className="flex flex-col flex-1 overflow-hidden leading-tight">
                 <span className="text-[11px] font-black truncate text-slate-850 dark:text-slate-100">{user?.displayName}</span>
-                <span className="text-[7.5px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest truncate mt-0.5">
+                {/* V4-TYPO: replaced text-[7.5px] with text-caption and font-sans */}
+                <span className="text-caption font-sans text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest truncate mt-0.5">
                   {user?.role?.replace(/_/g, ' ')}
                 </span>
               </div>
@@ -461,7 +466,7 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
             <Button 
               variant="ghost" 
               size="sm" 
-              className="w-full justify-start text-[8px] font-black uppercase tracking-widest h-8 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50/30 dark:hover:bg-red-950/10 text-slate-500 dark:text-slate-400 transition-colors"
+              className="w-full justify-start text-caption font-sans font-black uppercase tracking-widest h-8 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50/30 dark:hover:bg-red-950/10 text-slate-500 dark:text-slate-400 transition-colors"
               onClick={() => {
                 logout();
                 toast.info("Déconnexion réussie");
