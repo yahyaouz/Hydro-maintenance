@@ -87,3 +87,30 @@ export interface RapportFinInterventionRFI {
   signedBy: string;
   siteId: SiteID;
 }
+
+export interface CarnetSanteProfile {
+  id: string;
+  enginId: string;
+  siteId: SiteID;
+  healthScore: number;
+  lastChecked: string;
+  notes?: string;
+}
+
+export interface RootCauseAnalysis {
+  id: string;
+  workOrderId: string;
+  machineCode: string;
+  title: string;
+  status: "BROUILLON" | "COMPLÉTÉ" | "APPROUVÉ";
+  team: string[];
+  problemDescription: string;
+  fiveWhys: string[];
+  rootCause: string;
+  preventiveActions: string[];
+  siteId: SiteID;
+  createdAt: string;
+  updatedAt: string;
+  aiAnalysis?: string;
+}
+

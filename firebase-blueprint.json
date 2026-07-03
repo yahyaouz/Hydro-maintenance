@@ -275,6 +275,42 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "enginId", "siteId", "position", "marque", "cout", "changePar", "createdAt"]
+    },
+    "carnetSante": {
+      "title": "CarnetSante",
+      "description": "Fiche de santé d'un engin ou équipement de la flotte",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "enginId": { "type": "string" },
+        "siteId": { "type": "string" },
+        "healthScore": { "type": "number" },
+        "lastChecked": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "enginId", "siteId", "healthScore"]
+    },
+    "rootCauseAnalysis": {
+      "title": "RootCauseAnalysis",
+      "description": "Analyse de causes racines (RCA) d'une panne ou défaillance",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "workOrderId": { "type": "string" },
+        "machineCode": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "enum": ["BROUILLON", "COMPLÉTÉ", "APPROUVÉ"] },
+        "team": { "type": "array" },
+        "problemDescription": { "type": "string" },
+        "fiveWhys": { "type": "array" },
+        "rootCause": { "type": "string" },
+        "preventiveActions": { "type": "array" },
+        "siteId": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "aiAnalysis": { "type": "string" }
+      },
+      "required": ["id", "workOrderId", "machineCode", "title", "status", "siteId"]
     }
   },
   "firestore": {
@@ -333,6 +369,14 @@
     "checklists": {
       "schema": "checklist",
       "description": "Collection des checklists et inspections de sécurité/conducteur/maintenance"
+    },
+    "carnetSante": {
+      "schema": "carnetSante",
+      "description": "Collection des fiches de santé d'engins"
+    },
+    "rootCauseAnalysis": {
+      "schema": "rootCauseAnalysis",
+      "description": "Collection des analyses de causes racines (RCA) de pannes"
     },
     "config": {
       "schema": "object",

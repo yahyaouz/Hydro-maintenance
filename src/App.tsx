@@ -16,6 +16,8 @@ import { SystematicTasks } from "@/components/SystematicTasks";
 import { ImportConfig } from "@/components/ImportConfig";
 import { Mecaniciens } from "@/components/Mecaniciens";
 import { Pneumatiques } from "@/components/Pneumatiques";
+import { CarnetSante } from "@/components/CarnetSante";
+import { RootCauseAnalysis } from "@/components/RootCauseAnalysis";
 import { startViewerTrackingSession, trackViewerPageTransition } from "@/services/viewerTracking";
 
 function IndustrialSkeleton() {
@@ -341,6 +343,8 @@ export default function App() {
       case "analyses": return "Analyses & KPI";
       case "systematique": return "Tâches Systématiques";
       case "import_config": return "Import & Paramètres";
+      case "carnet_sante": return "Carnet de Santé Flotte";
+      case "rca": return "Analyse de Cause Racine (RCA)";
       default: return "Hydromines GMAO";
     }
   };
@@ -455,8 +459,10 @@ export default function App() {
               {activeTab === "systematique" && <SystematicTasks />}
               {activeTab === "mecaniciens" && <Mecaniciens />}
               {activeTab === "pneumatiques" && <Pneumatiques />}
+              {activeTab === "carnet_sante" && <CarnetSante />}
+              {activeTab === "rca" && <RootCauseAnalysis />}
               
-              {!["dashboard", "alertes", "engins", "referentiel", "admin", "checklists", "taches_planning", "analyses", "systematique", "import_config", "mecaniciens", "pneumatiques"].includes(activeTab) && (
+              {!["dashboard", "alertes", "engins", "referentiel", "admin", "checklists", "taches_planning", "analyses", "systematique", "import_config", "mecaniciens", "pneumatiques", "carnet_sante", "rca"].includes(activeTab) && (
                 <div className="flex items-center justify-center h-full text-muted-foreground bg-white dark:bg-slate-900">
                   Module {activeTab} en cours d'implémentation...
                 </div>
