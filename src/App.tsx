@@ -1,19 +1,8 @@
 import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { 
-  Sidebar 
-} from "@/components/Sidebar";
-import { Settings } from "lucide-react";
+import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
 import { EnginList } from "@/components/EnginList";
-// NETTOYÉ : Import PannesList supprimé
-// NETTOYÉ : Import HeuresTravail supprimé
-// NETTOYÉ : Import MaintenanceModule supprimé
-// NETTOYÉ : Import AlertesModule supprimé
-// NETTOYÉ : Import Pneumatiques supprimé
-// NETTOYÉ : Import Consommations supprimé
-// NETTOYÉ : Import StockPieces supprimé
-// NETTOYÉ : Import MecaniciensModule supprimé
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
@@ -22,16 +11,10 @@ import { ReferentielTechnique } from "@/components/ReferentielTechnique";
 import Checklists from "@/components/Checklists";
 import TachesPlanning from "@/components/TachesPlanning";
 import Analyses from "@/components/Analyses";
-// V4-ALERTES: Import Alertes page component
 import { Alertes } from "@/components/Alertes";
-// V4-IMPORT: Import ImportConfig page component
+import { SystematicTasks } from "@/components/SystematicTasks";
 import { ImportConfig } from "@/components/ImportConfig";
 import { startViewerTrackingSession, trackViewerPageTransition } from "@/services/viewerTracking";
-
-// NETTOYÉ : Import lazy VisionIA supprimé
-// NETTOYÉ : Import lazy Rapports supprimé
-// NETTOYÉ : Import lazy InspectionModule supprimé
-// NETTOYÉ : Import lazy MondeMaintenance supprimé
 
 function IndustrialSkeleton() {
   return (
@@ -50,7 +33,7 @@ import { Admin } from "@/components/Admin";
 import { getDoc, doc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
-import { Shield, ShieldAlert, LogOut, RefreshCw } from "lucide-react";
+import { ShieldAlert, LogOut, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -179,7 +162,8 @@ function AwaitingApprovalScreen() {
 
 import { useNotificationStore } from "@/services/notificationStore";
 import { OfflineQueueManager } from "@/services/offlineQueueManager";
-import { Bell, Wifi, WifiOff, Activity, BadgeAlert, Calendar, CheckSquare, Layers, AlertCircle, Info, CheckCheck, Trash2, Moon, Sun } from "lucide-react";
+import { dbService } from "@/services/firestoreService";
+import { Bell, Activity, CheckSquare, CheckCheck, Trash2, Moon, Sun } from "lucide-react";
 
 export default function App() {
   const [activeTab, setActiveTab] = React.useState("dashboard");
@@ -190,6 +174,43 @@ export default function App() {
   const [offlineActionCount, setOfflineActionCount] = React.useState(0);
   const { notifications, markAsRead, markAllAsRead, clearAll, addNotification } = useNotificationStore();
   const [networkOnline, setNetworkOnline] = React.useState(navigator.onLine);
+
+  // Memoized offline queue synchronizer
+  const syncOfflineQueue = React.useCallback(async () => {
+    if (!navigator.onLine) return;
+    const pending = OfflineQueueManager.getPending();
+    if (pending.length === 0) return;
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const tx of pending) {
+      try {
+        await dbService.offlineQueue.replayAction(tx);
+        OfflineQueueManager.updateStatus(tx.id, 'REPLAYED');
+        successCount++;
+      } catch (err: any) {
+        console.error("Erreur replay action offline:", err);
+        OfflineQueueManager.updateStatus(tx.id, 'FAILED', err.message || String(err));
+        failCount++;
+      }
+    }
+
+    OfflineQueueManager.clearReplayed();
+
+    if (successCount > 0 && failCount === 0) {
+      toast.success(`[Mode Hors-ligne] Synchronisation réussie : ${successCount} actions synchronisées avec la base centrale.`);
+    } else if (successCount > 0 && failCount > 0) {
+      toast.warning(`[Mode Hors-ligne] Synchronisation partielle : ${successCount} réussies, ${failCount} échecs.`);
+    } else if (failCount > 0) {
+      toast.error(`[Mode Hors-ligne] Échec de synchronisation : ${failCount} actions en erreur.`);
+    }
+
+    try {
+      const queue = OfflineQueueManager.getQueue();
+      setOfflineActionCount(queue.length);
+    } catch {}
+  }, []);
 
   React.useEffect(() => {
     // Synchronize HTML theme class
@@ -211,6 +232,7 @@ export default function App() {
         triggerSource: 'OFFLINE_MONITOR',
         siteId: activeSite
       });
+      syncOfflineQueue();
     };
     const handleOffline = () => {
       setNetworkOnline(false);
@@ -240,7 +262,25 @@ export default function App() {
       window.removeEventListener("offline", handleOffline);
       clearInterval(interval);
     };
-  }, [activeSite]);
+  }, [activeSite, syncOfflineQueue]);
+
+  // Trigger sync on mount (if online) and configure periodic 15s check
+  React.useEffect(() => {
+    if (navigator.onLine) {
+      syncOfflineQueue();
+    }
+
+    const interval = setInterval(() => {
+      if (navigator.onLine) {
+        const pending = OfflineQueueManager.getPending();
+        if (pending.length > 0) {
+          syncOfflineQueue();
+        }
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [syncOfflineQueue]);
 
   // Prevent Privilege Escalation - Silent real-time revalidation
   React.useEffect(() => {
@@ -290,26 +330,15 @@ export default function App() {
   const getTabTitle = () => {
     switch(activeTab) {
       case "dashboard": return "Supervision Flotte";
-      // V4-ALERTES: Set dynamic header title for Alertes page
       case "alertes": return "Alertes & Vigilance Métier";
       case "engins": return "Gestion du Parc";
-      // NETTOYÉ : pannes supprimé
-      // NETTOYÉ : heures supprimé
-      // NETTOYÉ : vision_ia supprimé
-      // NETTOYÉ : maintenance supprimé
-      // NETTOYÉ : alertes supprimé
-      // NETTOYÉ : pneus supprimé
-      // NETTOYÉ : carburant supprimé
-      // NETTOYÉ : stock supprimé
-      // NETTOYÉ : rapports supprimé
-      // NETTOYÉ : inspection supprimé
-      // NETTOYÉ : monde supprimé
       case "admin": return "Privilèges & Droits";
-      // NETTOYÉ : mecaniciens supprimé
-      // NETTOYÉ : ma_fiche supprimé
-      // NETTOYÉ : interventions supprimé
-      // NETTOYÉ : saisies supprimé
       case "referentiel": return "Référentiel Technique";
+      case "checklists": return "Fiches de Contrôle";
+      case "taches_planning": return "Planning des Tâches";
+      case "analyses": return "Analyses & KPI";
+      case "systematique": return "Tâches Systématiques";
+      case "import_config": return "Import & Paramètres";
       default: return "Hydromines GMAO";
     }
   };
@@ -413,19 +442,17 @@ export default function App() {
           <div className="relative z-10 w-full h-full p-6">
             <React.Suspense fallback={<IndustrialSkeleton />}>
               {activeTab === "dashboard" && <Dashboard />}
-              {/* V4-ALERTES: Render Alertes page component */}
               {activeTab === "alertes" && <Alertes />}
               {activeTab === "engins" && <EnginList />}
-              {/* V4-IMPORT: Render ImportConfig component */}
               {activeTab === "import_config" && <ImportConfig />}
-              {/* NETTOYÉ : pannes, heures, vision_ia, maintenance, alertes, pneus, carburant, stock, rapports, inspection, monde, mecaniciens, ma_fiche, interventions, saisies supprimés */}
               {activeTab === "admin" && <Admin />}
               {activeTab === "referentiel" && <ReferentielTechnique />}
               {activeTab === "checklists" && <Checklists />}
               {activeTab === "taches_planning" && <TachesPlanning />}
               {activeTab === "analyses" && <Analyses />}
+              {activeTab === "systematique" && <SystematicTasks />}
               
-              {!["dashboard", "alertes", "engins", "referentiel", "admin", "checklists", "taches_planning", "analyses", "import_config"].includes(activeTab) && (
+              {!["dashboard", "alertes", "engins", "referentiel", "admin", "checklists", "taches_planning", "analyses", "systematique", "import_config"].includes(activeTab) && (
                 <div className="flex items-center justify-center h-full text-muted-foreground bg-white dark:bg-slate-900">
                   Module {activeTab} en cours d'implémentation...
                 </div>

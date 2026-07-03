@@ -5,7 +5,7 @@ import {
   Settings, ChevronDown, LogOut, MapPin, RefreshCw,
   Users, CheckCircle2, UserIcon, FileSpreadsheet, Shield,
   Sun, Moon, PlusCircle, Sparkles, ChevronLeft, ChevronRight,
-  BookOpen, Calendar, BarChart3
+  BookOpen, Calendar, BarChart3, ClipboardList
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -244,6 +244,7 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
       items: [
         { id: "taches_planning", label: "Tâches & Planning", icon: Calendar, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","VIEWER"] },
         { id: "checklists", label: "Checklists SOU-GMAO", icon: CheckCircle2, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","VIEWER"] },
+        { id: "systematique", label: "Tâches Systématiques", icon: ClipboardList, roles: ["MECANICIEN", "SECRETAIRE", "RESPONSABLE_MAINTENANCE", "ADMIN", "DIRECTION"] },
       ]
     },
     {

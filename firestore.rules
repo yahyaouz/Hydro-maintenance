@@ -214,6 +214,21 @@ service cloud.firestore {
       allow delete: if isSignedIn() && isRole('ADMIN');
     }
 
+    match /systematicTaskConfigs/{configId} {
+      allow read: if true;
+      allow write: if isSignedIn() && (
+        getUserData().role == 'ADMIN' ||
+        getUserData().role == 'RESPONSABLE_MAINTENANCE'
+      );
+    }
+
+    match /systematicTasks/{taskId} {
+      allow read: if true;
+      allow create: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
+      allow update: if isSignedIn() && matchesSite(resource.data.siteId || 'SMI');
+      allow delete: if isSignedIn() && isRole('ADMIN');
+    }
+
     match /alerts/{alertId} {
       allow read: if true;
       allow write: if isSignedIn();

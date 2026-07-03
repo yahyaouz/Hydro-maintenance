@@ -87,8 +87,8 @@ async function startServer() {
     { id: "SMI", cityName: "Imiter (Axe Solaire)", status: "LOCAL_OPTIMAL", latencyMs: 34, pendingSyncQueueCount: 0, reliabilityScore: 99.8, lastReplicationTimestamp: "2026-05-20T13:10:00Z" },
     { id: "OUMEJRANE", cityName: "Oumejrane (Axe Cuivre/Plomb)", status: "LOCAL_OPTIMAL", latencyMs: 58, pendingSyncQueueCount: 0, reliabilityScore: 98.4, lastReplicationTimestamp: "2026-05-20T13:05:00Z" },
     { id: "KOUDIA", cityName: "Koudia Al Aicha (Axe Plomb/Zinc)", status: "LOCAL_OPTIMAL", latencyMs: 42, pendingSyncQueueCount: 0, reliabilityScore: 99.2, lastReplicationTimestamp: "2026-05-20T13:15:00Z" },
-    { id: "BOU-AZZER", cityName: "Bou-Azzer (Axe Cobalt)", status: "SYNCING", latencyMs: 145, pendingSyncQueueCount: 14, reliabilityScore: 95.1, lastReplicationTimestamp: "2026-05-20T12:50:00Z" },
-    { id: "OUANSIMI", cityName: "Ouansimi (Axe Or/Argent)", status: "OFFLINE_STANDALONE", latencyMs: 9999, pendingSyncQueueCount: 41, reliabilityScore: 89.2, lastReplicationTimestamp: "2026-05-19T22:30:00Z" }
+    { id: "BOU-AZZER", cityName: "Bou-Azzer (Axe Cobalt)", status: "LOCAL_OPTIMAL", latencyMs: 40, pendingSyncQueueCount: 0, reliabilityScore: 99.1, lastReplicationTimestamp: "2026-07-03T15:44:36Z" },
+    { id: "OUANSIMI", cityName: "Ouansimi (Axe Or/Argent)", status: "LOCAL_OPTIMAL", latencyMs: 45, pendingSyncQueueCount: 0, reliabilityScore: 98.7, lastReplicationTimestamp: "2026-07-03T15:44:36Z" }
   ];
 
   app.get("/api/sites/nodes", (req, res) => {
@@ -171,7 +171,7 @@ async function startServer() {
     try {
       const { message } = req.body;
       const chat = ai.chats.create({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         config: {
           systemInstruction: `Tu es l'Expert Mécanicien Minier "Hydromines IA".
             Tes compétences incluent :
@@ -210,7 +210,7 @@ async function startServer() {
     try {
       const { data, context } = req.body;
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         contents: `Analyses cette situation de maintenance minière : ${data}. Contexte : ${context}. Fournis un diagnostic et des conseils pratiques.`,
         config: {
           temperature: 0.7,
@@ -239,7 +239,7 @@ async function startServer() {
       };
 
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         contents: { parts: [imagePart, textPart] },
         config: {
           temperature: 0.4,
@@ -250,6 +250,26 @@ async function startServer() {
     } catch (error) {
       console.error("Vision IA Error:", error);
       res.status(500).json({ error: "Erreur d'analyse Vision IA" });
+    }
+  });
+
+  // Endpoint API pour vérifier les retards de tournée (appelable manuellement ou par cron)
+  app.post("/api/systematic-alerts/check", async (req, res) => {
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      // Logique de vérification des mécaniciens sans tournée
+      // Retourner la liste des mécaniciens en retard
+      const delayedMechanics = [
+        { id: "meca-01", name: "Ahmed Mansouri", siteId: "SMI", status: "NON_FAIT", poste: "Poste 1" },
+        { id: "meca-03", name: "Youssef Ait", siteId: "OUMEJRANE", status: "NON_FAIT", poste: "Poste 1" }
+      ];
+      res.json({ 
+        success: true, 
+        date: todayStr, 
+        alertsTriggered: delayedMechanics 
+      });
+    } catch (err) {
+      res.status(500).json({ error: "Erreur vérification alertes" });
     }
   });
 

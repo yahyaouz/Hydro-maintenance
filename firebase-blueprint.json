@@ -189,9 +189,52 @@
         "createdAt": { "type": "object" }
       },
       "required": ["id", "type", "date", "heure", "enginId", "enginModele", "signataire", "poste", "siteId", "items", "commentaires", "timestamp", "deleted"]
+    },
+    "systematicTaskConfig": {
+      "title": "SystematicTaskConfig",
+      "description": "Configuration des tâches systématiques imposées par site et par poste",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "siteId": { "type": "string" },
+        "poste": { "type": "string" },
+        "tasks": { "type": "array" },
+        "updatedBy": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "siteId", "poste", "tasks"]
+    },
+    "systematicTask": {
+      "title": "SystematicTask",
+      "description": "Fiche journalière de la tournée des tâches systématiques imposées à un mécanicien",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "mecanicienId": { "type": "string" },
+        "mecanicienNom": { "type": "string" },
+        "siteId": { "type": "string" },
+        "poste": { "type": "string" },
+        "tasks": { "type": "array" },
+        "status": { "enum": ["NON_FAIT", "PARTIEL", "COMPLET", "VALIDÉ"] },
+        "alertSent": { "type": "boolean" },
+        "alertSentAt": { "type": "string" },
+        "photo": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "date", "mecanicienId", "mecanicienNom", "siteId", "poste", "tasks", "status"]
     }
   },
   "firestore": {
+    "systematicTaskConfigs": {
+      "schema": "systematicTaskConfig",
+      "description": "Collection de configuration des tâches systématiques"
+    },
+    "systematicTasks": {
+      "schema": "systematicTask",
+      "description": "Collection des tournées de tâches systématiques journalières des mécaniciens"
+    },
     "users": {
       "schema": "user",
       "description": "Collection des profils de maintenance et d'administration"
