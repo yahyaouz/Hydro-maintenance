@@ -34,6 +34,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuthStore } from '@/lib/store';
+import { AdminMecaniciens } from "./admin/AdminMecaniciens";
 
 // RECONSTRUIT : Interfaces TypeScript pour typer proprement les collections stockées
 interface Engin {
@@ -857,11 +858,15 @@ export function Admin() {
         </button>
       </div>
 
-      {/* RECONSTRUIT : Affichage des statistiques selon l'onglet actif */}
-      {renderStats()}
+      {activeTab === "mecaniciens" ? (
+        <AdminMecaniciens />
+      ) : (
+        <>
+          {/* RECONSTRUIT : Affichage des statistiques selon l'onglet actif */}
+          {renderStats()}
 
-      {/* RECONSTRUIT : Zone d'actions et filtres de recherche */}
-      <Card className="bg-slate-50 border-slate-200 rounded-xl p-4 shadow-sm">
+          {/* RECONSTRUIT : Zone d'actions et filtres de recherche */}
+          <Card className="bg-slate-50 border-slate-200 rounded-xl p-4 shadow-sm">
         <div className="flex flex-col lg:flex-row gap-4 justify-between items-center">
           
           {/* Barre de Recherche */}
@@ -871,7 +876,7 @@ export function Admin() {
               type="text"
               placeholder={
                 activeTab === "engins" ? "Rechercher par N° de Parc, Modèle, Conducteur..." :
-                activeTab === "mecaniciens" ? "Rechercher par Matricule, Nom, Spécialité..." :
+                (activeTab as string) === "mecaniciens" ? "Rechercher par Matricule, Nom, Spécialité..." :
                 activeTab === "chantiers" ? "Rechercher par Code, Nom, Localisation..." :
                 "Rechercher par opération, fluide..."
               }
@@ -908,7 +913,7 @@ export function Admin() {
               </>
             )}
 
-            {activeTab === "mecaniciens" && (
+            {(activeTab as string) === "mecaniciens" && (
               <>
                 <select
                   value={filterOption1}
@@ -1006,7 +1011,7 @@ export function Admin() {
             >
               <Plus className="h-4.5 w-4.5" />
               {activeTab === "engins" && "Engin"}
-              {activeTab === "mecaniciens" && "Mécanicien"}
+              {(activeTab as string) === "mecaniciens" && "Mécanicien"}
               {activeTab === "chantiers" && "Chantier"}
               {activeTab === "intervalles" && "Intervalle"}
             </Button>
@@ -1049,7 +1054,7 @@ export function Admin() {
                     )}
 
                     {/* MECANICIENS HEADERS */}
-                    {activeTab === "mecaniciens" && (
+                    {(activeTab as string) === "mecaniciens" && (
                       <>
                         <th className="py-4 px-6">Matricule</th>
                         <th className="py-4 px-4">Nom Complet</th>
@@ -1149,7 +1154,7 @@ export function Admin() {
                   ))}
 
                   {/* MECANICIENS ROWS */}
-                  {activeTab === "mecaniciens" && (filteredData as Mecanicien[]).map((m) => (
+                  {(activeTab as string) === "mecaniciens" && (filteredData as Mecanicien[]).map((m) => (
                     <tr key={m.id} className="hover:bg-slate-50 text-sm font-sans transition-colors duration-150">
                       <td className="py-4 px-6 font-mono font-bold text-amber-600">{m.id}</td>
                       <td className="py-4 px-4 font-bold text-slate-800">{m.nomComplet}</td>
@@ -1321,7 +1326,7 @@ export function Admin() {
               <Button
                 onClick={() => {
                   if (activeTab === "engins") handleDeleteEngin(confirmDeleteId);
-                  else if (activeTab === "mecaniciens") handleDeleteMecanicien(confirmDeleteId);
+                  else if ((activeTab as string) === "mecaniciens") handleDeleteMecanicien(confirmDeleteId);
                   else if (activeTab === "chantiers") handleDeleteChantier(confirmDeleteId);
                   else handleDeleteIntervalle(confirmDeleteId);
                 }}
@@ -1346,7 +1351,7 @@ export function Admin() {
               <h2 className="text-base font-black uppercase tracking-wider text-amber-600">
                 {editingItem ? "✏️ MODIFIER" : "➕ AJOUTER"} {
                   activeTab === "engins" ? "UN ENGIN DE FOND" :
-                  activeTab === "mecaniciens" ? "UN COLLABORATEUR" :
+                  (activeTab as string) === "mecaniciens" ? "UN COLLABORATEUR" :
                   activeTab === "chantiers" ? "UN CHANTIER ACTIF" :
                   "UN INTERVALLE DE MAINTENANCE"
                 }
@@ -1366,7 +1371,7 @@ export function Admin() {
               const data = Object.fromEntries(formData.entries());
               
               if (activeTab === "engins") handleSaveEngin(data);
-              else if (activeTab === "mecaniciens") handleSaveMecanicien(data);
+              else if ((activeTab as string) === "mecaniciens") handleSaveMecanicien(data);
               else if (activeTab === "chantiers") handleSaveChantier(data);
               else handleSaveIntervalle(data);
             }} className="space-y-4">
@@ -1493,7 +1498,7 @@ export function Admin() {
               {/* ==========================================
                   FORMULAIRE : MÉCANICIENS
                   ========================================== */}
-              {activeTab === "mecaniciens" && (
+              {(activeTab as string) === "mecaniciens" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-mono font-bold uppercase text-slate-600 mb-1.5">
@@ -1782,6 +1787,8 @@ export function Admin() {
           </div>
         </div>
       )}
+</>
+)}
 
     </div>
   );

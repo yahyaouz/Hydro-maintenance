@@ -71,6 +71,69 @@ export interface Mechanic {
   qualityRate: number;
 }
 
+export interface VisaStatus {
+  active: boolean;
+  dateExpiration: string | null;
+}
+
+export interface Visas {
+  LOTO: VisaStatus;
+  HAUTEUR: VisaStatus;
+  CONFINE: VisaStatus;
+  ELECTRIQUE_HV: VisaStatus;
+  CHARGEUR: VisaStatus;
+}
+
+export interface Documents {
+  contrat?: string;
+  diplome?: string;
+  visaMedical?: string;
+  attestationFormation?: string;
+  caces?: string;
+}
+
+export interface MecanicienStats {
+  totalInterventions: number;
+  interventionsCeMois: number;
+  derniereIntervention: string;
+  scoreMensuel: number;
+  mttrMoyen: number;
+  tauxResolutionPremiereFois: number;
+  tauxTournéesCompletes: number;
+  heuresInterventionCeMois: number;
+}
+
+export interface Mecanicien {
+  id?: string; // Firestore document ID
+  uid: string;
+  userUid?: string | null; // Lien vers users.uid si le mécano a un compte GMAO, null si technicien de fond
+  matricule: string;
+  nom: string;
+  prenom: string;
+  photo: string; // URL Firebase Storage ou base64
+  siteId: SiteID;
+  poste: string; // "Poste 1" | "Poste 2" | "Poste 3"
+  equipe?: string; // Shift (A, B, C...)
+  competences: string[];
+  telephone: string;
+  telephoneUrgence?: string;
+  email: string;
+  adresse?: string;
+  dateNaissance?: string;
+  dateEmbauche: string;
+  visas?: Visas;
+  documents?: Documents;
+  stats: MecanicienStats;
+  active: boolean;
+  source: "MOCK_SPRINT4" | "PRODUCTION_IMPORT" | "ADMIN_CREATION";
+  updatedAt?: string;
+  
+  // Backwards compatibility toggles
+  visaLOTO?: boolean;
+  visaHauteur?: boolean;
+  visaConfine?: boolean;
+}
+
 export interface Intervention {
   id: string; // workOrderId / panneId reference
   enginId?: string; // normalized engine reference

@@ -227,25 +227,89 @@
     },
     "mecanicien": {
       "title": "Mecanicien",
-      "description": "Fiche mécanicien et statistiques de performance (Mock S4, intégration S6)",
+      "description": "Fiche mécanicien et statistiques de performance (Mock S4, intégration S6). ARCHITECTURE DUALE: Collection 'users' pour comptes de connexion GMAO (auth Firebase), Collection 'mecaniciens' pour le référentiel opérationnel des techniciens. Certains mécaniciens n'ont pas de compte GMAO (travaillent hors-ligne). Quand un mécano a un compte, userUid fait le lien entre les deux. L'import Planification (SPRINT 6) écrit dans 'mecaniciens'. Le module Mécaniciens (SPRINT 4) lit depuis 'mecaniciens'.",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
+        "userUid": { "type": "string" },
         "matricule": { "type": "string" },
         "nom": { "type": "string" },
         "prenom": { "type": "string" },
-        "photo": { "type": "string" },
+        "photo": { "type": "string", "description": "URL Firebase Storage : /mecaniciens/{matricule}/avatar.jpg ou base64. Upload via le formulaire admin, PAS de mock externe" },
         "siteId": { "type": "string" },
         "poste": { "type": "string" },
+        "equipe": { "type": "string" },
         "competences": { "type": "array" },
-        "visaLOTO": { "type": "boolean" },
-        "visaHauteur": { "type": "boolean" },
-        "visaConfine": { "type": "boolean" },
         "telephone": { "type": "string" },
+        "telephoneUrgence": { "type": "string" },
         "email": { "type": "string" },
-        "stats": { "type": "object" },
-        "active": { "type": "boolean" },
+        "adresse": { "type": "string" },
+        "dateNaissance": { "type": "string" },
         "dateEmbauche": { "type": "string" },
+        "visas": {
+          "type": "object",
+          "properties": {
+            "LOTO": {
+              "type": "object",
+              "properties": {
+                "active": { "type": "boolean" },
+                "dateExpiration": { "type": "string" }
+              }
+            },
+            "HAUTEUR": {
+              "type": "object",
+              "properties": {
+                "active": { "type": "boolean" },
+                "dateExpiration": { "type": "string" }
+              }
+            },
+            "CONFINE": {
+              "type": "object",
+              "properties": {
+                "active": { "type": "boolean" },
+                "dateExpiration": { "type": "string" }
+              }
+            },
+            "ELECTRIQUE_HV": {
+              "type": "object",
+              "properties": {
+                "active": { "type": "boolean" },
+                "dateExpiration": { "type": "string" }
+              }
+            },
+            "CHARGEUR": {
+              "type": "object",
+              "properties": {
+                "active": { "type": "boolean" },
+                "dateExpiration": { "type": "string" }
+              }
+            }
+          }
+        },
+        "documents": {
+          "type": "object",
+          "properties": {
+            "contrat": { "type": "string" },
+            "diplome": { "type": "string" },
+            "visaMedical": { "type": "string" },
+            "attestationFormation": { "type": "string" },
+            "caces": { "type": "string" }
+          }
+        },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "totalInterventions": { "type": "number" },
+            "interventionsCeMois": { "type": "number" },
+            "derniereIntervention": { "type": "string" },
+            "scoreMensuel": { "type": "number" },
+            "mttrMoyen": { "type": "number" },
+            "tauxResolutionPremiereFois": { "type": "number" },
+            "tauxTournéesCompletes": { "type": "number" },
+            "heuresInterventionCeMois": { "type": "number" }
+          }
+        },
+        "active": { "type": "boolean" },
         "source": { "type": "string" }
       },
       "required": ["uid", "matricule", "nom", "prenom", "siteId", "active"]
@@ -311,6 +375,68 @@
         "aiAnalysis": { "type": "string" }
       },
       "required": ["id", "workOrderId", "machineCode", "title", "status", "siteId"]
+    },
+    "consommation": {
+      "title": "Consommation",
+      "description": "Rapport de consommation de pièces de rechange",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "codePiece": { "type": "string" },
+        "designation": { "type": "string" },
+        "quantite": { "type": "number" },
+        "unite": { "type": "string" },
+        "enginMatricule": { "type": "string" },
+        "enginType": { "type": "string" },
+        "site": { "type": "string" },
+        "dateConso": { "type": "string" },
+        "mecanicienMatricule": { "type": "string" },
+        "coutUnite": { "type": "number" },
+        "coutTotal": { "type": "number" },
+        "importedAt": { "type": "string" }
+      },
+      "required": ["id", "codePiece", "quantite", "enginMatricule", "site", "dateConso"]
+    },
+    "carburant": {
+      "title": "Carburant",
+      "description": "Relevé de consommation de carburants, lubrifiants et heures moteur",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "matriculeEngin": { "type": "string" },
+        "typeEngin": { "type": "string" },
+        "site": { "type": "string" },
+        "dateReleve": { "type": "string" },
+        "heuresMoteur": { "type": "number" },
+        "consoGasoil": { "type": "number" },
+        "consoHuileMoteur": { "type": "number" },
+        "consoHuileHydraulique": { "type": "number" },
+        "consoAutresLubrifiants": { "type": "number" },
+        "importedAt": { "type": "string" }
+      },
+      "required": ["id", "matriculeEngin", "site", "dateReleve", "heuresMoteur"]
+    },
+    "intervention": {
+      "title": "Intervention",
+      "description": "Rapport d'intervention réelle de production",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "mecanicienMatricule": { "type": "string" },
+        "mecanicienNom": { "type": "string" },
+        "date": { "type": "string" },
+        "enginMatricule": { "type": "string" },
+        "typeIntervention": { "type": "string" },
+        "heureDebutReelle": { "type": "string" },
+        "heureFinReelle": { "type": "string" },
+        "dureeHeures": { "type": "number" },
+        "descriptionTravaux": { "type": "string" },
+        "status": { "type": "string" },
+        "piecesUtilisees": { "type": "array" },
+        "siteId": { "type": "string" },
+        "importedAt": { "type": "string" }
+      },
+      "required": ["id", "mecanicienMatricule", "date", "enginMatricule", "dureeHeures"]
     }
   },
   "firestore": {
@@ -377,6 +503,18 @@
     "rootCauseAnalysis": {
       "schema": "rootCauseAnalysis",
       "description": "Collection des analyses de causes racines (RCA) de pannes"
+    },
+    "consommations": {
+      "schema": "consommation",
+      "description": "Collection des consommations de pièces détachées de l'Espace Magasinier"
+    },
+    "carburants": {
+      "schema": "carburant",
+      "description": "Collection des relevés de télémétrie, compteurs d'heures et carburants"
+    },
+    "interventions": {
+      "schema": "intervention",
+      "description": "Collection des interventions réelles de production"
     },
     "config": {
       "schema": "object",

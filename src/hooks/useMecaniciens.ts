@@ -1,9 +1,4 @@
-// ⚠️ ATTENTION : DONNÉES MOCK POUR DÉMO SPRINT 4
-// Ces données seront remplacées par les vraies données de la plateforme 
-// Production au SPRINT 6 (Import + Intégration).
-// La source de vérité finale sera la collection 'users' avec role === 'MECANICIEN'.
-// Ce hook lira users (pas mecaniciens) après le SPRINT 6.
-
+// Hook useMecaniciens.ts - Phase 2 Refactoring
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { 
@@ -11,60 +6,69 @@ import {
   onSnapshot, 
   doc, 
   setDoc, 
-  updateDoc, 
-  addDoc 
+  deleteDoc,
+  getDocs
 } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { toast } from "sonner";
-import { SiteID } from "@/types";
+import { SiteID, Mecanicien, MecanicienStats, Visas, Documents, VisaStatus } from "@/types";
+export type { Mecanicien, MecanicienStats, Visas, Documents, VisaStatus };
 
-export interface MecanicienStats {
-  totalInterventions: number;
-  interventionsCeMois: number;
-  derniereIntervention: string;
-  scoreMensuel: number;
-  mttrMoyen: number;
-  tauxResolutionPremiereFois: number;
-  tauxTournéesCompletes: number;
-  heuresInterventionCeMois: number;
-}
+// Default visas and documents structures to prevent undefined crashes
+export const DEFAULT_VISAS: Visas = {
+  LOTO: { active: false, dateExpiration: null },
+  HAUTEUR: { active: false, dateExpiration: null },
+  CONFINE: { active: false, dateExpiration: null },
+  ELECTRIQUE_HV: { active: false, dateExpiration: null },
+  CHARGEUR: { active: false, dateExpiration: null }
+};
 
-export interface Mecanicien {
-  id?: string; // Firestore document ID
-  uid: string;
-  matricule: string;
-  nom: string;
-  prenom: string;
-  photo: string;
-  siteId: SiteID;
-  poste: string;
-  competences: string[];
-  visaLOTO: boolean;
-  visaHauteur: boolean;
-  visaConfine: boolean;
-  telephone: string;
-  email: string;
-  stats: MecanicienStats;
-  active: boolean;
-  dateEmbauche: string;
-  source: "MOCK_SPRINT4" | "PRODUCTION_IMPORT";
-}
+export const DEFAULT_DOCUMENTS: Documents = {
+  contrat: "",
+  diplome: "",
+  visaMedical: "",
+  attestationFormation: "",
+  caces: ""
+};
 
+export const DEFAULT_STATS: MecanicienStats = {
+  totalInterventions: 0,
+  interventionsCeMois: 0,
+  derniereIntervention: "",
+  scoreMensuel: 100,
+  mttrMoyen: 0,
+  tauxResolutionPremiereFois: 100,
+  tauxTournéesCompletes: 100,
+  heuresInterventionCeMois: 0
+};
+
+// Seed/mock data updated to match the new schema with empty/default visas
 const MOCK_MECANICIENS: Mecanicien[] = [
   {
     uid: "meca-01",
+    userUid: "user-meca-01",
     matricule: "M-2024-001",
     nom: "Naciri",
     prenom: "Kaddour",
-    photo: "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150",
+    photo: "", // Empty so it uses UI avatar generation
     siteId: "SMI",
     poste: "Poste 1",
+    equipe: "A",
     competences: ["MOTEUR_DIESEL", "HYDRAULIQUE", "ELECTRIQUE", "PNEUMATIQUE"],
-    visaLOTO: true,
-    visaHauteur: false,
-    visaConfine: true,
-    // Téléphone mock - À remplacer par le vrai numéro depuis la Configuration Système
     telephone: "+212 661 123456",
+    telephoneUrgence: "+212 661 112233",
     email: "k.naciri@hydromines.ma",
+    adresse: "Quartier El Houda, Ouarzazate",
+    dateNaissance: "1985-03-15",
+    dateEmbauche: "2019-03-15",
+    visas: {
+      LOTO: { active: true, dateExpiration: "2026-12-31" },
+      HAUTEUR: { active: false, dateExpiration: null },
+      CONFINE: { active: true, dateExpiration: "2026-10-15" }, // Expire bientôt
+      ELECTRIQUE_HV: { active: false, dateExpiration: null },
+      CHARGEUR: { active: true, dateExpiration: "2027-01-20" }
+    },
+    documents: DEFAULT_DOCUMENTS,
     stats: {
       totalInterventions: 47,
       interventionsCeMois: 12,
@@ -76,256 +80,71 @@ const MOCK_MECANICIENS: Mecanicien[] = [
       heuresInterventionCeMois: 156
     },
     active: true,
-    dateEmbauche: "2019-03-15",
     source: "MOCK_SPRINT4"
   },
   {
     uid: "meca-02",
+    userUid: null,
     matricule: "M-2024-002",
     nom: "Amrani",
     prenom: "Youssef",
-    photo: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150",
+    photo: "",
     siteId: "SMI",
     poste: "Poste 2",
-    competences: ["MOTEUR_DIESEL", "HYDRAULIQUE", "SOUDURE"],
-    visaLOTO: true,
-    visaHauteur: true,
-    visaConfine: false,
-    // Téléphone mock - À remplacer par le vrai numéro depuis la Configuration Système
+    equipe: "B",
+    competences: ["MOTEUR_DIESEL", "HYDRAULIQUE"],
     telephone: "+212 661 987654",
+    telephoneUrgence: "+212 661 445566",
     email: "y.amrani@hydromines.ma",
+    adresse: "Centre ville, Tinghir",
+    dateNaissance: "1990-07-22",
+    dateEmbauche: "2021-05-10",
+    visas: {
+      LOTO: { active: true, dateExpiration: "2026-11-30" },
+      HAUTEUR: { active: true, dateExpiration: "2026-12-15" },
+      CONFINE: { active: false, dateExpiration: null },
+      ELECTRIQUE_HV: { active: false, dateExpiration: null },
+      CHARGEUR: { active: false, dateExpiration: null }
+    },
+    documents: DEFAULT_DOCUMENTS,
     stats: {
       totalInterventions: 38,
       interventionsCeMois: 8,
       derniereIntervention: "2026-07-03T11:15:00Z",
-      scoreMensuel: 82.0,
-      mttrMoyen: 4.1,
-      tauxResolutionPremiereFois: 78.0,
-      tauxTournéesCompletes: 89.0,
-      heuresInterventionCeMois: 120
-    },
-    active: true,
-    dateEmbauche: "2021-06-10",
-    source: "MOCK_SPRINT4"
-  },
-  {
-    uid: "meca-03",
-    matricule: "M-2024-003",
-    nom: "El Fassi",
-    prenom: "Brahim",
-    photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
-    siteId: "OUMEJRANE",
-    poste: "Poste 1",
-    competences: ["MOTEUR_DIESEL", "TRANSMISSION", "HYDRAULIQUE"],
-    visaLOTO: true,
-    visaHauteur: true,
-    visaConfine: true,
-    // Téléphone mock - À remplacer par le vrai numéro depuis la Configuration Système
-    telephone: "+212 661 456123",
-    email: "b.elfassi@hydromines.ma",
-    stats: {
-      totalInterventions: 52,
-      interventionsCeMois: 10,
-      derniereIntervention: "2026-07-02T18:30:00Z",
-      scoreMensuel: 94.0,
+      scoreMensuel: 94.2,
       mttrMoyen: 2.8,
-      tauxResolutionPremiereFois: 92.0,
+      tauxResolutionPremiereFois: 91.0,
       tauxTournéesCompletes: 98.0,
-      heuresInterventionCeMois: 145
+      heuresInterventionCeMois: 124
     },
     active: true,
-    dateEmbauche: "2018-11-20",
-    source: "MOCK_SPRINT4"
-  },
-  {
-    uid: "meca-04",
-    matricule: "M-2024-004",
-    nom: "Mansouri",
-    prenom: "Ahmed",
-    photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
-    siteId: "SMI",
-    poste: "Poste 1",
-    competences: ["ELECTRIQUE", "CLIMATISATION", "ELECTRONIQUE"],
-    visaLOTO: true,
-    visaHauteur: false,
-    visaConfine: false,
-    // Téléphone mock - À remplacer par le vrai numéro depuis la Configuration Système
-    telephone: "+212 662 334455",
-    email: "a.mansouri@hydromines.ma",
-    stats: {
-      totalInterventions: 31,
-      interventionsCeMois: 6,
-      derniereIntervention: "2026-07-01T09:45:00Z",
-      scoreMensuel: 88.0,
-      mttrMoyen: 3.5,
-      tauxResolutionPremiereFois: 85.0,
-      tauxTournéesCompletes: 94.0,
-      heuresInterventionCeMois: 95
-    },
-    active: true,
-    dateEmbauche: "2022-02-15",
-    source: "MOCK_SPRINT4"
-  },
-  {
-    uid: "meca-05",
-    matricule: "M-2024-005",
-    nom: "Ait",
-    prenom: "Youssef",
-    photo: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150",
-    siteId: "OUMEJRANE",
-    poste: "Poste 1",
-    competences: ["HYDRAULIQUE", "PNEUMATIQUE", "GRAISSAGE"],
-    visaLOTO: false,
-    visaHauteur: true,
-    visaConfine: false,
-    // Téléphone mock - À remplacer par le vrai numéro depuis la Configuration Système
-    telephone: "+212 663 889900",
-    email: "y.ait@hydromines.ma",
-    stats: {
-      totalInterventions: 25,
-      interventionsCeMois: 5,
-      derniereIntervention: "2026-06-30T16:20:00Z",
-      scoreMensuel: 79.5,
-      mttrMoyen: 4.5,
-      tauxResolutionPremiereFois: 80.0,
-      tauxTournéesCompletes: 91.0,
-      heuresInterventionCeMois: 88
-    },
-    active: true,
-    dateEmbauche: "2023-08-01",
-    source: "MOCK_SPRINT4"
-  },
-  {
-    uid: "meca-06",
-    matricule: "M-2024-006",
-    nom: "El Alami",
-    prenom: "Said",
-    photo: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150",
-    siteId: "KOUDIA",
-    poste: "Poste 1",
-    competences: ["MOTEUR_DIESEL", "HYDRAULIQUE", "CHASSIS"],
-    visaLOTO: true,
-    visaHauteur: false,
-    visaConfine: true,
-    // Téléphone mock - À remplacer par le vrai numéro depuis la Configuration Système
-    telephone: "+212 664 112233",
-    email: "s.elalami@hydromines.ma",
-    stats: {
-      totalInterventions: 40,
-      interventionsCeMois: 7,
-      derniereIntervention: "2026-07-02T15:00:00Z",
-      scoreMensuel: 91.5,
-      mttrMoyen: 3.1,
-      tauxResolutionPremiereFois: 88.0,
-      tauxTournéesCompletes: 95.0,
-      heuresInterventionCeMois: 130
-    },
-    active: true,
-    dateEmbauche: "2020-04-12",
-    source: "MOCK_SPRINT4"
-  },
-  {
-    uid: "meca-07",
-    matricule: "M-2024-007",
-    nom: "Benali",
-    prenom: "Rachid",
-    photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
-    siteId: "OUANSIMI",
-    poste: "Poste 2",
-    competences: ["ELECTRIQUE", "HYDRAULIQUE", "PNEUMATIQUE"],
-    visaLOTO: true,
-    visaHauteur: true,
-    visaConfine: false,
-    // Téléphone mock - À remplacer par le vrai numéro depuis la Configuration Système
-    telephone: "+212 665 445566",
-    email: "r.benali@hydromines.ma",
-    stats: {
-      totalInterventions: 29,
-      interventionsCeMois: 4,
-      derniereIntervention: "2026-06-29T10:30:00Z",
-      scoreMensuel: 84.0,
-      mttrMoyen: 3.8,
-      tauxResolutionPremiereFois: 82.0,
-      tauxTournéesCompletes: 90.0,
-      heuresInterventionCeMois: 92
-    },
-    active: true,
-    dateEmbauche: "2022-09-01",
-    source: "MOCK_SPRINT4"
-  },
-  {
-    uid: "meca-08",
-    matricule: "M-2024-008",
-    nom: "Mourad",
-    prenom: "Hassan",
-    photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-    siteId: "BOU-AZZER",
-    poste: "Poste 1",
-    competences: ["MOTEUR_DIESEL", "TRANSMISSION", "SOUDURE"],
-    visaLOTO: true,
-    visaHauteur: true,
-    visaConfine: true,
-    // Téléphone mock - À remplacer par le vrai numéro depuis la Configuration Système
-    telephone: "+212 666 778899",
-    email: "h.mourad@hydromines.ma",
-    stats: {
-      totalInterventions: 45,
-      interventionsCeMois: 9,
-      derniereIntervention: "2026-07-02T16:15:00Z",
-      scoreMensuel: 93.0,
-      mttrMoyen: 2.9,
-      tauxResolutionPremiereFois: 90.0,
-      tauxTournéesCompletes: 97.0,
-      heuresInterventionCeMois: 140
-    },
-    active: true,
-    dateEmbauche: "2019-10-10",
-    source: "MOCK_SPRINT4"
-  },
-  {
-    uid: "meca-09",
-    matricule: "M-2024-009",
-    nom: "Chafik",
-    prenom: "Mohamed",
-    photo: "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=150",
-    siteId: "SMI",
-    poste: "Poste 3",
-    competences: ["GRAISSAGE", "PNEUMATIQUE", "INSPECTION"],
-    visaLOTO: false,
-    visaHauteur: false,
-    visaConfine: true,
-    // Téléphone mock - À remplacer par le vrai numéro depuis la Configuration Système
-    telephone: "+212 667 112244",
-    email: "m.chafik@hydromines.ma",
-    stats: {
-      totalInterventions: 22,
-      interventionsCeMois: 3,
-      derniereIntervention: "2026-07-01T14:00:00Z",
-      scoreMensuel: 76.0,
-      mttrMoyen: 4.8,
-      tauxResolutionPremiereFois: 75.0,
-      tauxTournéesCompletes: 88.0,
-      heuresInterventionCeMois: 75
-    },
-    active: true,
-    dateEmbauche: "2024-01-15",
     source: "MOCK_SPRINT4"
   },
   {
     uid: "meca-10",
-    matricule: "M-2024-10",
+    userUid: null,
+    matricule: "M-2024-010",
     nom: "Faris",
     prenom: "Omar",
-    photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150",
+    photo: "",
     siteId: "OUMEJRANE",
     poste: "Poste 2",
-    competences: ["ELECTRIQUE", "AUTOMATISME", "CLIMATISATION"],
-    visaLOTO: true,
-    visaHauteur: true,
-    visaConfine: false,
-    // Téléphone mock - À remplacer par le vrai numéro depuis la Configuration Système
+    equipe: "A",
+    competences: ["ELECTRIQUE", "AUTOMATISME"],
     telephone: "+212 668 556677",
+    telephoneUrgence: "+212 668 990011",
     email: "o.faris@hydromines.ma",
+    adresse: "Alnif, Province de Tinghir",
+    dateNaissance: "1993-11-12",
+    dateEmbauche: "2021-12-01",
+    visas: {
+      LOTO: { active: true, dateExpiration: "2026-08-10" }, // Expire très bientôt
+      HAUTEUR: { active: true, dateExpiration: "2027-02-15" },
+      CONFINE: { active: false, dateExpiration: null },
+      ELECTRIQUE_HV: { active: true, dateExpiration: "2026-12-31" },
+      CHARGEUR: { active: false, dateExpiration: null }
+    },
+    documents: DEFAULT_DOCUMENTS,
     stats: {
       totalInterventions: 33,
       interventionsCeMois: 7,
@@ -337,24 +156,24 @@ const MOCK_MECANICIENS: Mecanicien[] = [
       heuresInterventionCeMois: 105
     },
     active: true,
-    dateEmbauche: "2021-12-01",
     source: "MOCK_SPRINT4"
   },
   {
     uid: "meca-11",
+    userUid: null,
     matricule: "M-2024-011",
     nom: "Sabiri",
     prenom: "Khalid",
-    photo: "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=150",
+    photo: "",
     siteId: "KOUDIA",
     poste: "Poste 2",
-    competences: ["MOTEUR_DIESEL", "TRANSMISSION", "HYDRAULIQUE"],
-    visaLOTO: true,
-    visaHauteur: false,
-    visaConfine: true,
-    // Téléphone mock - À remplacer par le vrai numéro depuis la Configuration Système
+    equipe: "C",
+    competences: ["MOTEUR_DIESEL", "HYDRAULIQUE"],
     telephone: "+212 669 223344",
     email: "k.sabiri@hydromines.ma",
+    dateEmbauche: "2020-07-15",
+    visas: DEFAULT_VISAS,
+    documents: DEFAULT_DOCUMENTS,
     stats: {
       totalInterventions: 41,
       interventionsCeMois: 8,
@@ -366,24 +185,24 @@ const MOCK_MECANICIENS: Mecanicien[] = [
       heuresInterventionCeMois: 135
     },
     active: true,
-    dateEmbauche: "2020-07-15",
     source: "MOCK_SPRINT4"
   },
   {
     uid: "meca-12",
+    userUid: null,
     matricule: "M-2024-012",
     nom: "Radi",
     prenom: "Mustafa",
-    photo: "https://images.unsplash.com/photo-1500048993953-d23a436266cf?w=150",
+    photo: "",
     siteId: "BOU-AZZER",
     poste: "Poste 2",
-    competences: ["SOUDURE", "HYDRAULIQUE", "CHASSIS"],
-    visaLOTO: true,
-    visaHauteur: true,
-    visaConfine: false,
-    // Téléphone mock - À remplacer par le vrai numéro depuis la Configuration Système
+    equipe: "A",
+    competences: ["SOUDURE", "HYDRAULIQUE"],
     telephone: "+212 670 889911",
     email: "m.radi@hydromines.ma",
+    dateEmbauche: "2023-03-20",
+    visas: DEFAULT_VISAS,
+    documents: DEFAULT_DOCUMENTS,
     stats: {
       totalInterventions: 28,
       interventionsCeMois: 4,
@@ -395,7 +214,6 @@ const MOCK_MECANICIENS: Mecanicien[] = [
       heuresInterventionCeMois: 85
     },
     active: true,
-    dateEmbauche: "2023-03-20",
     source: "MOCK_SPRINT4"
   }
 ];
@@ -408,7 +226,6 @@ export function useMecaniciens() {
     // Read from 'mecaniciens' Firestore collection in real time
     const unsubscribe = onSnapshot(collection(db, "mecaniciens"), async (snapshot) => {
       if (snapshot.empty) {
-        // Seed database if empty
         setLoading(true);
         try {
           for (const meca of MOCK_MECANICIENS) {
@@ -422,14 +239,69 @@ export function useMecaniciens() {
       } else {
         const list: Mecanicien[] = [];
         snapshot.forEach((docSnap) => {
-          list.push({ id: docSnap.id, ...docSnap.data() } as Mecanicien);
+          const data = docSnap.data();
+          
+          // Detect older schema that needs non-destructive migration
+          const needsMigration = !data.uid || !data.visas || !data.documents || !data.stats || !data.prenom || !data.nom;
+          const docUid = data.uid || docSnap.id;
+          
+          // Split old full name if present
+          let finalNom = data.nom || "";
+          let finalPrenom = data.prenom || "";
+          if (!finalNom && !finalPrenom && data.nomComplet) {
+            const parts = data.nomComplet.trim().split(/\s+/);
+            finalPrenom = parts[0] || "";
+            finalNom = parts.slice(1).join(" ") || "";
+          }
+
+          const processed: Mecanicien = {
+            id: docSnap.id,
+            uid: docUid,
+            matricule: data.matricule || docSnap.id,
+            nom: finalNom || "Nom",
+            prenom: finalPrenom || "Prénom",
+            photo: data.photo || "",
+            siteId: data.siteId || "SMI",
+            poste: data.poste || "Poste 1",
+            equipe: data.equipe || "A",
+            competences: data.competences || [],
+            telephone: data.telephone || "",
+            telephoneUrgence: data.telephoneUrgence || "",
+            email: data.email || "",
+            adresse: data.adresse || "",
+            dateNaissance: data.dateNaissance || "",
+            dateEmbauche: data.dateEmbauche || new Date().toISOString().split('T')[0],
+            visas: data.visas || {
+              LOTO: { active: !!data.visaLOTO, dateExpiration: data.visas?.LOTO?.dateExpiration || null },
+              HAUTEUR: { active: !!data.visaHauteur, dateExpiration: data.visas?.HAUTEUR?.dateExpiration || null },
+              CONFINE: { active: !!data.visaConfine, dateExpiration: data.visas?.CONFINE?.dateExpiration || null },
+              ELECTRIQUE_HV: { active: !!data.visas?.ELECTRIQUE_HV?.active, dateExpiration: data.visas?.ELECTRIQUE_HV?.dateExpiration || null },
+              CHARGEUR: { active: !!data.visas?.CHARGEUR?.active, dateExpiration: data.visas?.CHARGEUR?.dateExpiration || null }
+            },
+            documents: data.documents || DEFAULT_DOCUMENTS,
+            stats: data.stats || DEFAULT_STATS,
+            active: data.active !== false,
+            source: data.source || "MIGRATION_SPRINT6",
+            userUid: data.userUid || null
+          };
+          
+          if (needsMigration) {
+            // Write migrated document back to Firestore asynchronously
+            setDoc(doc(db, "mecaniciens", docSnap.id), {
+              ...processed,
+              updatedAt: new Date().toISOString()
+            }, { merge: true }).catch(err => {
+              console.error(`Failed to background-migrate mecanicien ${docSnap.id}:`, err);
+            });
+          }
+
+          list.push(processed);
         });
         setMecaniciens(list);
         setLoading(false);
       }
     }, (err) => {
       console.error("Error fetching mecaniciens:", err);
-      // Fallback to mock data offline
       setMecaniciens(MOCK_MECANICIENS);
       setLoading(false);
     });
@@ -439,16 +311,67 @@ export function useMecaniciens() {
 
   const saveMecanicien = async (meca: Mecanicien) => {
     try {
-      await setDoc(doc(db, "mecaniciens", meca.uid), {
+      const docRef = doc(db, "mecaniciens", meca.uid);
+      await setDoc(docRef, {
         ...meca,
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      toast.success("Fiche mécanicien mise à jour !");
+      toast.success(`Fiche de ${meca.prenom} ${meca.nom} enregistrée !`);
+      return true;
     } catch (err) {
       console.error("Error saving mecanicien:", err);
-      toast.error("Erreur d'écriture dans la collection");
+      toast.error("Erreur d'écriture de la fiche mécanicien");
+      return false;
     }
   };
 
-  return { mecaniciens, loading, saveMecanicien };
+  const deleteMecanicien = async (uid: string) => {
+    try {
+      await deleteDoc(doc(db, "mecaniciens", uid));
+      toast.success("Mécanicien supprimé avec succès de la Configuration.");
+      return true;
+    } catch (err) {
+      console.error("Error deleting mecanicien:", err);
+      toast.error("Erreur lors de la suppression de la fiche.");
+      return false;
+    }
+  };
+
+  const uploadMecanicienFile = async (
+    matricule: string,
+    type: "avatar" | "document",
+    file: File,
+    documentKey?: string
+  ): Promise<string> => {
+    try {
+      const storage = getStorage();
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
+      const path = type === "avatar" 
+        ? `mecaniciens/${matricule}/avatar_${cleanFileName}`
+        : `mecaniciens/${matricule}/documents/${documentKey || "doc"}_${Date.now()}_${cleanFileName}`;
+      
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      return url;
+    } catch (err) {
+      console.warn("Firebase Storage non configuré ou inaccessible, encodage Base64 activé :", err);
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          resolve(reader.result as string);
+        };
+        reader.onerror = (e) => reject(e);
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  return { 
+    mecaniciens, 
+    loading, 
+    saveMecanicien, 
+    deleteMecanicien, 
+    uploadMecanicienFile 
+  };
 }
