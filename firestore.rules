@@ -214,6 +214,11 @@ service cloud.firestore {
       allow delete: if isSignedIn() && isRole('ADMIN');
     }
 
+    match /alerts/{alertId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
     match /config/{configId} {
       allow read: if true;
       allow write: if isSignedIn() && (
