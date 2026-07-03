@@ -22,6 +22,49 @@ import { TaskDetailModal } from './taches/TaskDetailModal';
 import { AddTaskModal } from './taches/AddTaskModal';
 import { SignalerPanne } from './SignalerPanne';
 
+// V4-HEURES-IMPORT: Robust utility to format engine last updated timestamp/date
+const formatLastUpdatedDate = (engin: Engin) => {
+  const dateVal = (engin as any).heuresMarcheUpdatedAt || (engin as any).updatedAt;
+  if (!dateVal) return "N/A";
+  
+  try {
+    // If it's a Firestore Timestamp (has toDate method)
+    if (dateVal && typeof dateVal === 'object' && 'toDate' in dateVal && typeof (dateVal as any).toDate === 'function') {
+      return (dateVal as any).toDate().toLocaleString('fr-FR', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+    
+    // If it's a Firestore Timestamp representation (seconds / nanoseconds)
+    if (dateVal && typeof dateVal === 'object' && 'seconds' in dateVal) {
+      const date = new Date((dateVal as any).seconds * 1000);
+      return date.toLocaleString('fr-FR', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Otherwise try parsing as Date
+    const d = new Date(dateVal as any);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleString('fr-FR', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  } catch (e) {
+    console.error("V4-HEURES-IMPORT: Error formatting date", e);
+  }
+  return "N/A";
+};
+
 export default function TachesPlanning() {
   const { user, activeSite } = useAuthStore();
   const isModeDirecteur = ['ADMIN', 'DIRECTION', 'RESPONSABLE_MAINTENANCE'].includes(user?.role || '');
@@ -173,6 +216,9 @@ export default function TachesPlanning() {
             // V4-FIRESTORE: Ignore temp engins from offline queue until they are replayed/resolved
             if (engin.id.startsWith('temp_')) continue;
 
+            // V4-HEURES-IMPORT: Skip generation if hours are 0, null, or undefined
+            if (engin.heuresMarche === 0 || engin.heuresMarche === null || engin.heuresMarche === undefined) continue;
+
             const siteMecas = filteredMecaniciens.filter(m => m.siteId === engin.siteId);
             if (siteMecas.length === 0) continue;
 
@@ -220,6 +266,9 @@ export default function TachesPlanning() {
           for (const engin of filteredEngins) {
             // V4-FIRESTORE: Ignore temp engins from offline queue
             if (engin.id.startsWith('temp_')) continue;
+
+            // V4-HEURES-IMPORT: Skip generation if hours are 0, null, or undefined
+            if (engin.heuresMarche === 0 || engin.heuresMarche === null || engin.heuresMarche === undefined) continue;
 
             const modelIntervalles = pmIntervalles.filter(
               i => i.typeEngin === engin.modele || i.typeEngin === 'Générique'
@@ -689,6 +738,84 @@ export default function TachesPlanning() {
                 </Button>
               </div>
             </div>
+
+            {/* V4-HEURES-IMPORT: Section des Heures de Marche des Engins en lecture seule */}
+            <Card className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
+              <div className="bg-slate-50 border-b border-slate-100 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-slate-500" /> Heures de Marche des Engins
+                  </h3>
+                  <p className="text-caption text-slate-400 font-medium">
+                    État des compteurs d'heures réels pour la planification et le suivi préventif
+                  </p>
+                </div>
+                
+                {/* V4-HEURES-IMPORT: Bandeau d'information de provenance des données */}
+                <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  <span>Heures importées depuis Carburants & Lubrifiants — Saisie manuelle désactivée</span>
+                </div>
+              </div>
+              
+              <CardContent className="p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {filteredEngins.map((engin) => {
+                    const hasHours = engin.heuresMarche !== undefined && engin.heuresMarche !== null && engin.heuresMarche !== 0;
+                    
+                    return (
+                      <div 
+                        key={engin.id} 
+                        className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between min-h-[105px] ${
+                          hasHours 
+                            ? "bg-slate-50/50 border-slate-200 hover:border-slate-300" 
+                            : "bg-amber-50/30 border-amber-200 hover:border-amber-300"
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="font-mono font-black uppercase text-xs text-slate-800">{engin.id}</span>
+                            <span className="block text-[10px] text-slate-400 font-bold uppercase">{engin.modele}</span>
+                          </div>
+                          
+                          {/* V4-HEURES-IMPORT: Affiche engin.heuresMarche en lecture seule style text-tech font-mono */}
+                          {hasHours ? (
+                            <div className="text-right">
+                              <span className="text-tech font-mono text-xs font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">
+                                {engin.heuresMarche} h
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="text-right">
+                              <span className="text-[10px] font-black text-rose-500 uppercase bg-rose-50 px-1.5 py-0.5 rounded-md flex items-center gap-1 animate-pulse">
+                                <AlertTriangle className="h-3 w-3" /> Absent
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-3 pt-2.5 border-t border-slate-100/75 flex flex-col gap-1 text-[10px]">
+                          {/* V4-HEURES-IMPORT: Avertissement jaune si les heures sont indisponibles */}
+                          {!hasHours && (
+                            <span className="text-amber-700 font-bold leading-tight flex items-start gap-1">
+                              ⚠️ Données d'heures non disponibles — Import Carburants & Lubrifiants requis
+                            </span>
+                          )}
+                          
+                          {/* V4-HEURES-IMPORT: Date de dernière mise à jour */}
+                          <div className="flex justify-between text-slate-400 font-medium">
+                            <span>Dernier import :</span>
+                            <span className="font-mono font-bold text-slate-500">
+                              {formatLastUpdatedDate(engin)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Filters Bar */}
             <Card className="bg-white border border-slate-200">

@@ -15,6 +15,9 @@ import { motion, AnimatePresence } from "motion/react";
 import { HydrominesLogo } from "./auth/HydrominesLogo";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
+// V4-BADGE: Import Firestore methods and db instance
+import { collection, query, where, limit, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface SidebarProps {
   activeTab: string;
@@ -28,6 +31,103 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
   const { user, logout, activeSite, setActiveSite, theme, setTheme, density, setDensity } = useAuthStore();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [isOnline, setIsOnline] = React.useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  // V4-BADGE: Real-time active alerts badge state
+  const [alertCount, setAlertCount] = React.useState(0);
+  const [isSoundEnabled, setIsSoundEnabled] = React.useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("hydromines_alerts_sound") === "true";
+    }
+    return false;
+  });
+
+  const showBadge = React.useMemo(() => {
+    return !!(user && ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE"].includes(user.role));
+  }, [user]);
+
+  React.useEffect(() => {
+    if (!showBadge) {
+      setAlertCount(0);
+      return;
+    }
+
+    // V4-BADGE: Query active RED or RED_FLASHING alerts limited to 100
+    const q = query(
+      collection(db, "alerts"),
+      where("status", "==", "ACTIVE"),
+      where("severity", "in", ["RED", "RED_FLASHING"]),
+      limit(100)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setAlertCount(snapshot.size);
+    }, (err) => {
+      console.error("V4-BADGE: Failed to subscribe to active alerts:", err);
+    });
+
+    return () => unsubscribe();
+  }, [showBadge]);
+
+  // V4-BADGE: Audio alert mechanism (synthesized sine wave)
+  const prevCountRef = React.useRef(0);
+  const isFirstLoad = React.useRef(true);
+
+  React.useEffect(() => {
+    if (isFirstLoad.current) {
+      if (alertCount > 0) {
+        prevCountRef.current = alertCount;
+      }
+      isFirstLoad.current = false;
+      return;
+    }
+
+    if (isSoundEnabled && alertCount > prevCountRef.current) {
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+        gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.35);
+      } catch (e) {
+        console.warn("V4-BADGE: Audio play failed", e);
+      }
+    }
+    prevCountRef.current = alertCount;
+  }, [alertCount, isSoundEnabled]);
+
+  const toggleSound = React.useCallback(() => {
+    setIsSoundEnabled((prev) => {
+      const newVal = !prev;
+      localStorage.setItem("hydromines_alerts_sound", String(newVal));
+      if (newVal) {
+        toast.success("Alertes sonores activées");
+        try {
+          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.1);
+        } catch (e) {}
+      } else {
+        toast.info("Alertes sonores désactivées");
+      }
+      return newVal;
+    });
+  }, []);
 
   React.useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -378,10 +478,19 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
                             onClick={() => handlePageSelect(item)}
                             title={item.id === "guide_reparation" ? "Plateforme de guide de réparation — disponible prochainement" : item.label}
                           >
-                            <item.icon className={cn(
-                              "h-5 w-5 shrink-0 transition-transform duration-350",
-                              isActive ? "text-amber-500 dark:text-amber-400" : "text-slate-500 group-hover:scale-110"
-                            )} />
+                            <div className="relative">
+                              <item.icon className={cn(
+                                "h-5 w-5 shrink-0 transition-transform duration-350",
+                                isActive ? "text-amber-500 dark:text-amber-400" : "text-slate-500 group-hover:scale-110"
+                              )} />
+                              {/* V4-BADGE: Point rouge clignotant sur l'icône en mode collapsed */}
+                              {item.id === "alertes" && showBadge && alertCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                                </span>
+                              )}
+                            </div>
                             {isActive && (
                               <motion.div 
                                 layoutId="activeSideIndicatorCollapsed"
@@ -423,6 +532,12 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
                                     isActive ? "text-amber-500 dark:text-amber-400" : "text-slate-500 group-hover:scale-110"
                                   )} />
                                   <span className="text-[11px] tracking-wide uppercase font-black">{item.label}</span>
+                                  {/* V4-BADGE: Pilule rouge avec le nombre en mode étendu */}
+                                  {item.id === "alertes" && showBadge && alertCount > 0 && (
+                                    <span className="ml-auto flex items-center justify-center bg-red-500 text-white text-[10px] font-black h-5 min-w-[20px] px-1.5 rounded-full animate-pulse shadow-sm">
+                                      {alertCount > 99 ? "99+" : alertCount}
+                                    </span>
+                                  )}
                                 </Button>
                               );
                             })}
@@ -460,6 +575,32 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
               </div>
             )}
           </div>
+
+          {/* V4-BADGE: Sound Mute/Unmute Toggle */}
+          {showBadge && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={cn(
+                "w-full text-caption font-sans font-black uppercase tracking-widest h-8 transition-all border border-transparent hover:text-amber-600 dark:hover:text-amber-400",
+                isCollapsed ? "justify-center px-0" : "justify-start px-2",
+                isSoundEnabled 
+                  ? "text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50/10 dark:hover:bg-emerald-950/5" 
+                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50/75 dark:hover:bg-slate-900/60"
+              )}
+              onClick={toggleSound}
+              title={isSoundEnabled ? "Désactiver les alertes sonores" : "Activer les alertes sonores"}
+            >
+              <span className={cn("text-xs shrink-0", isCollapsed ? "" : "mr-2")}>
+                {isSoundEnabled ? "🔊" : "🔔"}
+              </span>
+              {!isCollapsed && (
+                <span className="truncate">
+                  {isSoundEnabled ? "Alertes sonores : ON" : "Activer les alertes sonores"}
+                </span>
+              )}
+            </Button>
+          )}
 
           {/* Exit / Logout button */}
           {!isCollapsed && (
