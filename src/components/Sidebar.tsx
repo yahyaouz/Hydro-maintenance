@@ -51,18 +51,25 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
       return;
     }
 
-    // V4-BADGE: Query active RED or RED_FLASHING alerts limited to 100
+    // V4-BADGE: Query active alerts limited to 100, filter severity client-side to avoid composite index requirements
     const q = query(
       collection(db, "alerts"),
       where("status", "==", "ACTIVE"),
-      where("severity", "in", ["RED", "RED_FLASHING"]),
       limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setAlertCount(snapshot.size);
+      let count = 0;
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data && (data.severity === "RED" || data.severity === "RED_FLASHING")) {
+          count++;
+        }
+      });
+      setAlertCount(count);
     }, (err) => {
-      console.error("V4-BADGE: Failed to subscribe to active alerts:", err);
+      console.warn("V4-BADGE: Failed to subscribe to active alerts (handled gracefully):", err);
+      setAlertCount(0);
     });
 
     return () => unsubscribe();
