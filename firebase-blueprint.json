@@ -224,9 +224,68 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["id", "date", "mecanicienId", "mecanicienNom", "siteId", "poste", "tasks", "status"]
+    },
+    "mecanicien": {
+      "title": "Mecanicien",
+      "description": "Fiche mécanicien et statistiques de performance (Mock S4, intégration S6)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "matricule": { "type": "string" },
+        "nom": { "type": "string" },
+        "prenom": { "type": "string" },
+        "photo": { "type": "string" },
+        "siteId": { "type": "string" },
+        "poste": { "type": "string" },
+        "competences": { "type": "array" },
+        "visaLOTO": { "type": "boolean" },
+        "visaHauteur": { "type": "boolean" },
+        "visaConfine": { "type": "boolean" },
+        "telephone": { "type": "string" },
+        "email": { "type": "string" },
+        "stats": { "type": "object" },
+        "active": { "type": "boolean" },
+        "dateEmbauche": { "type": "string" },
+        "source": { "type": "string" }
+      },
+      "required": ["uid", "matricule", "nom", "prenom", "siteId", "active"]
+    },
+    "pneumatique": {
+      "title": "Pneumatique",
+      "description": "Changement de pneumatique et suivi d'usure",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "enginId": { "type": "string" },
+        "enginModele": { "type": "string" },
+        "siteId": { "type": "string" },
+        "position": { "type": "string" },
+        "marque": { "type": "string" },
+        "dimension": { "type": "string" },
+        "type": { "type": "string" },
+        "numeroSerie": { "type": "string" },
+        "datePose": { "type": "string" },
+        "heurePose": { "type": "number" },
+        "ancienPneuDureeHeures": { "type": "number" },
+        "ancienPneuRaison": { "type": "string" },
+        "cout": { "type": "number" },
+        "fournisseur": { "type": "string" },
+        "changePar": { "type": "string" },
+        "validePar": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "enginId", "siteId", "position", "marque", "cout", "changePar", "createdAt"]
     }
   },
   "firestore": {
+    "mecaniciens": {
+      "schema": "mecanicien",
+      "description": "Collection des mécaniciens et statistiques"
+    },
+    "pneumatiques": {
+      "schema": "pneumatique",
+      "description": "Collection des changements et suivi des pneumatiques"
+    },
     "systematicTaskConfigs": {
       "schema": "systematicTaskConfig",
       "description": "Collection de configuration des tâches systématiques"

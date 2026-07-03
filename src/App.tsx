@@ -14,6 +14,8 @@ import Analyses from "@/components/Analyses";
 import { Alertes } from "@/components/Alertes";
 import { SystematicTasks } from "@/components/SystematicTasks";
 import { ImportConfig } from "@/components/ImportConfig";
+import { Mecaniciens } from "@/components/Mecaniciens";
+import { Pneumatiques } from "@/components/Pneumatiques";
 import { startViewerTrackingSession, trackViewerPageTransition } from "@/services/viewerTracking";
 
 function IndustrialSkeleton() {
@@ -451,8 +453,10 @@ export default function App() {
               {activeTab === "taches_planning" && <TachesPlanning />}
               {activeTab === "analyses" && <Analyses />}
               {activeTab === "systematique" && <SystematicTasks />}
+              {activeTab === "mecaniciens" && <Mecaniciens />}
+              {activeTab === "pneumatiques" && <Pneumatiques />}
               
-              {!["dashboard", "alertes", "engins", "referentiel", "admin", "checklists", "taches_planning", "analyses", "systematique", "import_config"].includes(activeTab) && (
+              {!["dashboard", "alertes", "engins", "referentiel", "admin", "checklists", "taches_planning", "analyses", "systematique", "import_config", "mecaniciens", "pneumatiques"].includes(activeTab) && (
                 <div className="flex items-center justify-center h-full text-muted-foreground bg-white dark:bg-slate-900">
                   Module {activeTab} en cours d'implémentation...
                 </div>

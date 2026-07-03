@@ -140,6 +140,13 @@ service cloud.firestore {
       );
     }
 
+    match /pneumatiques/{pneuId} {
+      allow read: if true;
+      allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
+        isRole('MECANICIEN') || isRole('CHEF_QUART') || isRole('ADMIN')
+      );
+    }
+
     match /auditLogs/{logId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();

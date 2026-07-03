@@ -5,7 +5,7 @@ import {
   Settings, ChevronDown, LogOut, MapPin, RefreshCw,
   Users, CheckCircle2, UserIcon, FileSpreadsheet, Shield,
   Sun, Moon, PlusCircle, Sparkles, ChevronLeft, ChevronRight,
-  BookOpen, Calendar, BarChart3, ClipboardList
+  BookOpen, Calendar, BarChart3, ClipboardList, CircleDot
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -235,6 +235,8 @@ export function Sidebar({ activeTab, setActiveTab, className, isOpen, onClose }:
       title: "GESTION DU PARC",
       items: [
         { id: "engins", label: "État de la Flotte", icon: Truck, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","VIEWER"] },
+        { id: "mecaniciens", label: "Mécaniciens", icon: Users, roles: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "SECRETAIRE"] },
+        { id: "pneumatiques", label: "Pneumatiques", icon: CircleDot, roles: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"] },
         { id: "referentiel", label: "Référentiel Technique", icon: BookOpen, roles: ["ADMIN","DIRECTION","RESPONSABLE_MAINTENANCE","RESPONSABLE_CHANTIER","MECANICIEN","SECRETAIRE","VIEWER"] },
       ]
     },
