@@ -167,11 +167,21 @@ function AwaitingApprovalScreen() {
 import { useNotificationStore } from "@/services/notificationStore";
 import { OfflineQueueManager } from "@/services/offlineQueueManager";
 import { dbService } from "@/services/firestoreService";
-import { Bell, Activity, CheckSquare, CheckCheck, Trash2, Moon, Sun } from "lucide-react";
+import { Bell, Activity, CheckSquare, CheckCheck, Trash2, Moon, Sun, Menu } from "lucide-react";
 
 export default function App() {
   const [activeTab, setActiveTab] = React.useState("dashboard");
-  const { isAuthenticated, user, setUser, theme, setTheme, activeSite } = useAuthStore();
+  const { isAuthenticated, user, setUser, theme, setTheme, activeSite, setActiveSite, logout } = useAuthStore();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error("Firebase auth signout failure:", e);
+    }
+    logout();
+  };
 
   // Notifications State Management
   const [showNotifications, setShowNotifications] = React.useState(false);
@@ -370,12 +380,32 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-white text-slate-900 overflow-hidden font-sans relative">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar
+        currentPage={activeTab}
+        onNavigate={setActiveTab}
+        currentSite={activeSite}
+        setSite={setActiveSite}
+        user={user}
+        isAdmin={user?.role === "ADMIN"}
+        notifications={notifications}
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        onSignOut={handleLogout}
+        isDarkMode={theme === 'dark'}
+        onToggleDarkMode={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+      />
       
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-white">
         {/* Centered Master Branding Header */}
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-white px-6 border-gray-100 shrink-0 relative">
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="md:hidden flex h-9 w-9 items-center justify-center rounded-lg border border-slate-150 bg-white text-slate-700 hover:bg-sky-50/50 transition-all cursor-pointer"
+              aria-label="Ouvrir le menu"
+            >
+              <Menu className="h-4.5 w-4.5" />
+            </button>
             <h1 className="text-xs font-black uppercase tracking-widest text-[#0F172A] font-sans">
               {getTabTitle()}
             </h1>
