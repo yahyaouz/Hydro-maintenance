@@ -42,6 +42,17 @@ const SITES_LIST = [
   "OUANSIMI"
 ];
 
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<any>;
+}
+
+interface MenuCategory {
+  title: string;
+  items: MenuItem[];
+}
+
 export function Sidebar({
   currentPage,
   onNavigate,
@@ -76,20 +87,54 @@ export function Sidebar({
     return notifications ? notifications.filter((n) => !n.read).length : 0;
   }, [notifications]);
 
-  const menuItems = [
-    { id: "dashboard", label: "COCKPIT", icon: LayoutDashboard },
-    { id: "carnet_sante", label: "CARNET SANTÉ", icon: HeartPulse },
-    { id: "rca", label: "RCA", icon: Microscope },
-    { id: "systematique", label: "TÂCHES SYST.", icon: ClipboardCheck },
-    { id: "mecaniciens", label: "MÉCANICIENS", icon: Wrench },
-    { id: "pneumatiques", label: "PNEUMATIQUES", icon: Circle },
-    { id: "import_config", label: "IMPORTS", icon: Download },
-    { id: "referentiel", label: "CONFIG", icon: Settings },
-    { id: "analyses", label: "RAPPORTS", icon: FileText },
+  // Original categories and page names/labels
+  const menuCategories: MenuCategory[] = [
+    {
+      title: "SUPERVISION & OPÉRATIONS",
+      items: [
+        { id: "dashboard", label: "Supervision Flotte", icon: LayoutDashboard },
+        { id: "alertes", label: "Alertes & Vigilance Métier", icon: Bell },
+      ]
+    },
+    {
+      title: "MAINTENANCE PRÉVENTIVE",
+      items: [
+        { id: "carnet_sante", label: "Carnet de Santé Flotte", icon: HeartPulse },
+        { id: "systematique", label: "TÂCHES SYSTÉMATIQUES", icon: ClipboardCheck },
+        { id: "taches_planning", label: "Planning des Tâches", icon: ClipboardCheck },
+        { id: "checklists", label: "Fiches de Contrôle", icon: ClipboardCheck },
+      ]
+    },
+    {
+      title: "RESSOURCES & PARC",
+      items: [
+        { id: "engins", label: "Gestion du Parc", icon: Circle },
+        { id: "mecaniciens", label: "Collaborateurs", icon: Wrench },
+        { id: "pneumatiques", label: "Pneumatiques", icon: Circle },
+      ]
+    },
+    {
+      title: "AMÉLIORATION CONTINUE",
+      items: [
+        { id: "rca", label: "Analyse de Cause Racine (RCA)", icon: Microscope },
+        { id: "analyses", label: "Analyses & KPI", icon: FileText },
+      ]
+    },
+    {
+      title: "CONFIGURATION & SYSTÈME",
+      items: [
+        { id: "referentiel", label: "Référentiel Technique", icon: Settings },
+        { id: "import_config", label: "Import & Paramètres", icon: Download },
+      ]
+    }
   ];
 
+  // Dynamically add Admin module for admin users
   if (isAdmin) {
-    menuItems.push({ id: "admin", label: "ADMIN", icon: Shield });
+    const systemCategory = menuCategories.find(cat => cat.title === "CONFIGURATION & SYSTÈME");
+    if (systemCategory) {
+      systemCategory.items.push({ id: "admin", label: "Privilèges & Droits", icon: Shield });
+    }
   }
 
   // Common render of the sidebar content to keep it DRY for Desktop & Mobile
@@ -149,30 +194,42 @@ export function Sidebar({
         )}
       </div>
 
-      {/* Navigation menu list */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5" role="navigation" aria-label="Menu principal">
-        {menuItems.map((item) => {
-          const isActive = currentPage === item.id;
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                onNavigate(item.id);
-                onClose(); // auto close drawer on mobile selection
-              }}
-              className={cn(
-                "w-full flex items-center gap-3.5 h-11 px-4 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-150 cursor-pointer text-left relative",
-                isActive
-                  ? "bg-sky-50 text-sky-700 border-l-[3px] border-sky-500 rounded-l-none pl-3"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              )}
-            >
-              <Icon className={cn("h-4.5 w-4.5 shrink-0", isActive ? "text-sky-500" : "text-slate-400")} />
-              <span className="truncate">{item.label}</span>
-            </button>
-          );
-        })}
+      {/* Navigation menu list grouped by categories */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4" role="navigation" aria-label="Menu principal">
+        {menuCategories.map((category) => (
+          <div key={category.title} className="space-y-1">
+            {/* Category title header */}
+            <div className="text-[10px] font-extrabold text-slate-400 tracking-wider mb-1.5 px-3 uppercase">
+              {category.title}
+            </div>
+            
+            {/* Category items */}
+            <div className="space-y-1">
+              {category.items.map((item) => {
+                const isActive = currentPage === item.id;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      onNavigate(item.id);
+                      onClose(); // auto close drawer on mobile selection
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-3 h-10 px-3 text-xs font-semibold rounded-lg transition-all duration-150 cursor-pointer text-left relative",
+                      isActive
+                        ? "bg-sky-50 text-sky-700 border-l-[3px] border-sky-500 rounded-l-none pl-2.5"
+                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    )}
+                  >
+                    <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-sky-500" : "text-slate-400")} />
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Bottom area: User section, notifications bell, dark/light toggle and log-out */}
