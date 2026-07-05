@@ -766,7 +766,7 @@ export function ImportConfig() {
                     {historyLogs.map((log) => (
                       <tr key={log.id} className="hover:bg-slate-50/60 transition-all">
                         <td className="py-3 px-3 font-mono text-[10px] whitespace-nowrap">
-                          {log.timestamp ? new Date(log.timestamp.toDate ? log.timestamp.toDate() : log.timestamp).toLocaleString() : "À l'instant"}
+                          {log.timestamp ? new Date((log.timestamp as any).toDate ? (log.timestamp as any).toDate() : ((log.timestamp as any).seconds ? (log.timestamp as any).seconds * 1000 : log.timestamp)).toLocaleString() : "À l'instant"}
                         </td>
                         <td className="py-3 px-3 font-bold uppercase text-[10px]">
                           {log.platform === "magasinier" && "LOGISTIQUE"}

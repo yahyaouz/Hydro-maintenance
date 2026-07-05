@@ -710,7 +710,7 @@ export function Alertes() {
                       
                       {/* V4-TYPO: replaced text-[8.5px] and font-mono with text-caption and font-sans */}
                       <span className="text-caption font-sans text-slate-450 uppercase font-black">
-                        {new Date(alert.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                        {new Date((alert.createdAt as any)?.seconds ? (alert.createdAt as any).seconds * 1000 : alert.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                       </span>
                     </div>
  

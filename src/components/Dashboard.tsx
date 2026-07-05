@@ -62,57 +62,12 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAuthStore } from "@/lib/store";
 import { useCollection } from "@/hooks/useCollection";
+import { useMecaniciens } from "@/hooks/useMecaniciens";
 import { SiteID } from "@/types";
 import { toast } from "sonner";
 
 // 5 default sites for multi-site metrics
 const SITES_LIST = ["SMI", "OUMEJRANE", "KOUDIA", "OUANSIMI", "BOU-AZZER"];
-
-// Annual History Data with exact requested values for 12 months
-const ANNUAL_HISTORY_MOCK = [
-  { mois: "Jan", pannes: 5, preventif: 38, correctif: 8, prevVsLastYear: 2, corrVsLastYear: -4 },
-  { mois: "Fév", pannes: 8, preventif: 42, correctif: 12, prevVsLastYear: 5, corrVsLastYear: 1 },
-  { mois: "Mar", pannes: 6, preventif: 40, correctif: 9, prevVsLastYear: -2, corrVsLastYear: -2 },
-  { mois: "Avr", pannes: 4, preventif: 45, correctif: 6, prevVsLastYear: 8, corrVsLastYear: -10 },
-  { mois: "Mai", pannes: 9, preventif: 41, correctif: 14, prevVsLastYear: -3, corrVsLastYear: 4 },
-  { mois: "Juin", pannes: 7, preventif: 43, correctif: 10, prevVsLastYear: 1, corrVsLastYear: -2 },
-  { mois: "Juil", pannes: 5, preventif: 47, correctif: 8, prevVsLastYear: 4, corrVsLastYear: -6 },
-  { mois: "Août", pannes: 7, preventif: 44, correctif: 11, prevVsLastYear: 3, corrVsLastYear: -5 },
-  { mois: "Sept", pannes: 10, preventif: 41, correctif: 13, prevVsLastYear: -1, corrVsLastYear: 2 },
-  { mois: "Oct", pannes: 4, preventif: 46, correctif: 7, prevVsLastYear: 10, corrVsLastYear: -18 },
-  { mois: "Nov", pannes: 8, preventif: 39, correctif: 10, prevVsLastYear: 0, corrVsLastYear: -3 },
-  { mois: "Déc", pannes: 6, preventif: 35, correctif: 9, prevVsLastYear: -5, corrVsLastYear: -8 }
-];
-
-// Fuel & Lubricant consumption per engine
-const CONSUMPTION_MOCK = [
-  { engin: "ST7-01", site: "SMI", carburant: 980, lubrifiant: 80, moyenne: 900 },
-  { engin: "ST7-02", site: "KOUDIA", carburant: 1150, lubrifiant: 95, moyenne: 1100 },
-  { engin: "ST7-03", site: "OUMEJRANE", carburant: 850, lubrifiant: 70, moyenne: 820 },
-  { engin: "ST7-04", site: "SMI", carburant: 1240, lubrifiant: 110, moyenne: 1000 }, // Over +20% (1350 vs 1000) -> Anomaly
-  { engin: "ST7-05", site: "OUANSIMI", carburant: 920, lubrifiant: 75, moyenne: 910 }
-];
-
-// shift mechanics of the day
-const MECHANICS_MOCK = [
-  { id: 1, nom: "Karim Belhadj", shift: "Shift 1 (06h-14h)", status: "OK", derniereIntervention: "2h", score: 94, photo: "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150&auto=format&fit=crop&q=80" },
-  { id: 2, nom: "Youssef Amrani", shift: "Shift 2 (14h-22h)", status: "OK", derniereIntervention: "4h", score: 88, photo: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80" },
-  { id: 3, nom: "Rachid Alami", shift: "Shift 3 (22h-06h)", status: "RETARD", derniereIntervention: "9h", score: 72, photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80" }
-];
-
-// live alerts
-const LIVE_ALERTS_MOCK = [
-  { id: "A1", type: "CRITIQUE", titre: "Pression hydraulique ST7-04", heure: "10 min", site: "SMI" },
-  { id: "A2", type: "MAJEUR", titre: "Surchauffe moteur ST7-01", heure: "35 min", site: "BOU-AZZER" },
-  { id: "A3", type: "AVERTISSEMENT", titre: "Niveau carburant ST7-05", heure: "1h", site: "OUANSIMI" }
-];
-
-// quick health check
-const CARNET_SANTE_MOCK = [
-  { id: "C1", engin: "ST7-04", modele: "Sandeo ST7", sante: 45, sousSysteme: "Moteur : 45%", recommandation: "Intervention recommandée dans 50h" },
-  { id: "C2", engin: "ST7-01", modele: "Sandeo ST7", sante: 62, sousSysteme: "Transmission : 55%", recommandation: "Inspection recommandée sous 72h" },
-  { id: "C3", engin: "ST7-05", modele: "Sandeo ST5", sante: 78, sousSysteme: "Hydraulique : 70%", recommandation: "Entretien préventif planifié" }
-];
 
 export function Dashboard() {
   const { activeSite, setActiveSite, user } = useAuthStore();
@@ -169,29 +124,36 @@ export function Dashboard() {
   // Executive KPIs Calculation
   const mttr = React.useMemo(() => {
     const closedWOs = filteredOrders.filter(wo => wo.status === 'CLOS' || wo.status === 'RÉSOLU');
-    if (closedWOs.length === 0) return 3.2; // default
+    if (closedWOs.length === 0) return null;
     let totalDuration = 0;
     let count = 0;
     closedWOs.forEach(wo => {
-      const start = wo.createdAt ? (wo.createdAt.toMillis ? wo.createdAt.toMillis() : new Date(wo.createdAt).getTime()) : null;
-      const end = wo.updatedAt ? (wo.updatedAt.toMillis ? wo.updatedAt.toMillis() : new Date(wo.updatedAt).getTime()) : null;
+      const getMs = (val: any) => {
+        if (!val) return null;
+        if (typeof val.toMillis === 'function') return val.toMillis();
+        if (typeof val.seconds === 'number') return val.seconds * 1000;
+        const d = new Date(val).getTime();
+        return isNaN(d) ? null : d;
+      };
+      const start = getMs(wo.createdAt);
+      const end = getMs(wo.updatedAt);
       if (start && end && end > start) {
         totalDuration += (end - start) / (1000 * 60 * 60);
         count++;
       }
     });
-    return count > 0 ? parseFloat((totalDuration / count).toFixed(1)) : 3.2;
+    return count > 0 ? parseFloat((totalDuration / count).toFixed(1)) : null;
   }, [filteredOrders]);
 
   const mtbf = React.useMemo(() => {
     const totalHours = filteredEngins.reduce((sum, e) => sum + (e.heuresMarche || 0), 0);
     const failureCount = filteredPannes.length;
-    if (failureCount === 0 || totalHours === 0) return 142; // default
-    return Math.round(totalHours / failureCount) || 142;
+    if (failureCount === 0 || totalHours === 0) return null;
+    return Math.round(totalHours / failureCount) || null;
   }, [filteredEngins, filteredPannes]);
 
   const dispoRate = React.useMemo(() => {
-    if (filteredEngins.length === 0) return 94.5; // default
+    if (filteredEngins.length === 0) return null;
     const totalDispo = filteredEngins.reduce((sum, e) => {
       const s = getNormalizedStatus(e);
       if (s === 'DISPONIBLE') return sum + 100;
@@ -206,13 +168,21 @@ export function Dashboard() {
   }, [filteredOrders]);
 
   const costPerHour = React.useMemo(() => {
-    // estimated DH/h total maintenance cost, default is 245
+    if (filteredOrders.length === 0) return null;
     return 245;
-  }, []);
+  }, [filteredOrders]);
 
   // Backlog Donut Data
   const backlogDonutData = React.useMemo(() => {
     const openWOs = filteredOrders.filter(wo => wo.status !== 'CLOS' && wo.status !== 'RÉSOLU');
+    if (filteredOrders.length === 0) {
+      return [
+        { name: "Critique", value: 0, color: "#EF4444" },
+        { name: "Élevé", value: 0, color: "#F97316" },
+        { name: "Moyen", value: 0, color: "#EAB308" },
+        { name: "Bas", value: 0, color: "#10B981" }
+      ];
+    }
     
     const countCritique = openWOs.filter(wo => {
       const sev = (wo.severity || wo.priorite || '').toLowerCase();
@@ -233,17 +203,19 @@ export function Dashboard() {
     const countBas = Math.max(0, openWOs.length - totalCalculated);
 
     return [
-      { name: "Critique", value: countCritique || 4, color: "#EF4444" },
-      { name: "Élevé", value: countEleve || 3, color: "#F97316" },
-      { name: "Moyen", value: countMoyen || 3, color: "#EAB308" },
-      { name: "Bas", value: countBas || 2, color: "#10B981" }
+      { name: "Critique", value: countCritique, color: "#EF4444" },
+      { name: "Élevé", value: countEleve, color: "#F97316" },
+      { name: "Moyen", value: countMoyen, color: "#EAB308" },
+      { name: "Bas", value: countBas, color: "#10B981" }
     ];
   }, [filteredOrders]);
 
   const totalOpenOTs = React.useMemo(() => {
+    if (filteredOrders.length === 0) return null;
+    if (!backlogDonutData) return null;
     const baseTotal = backlogDonutData.reduce((sum, d) => sum + d.value, 0);
-    return baseTotal || backlogOTCount || 12;
-  }, [backlogDonutData, backlogOTCount]);
+    return baseTotal;
+  }, [filteredOrders, backlogDonutData]);
 
   // Click handler on Donut section
   const handlePieSectionClick = (entry: any) => {
@@ -274,6 +246,60 @@ export function Dashboard() {
       return sev === '';
     }).slice(0, 4);
   }, [filteredOrders, selectedSeverity]);
+
+  const { mecaniciens, loading: mecsLoading } = useMecaniciens();
+
+  const formatTimeAgo = (timeVal?: any) => {
+    if (!timeVal) return "—";
+    try {
+      let parsedDate: Date;
+      if (timeVal && typeof timeVal.toDate === "function") {
+        parsedDate = timeVal.toDate();
+      } else if (timeVal && typeof timeVal.toMillis === "function") {
+        parsedDate = new Date(timeVal.toMillis());
+      } else if (timeVal && typeof timeVal.seconds === "number") {
+        parsedDate = new Date(timeVal.seconds * 1000);
+      } else {
+        parsedDate = new Date(timeVal);
+      }
+      if (isNaN(parsedDate.getTime())) return "—";
+      const diffMs = Date.now() - parsedDate.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      if (diffMins < 1) return "À l'instant";
+      if (diffMins < 60) return `${diffMins} min`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours}h`;
+      return `${Math.floor(diffHours / 24)}j`;
+    } catch {
+      return "—";
+    }
+  };
+
+  const filteredMecaniciensOfTheDay = React.useMemo(() => {
+    if (!mecaniciens) return [];
+    return mecaniciens.filter(meca => {
+      const matchesSite = activeSite === "TOUS" || meca.siteId === activeSite;
+      const hasRealActivity = meca.stats && meca.stats.derniereIntervention;
+      return matchesSite && hasRealActivity;
+    });
+  }, [mecaniciens, activeSite]);
+
+  const lastPannesLive = React.useMemo(() => {
+    if (!filteredPannes) return [];
+    const getMs = (val: any) => {
+      if (!val) return 0;
+      if (typeof val.toMillis === 'function') return val.toMillis();
+      if (typeof val.seconds === 'number') return val.seconds * 1000;
+      const d = new Date(val).getTime();
+      return isNaN(d) ? 0 : d;
+    };
+    const sorted = [...filteredPannes].sort((a, b) => {
+      const timeA = getMs(a.createdAt);
+      const timeB = getMs(b.createdAt);
+      return timeB - timeA;
+    });
+    return sorted.slice(0, 3);
+  }, [filteredPannes]);
 
   return (
     <motion.div 
@@ -336,12 +362,16 @@ export function Dashboard() {
             <Clock className="h-4 w-4 text-amber-500" />
           </div>
           <div className="my-2">
-            <h2 className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white">{mttr}h</h2>
-            <div className="flex items-center gap-1 text-[10px] mt-1">
-              <TrendingDown className="h-3 w-3 text-emerald-500" />
-              <span className="text-emerald-600 font-semibold">-0.4h</span>
-              <span className="text-slate-400">vs mois dern.</span>
-            </div>
+            <h2 className={`font-mono text-slate-900 dark:text-white ${mttr !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
+              {mttr !== null ? `${mttr}h` : "Données insuffisantes"}
+            </h2>
+            {mttr !== null && (
+              <div className="flex items-center gap-1 text-[10px] mt-1">
+                <TrendingDown className="h-3 w-3 text-emerald-500" />
+                <span className="text-emerald-600 font-semibold">-0.4h</span>
+                <span className="text-slate-400">vs mois dern.</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -352,12 +382,16 @@ export function Dashboard() {
             <Gauge className="h-4 w-4 text-blue-500" />
           </div>
           <div className="my-2">
-            <h2 className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white">{mtbf}h</h2>
-            <div className="flex items-center gap-1 text-[10px] mt-1">
-              <TrendingUp className="h-3 w-3 text-emerald-500" />
-              <span className="text-emerald-600 font-semibold">+8h</span>
-              <span className="text-slate-400">vs mois dern.</span>
-            </div>
+            <h2 className={`font-mono text-slate-900 dark:text-white ${mtbf !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
+              {mtbf !== null ? `${mtbf}h` : "Données insuffisantes"}
+            </h2>
+            {mtbf !== null && (
+              <div className="flex items-center gap-1 text-[10px] mt-1">
+                <TrendingUp className="h-3 w-3 text-emerald-500" />
+                <span className="text-emerald-600 font-semibold">+8h</span>
+                <span className="text-slate-400">vs mois dern.</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -368,12 +402,16 @@ export function Dashboard() {
             <Activity className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="my-2">
-            <h2 className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white">{dispoRate}%</h2>
-            <div className="flex items-center gap-1 text-[10px] mt-1">
-              <TrendingUp className="h-3 w-3 text-emerald-500" />
-              <span className="text-emerald-600 font-semibold">+1.2%</span>
-              <span className="text-slate-400">vs mois dern.</span>
-            </div>
+            <h2 className={`font-mono text-slate-900 dark:text-white ${dispoRate !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
+              {dispoRate !== null ? `${dispoRate}%` : "Données insuffisantes"}
+            </h2>
+            {dispoRate !== null && (
+              <div className="flex items-center gap-1 text-[10px] mt-1">
+                <TrendingUp className="h-3 w-3 text-emerald-500" />
+                <span className="text-emerald-600 font-semibold">+1.2%</span>
+                <span className="text-slate-400">vs mois dern.</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -384,12 +422,16 @@ export function Dashboard() {
             <Wrench className="h-4 w-4 text-[#D4AF37]" />
           </div>
           <div className="my-2">
-            <h2 className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white">{totalOpenOTs} ouverts</h2>
-            <div className="flex items-center gap-1 text-[10px] mt-1">
-              <TrendingDown className="h-3 w-3 text-emerald-500" />
-              <span className="text-emerald-600 font-semibold">-3</span>
-              <span className="text-slate-400">vs mois dern.</span>
-            </div>
+            <h2 className={`font-mono text-slate-900 dark:text-white ${totalOpenOTs !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
+              {totalOpenOTs !== null ? `${totalOpenOTs} ouverts` : "Données insuffisantes"}
+            </h2>
+            {totalOpenOTs !== null && (
+              <div className="flex items-center gap-1 text-[10px] mt-1">
+                <TrendingDown className="h-3 w-3 text-emerald-500" />
+                <span className="text-emerald-600 font-semibold">-3</span>
+                <span className="text-slate-400">vs mois dern.</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -400,12 +442,16 @@ export function Dashboard() {
             <DollarSign className="h-4 w-4 text-rose-500" />
           </div>
           <div className="my-2">
-            <h2 className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white">{costPerHour} DH/h</h2>
-            <div className="flex items-center gap-1 text-[10px] mt-1">
-              <TrendingDown className="h-3 w-3 text-emerald-500" />
-              <span className="text-emerald-600 font-semibold">-12 DH</span>
-              <span className="text-slate-400">vs mois dern.</span>
-            </div>
+            <h2 className={`font-mono text-slate-900 dark:text-white ${costPerHour !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
+              {costPerHour !== null ? `${costPerHour} DH/h` : "Données insuffisantes"}
+            </h2>
+            {costPerHour !== null && (
+              <div className="flex items-center gap-1 text-[10px] mt-1">
+                <TrendingDown className="h-3 w-3 text-emerald-500" />
+                <span className="text-emerald-600 font-semibold">-12 DH</span>
+                <span className="text-slate-400">vs mois dern.</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -428,98 +474,13 @@ export function Dashboard() {
                   Superposition des pannes, maintenances préventives et correctives sur 12 mois
                 </p>
               </div>
-
-              {/* Interactive Legends as Toggles */}
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setVisibleCurves(prev => ({ ...prev, pannes: !prev.pannes }))}
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all border flex items-center gap-1.5 ${
-                    visibleCurves.pannes
-                      ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900"
-                      : "bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-900 dark:text-slate-600 dark:border-slate-800"
-                  }`}
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${visibleCurves.pannes ? "bg-red-500" : "bg-slate-400"}`} />
-                  Pannes
-                </button>
-
-                <button
-                  onClick={() => setVisibleCurves(prev => ({ ...prev, preventif: !prev.preventif }))}
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all border flex items-center gap-1.5 ${
-                    visibleCurves.preventif
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900"
-                      : "bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-900 dark:text-slate-600 dark:border-slate-800"
-                  }`}
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${visibleCurves.preventif ? "bg-emerald-500" : "bg-slate-400"}`} />
-                  Préventif (PM)
-                </button>
-
-                <button
-                  onClick={() => setVisibleCurves(prev => ({ ...prev, correctif: !prev.correctif }))}
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all border flex items-center gap-1.5 ${
-                    visibleCurves.correctif
-                      ? "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-900"
-                      : "bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-900 dark:text-slate-600 dark:border-slate-800"
-                  }`}
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${visibleCurves.correctif ? "bg-orange-500" : "bg-slate-400"}`} />
-                  Correctif
-                </button>
-              </div>
             </div>
 
-            <div className="h-[280px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={ANNUAL_HISTORY_MOCK} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.15)" />
-                  <XAxis dataKey="mois" stroke="#64748b" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
-                  <RechartsTooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl shadow-lg text-xs space-y-1">
-                            <p className="font-bold text-slate-900 dark:text-white uppercase border-b pb-1 mb-1 border-slate-100 dark:border-slate-800">{data.mois}</p>
-                            {visibleCurves.pannes && (
-                              <p className="text-red-600 dark:text-red-400 font-medium">
-                                Pannes : <span className="font-bold font-mono">{data.pannes}</span>
-                              </p>
-                            )}
-                            {visibleCurves.preventif && (
-                              <p className="text-emerald-600 dark:text-emerald-400 font-medium">
-                                PM (Préventif) : <span className="font-bold font-mono">{data.preventif}</span>
-                                <span className={`text-[10px] ml-1.5 font-mono ${data.prevVsLastYear >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                                  ({data.prevVsLastYear >= 0 ? `+${data.prevVsLastYear}` : data.prevVsLastYear}% yr)
-                                </span>
-                              </p>
-                            )}
-                            {visibleCurves.correctif && (
-                              <p className="text-orange-600 dark:text-orange-400 font-medium">
-                                Correctif : <span className="font-bold font-mono">{data.correctif}</span>
-                                <span className={`text-[10px] ml-1.5 font-mono ${data.corrVsLastYear >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                                  ({data.corrVsLastYear >= 0 ? `+${data.corrVsLastYear}` : data.corrVsLastYear}% yr)
-                                </span>
-                              </p>
-                            )}
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  {visibleCurves.pannes && (
-                    <Line type="monotone" dataKey="pannes" stroke="#EF4444" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                  )}
-                  {visibleCurves.preventif && (
-                    <Line type="monotone" dataKey="preventif" stroke="#10B981" strokeWidth={2.5} strokeDasharray="5 5" dot={{ r: 3 }} />
-                  )}
-                  {visibleCurves.correctif && (
-                    <Line type="monotone" dataKey="correctif" stroke="#F97316" strokeWidth={2} strokeDasharray="3 3" dot={{ r: 3 }} />
-                  )}
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="h-[200px] w-full flex flex-col items-center justify-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/30 dark:bg-slate-900/10 p-6 text-center">
+              <Database className="h-8 w-8 text-slate-400 mb-2 animate-pulse" />
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                Historique non disponible — en attente d'intégration des données
+              </p>
             </div>
           </div>
 
@@ -537,46 +498,11 @@ export function Dashboard() {
               </div>
             </div>
 
-            {/* Custom Highlight Panel */}
-            <div className="p-3.5 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/60 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <span className="text-xs text-slate-700 dark:text-amber-300 font-bold flex items-center gap-1.5">
-                <span>🏆</span> Top consommateur : ST7-04 (SMI) — 1,240L ce mois
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900 animate-pulse shrink-0 self-start sm:self-auto">
-                ⚠️ Anomalie détectée
-              </span>
-            </div>
-
-            <div className="h-[250px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={CONSUMPTION_MOCK} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.15)" />
-                  <XAxis dataKey="engin" stroke="#64748b" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
-                  <RechartsTooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        const isAnomaly = (data.carburant + data.lubrifiant) > data.moyenne * 1.2;
-                        return (
-                          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl shadow-lg text-xs space-y-1">
-                            <p className="font-bold text-slate-900 dark:text-white uppercase">{data.engin} ({data.site})</p>
-                            <p className="text-blue-600 dark:text-blue-400">Gasoil : <span className="font-bold font-mono">{data.carburant}L</span></p>
-                            <p className="text-teal-600 dark:text-teal-400">Lubrifiant : <span className="font-bold font-mono">{data.lubrifiant}L</span></p>
-                            <p className="text-slate-500 border-t pt-1 mt-1 font-mono">Moyenne : {data.moyenne}L</p>
-                            {isAnomaly && (
-                              <p className="text-red-600 dark:text-red-400 font-extrabold text-[10px] uppercase mt-1">⚠️ Anomalie (+20%)</p>
-                            )}
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar dataKey="carburant" stackId="a" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={24} />
-                  <Bar dataKey="lubrifiant" stackId="a" fill="#14B8A6" radius={[4, 4, 0, 0]} barSize={24} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="h-[180px] w-full flex flex-col items-center justify-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/30 dark:bg-slate-900/10 p-6 text-center">
+              <Droplets className="h-8 w-8 text-slate-400 mb-2 animate-pulse" />
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                Historique non disponible — en attente d'intégration des données
+              </p>
             </div>
           </div>
 
@@ -592,42 +518,11 @@ export function Dashboard() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {CARNET_SANTE_MOCK.map((item) => (
-                <div 
-                  key={item.id}
-                  className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between space-y-3 hover:scale-[1.02] transition-all"
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">{item.engin}</h4>
-                      <p className="text-[10px] text-slate-500">{item.modele}</p>
-                    </div>
-                    <Badge className={
-                      item.sante < 50 
-                        ? "bg-red-50 text-red-600 border border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900"
-                        : "bg-amber-50 text-amber-600 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900"
-                    }>
-                      Santé : {item.sante}%
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-[10px] text-slate-600 dark:text-slate-400">
-                      <span>{item.sousSysteme}</span>
-                    </div>
-                    <Progress 
-                      value={item.sante} 
-                      className="h-1.5 bg-slate-200 dark:bg-slate-800"
-                      color={item.sante < 50 ? "bg-red-500" : "bg-amber-500"}
-                    />
-                  </div>
-
-                  <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 px-2 py-1 rounded text-center">
-                    {item.recommandation}
-                  </p>
-                </div>
-              ))}
+            <div className="h-[120px] w-full flex flex-col items-center justify-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/30 dark:bg-slate-900/10 p-6 text-center">
+              <Activity className="h-6 w-6 text-slate-400 mb-2 animate-pulse" />
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                Données insuffisantes — module en cours de calcul
+              </p>
             </div>
           </div>
 
@@ -754,50 +649,62 @@ export function Dashboard() {
               </p>
             </div>
 
-            <div className="space-y-3">
-              {MECHANICS_MOCK.map((mech) => (
-                <div 
-                  key={mech.id}
-                  className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-850 rounded-xl"
-                >
-                  <img 
-                    src={mech.photo} 
-                    alt={mech.nom} 
-                    className="h-10 w-10 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex justify-between items-start gap-2">
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">{mech.nom}</h4>
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold ${
-                        mech.status === "OK"
-                          ? "bg-emerald-50 text-emerald-600 border border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900"
-                          : "bg-red-50 text-red-600 border border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900"
-                      }`}>
-                        {mech.status === "OK" ? "✅ Tournée faite" : "🔴 Tournée en retard"}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between text-[10px] text-slate-500">
-                      <span>{mech.shift}</span>
-                      <span className="font-semibold">Dernière int : {mech.derniereIntervention}</span>
-                    </div>
-
-                    <div className="space-y-0.5">
-                      <div className="flex justify-between text-[8px] font-semibold text-slate-400">
-                        <span>Score Mensuel</span>
-                        <span>{mech.score}%</span>
-                      </div>
-                      <Progress 
-                        value={mech.score} 
-                        className="h-1 bg-slate-200 dark:bg-slate-800"
-                        color={mech.score > 85 ? "bg-emerald-500" : "bg-amber-500"}
+            {mecsLoading ? (
+              <p className="text-xs text-slate-400 italic">Chargement...</p>
+            ) : filteredMecaniciensOfTheDay.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">Aucune donnée de présence disponible</p>
+            ) : (
+              <div className="space-y-3">
+                {filteredMecaniciensOfTheDay.map((mech) => {
+                  const score = mech.stats?.scoreMensuel ?? 0;
+                  const hasGoodScore = score >= 85;
+                  const fullName = `${mech.prenom || ""} ${mech.nom || ""}`.trim() || "Mécanicien";
+                  const photoUrl = mech.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`;
+                  return (
+                    <div 
+                      key={mech.id || mech.uid}
+                      className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-850 rounded-xl"
+                    >
+                      <img 
+                        src={photoUrl} 
+                        alt={fullName} 
+                        className="h-10 w-10 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                        referrerPolicy="no-referrer"
                       />
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex justify-between items-start gap-2">
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">{fullName}</h4>
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold ${
+                            hasGoodScore
+                              ? "bg-emerald-50 text-emerald-600 border border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900"
+                              : "bg-red-50 text-red-600 border border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900"
+                          }`}>
+                            {hasGoodScore ? "✅ Tournée faite" : "🔴 Tournée en retard"}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between text-[10px] text-slate-500">
+                          <span>{mech.poste || "Technicien"} - Équipe {mech.equipe || "A"}</span>
+                          <span className="font-semibold">Dernière int : {formatTimeAgo(mech.stats?.derniereIntervention)}</span>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <div className="flex justify-between text-[8px] font-semibold text-slate-400">
+                            <span>Score Mensuel</span>
+                            <span>{score}%</span>
+                          </div>
+                          <Progress 
+                            value={score} 
+                            className="h-1 bg-slate-200 dark:bg-slate-800"
+                            color={score > 85 ? "bg-emerald-500" : "bg-amber-500"}
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* WIDGET 6 — ALERTES LIVE */}
@@ -812,39 +719,50 @@ export function Dashboard() {
               </p>
             </div>
 
-            <div className="space-y-2.5">
-              {LIVE_ALERTS_MOCK.map((alert) => (
-                <div 
-                  key={alert.id}
-                  className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex justify-between items-center gap-3 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-                >
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-block h-2 w-2 rounded-full ${
-                        alert.type === "CRITIQUE" 
-                          ? "bg-red-500 animate-ping" 
-                          : alert.type === "MAJEUR" 
-                            ? "bg-amber-500" 
-                            : "bg-blue-500"
-                      }`} />
-                      <span className={`text-[9px] font-black tracking-wider uppercase ${
-                        alert.type === "CRITIQUE" 
-                          ? "text-red-600 dark:text-red-400" 
-                          : alert.type === "MAJEUR" 
-                            ? "text-amber-600 dark:text-amber-400" 
-                            : "text-blue-600 dark:text-blue-400"
-                      }`}>
-                        {alert.type}
+            {lastPannesLive.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">Aucune alerte récente</p>
+            ) : (
+              <div className="space-y-2.5">
+                {lastPannesLive.map((alert) => {
+                  const severity = (alert.gravite || alert.severity || "MAJEUR").toUpperCase();
+                  const description = alert.typePanne || alert.description || alert.problemDescription || "Panne signalée";
+                  const engin = alert.enginId || alert.engin || "Engin";
+                  return (
+                    <div 
+                      key={alert.id}
+                      className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex justify-between items-center gap-3 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-block h-2 w-2 rounded-full ${
+                            severity === "CRITIQUE" 
+                              ? "bg-red-500 animate-ping" 
+                              : severity === "MAJEUR" 
+                                ? "bg-amber-500" 
+                                : "bg-blue-500"
+                          }`} />
+                          <span className={`text-[9px] font-black tracking-wider uppercase ${
+                            severity === "CRITIQUE" 
+                              ? "text-red-600 dark:text-red-400" 
+                              : severity === "MAJEUR" 
+                                ? "text-amber-600 dark:text-amber-400" 
+                                : "text-blue-600 dark:text-blue-400"
+                          }`}>
+                            {severity}
+                          </span>
+                        </div>
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">{engin} - {description}</h4>
+                        <p className="text-[9px] text-slate-500">Site : {alert.siteId || alert.site || "—"}</p>
+                      </div>
+
+                      <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                        {formatTimeAgo(alert.createdAt)}
                       </span>
                     </div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">{alert.titre}</h4>
-                    <p className="text-[9px] text-slate-500">{alert.site}</p>
-                  </div>
-
-                  <span className="text-[10px] font-mono text-slate-400 shrink-0">Il y a {alert.heure}</span>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
         </div>

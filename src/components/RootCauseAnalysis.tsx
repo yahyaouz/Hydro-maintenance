@@ -266,7 +266,7 @@ export function RootCauseAnalysis() {
             ) : (
               filteredRcas.map((r) => {
                 const isSelected = r.id === selectedRcaId;
-                const dateStr = new Date(r.createdAt).toLocaleDateString("fr-FR", { day: '2-digit', month: '2-digit' });
+                const dateStr = new Date((r.createdAt as any)?.seconds ? (r.createdAt as any).seconds * 1000 : r.createdAt).toLocaleDateString("fr-FR", { day: '2-digit', month: '2-digit' });
                 
                 return (
                   <button

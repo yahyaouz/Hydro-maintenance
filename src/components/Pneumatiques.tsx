@@ -271,7 +271,7 @@ export function Pneumatiques() {
           <div>
             <span className="text-[10px] text-slate-400 font-mono block uppercase">Coût d'Investissement</span>
             <span className="text-2xl font-black text-slate-900 dark:text-white">
-              {kpis.totalCost.toLocaleString()} €
+              {kpis.totalCost.toLocaleString()} DH
             </span>
           </div>
         </div>
@@ -389,7 +389,7 @@ export function Pneumatiques() {
                         </div>
                       </td>
                       <td className="p-4 text-right font-mono font-black text-slate-900 dark:text-white">
-                        {p.cout.toLocaleString()} €
+                        {p.cout.toLocaleString()} DH
                       </td>
                       <td className="p-4">
                         <div className="space-y-0.5">
@@ -627,7 +627,7 @@ export function Pneumatiques() {
 
                   {/* Cost */}
                   <div className="space-y-1">
-                    <label className="text-[10px] font-mono text-slate-400 uppercase font-black block">Coût du Pneu (€) *</label>
+                    <label className="text-[10px] font-mono text-slate-400 uppercase font-black block">Coût du Pneu (DH) *</label>
                     <input
                       type="number"
                       required

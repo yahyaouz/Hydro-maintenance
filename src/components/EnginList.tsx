@@ -42,6 +42,7 @@ import { useCollection } from "@/hooks/useCollection";
 import { PageBanner } from "@/components/ui/PageBanner";
 import { CarnetSante } from "@/components/CarnetSante";
 import { SignalerPanne } from "./SignalerPanne";
+import { BusinessRules } from "@/services/businessRules";
 
 // Specs mappings for the three categories
 export const ENGIN_SPECS: Record<string, { godet: string; reservoir: string; transmission: string; hauteur: string }> = {
@@ -87,6 +88,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
 
   // Load equipements from Firestore
   const { data: allEquipements, loading } = useCollection<any>("engins");
+  const { data: allWorkorders } = useCollection<any>("workorders");
 
   // State
   const [activeTab, setActiveTab] = React.useState<"LHD" | "VL" | "PERFORATEUR" | "CARNET">("LHD");
@@ -177,6 +179,29 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
     setIsSubmitLoading(true);
 
     try {
+      // HSE Guard: Un engin ne peut pas être remis DISPONIBLE s'il possède au moins un BT actif de gravité CRITIQUE.
+      if (editStatut === "actif") {
+        const activeBTs = (allWorkorders || []).filter(
+          w => (w.machineCode === editingEquip.matricule || w.enginId === editingEquip.id) &&
+          w.status !== "CLOS" && w.status !== "RÉSOLU"
+        ).map(w => ({
+          status: w.status,
+          severity: (w.severity || w.priorite || "").toLowerCase()
+        }));
+
+        const validation = BusinessRules.validateAvailabilityState(
+          editingEquip.id,
+          "DISPONIBLE",
+          activeBTs
+        );
+
+        if (!validation.isValid) {
+          toast.error(validation.message);
+          setIsSubmitLoading(false);
+          return;
+        }
+      }
+
       const docRef = doc(db, "engins", editingEquip.id);
       
       let updatedData: any = {

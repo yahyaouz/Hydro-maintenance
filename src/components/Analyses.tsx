@@ -109,7 +109,11 @@ export default function Analyses() {
     const now = Date.now();
     return tasks.filter(t => {
       if (t.statut !== 'FAIT') return false;
-      const updatedMs = t.updatedAt?.toMillis ? t.updatedAt.toMillis() : new Date(t.updatedAt || Date.now()).getTime();
+      const updatedMs = (t.updatedAt as any)?.toMillis 
+        ? (t.updatedAt as any).toMillis() 
+        : (t.updatedAt as any)?.seconds 
+          ? (t.updatedAt as any).seconds * 1000 
+          : new Date(t.updatedAt || Date.now()).getTime();
       return (now - updatedMs) / (1000 * 60 * 60) >= 48;
     });
   }, [tasks]);

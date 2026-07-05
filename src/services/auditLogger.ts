@@ -85,8 +85,7 @@ export const auditLogger = {
   getLocalLogs(): AuditLogDocument[] {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (!raw) {
-      // Seed pre-filled historic audit logs for strategic visual depth
-      const seeded = this.generateDemoLogs();
+      const seeded: AuditLogDocument[] = [];
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(seeded));
       return seeded;
     }
@@ -95,42 +94,5 @@ export const auditLogger = {
     } catch {
       return [];
     }
-  },
-
-  generateDemoLogs(): AuditLogDocument[] {
-    const types: Array<AuditLogDocument['actionType']> = [
-      'CREATE_BT', 'CLOSE_BT', 'ENGINE_STATUS_CHANGE', 'PART_OUTPUT', 'MAINTENANCE_VALIDATION', 'STOCK_MODIFICATION'
-    ];
-    const sites: SiteID[] = ['SMI', 'OUMEJRANE', 'KOUDIA', 'OUANSIMI', 'BOU-AZZER'];
-    const techs = ['Yassine Boudaoud', 'M. Benali', 'Said Maarouf', 'Ouacha Mohamed'];
-    const machines = ['ST7-01', 'ST14-04', 'DUM-03', 'M-05', 'DRILL-02'];
-    const logs: AuditLogDocument[] = [];
-
-    for (let i = 0; i < 45; i++) {
-      const type = types[i % types.length];
-      const site = sites[i % sites.length];
-      const tech = techs[i % techs.length];
-      const machine = machines[i % machines.length];
-      const date = new Date(Date.now() - i * 1.5 * 3600 * 1000); // spread across past days
-
-      logs.push({
-        id: `LOG-DEMO-${1000 + i}`,
-        actionType: type,
-        userId: `uid-${i % 4}`,
-        userName: tech,
-        userRole: (i % 3 === 0 ? 'RESPONSABLE_MAINTENANCE' : (i % 3 === 1 ? 'ADMIN' : 'RESPONSABLE_CHANTIER')) as UserRole,
-        siteId: site,
-        timestamp: date.toISOString(),
-        oldValue: type === 'ENGINE_STATUS_CHANGE' ? 'ARRÊTÉ' : (type === 'STOCK_MODIFICATION' ? 'Stock: 15' : 'Stabilité: Basse'),
-        newValue: type === 'ENGINE_STATUS_CHANGE' ? 'DISPONIBLE' : (type === 'STOCK_MODIFICATION' ? 'Stock: 14' : 'Maintenance Validée'),
-        enginId: machine,
-        workOrderId: type === 'CLOSE_BT' ? `BT-754${i}` : undefined,
-        device: i % 2 === 0 ? 'Tablette Mine Android' : 'Poste Supervision',
-        source: i % 10 === 0 ? 'OFFLINE' : 'ONLINE',
-        lineageId: `lin-demo-lin-${1000 + i}`,
-        priority: i % 5 === 0 ? 'CRITIQUE' : i % 3 === 0 ? 'MOYENNE' : 'BASSE'
-      });
-    }
-    return logs;
   }
 };

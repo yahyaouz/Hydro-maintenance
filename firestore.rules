@@ -39,27 +39,26 @@ service cloud.firestore {
 
     match /users/{userId} {
       // Allow viewers and registered agents to read the profiles directory
-      allow read: if true;
-      allow create: if isSignedIn() && request.auth.uid == userId && (
-        !request.resource.data.keys().hasAny(['role']) || 
-        request.resource.data.role == 'VIEWER'
-      );
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == userId && 
+        request.resource.data.active == false;
       allow update: if isSignedIn() && (
         getUserData().role == 'ADMIN' || (
           request.auth.uid == userId && 
-          request.resource.data.role == resource.data.role
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.get('requestedRole', '') == resource.data.get('requestedRole', '')
         )
       );
       allow delete: if isSignedIn() && getUserData().role == 'ADMIN';
     }
 
     match /sites/{siteId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && getUserData().role == 'ADMIN';
     }
 
     match /engins/{enginId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       // Protect against dirty overwriting and enforce global LOTO lock rules on server-side
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
         (!isMachineLotoLocked(enginId) && (
@@ -71,7 +70,7 @@ service cloud.firestore {
     }
 
     match /workorders/{orderId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       // Prevent creating workorders for locked machines unless admin override
       allow create: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
         !isMachineLotoLocked(request.resource.data.machineCode) || isRole('ADMIN')
@@ -88,7 +87,7 @@ service cloud.firestore {
     }
 
     match /lotoLocks/{lockId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       // Authorized maintenance crews can engage, approve or release LOTO locks
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
         isRole('CHEF_QUART') || isRole('MECANICIEN') || isRole('ADMIN')
@@ -96,12 +95,12 @@ service cloud.firestore {
     }
 
     match /pannes/{panneId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
     }
 
     match /pieces/{pieceId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
         isRole('CHEF_QUART') || 
         getUserData().role == 'RESPONSABLE_MAINTENANCE'
@@ -109,14 +108,14 @@ service cloud.firestore {
     }
 
     match /maintenances/{maintenanceId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
         isRole('MECANICIEN') || isRole('CHEF_QUART') || isRole('ADMIN')
       );
     }
 
     match /mecaniciens/{mecaId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && (
         getUserData().role == 'ADMIN' ||
         getUserData().role == 'RESPONSABLE_MAINTENANCE'
@@ -124,12 +123,12 @@ service cloud.firestore {
     }
 
     match /chantiers/{chantierId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && getUserData().role == 'ADMIN';
     }
 
     match /pmIntervalles/{intervalleId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && (
         getUserData().role == 'ADMIN' ||
         getUserData().role == 'RESPONSABLE_MAINTENANCE'
@@ -137,14 +136,14 @@ service cloud.firestore {
     }
 
     match /pneus/{pneuId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
         isRole('MECANICIEN') || isRole('CHEF_QUART') || isRole('ADMIN')
       );
     }
 
     match /pneumatiques/{pneuId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
         isRole('MECANICIEN') || isRole('CHEF_QUART') || isRole('ADMIN')
       );
@@ -157,56 +156,25 @@ service cloud.firestore {
     }
 
     match /demandesIntervention/{diId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
     }
 
     match /rapportsFinIntervention/{rfiId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
         isRole('MECANICIEN') || isRole('CHEF_QUART') || isRole('ADMIN')
       );
     }
 
     match /feedbacks/{feedbackId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isSignedIn() && isRole('ADMIN');
     }
 
-    // Security surveillance for VIEWER telemetries
-    match /viewerAuditLogs/{logId} {
-      // Viewers and system are permitted to dispatch audit logs
-      allow create: if true;
-      // Only validated Administrators can read audit tracking telemetry
-      allow read: if isSignedIn() && getUserData().role == 'ADMIN';
-      // Logs are unmutable and cannot be tempered with or erased
-      allow update, delete: if false;
-    }
-
-    // Consolidated viewer session summaries (zero data leak - only ADMIN can read)
-    match /viewerSessions/{sessionId} {
-      allow create, update: if true;
-      allow read: if isSignedIn() && getUserData().role == 'ADMIN';
-      allow delete: if false;
-    }
-
-    // Critical security event logs
-    match /viewerSecurityEvents/{eventId} {
-      allow create, update: if true;
-      allow read: if isSignedIn() && getUserData().role == 'ADMIN';
-      allow delete: if false;
-    }
-
-    // Daily operational analytics metrics
-    match /viewerAnalyticsDaily/{dayId} {
-      allow create, update: if true;
-      allow read: if isSignedIn() && getUserData().role == 'ADMIN';
-      allow delete: if false;
-    }
-
     match /maintenanceTasks/{taskId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow create: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
       allow update: if isSignedIn() && matchesSite(resource.data.siteId || 'SMI') && (
         isRole('MECANICIEN') || isRole('RESPONSABLE_MAINTENANCE') || isRole('ADMIN')
@@ -215,7 +183,7 @@ service cloud.firestore {
     }
 
     match /checklists/{checklistId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow create: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
       allow update: if isSignedIn() && (
         isRole('ADMIN') || isRole('RESPONSABLE_MAINTENANCE') ||
@@ -225,7 +193,7 @@ service cloud.firestore {
     }
 
     match /systematicTaskConfigs/{configId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && (
         getUserData().role == 'ADMIN' ||
         getUserData().role == 'RESPONSABLE_MAINTENANCE'
@@ -233,29 +201,29 @@ service cloud.firestore {
     }
 
     match /systematicTasks/{taskId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow create: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
       allow update: if isSignedIn() && matchesSite(resource.data.siteId || 'SMI');
       allow delete: if isSignedIn() && isRole('ADMIN');
     }
 
     match /alerts/{alertId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn();
     }
 
     match /carnetSante/{id} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
     }
 
     match /rootCauseAnalysis/{id} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
     }
 
     match /consommations/{id} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.site || 'SMI') && (
         getUserData().role == 'ADMIN' ||
         getUserData().role == 'RESPONSABLE_MAINTENANCE'
@@ -263,7 +231,7 @@ service cloud.firestore {
     }
 
     match /carburants/{id} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.site || 'SMI') && (
         getUserData().role == 'ADMIN' ||
         getUserData().role == 'RESPONSABLE_MAINTENANCE'
@@ -271,7 +239,7 @@ service cloud.firestore {
     }
 
     match /interventions/{id} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
         getUserData().role == 'ADMIN' ||
         getUserData().role == 'RESPONSABLE_MAINTENANCE'
@@ -279,7 +247,7 @@ service cloud.firestore {
     }
 
     match /config/{configId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isSignedIn() && (
         getUserData().role == 'ADMIN' ||
         getUserData().role == 'RESPONSABLE_MAINTENANCE'

@@ -21,6 +21,7 @@ import {
 import { TaskDetailModal } from './taches/TaskDetailModal';
 import { AddTaskModal } from './taches/AddTaskModal';
 import { SignalerPanne } from './SignalerPanne';
+import { BusinessRules } from '@/services/businessRules';
 
 // V4-HEURES-IMPORT: Robust utility to format engine last updated timestamp/date
 const formatLastUpdatedDate = (engin: Engin) => {
@@ -379,6 +380,19 @@ export default function TachesPlanning() {
         }
         const taskData = taskSnap.data() as any;
 
+        // HSE / Business Rule validation before status transitions
+        if (fields.statut && fields.statut !== taskData.statut) {
+          const validation = BusinessRules.validateWorkOrderTransition(
+            taskData.statut,
+            fields.statut,
+            true, // checklistComplete - assumed true as there are no checklist fields in tasks
+            user?.role || 'MECANICIEN'
+          );
+          if (!validation.isValid) {
+            throw new Error(`VALIDATION_ERROR: ${validation.message}`);
+          }
+        }
+
         // 2. Prepare task updates
         const taskUpdates = {
           ...fields,
@@ -422,12 +436,31 @@ export default function TachesPlanning() {
       });
 
       toast.success("Tâche mise à jour avec succès (Transaction V4 validée) !");
-    } catch (err) {
-      handleFirestoreError(err, 'Mettre à jour');
+    } catch (err: any) {
+      if (err?.message?.startsWith("VALIDATION_ERROR: ")) {
+        toast.error(err.message.replace("VALIDATION_ERROR: ", ""));
+      } else {
+        handleFirestoreError(err, 'Mettre à jour');
+      }
     }
   };
 
   const handleDeleteTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // Business rule check: can we delete this work order?
+    const validation = BusinessRules.canDeleteWorkOrder(
+      task.statut || '',
+      (task.priorite || '').toLowerCase(),
+      user?.role || 'MECANICIEN'
+    );
+
+    if (!validation.isValid) {
+      toast.error(validation.message);
+      return;
+    }
+
     if (!window.confirm("Supprimer définitivement cette tâche ?")) return;
     try {
       await updateDoc(doc(db, 'maintenanceTasks', taskId), {

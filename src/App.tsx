@@ -18,7 +18,6 @@ import { Mecaniciens } from "@/components/Mecaniciens";
 import { Pneumatiques } from "@/components/Pneumatiques";
 import { CarnetSante } from "@/components/CarnetSante";
 import { RootCauseAnalysis } from "@/components/RootCauseAnalysis";
-import { startViewerTrackingSession, trackViewerPageTransition } from "@/services/viewerTracking";
 
 function IndustrialSkeleton() {
   return (
@@ -298,7 +297,7 @@ export default function App() {
 
   // Prevent Privilege Escalation - Silent real-time revalidation
   React.useEffect(() => {
-    if (isAuthenticated && user && user.role !== "VIEWER" && navigator.onLine) {
+    if (isAuthenticated && user && navigator.onLine) {
       const userRef = doc(db, "users", user.uid);
       getDoc(userRef).then(snap => {
         if (snap.exists()) {
@@ -319,22 +318,6 @@ export default function App() {
       });
     }
   }, [isAuthenticated]);
-
-  // Viewer Telemetry Session Hooks
-  React.useEffect(() => {
-    if (user?.role === "VIEWER") {
-      const stopSession = startViewerTrackingSession(activeTab);
-      return () => {
-        if (stopSession) stopSession();
-      };
-    }
-  }, [user]);
-
-  React.useEffect(() => {
-    if (user?.role === "VIEWER") {
-      trackViewerPageTransition(activeTab);
-    }
-  }, [activeTab, user]);
 
   const unreadCount = React.useMemo(() => {
     return notifications.filter(n => !n.read).length;

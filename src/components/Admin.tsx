@@ -26,6 +26,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { 
   collection, doc, setDoc, addDoc, updateDoc, 
@@ -83,9 +84,10 @@ export function Admin() {
   const { user } = useAuthStore();
 
   // RECONSTRUIT : États de navigation des onglets
-  const [activeTab, setActiveTab] = React.useState<"engins" | "mecaniciens" | "chantiers" | "intervalles">("engins");
+  const [activeTab, setActiveTab] = React.useState<"engins" | "mecaniciens" | "chantiers" | "intervalles" | "comptes">("engins");
 
   // RECONSTRUIT : Données stockées localement
+  const [unapprovedUsers, setUnapprovedUsers] = React.useState<any[]>([]);
   const [engins, setEngins] = React.useState<Engin[]>([]);
   const [mecaniciens, setMecaniciens] = React.useState<Mecanicien[]>([]);
   const [chantiers, setChantiers] = React.useState<Chantier[]>([]);
@@ -205,6 +207,15 @@ export function Admin() {
   React.useEffect(() => {
     setLoading(true);
 
+    const getMs = (val: any) => {
+      if (!val) return 0;
+      if (typeof val.toMillis === 'function') return val.toMillis();
+      if (typeof val.toDate === 'function') return val.toDate().getTime();
+      if (typeof val.seconds === 'number') return val.seconds * 1000;
+      const d = new Date(val).getTime();
+      return isNaN(d) ? 0 : d;
+    };
+
     // 1. ENGINS
     let qEngins = query(collection(db, 'engins'), where('deleted', '!=', true));
     if (user?.role !== 'ADMIN' && user?.role !== 'DIRECTION') {
@@ -213,8 +224,8 @@ export function Admin() {
     const unsubEngins = onSnapshot(qEngins, (snap) => {
       const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Engin[];
       data.sort((a: any, b: any) => {
-        const tA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt || 0);
-        const tB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt || 0);
+        const tA = getMs(a.updatedAt);
+        const tB = getMs(b.updatedAt);
         return tB - tA;
       });
       setEngins(data);
@@ -231,8 +242,8 @@ export function Admin() {
     const unsubMecaniciens = onSnapshot(qMecaniciens, (snap) => {
       const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Mecanicien[];
       data.sort((a: any, b: any) => {
-        const tA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt || 0);
-        const tB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt || 0);
+        const tA = getMs(a.updatedAt);
+        const tB = getMs(b.updatedAt);
         return tB - tA;
       });
       setMecaniciens(data);
@@ -248,8 +259,8 @@ export function Admin() {
         data = data.filter(c => c.id === (user?.siteId || 'SMI'));
       }
       data.sort((a: any, b: any) => {
-        const tA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt || 0);
-        const tB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt || 0);
+        const tA = getMs(a.updatedAt);
+        const tB = getMs(b.updatedAt);
         return tB - tA;
       });
       setChantiers(data);
@@ -262,8 +273,8 @@ export function Admin() {
     const unsubIntervalles = onSnapshot(query(collection(db, 'pmIntervalles'), where('deleted', '!=', true)), (snap) => {
       const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as IntervalleMaintenance[];
       data.sort((a: any, b: any) => {
-        const tA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt || 0);
-        const tB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt || 0);
+        const tA = getMs(a.updatedAt);
+        const tB = getMs(b.updatedAt);
         return tB - tA;
       });
       setIntervalles(data);
@@ -274,11 +285,22 @@ export function Admin() {
       setLoading(false);
     });
 
+    // 5. COMPTES UTILISATEURS EN ATTENTE
+    const qUsers = query(collection(db, 'users'), where('active', '==', false));
+    const unsubUsers = onSnapshot(qUsers, (snap) => {
+      const data = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+      setUnapprovedUsers(data);
+    }, (err) => {
+      console.error(err);
+      toast.error("Erreur de chargement des comptes en attente.");
+    });
+
     return () => {
       unsubEngins();
       unsubMecaniciens();
       unsubChantiers();
       unsubIntervalles();
+      unsubUsers();
     };
   }, [user]);
 
@@ -804,6 +826,182 @@ export function Admin() {
     return engins.filter(e => e.siteId === chantierId).length;
   };
 
+  const SITE_LABELS: Record<string, string> = {
+    SMI: "SMI (Imiter)",
+    OUMEJRANE: "Oumejrane",
+    KOUDIA: "Koudiat Aïcha",
+    "KOUDIAT AICHA": "Koudiat Aïcha",
+    OUANSIMI: "Ouansimi",
+    "BOU-AZZER": "Bou-Azzer"
+  };
+
+  const ROLE_LABELS: Record<string, string> = {
+    ADMIN: "Admin / Dir. Technique",
+    DIRECTION: "Direction / Dir. Général",
+    RESPONSABLE_MAINTENANCE: "Resp. Maintenance",
+    RESPONSABLE_CHANTIER: "Resp. / Chef Chantier",
+    MECANICIEN: "Mécanicien",
+    SECRETAIRE: "Secrétaire Chantier"
+  };
+
+  const handleApproveUser = async (userToApprove: any) => {
+    if (user?.role !== 'ADMIN') {
+      toast.error("Seul un Administrateur est autorisé à approuver les comptes.");
+      return;
+    }
+    try {
+      const userRef = doc(db, 'users', userToApprove.uid);
+      const roleToSet = userToApprove.requestedRole || userToApprove.role || 'MECANICIEN';
+      await updateDoc(userRef, {
+        role: roleToSet,
+        active: true,
+        updatedAt: new Date().toISOString()
+      });
+      toast.success(`Le compte de ${userToApprove.displayName} a été approuvé avec le rôle ${ROLE_LABELS[roleToSet] || roleToSet}.`);
+    } catch (err: any) {
+      console.error("Error approving user:", err);
+      toast.error(`Erreur d'approbation du compte : ${err.message}`);
+    }
+  };
+
+  const handleRejectUser = async (userToReject: any) => {
+    if (user?.role !== 'ADMIN') {
+      toast.error("Seul un Administrateur est autorisé à rejeter les comptes.");
+      return;
+    }
+    if (!confirm(`Voulez-vous vraiment rejeter et supprimer la demande de ${userToReject.displayName} ?`)) {
+      return;
+    }
+    try {
+      const userRef = doc(db, 'users', userToReject.uid);
+      await setDoc(userRef, {
+        ...userToReject,
+        active: false,
+        rejected: true,
+        updatedAt: new Date().toISOString()
+      });
+      toast.success(`La demande de ${userToReject.displayName} a été rejetée.`);
+    } catch (err: any) {
+      console.error("Error rejecting user:", err);
+      toast.error(`Erreur lors du rejet : ${err.message}`);
+    }
+  };
+
+  const renderUserApprovals = () => {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div>
+            <h2 className="text-lg font-black text-slate-900 tracking-tight uppercase flex items-center gap-2">
+              <span>🔑</span> Approbations des Comptes d'Agents
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Validation sécuritaire des habilitations et rôles des collaborateurs avant ouverture d'accès à la GMAO d'Hydromines.
+            </p>
+          </div>
+          <Badge className="bg-amber-100 text-amber-900 font-mono text-[10px] uppercase font-bold border-amber-200">
+            {unapprovedUsers.length} en attente
+          </Badge>
+        </div>
+
+        <Card className="border-slate-200 shadow-none">
+          <CardContent className="p-0">
+            {unapprovedUsers.length === 0 ? (
+              <div className="text-center py-16 text-slate-400 space-y-2">
+                <CheckCircle className="w-10 h-10 mx-auto text-emerald-500/30" />
+                <p className="font-bold text-sm text-slate-700">Aucun compte en attente d'approbation</p>
+                <p className="text-xs max-w-xs mx-auto text-slate-400">Tous les agents enregistrés disposent de fiches actives ou validées.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto animate-fade-in">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-450 font-mono text-[9px] uppercase tracking-wider font-extrabold">
+                      <th className="py-3.5 px-5">Agent de mine</th>
+                      <th className="py-3.5 px-5">Email</th>
+                      <th className="py-3.5 px-5">Rôle demandé (Habilitation)</th>
+                      <th className="py-3.5 px-5">Site d'affectation</th>
+                      <th className="py-3.5 px-5">Date d'inscription</th>
+                      <th className="py-3.5 px-5 text-right">Actions de direction</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-150 text-slate-700">
+                    {unapprovedUsers.map((u) => {
+                      const reqRole = u.requestedRole || u.role || "MECANICIEN";
+                      const dateStr = u.createdAt ? new Date(u.createdAt).toLocaleDateString([], {dateStyle: 'medium'}) : "Non spécifiée";
+                      return (
+                        <tr key={u.uid} className="hover:bg-slate-50/50 transition-all">
+                          {/* Name / Display Name */}
+                          <td className="py-4 px-5">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-slate-150 border border-slate-250 flex-shrink-0 flex items-center justify-center font-mono font-bold text-slate-600">
+                                {u.displayName ? u.displayName.substring(0, 2).toUpperCase() : "??"}
+                              </div>
+                              <div>
+                                <p className="font-bold text-slate-900">{u.displayName || "Sans Nom"}</p>
+                                <span className="text-[10px] font-mono text-slate-400 uppercase">UID: {u.uid.substring(0, 8)}...</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Email */}
+                          <td className="py-4 px-5 font-mono text-xs text-slate-600">
+                            {u.email}
+                          </td>
+
+                          {/* Requested Role */}
+                          <td className="py-4 px-5">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-amber-200 text-amber-700 bg-amber-50/50 text-[10px] font-bold uppercase tracking-wide">
+                              <Shield className="w-3.5 h-3.5 text-amber-600" />
+                              {ROLE_LABELS[reqRole] || reqRole}
+                            </span>
+                          </td>
+
+                          {/* Site Id */}
+                          <td className="py-4 px-5">
+                            <span className="font-bold text-slate-800 text-xs">
+                              {SITE_LABELS[u.siteId] || u.siteId || "Tous les chantiers"}
+                            </span>
+                          </td>
+
+                          {/* Created Date */}
+                          <td className="py-4 px-5 text-slate-500 text-xs">
+                            {dateStr}
+                          </td>
+
+                          {/* Actions */}
+                          <td className="py-4 px-5 text-right">
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                onClick={() => handleApproveUser(u)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] uppercase tracking-wider py-1.5 px-3.5 rounded-xl gap-1"
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                Approuver
+                              </Button>
+                              <Button
+                                onClick={() => handleRejectUser(u)}
+                                variant="outline"
+                                className="border-red-200 hover:border-red-300 hover:bg-red-50 text-red-600 font-extrabold text-[10px] uppercase tracking-wider py-1.5 px-3.5 rounded-xl gap-1"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                Rejeter
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 bg-white min-h-screen text-slate-800 font-sans p-6 rounded-2xl border border-slate-200 shadow-xl">
       {/* RECONSTRUIT : Banner avec style conservé, changement de titre exact */}
@@ -856,10 +1054,27 @@ export function Admin() {
         >
           ⚙️ INTERVALLES MAINTENANCE
         </button>
+        <button
+          onClick={() => setActiveTab("comptes")}
+          className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-xs transition-all relative ${
+            activeTab === "comptes"
+              ? "bg-amber-500 text-slate-950 shadow-md"
+              : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+          }`}
+        >
+          🔑 COMPTES EN ATTENTE
+          {unapprovedUsers.length > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-red-600 text-white font-black text-[10px] rounded-full flex items-center justify-center animate-bounce">
+              {unapprovedUsers.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {activeTab === "mecaniciens" ? (
         <AdminMecaniciens />
+      ) : activeTab === "comptes" ? (
+        renderUserApprovals()
       ) : (
         <>
           {/* RECONSTRUIT : Affichage des statistiques selon l'onglet actif */}

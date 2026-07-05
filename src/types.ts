@@ -4,8 +4,7 @@ export enum USER_ROLES {
   RESPONSABLE_MAINTENANCE = 'RESPONSABLE_MAINTENANCE',
   RESPONSABLE_CHANTIER = 'RESPONSABLE_CHANTIER',
   MECANICIEN = 'MECANICIEN',
-  SECRETAIRE = 'SECRETAIRE',
-  VIEWER = 'VIEWER'
+  SECRETAIRE = 'SECRETAIRE'
 }
 
 export type UserRole = 
@@ -14,8 +13,7 @@ export type UserRole =
   | 'RESPONSABLE_MAINTENANCE' 
   | 'RESPONSABLE_CHANTIER' 
   | 'MECANICIEN' 
-  | 'SECRETAIRE'
-  | 'VIEWER';
+  | 'SECRETAIRE';
 
 export type SiteID = 'SMI' | 'OUMEJRANE' | 'KOUDIA' | 'OUANSIMI' | 'BOU-AZZER' | 'TOUS';
 
@@ -48,6 +46,7 @@ export interface User {
   siteId: SiteID;
   speciality?: string;
   active?: boolean;
+  requestedRole?: UserRole;
 }
 
 export interface Site {
