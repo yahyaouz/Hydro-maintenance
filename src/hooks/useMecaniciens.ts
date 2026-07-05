@@ -51,6 +51,11 @@ export function useMecaniciens() {
   const { user } = useAuthStore();
 
   useEffect(() => {
+    if (!user || user.active === false) {
+      setLoading(false);
+      return;
+    }
+
     // Read from 'mecaniciens' Firestore collection in real time
     const unsubscribe = onSnapshot(collection(db, "mecaniciens"), async (snapshot) => {
       setError(null);
@@ -129,7 +134,7 @@ export function useMecaniciens() {
     });
 
     return () => unsubscribe();
-  }, [user?.role]);
+  }, [user?.role, user?.uid, user?.active]);
 
   const saveMecanicien = async (meca: Mecanicien) => {
     try {

@@ -35,7 +35,7 @@ function IndustrialSkeleton() {
 import { Admin } from "@/components/Admin";
 import { getDoc, doc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged } from "firebase/auth";
 import { ShieldAlert, LogOut, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -172,6 +172,21 @@ export default function App() {
   const [activeTab, setActiveTab] = React.useState("dashboard");
   const { isAuthenticated, user, setUser, theme, setTheme, activeSite, setActiveSite, logout } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [authInitialized, setAuthInitialized] = React.useState(false);
+
+  // Sync state between Firebase Auth and Zustand store on mount
+  React.useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setAuthInitialized(true);
+      if (!firebaseUser) {
+        // If there's no active firebase user session, ensure we clear our Zustand store
+        if (isAuthenticated) {
+          logout();
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [isAuthenticated, logout]);
 
   const handleLogout = async () => {
     try {
@@ -341,6 +356,10 @@ export default function App() {
       default: return "Hydromines GMAO";
     }
   };
+
+  if (!authInitialized) {
+    return <IndustrialSkeleton />;
+  }
 
   if (!isAuthenticated) {
     return (

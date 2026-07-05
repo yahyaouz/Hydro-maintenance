@@ -13,6 +13,7 @@ import {
   getDocFromServer
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuthStore } from '@/lib/store';
 
 export interface CollectionOptions {
   limitNum?: number;
@@ -36,8 +37,15 @@ export function useCollection<T>(
   const orderByField = options.orderByField || 'updatedAt';
   const orderByDirection = options.orderByDirection || 'desc';
 
+  const { user } = useAuthStore();
+
   // Master load query that handles query constraints and soft delete filters
   useEffect(() => {
+    if (!user || user.active === false) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     lastDocRef.current = null;
 
@@ -65,6 +73,7 @@ export function useCollection<T>(
         lastDocRef.current = snapshot.docs[snapshot.docs.length - 1] || null;
         setHasMore(snapshot.docs.length === limitCount);
         setLoading(false);
+        setError(null);
       },
       (err) => {
         console.error(`Error fetching paginated ${collectionName}:`, err);
@@ -74,7 +83,7 @@ export function useCollection<T>(
     );
 
     return () => unsubscribe();
-  }, [collectionName, JSON.stringify(filters), limitCount, orderByField, orderByDirection, options.includeDeleted]);
+  }, [collectionName, JSON.stringify(filters), limitCount, orderByField, orderByDirection, options.includeDeleted, user?.uid, user?.active]);
 
   // Cursor pagination dynamic load more for infinite history support
   const loadMore = useCallback(async () => {
