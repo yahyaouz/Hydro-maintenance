@@ -796,7 +796,8 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
 
       {/* 🔧 ADVANCED MECHANICAL DIAGNOSTICS & RELIABILITY PANEL */}
       {activeTab !== "CARNET" && (
-        <Card className="border border-slate-200 rounded-2xl shadow-sm bg-slate-50/30 overflow-hidden">
+        <Card className="relative overflow-hidden border border-[#D4AF37]/50 rounded-2xl shadow-sm bg-slate-50/30">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
           {/* Panel Header */}
           <div 
             onClick={() => setIsAnalyticsOpen(!isAnalyticsOpen)}

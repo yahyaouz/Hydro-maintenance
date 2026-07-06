@@ -202,7 +202,8 @@ export const SystematicTaskOverview: React.FC<SystematicTaskOverviewProps> = ({ 
   return (
     <div className="space-y-6" id="overview-systematic-container">
       {/* Title & Navigation Tabs */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-100 shadow-sm" id="overview-header-card">
+      <div className="relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-[#D4AF37]/50 shadow-sm" id="overview-header-card">
+        <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
         <div className="space-y-1">
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-sky-500" />
@@ -247,7 +248,7 @@ export const SystematicTaskOverview: React.FC<SystematicTaskOverviewProps> = ({ 
       {activeTab === "surveillance" ? (
         <div className="space-y-6" id="overview-surveillance-tab">
           {/* Week Selector & PDF Trigger */}
-          <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 no-print" id="surveillance-controls">
+          <div className="bg-white p-4 rounded-2xl border border-[#D4AF37]/30 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 no-print" id="surveillance-controls">
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -285,7 +286,8 @@ export const SystematicTaskOverview: React.FC<SystematicTaskOverviewProps> = ({ 
           </div>
 
           {/* Matrix table card */}
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden" id="print-surveillance-matrix">
+          <div className="relative overflow-hidden bg-white rounded-2xl border border-[#D4AF37]/50 shadow-sm" id="print-surveillance-matrix">
+            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
             <div className="p-5 border-b border-slate-100 flex items-center justify-between no-print">
               <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
                 <Users className="h-4.5 w-4.5 text-slate-400" />
@@ -415,13 +417,14 @@ export const SystematicTaskOverview: React.FC<SystematicTaskOverviewProps> = ({ 
 
           {/* KPI Dashboard cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 no-print" id="surveillance-kpi-grid">
-            <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
-              <div className="p-3 bg-sky-50 text-sky-600 rounded-lg">
+            <div className="relative overflow-hidden bg-white dark:bg-slate-950 p-5 rounded-xl border border-[#D4AF37]/50 shadow-sm flex items-center gap-4 text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+              <div className="p-3 rounded-lg bg-[#D4AF37]/10 text-[#D4AF37]">
                 <Award className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-400 uppercase">Taux d'Assiduité Moyen</p>
-                <p className="text-xl font-extrabold text-slate-800">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block uppercase">Taux d'Assiduité Moyen</p>
+                <p className="text-2xl font-black text-[#D4AF37] mt-1">
                   {(() => {
                     const scores = filteredMechanics
                       .map(m => calculateComplianceScore(m.id))
@@ -434,25 +437,27 @@ export const SystematicTaskOverview: React.FC<SystematicTaskOverviewProps> = ({ 
               </div>
             </div>
 
-            <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
-              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
+            <div className="relative overflow-hidden bg-white dark:bg-slate-950 p-5 rounded-xl border border-[#D4AF37]/50 shadow-sm flex items-center gap-4 text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+              <div className="p-3 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-400 uppercase">Tournées Validées (Semaine)</p>
-                <p className="text-xl font-extrabold text-slate-800">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block uppercase">Tournées Validées (Semaine)</p>
+                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
                   {sheets.filter(s => weekDays.map(wd => wd.dateStr).includes(s.date) && s.status === "VALIDÉ").length}
                 </p>
               </div>
             </div>
 
-            <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
-              <div className="p-3 bg-amber-50 text-amber-600 rounded-lg">
+            <div className="relative overflow-hidden bg-white dark:bg-slate-950 p-5 rounded-xl border border-[#D4AF37]/50 shadow-sm flex items-center gap-4 text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+              <div className="p-3 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
                 <AlertTriangle className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-400 uppercase">Tournées Incomplètes/Partielles</p>
-                <p className="text-xl font-extrabold text-slate-800">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block uppercase">Tournées Incomplètes/Partielles</p>
+                <p className="text-2xl font-black text-[#D4AF37] mt-1">
                   {sheets.filter(s => weekDays.map(wd => wd.dateStr).includes(s.date) && s.status === "PARTIEL").length}
                 </p>
               </div>
@@ -464,7 +469,8 @@ export const SystematicTaskOverview: React.FC<SystematicTaskOverviewProps> = ({ 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="overview-config-tab">
           {/* Left selectors and new task input */}
           <div className="space-y-4">
-            <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-4" id="config-params-card">
+            <div className="relative overflow-hidden bg-white p-5 rounded-2xl border border-[#D4AF37]/30 shadow-sm space-y-4" id="config-params-card">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
                 <Sliders className="h-4.5 w-4.5 text-slate-500" />
                 Sélection de la Cible
@@ -502,7 +508,8 @@ export const SystematicTaskOverview: React.FC<SystematicTaskOverviewProps> = ({ 
             </div>
 
             {/* Add custom task card */}
-            <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-4" id="config-add-task-card">
+            <div className="relative overflow-hidden bg-white p-5 rounded-2xl border border-[#D4AF37]/30 shadow-sm space-y-4" id="config-add-task-card">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
                 <Plus className="h-4.5 w-4.5 text-slate-500" />
                 Ajouter une tâche personnalisée
@@ -553,7 +560,8 @@ export const SystematicTaskOverview: React.FC<SystematicTaskOverviewProps> = ({ 
 
           {/* Right listing and reordering tasks */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm space-y-4" id="config-tasks-list-card">
+            <div className="relative overflow-hidden bg-white p-6 rounded-2xl border border-[#D4AF37]/50 shadow-sm space-y-4" id="config-tasks-list-card">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="space-y-0.5">
                   <h3 className="text-sm font-bold text-slate-800">

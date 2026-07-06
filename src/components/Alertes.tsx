@@ -48,7 +48,7 @@ export function Alertes() {
   });
 
   const { data: engins, loading: enginsLoading } = useCollection<any>('engins');
-  const { data: pmIntervalles, loading: pmIntervallesLoading } = useCollection<any>('config/intervalles');
+  const { data: pmIntervalles, loading: pmIntervallesLoading } = useCollection<any>('pmIntervalles');
   const { data: pannes, loading: pannesLoading } = useCollection<any>('pannes');
   const { data: pieces, loading: piecesLoading } = useCollection<any>('pieces');
   const { data: tasks, loading: tasksLoading } = useCollection<any>('maintenanceTasks');
@@ -508,68 +508,73 @@ export function Alertes() {
 
       {/* KPI Dashboard Highlights */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="bg-white border border-gray-100 hover:shadow-md transition-all rounded-[14px]">
-          <CardContent className="p-4 flex items-center justify-between">
+        <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-xl shadow-sm text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+          <CardContent className="p-4 pt-5 flex items-center justify-between">
             <div>
               {/* V4-TYPO: replaced text-[10px] and font-mono with text-caption and font-sans */}
-              <p className="text-caption font-sans text-slate-400 uppercase tracking-wider font-extrabold">Active Alerts</p>
-              <h3 className="text-2xl font-black text-slate-800 mt-1">{counts.active}</h3>
+              <p className="text-caption font-sans text-slate-500 dark:text-slate-400 uppercase tracking-wider font-extrabold">Active Alerts</p>
+              <h3 className="text-2xl font-black text-[#D4AF37] mt-1">{counts.active}</h3>
             </div>
-            <div className="p-2.5 rounded-xl bg-yellow-50 text-yellow-600">
+            <div className="p-2.5 rounded-xl bg-[#D4AF37]/10 text-[#D4AF37]">
               <AlertOctagon className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border border-gray-100 hover:shadow-md transition-all rounded-[14px]">
-          <CardContent className="p-4 flex items-center justify-between">
+        <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-xl shadow-sm text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+          <CardContent className="p-4 pt-5 flex items-center justify-between">
             <div>
               {/* V4-TYPO: replaced text-[10px] and font-mono with text-caption and font-sans */}
-              <p className="text-caption font-sans text-slate-400 uppercase tracking-wider font-extrabold">Risques Critiques</p>
-              <h3 className={cn("text-2xl font-black mt-1", counts.critical > 0 ? "text-rose-600 animate-pulse" : "text-slate-800")}>
+              <p className="text-caption font-sans text-slate-500 dark:text-slate-400 uppercase tracking-wider font-extrabold">Risques Critiques</p>
+              <h3 className={cn("text-2xl font-black mt-1 animate-pulse text-red-600 dark:text-red-400", counts.critical > 0 ? "" : "text-[#D4AF37]")}>
                 {counts.critical}
               </h3>
             </div>
-            <div className={cn("p-2.5 rounded-xl", counts.critical > 0 ? "bg-rose-50 text-rose-600 animate-bounce" : "bg-slate-50 text-slate-400")}>
+            <div className={cn("p-2.5 rounded-xl", counts.critical > 0 ? "bg-red-500/10 text-red-600 dark:text-red-400 animate-bounce" : "bg-slate-100 dark:bg-slate-900 text-slate-400")}>
               <ShieldAlert className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border border-gray-100 hover:shadow-md transition-all rounded-[14px]">
-          <CardContent className="p-4 flex items-center justify-between">
+        <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-xl shadow-sm text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+          <CardContent className="p-4 pt-5 flex items-center justify-between">
             <div>
               {/* V4-TYPO: replaced text-[10px] and font-mono with text-caption and font-sans */}
-              <p className="text-caption font-sans text-slate-400 uppercase tracking-wider font-extrabold">Alertes Acquittées</p>
-              <h3 className="text-2xl font-black text-slate-800 mt-1">{counts.vue}</h3>
+              <p className="text-caption font-sans text-slate-500 dark:text-slate-400 uppercase tracking-wider font-extrabold">Alertes Acquittées</p>
+              <h3 className="text-2xl font-black text-[#D4AF37] mt-1">{counts.vue}</h3>
             </div>
-            <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
+            <div className="p-2.5 rounded-xl bg-[#D4AF37]/10 text-[#D4AF37]">
               <Eye className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border border-gray-100 hover:shadow-md transition-all rounded-[14px]">
-          <CardContent className="p-4 flex items-center justify-between">
+        <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-xl shadow-sm text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+          <CardContent className="p-4 pt-5 flex items-center justify-between">
             <div>
               {/* V4-TYPO: replaced text-[10px] and font-mono with text-caption and font-sans */}
-              <p className="text-caption font-sans text-slate-400 uppercase tracking-wider font-extrabold">Alertes Traitées</p>
-              <h3 className="text-2xl font-black text-slate-800 mt-1">{counts.traitee}</h3>
+              <p className="text-caption font-sans text-slate-500 dark:text-slate-400 uppercase tracking-wider font-extrabold">Alertes Traitées</p>
+              <h3 className="text-2xl font-black text-[#D4AF37] mt-1">{counts.traitee}</h3>
             </div>
-            <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600">
+            <div className="p-2.5 rounded-xl bg-[#D4AF37]/10 text-[#D4AF37]">
               <CheckCircle2 className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border border-gray-100 hover:shadow-md transition-all rounded-[14px]">
-          <CardContent className="p-4 flex items-center justify-between">
+        <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-xl shadow-sm text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+          <CardContent className="p-4 pt-5 flex items-center justify-between">
             <div>
               {/* V4-TYPO: replaced text-[10px] and font-mono with text-caption and font-sans */}
-              <p className="text-caption font-sans text-slate-400 uppercase tracking-wider font-extrabold">Historique Archivé</p>
-              <h3 className="text-2xl font-black text-slate-800 mt-1">{counts.archivee}</h3>
+              <p className="text-caption font-sans text-slate-500 dark:text-slate-400 uppercase tracking-wider font-extrabold">Historique Archivé</p>
+              <h3 className="text-2xl font-black text-[#D4AF37] mt-1">{counts.archivee}</h3>
             </div>
-            <div className="p-2.5 rounded-xl bg-slate-50 text-slate-600">
+            <div className="p-2.5 rounded-xl bg-[#D4AF37]/10 text-[#D4AF37]">
               <Inbox className="h-5 w-5" />
             </div>
           </CardContent>
@@ -577,7 +582,8 @@ export function Alertes() {
       </div>
 
       {/* Filters Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-100">
+      <div className="relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-[#D4AF37]/30 shadow-sm">
+        <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
         {/* Navigation Categories Tab */}
         <div className="flex flex-wrap gap-1.5 bg-slate-50 p-1 rounded-lg">
           {(['ACTIVE', 'VUE', 'TRAITEE', 'ARCHIVEE', 'ALL'] as const).map((filter) => {
@@ -827,7 +833,8 @@ export function Alertes() {
       </div>
 
       {/* Rules and Limits Reference Panel */}
-      <Card className="bg-white border border-gray-150 rounded-[14px] mt-6">
+      <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl shadow-md mt-6">
+        <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
         <CardHeader className="p-4 pb-2 border-b border-slate-50 bg-slate-50/50">
           <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-700 flex items-center gap-1.5">
             <Shield className="h-4 w-4 text-amber-500" /> Guide de Configuration des Seuils Métier

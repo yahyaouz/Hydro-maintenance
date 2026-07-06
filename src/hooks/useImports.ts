@@ -402,7 +402,7 @@ export function useImports() {
 
           // Correction 1 & 2: Update/create basic user profile in the "users" collection (Correction 1)
           // Mise à jour basique du profil (nom, téléphone, email, site).
-          // Le profil COMPLET (matricule, compétences, visas, date d'embauche, etc.)
+          // Le profil COMPLET (matricule, compétences, date d'embauche, etc.)
           // sera enrichi dans l'ÉTAPE 7 (Configuration Système — Analyse approfondie).
           if (matchedMec) {
             const mecRef = doc(db, "users", matchedMec.id);

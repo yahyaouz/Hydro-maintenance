@@ -77,7 +77,7 @@ export default function TachesPlanning() {
     orderByField: 'datePlanifiee', 
     orderByDirection: 'desc' 
   });
-  const { data: pmIntervalles, loading: pmIntervallesLoading } = useCollection<PmIntervalle>('config/intervalles');
+  const { data: pmIntervalles, loading: pmIntervallesLoading } = useCollection<PmIntervalle>('pmIntervalles');
   const { data: pannes, loading: pannesLoading } = useCollection<any>('pannes');
 
   // Dynamically derive mechanics from users collection where role is MECANICIEN
@@ -733,27 +733,28 @@ export default function TachesPlanning() {
             
             {/* Summary Progress Card */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="bg-slate-900 text-white border-none shadow-sm md:col-span-3">
-                <CardContent className="p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+              <Card className="relative overflow-hidden bg-white dark:bg-slate-950 text-slate-900 dark:text-white border border-[#D4AF37]/50 shadow-sm md:col-span-3 transition-all duration-300">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+                <CardContent className="p-5 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
                   <div className="space-y-1 text-center md:text-left">
-                    <span className="text-[10px] font-bold uppercase text-amber-500 tracking-wider">Avancement du shift</span>
-                    <h3 className="text-xl font-black uppercase">{progressionRate}% Terminé</h3>
-                    <p className="text-xs text-slate-300 font-medium">
+                    <span className="text-[10px] font-bold uppercase text-[#D4AF37] tracking-wider">Avancement du shift</span>
+                    <h3 className="text-xl font-black uppercase text-slate-900 dark:text-white">{progressionRate}% Terminé</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                       {tasksFait} fiches validées / réalisées sur un total de {tasksTotal} tâches affectées
                     </p>
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="text-center">
-                      <span className="text-2xl font-black text-amber-500">{tasksTotal}</span>
+                      <span className="text-2xl font-black text-[#D4AF37]">{tasksTotal}</span>
                       <p className="text-[9px] font-bold text-slate-400 uppercase">Fiches affectées</p>
                     </div>
                     <div className="text-center">
-                      <span className="text-2xl font-black text-emerald-400">{tasksFait}</span>
+                      <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{tasksFait}</span>
                       {/* V4-TYPO: replaced text-[9px] with text-caption and font-sans */}
                       <p className="text-caption font-sans font-bold text-slate-400 uppercase">Réalisées</p>
                     </div>
                     <div className="text-center">
-                      <span className="text-2xl font-black text-blue-400">{getCumulativeDuration(visibleTasks)}</span>
+                      <span className="text-2xl font-black text-sky-600 dark:text-sky-400">{getCumulativeDuration(visibleTasks)}</span>
                       {/* V4-TYPO: replaced text-[9px] with text-caption and font-sans */}
                       <p className="text-caption font-sans font-bold text-slate-400 uppercase">Charge estimée</p>
                     </div>
@@ -773,8 +774,9 @@ export default function TachesPlanning() {
             </div>
 
             {/* V4-HEURES-IMPORT: Section des Heures de Marche des Engins en lecture seule */}
-            <Card className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
-              <div className="bg-slate-50 border-b border-slate-100 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl shadow-sm">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+              <div className="bg-slate-50/50 border-b border-slate-100 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="space-y-0.5">
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
                     <Truck className="h-4 w-4 text-slate-500" /> Heures de Marche des Engins
@@ -851,8 +853,9 @@ export default function TachesPlanning() {
             </Card>
 
             {/* Filters Bar */}
-            <Card className="bg-white border border-slate-200">
-              <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 items-end">
+            <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl shadow-sm">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+              <CardContent className="p-4 pt-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 items-end">
                 <div className="space-y-1">
                   {/* V4-TYPO: replaced text-[10px] with text-caption and font-sans */}
                   <label className="text-caption font-sans font-bold text-slate-400 uppercase flex items-center gap-1">
@@ -1029,15 +1032,16 @@ export default function TachesPlanning() {
           <div className="space-y-4">
             
             {/* Intel PM Forecast Card */}
-            <Card className="bg-slate-900 text-white border-none shadow-sm overflow-hidden">
-              <CardContent className="p-5 flex flex-col md:flex-row items-center justify-between gap-5">
+            <Card className="relative overflow-hidden bg-white dark:bg-slate-950 text-slate-900 dark:text-white border border-[#D4AF37]/50 shadow-sm rounded-2xl">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+              <CardContent className="p-5 pt-6 flex flex-col md:flex-row items-center justify-between gap-5">
                 <div className="space-y-1 max-w-lg text-center md:text-left">
                   {/* V4-TYPO: replaced text-[10px] with text-caption */}
-                  <span className="text-caption font-bold uppercase text-amber-500 tracking-wider flex items-center justify-center md:justify-start gap-1">
+                  <span className="text-caption font-bold uppercase text-[#D4AF37] tracking-wider flex items-center justify-center md:justify-start gap-1">
                     <Zap className="h-3.5 w-3.5" /> Algo de Prévision Intelligente
                   </span>
-                  <h3 className="text-sm font-black uppercase">🔥 Prochaines Fiches PM (Échéances &lt; 100 Heures)</h3>
-                  <p className="text-xs text-slate-300 font-medium">
+                  <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white">🔥 Prochaines Fiches PM (Échéances &lt; 100 Heures)</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                     Calcul en direct basé sur les heures de marche réelles des engins et l'historique des derniers préventifs validés sur Firestore
                   </p>
                 </div>
@@ -1045,18 +1049,18 @@ export default function TachesPlanning() {
                   {prochainesEcheances.map((ech, idx) => (
                     <div
                       key={idx}
-                      className="bg-slate-800 border border-slate-700/80 p-3 rounded-2xl flex flex-col gap-1 min-w-[160px]"
+                      className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl flex flex-col gap-1 min-w-[160px]"
                     >
                       {/* V4-TYPO: replaced text-[10px] and text-[9px] with text-caption/text-tech */}
-                      <span className="text-caption font-black uppercase text-amber-400">{ech.enginId}</span>
-                      <p className="text-caption text-white font-black truncate">{ech.operation}</p>
-                      <span className="text-tech font-bold text-rose-400 mt-1">
-                        Dû dans <strong className="text-white">{Math.round(ech.remainingHours)}h</strong>
+                      <span className="text-caption font-black uppercase text-[#D4AF37]">{ech.enginId}</span>
+                      <p className="text-caption text-slate-850 dark:text-slate-100 font-black truncate">{ech.operation}</p>
+                      <span className="text-tech font-bold text-rose-600 dark:text-rose-400 mt-1">
+                        Dû dans <strong className="text-slate-900 dark:text-white">{Math.round(ech.remainingHours)}h</strong>
                       </span>
                     </div>
                   ))}
                   {prochainesEcheances.length === 0 && (
-                    <div className="text-slate-400 text-xs font-bold py-2 px-4 bg-slate-800/50 rounded-2xl">
+                    <div className="text-slate-400 text-xs font-bold py-2 px-4 bg-slate-50 dark:bg-slate-900 rounded-2xl">
                       Aucune PM critique immédiate (&lt; 100h)
                     </div>
                   )}
@@ -1080,7 +1084,8 @@ export default function TachesPlanning() {
             </div>
 
             {/* Grid Calendar */}
-            <Card className="bg-white border border-slate-200 overflow-hidden">
+            <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 shadow-md rounded-2xl">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-xs min-w-[900px]">
                   <thead>
@@ -1150,61 +1155,66 @@ export default function TachesPlanning() {
             
             {/* Gamification Counters */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="bg-white border border-slate-200 shadow-xs">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="h-10 w-10 bg-indigo-50 border border-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+              <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-xl shadow-sm text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+                <CardContent className="p-4 pt-5 flex items-center gap-4">
+                  <div className="p-2.5 rounded-xl bg-indigo-550/10 text-indigo-600 dark:text-indigo-400">
                     <TrendingUp className="h-5 w-5" />
                   </div>
                   <div>
                     {/* V4-TYPO: replaced text-[9px] with text-caption */}
-                    <span className="text-caption font-bold text-slate-400 uppercase">Taux de Shift</span>
-                    <h3 className="text-lg font-black text-slate-800">{kpis.perfGlobale}%</h3>
+                    <span className="text-caption font-bold text-slate-500 dark:text-slate-400 uppercase">Taux de Shift</span>
+                    <h3 className="text-lg font-black text-[#D4AF37]">{kpis.perfGlobale}%</h3>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-white border border-slate-200 shadow-xs">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="h-10 w-10 bg-amber-50 border border-amber-100 rounded-full flex items-center justify-center text-amber-500 animate-bounce">
+              <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-xl shadow-sm text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+                <CardContent className="p-4 pt-5 flex items-center gap-4">
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 animate-bounce">
                     <Star className="h-5 w-5" />
                   </div>
                   <div>
                     {/* V4-TYPO: replaced text-[9px] with text-caption */}
-                    <span className="text-caption font-bold text-slate-400 uppercase">Prophète du Mois</span>
-                    <h3 className="text-sm font-black text-slate-800 truncate">{kpis.topNom}</h3>
+                    <span className="text-caption font-bold text-slate-500 dark:text-slate-400 uppercase">Prophète du Mois</span>
+                    <h3 className="text-sm font-black text-slate-800 dark:text-white truncate">{kpis.topNom}</h3>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-white border border-slate-200 shadow-xs">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="h-10 w-10 bg-emerald-50 border border-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+              <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-xl shadow-sm text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+                <CardContent className="p-4 pt-5 flex items-center gap-4">
+                  <div className="p-2.5 rounded-xl bg-emerald-550/10 text-emerald-600 dark:text-emerald-400">
                     <Award className="h-5 w-5" />
                   </div>
                   <div>
                     {/* V4-TYPO: replaced text-[9px] with text-caption */}
-                    <span className="text-caption font-bold text-slate-400 uppercase">Score Moyen d'exécution</span>
-                    <h3 className="text-lg font-black text-slate-800">{kpis.topRate}%</h3>
+                    <span className="text-caption font-bold text-slate-500 dark:text-slate-400 uppercase">Score Moyen d'exécution</span>
+                    <h3 className="text-lg font-black text-[#D4AF37]">{kpis.topRate}%</h3>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-white border border-slate-200 shadow-xs">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="h-10 w-10 bg-slate-900 border border-slate-800 rounded-full flex items-center justify-center text-amber-500">
+              <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-xl shadow-sm text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+                <CardContent className="p-4 pt-5 flex items-center gap-4">
+                  <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                     <Zap className="h-5 w-5" />
                   </div>
                   <div>
                     {/* V4-TYPO: replaced text-[9px] with text-caption */}
-                    <span className="text-caption font-bold text-slate-400 uppercase">Ratio Préventif / Correctif</span>
-                    <h3 className="text-lg font-black text-slate-800">{kpis.prevPercent}% / {100 - kpis.prevPercent}%</h3>
+                    <span className="text-caption font-bold text-slate-500 dark:text-slate-400 uppercase">Ratio Préventif / Correctif</span>
+                    <h3 className="text-lg font-black text-[#D4AF37]">{kpis.prevPercent}% / {100 - kpis.prevPercent}%</h3>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
             {/* Leaderboard Table */}
-            <Card className="bg-white border border-slate-200 overflow-hidden rounded-3xl shadow-sm">
+            <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl shadow-sm">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <CardHeader className="p-5 border-b border-slate-100 bg-slate-50/50">
                 <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-600">
                   🏆 Classement des Mécaniciens — Efficacité Mensuelle
@@ -1231,7 +1241,7 @@ export default function TachesPlanning() {
                         </td>
                         <td className="p-4 font-black text-slate-800 flex items-center gap-2">
                           {/* V4-TYPO: replaced text-[9px] with text-tech */}
-                          <div className="h-7 w-7 bg-slate-900 rounded-full flex items-center justify-center text-white font-black text-tech">
+                          <div className="h-7 w-7 bg-slate-100 dark:bg-slate-800 border border-[#D4AF37]/40 rounded-full flex items-center justify-center text-slate-700 dark:text-slate-300 font-black text-tech">
                             {stat.meca.nomComplet.substring(0, 2)}
                           </div>
                           <div>
@@ -1247,7 +1257,7 @@ export default function TachesPlanning() {
                           <div className="flex items-center justify-center gap-1.5">
                             <span className="font-black text-slate-800">{stat.rate}%</span>
                             <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-slate-900" style={{ width: `${stat.rate}%` }} />
+                              <div className="h-full bg-[#D4AF37]" style={{ width: `${stat.rate}%` }} />
                             </div>
                           </div>
                         </td>
@@ -1262,7 +1272,7 @@ export default function TachesPlanning() {
                         <td className="p-4">
                           <div className="flex gap-1.5">
                             {stat.badges.map((badge, bidx) => (
-                              <span key={bidx} className="bg-slate-900 text-amber-400 border border-slate-800 font-bold px-2 py-0.5 rounded-xl text-caption">
+                              <span key={bidx} className="bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/30 font-bold px-2 py-0.5 rounded-xl text-caption">
                                 {badge}
                               </span>
                             ))}

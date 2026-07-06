@@ -633,16 +633,17 @@ export default function Checklists() {
 
       {/* ZONE PRINCIPALE DE SAISIE */}
       {activeTab !== "historique" && !viewingSubmission && (
-        <Card className="border-slate-200 shadow-lg rounded-2xl max-w-4xl bg-white overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <Card className="relative overflow-hidden border border-[#D4AF37]/50 shadow-lg rounded-2xl max-w-4xl bg-white animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
           
           {/* Header Formulaire */}
-          <div className="bg-slate-900 text-white p-6 border-b border-slate-800">
+          <div className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white p-6 pt-7 border-b border-slate-100 dark:border-slate-800">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
-                <span className="text-amber-400 text-xs font-black uppercase tracking-widest block mb-1">
+                <span className="text-[#D4AF37] text-xs font-black uppercase tracking-widest block mb-1">
                   SAISIE INSPECTION GMAO
                 </span>
-                <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
+                <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-2 text-slate-900 dark:text-white">
                   {activeTab === "conducteur" && "🚗 FICHE CONDUITE AVANT DÉMARRAGE (< 2 Min)"}
                   {activeTab === "maintenance" && "🔧 FICHE MAINTENANCE PRÉVENTIVE (< 5 Min)"}
                   {activeTab === "securite" && "🛡️ INSPECTION MENSUELLE DES ÉQUIPEMENTS DE SÉCURITÉ"}
@@ -659,7 +660,7 @@ export default function Checklists() {
             </div>
 
             {/* Formulaire Header Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-800 text-slate-300">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300">
               
               {/* SÉLECTION ENGIN */}
               <div className="space-y-1.5">
@@ -667,11 +668,11 @@ export default function Checklists() {
                 <select
                   value={selectedEngin}
                   onChange={(e) => setSelectedEngin(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
                 >
                   <option value="">Sélectionner l'engin</option>
                   {engins.length === 0 ? (
-                    <option value="" disabled>Aucun engin disponible — Configurez Admin d'abord</option>
+                     <option value="" disabled>Aucun engin disponible — Configurez Admin d'abord</option>
                   ) : (
                     engins.map(e => (
                       <option key={e.id} value={e.id}>
@@ -681,7 +682,7 @@ export default function Checklists() {
                   )}
                 </select>
                 {selectedEnginData && (
-                  <p className="text-[10px] text-amber-400 font-bold mt-1">
+                  <p className="text-[10px] text-[#D4AF37] font-bold mt-1">
                     📍 Site : {selectedEnginData.siteId}
                   </p>
                 )}
@@ -695,7 +696,7 @@ export default function Checklists() {
                 <select
                   value={selectedSignataire}
                   onChange={(e) => setSelectedSignataire(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
                 >
                   {mecaniciens.length === 0 ? (
                     <option value="" disabled>Aucun mécanicien disponible</option>
@@ -711,13 +712,13 @@ export default function Checklists() {
               {/* SI NOM MANUEL */}
               {selectedSignataire === "Autre" && (
                 <div className="space-y-1.5 sm:col-span-2 md:col-span-1">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-rose-400 block">Préciser le Nom Complet</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-rose-600 block">Préciser le Nom Complet</label>
                   <input
                     type="text"
                     value={customSignataire}
                     onChange={(e) => setCustomSignataire(e.target.value)}
                     placeholder="Prénom Nom"
-                    className="w-full h-10 px-3 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-xs font-bold placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
                   />
                 </div>
               )}
@@ -728,7 +729,7 @@ export default function Checklists() {
                 <select
                   value={selectedPoste}
                   onChange={(e) => setSelectedPoste(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
                 >
                   <option value="Poste 1">Poste 1 (Shift Matin)</option>
                   <option value="Poste 2">Poste 2 (Shift Après-midi)</option>
@@ -744,7 +745,7 @@ export default function Checklists() {
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full h-10 px-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    className="w-full h-10 px-2 bg-slate-50 dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
                   />
                 </div>
                 <div className="w-20">
@@ -753,7 +754,7 @@ export default function Checklists() {
                     type="text"
                     value={selectedHeure}
                     onChange={(e) => setSelectedHeure(e.target.value)}
-                    className="w-full h-10 px-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold text-center focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    className="w-full h-10 px-2 bg-slate-50 dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-xs font-bold text-center focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
                   />
                 </div>
               </div>
@@ -862,7 +863,8 @@ export default function Checklists() {
 
       {/* HISTORIQUE ET CONSULTATION */}
       {activeTab === "historique" && !viewingSubmission && (
-        <Card className="border-slate-200 shadow-md rounded-2xl bg-white max-w-5xl overflow-hidden animate-in fade-in duration-150">
+        <Card className="relative overflow-hidden border border-[#D4AF37]/50 shadow-md rounded-2xl bg-white max-w-5xl animate-in fade-in duration-150">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
           <CardHeader className="border-b border-slate-100 bg-slate-50 py-4 px-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
@@ -1031,7 +1033,8 @@ export default function Checklists() {
           </div>
 
           {/* FICHE D'INSPECTION IMPRIMABLE */}
-          <div className="bg-white border border-slate-200 shadow-2xl rounded-3xl p-8 print:border-none print:shadow-none print:p-0 print:m-0 animate-in fade-in duration-200 relative">
+          <div className="relative overflow-hidden bg-white border border-[#D4AF37]/50 shadow-2xl rounded-3xl p-8 print:border-none print:shadow-none print:p-0 print:m-0 animate-in fade-in duration-200">
+            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B] print:hidden" />
             
             {/* Filigrane discret d'authenticité Hydromines */}
             <div className="absolute right-8 top-32 text-[10px] font-mono text-slate-300 font-bold select-none uppercase tracking-widest text-right print:hidden">

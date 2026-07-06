@@ -70,23 +70,9 @@ export interface Mechanic {
   qualityRate: number;
 }
 
-export interface VisaStatus {
-  active: boolean;
-  dateExpiration: string | null;
-}
-
-export interface Visas {
-  LOTO: VisaStatus;
-  HAUTEUR: VisaStatus;
-  CONFINE: VisaStatus;
-  ELECTRIQUE_HV: VisaStatus;
-  CHARGEUR: VisaStatus;
-}
-
 export interface Documents {
   contrat?: string;
   diplome?: string;
-  visaMedical?: string;
   attestationFormation?: string;
   caces?: string;
 }
@@ -120,17 +106,11 @@ export interface Mecanicien {
   adresse?: string;
   dateNaissance?: string;
   dateEmbauche: string;
-  visas?: Visas;
   documents?: Documents;
   stats: MecanicienStats;
   active: boolean;
   source: "MOCK_SPRINT4" | "PRODUCTION_IMPORT" | "ADMIN_CREATION";
   updatedAt?: string;
-  
-  // Backwards compatibility toggles
-  visaLOTO?: boolean;
-  visaHauteur?: boolean;
-  visaConfine?: boolean;
 }
 
 export interface Intervention {

@@ -64,7 +64,8 @@ export function ReferentielTechnique() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         
         {/* Left Column: Engins Selector (4 cols) */}
-        <div className="lg:col-span-4 bg-white border-2 border-slate-100 rounded-2xl p-5 shadow-xs flex flex-col gap-4">
+        <div className="relative overflow-hidden lg:col-span-4 bg-white border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
             <Truck className="h-5 w-5 text-amber-500" />
             <h2 className="text-sm font-black uppercase tracking-wider text-slate-800">
@@ -118,7 +119,8 @@ export function ReferentielTechnique() {
         </div>
 
         {/* Right Column: Technical Details (8 cols) */}
-        <div className="lg:col-span-8 bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-xs flex flex-col gap-6">
+        <div className="relative overflow-hidden lg:col-span-8 bg-white border border-[#D4AF37]/50 rounded-2xl p-6 shadow-sm flex flex-col gap-6">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
           <div className="flex items-center gap-2 pb-2.5 border-b border-slate-100">
             <BookOpen className="h-5 w-5 text-amber-500" />
             <h2 className="text-sm font-black uppercase tracking-wider text-slate-800">
@@ -201,7 +203,8 @@ export function ReferentielTechnique() {
                 </h4>
                 
                 {selectedEngin.specs ? (
-                  <div className="border-2 border-slate-100 rounded-xl overflow-hidden bg-white">
+                  <div className="relative overflow-hidden border border-[#D4AF37]/30 rounded-2xl bg-white shadow-sm">
+                    <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="bg-slate-50 border-b-2 border-slate-100">

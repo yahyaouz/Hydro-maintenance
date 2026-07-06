@@ -300,7 +300,8 @@ export function ImportConfig() {
           <div className="lg:col-span-2 space-y-6">
             
             {/* CARD 1: Espace Magasinier */}
-            <Card className="border-slate-200 shadow-xs overflow-hidden">
+            <Card className="relative overflow-hidden border border-[#D4AF37]/50 rounded-2xl shadow-sm bg-white">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <CardHeader className="bg-slate-50 p-4 border-b border-slate-200">
                 <div className="flex justify-between items-start">
                   <div>
@@ -381,7 +382,8 @@ export function ImportConfig() {
             </Card>
 
             {/* CARD 2: Carburants & Lubrifiants */}
-            <Card className="border-slate-200 shadow-xs overflow-hidden">
+            <Card className="relative overflow-hidden border border-[#D4AF37]/50 rounded-2xl shadow-sm bg-white">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <CardHeader className="bg-slate-50 p-4 border-b border-slate-200">
                 <div className="flex justify-between items-start">
                   <div>
@@ -461,7 +463,8 @@ export function ImportConfig() {
             </Card>
 
             {/* CARD 3: Plateforme Production - Planification */}
-            <Card className="border-slate-200 shadow-xs overflow-hidden">
+            <Card className="relative overflow-hidden border border-[#D4AF37]/50 rounded-2xl shadow-sm bg-white">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <CardHeader className="bg-slate-50 p-4 border-b border-slate-200">
                 <div className="flex justify-between items-start">
                   <div>
@@ -541,7 +544,8 @@ export function ImportConfig() {
             </Card>
 
             {/* CARD 4: Plateforme Production - Réalisation */}
-            <Card className="border-slate-200 shadow-xs overflow-hidden">
+            <Card className="relative overflow-hidden border border-[#D4AF37]/50 rounded-2xl shadow-sm bg-white">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <CardHeader className="bg-slate-50 p-4 border-b border-slate-200">
                 <div className="flex justify-between items-start">
                   <div>
@@ -625,7 +629,8 @@ export function ImportConfig() {
           {/* Right Sidebar - Active Report Feedback */}
           <div className="space-y-6">
             
-            <Card className="border-slate-200 shadow-xs">
+            <Card className="relative overflow-hidden border border-[#D4AF37]/50 rounded-2xl shadow-sm bg-white">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <CardHeader className="p-4 bg-slate-50 border-b border-slate-200">
                 <CardTitle className="text-xs font-black uppercase text-slate-800 flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-500" /> Rapport d'Importation en Direct
@@ -714,7 +719,8 @@ export function ImportConfig() {
       )}
 
       {activeTab === "history" && (
-        <Card className="border-slate-200 shadow-xs">
+        <Card className="relative overflow-hidden border border-[#D4AF37]/50 rounded-2xl shadow-sm bg-white">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
           <CardHeader className="bg-slate-50 p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
               <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">

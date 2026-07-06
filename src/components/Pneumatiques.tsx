@@ -254,45 +254,49 @@ export function Pneumatiques() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-950 p-4 rounded-xl border border-slate-100 dark:border-slate-900 shadow-xs flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-amber-500/10 text-amber-600">
+        <div className="relative overflow-hidden bg-white dark:bg-slate-950 p-4 pt-5 rounded-2xl border border-[#D4AF37]/50 shadow-sm flex items-center gap-4 text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+          <div className="p-3 rounded-lg bg-[#D4AF37]/10 text-[#D4AF37]">
             <Truck className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] text-slate-400 font-mono block uppercase">Remplacements Enregistrés</span>
-            <span className="text-2xl font-black text-slate-900 dark:text-white">{kpis.totalCount}</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block uppercase">Remplacements Enregistrés</span>
+            <span className="text-2xl font-black text-[#D4AF37]">{kpis.totalCount}</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-950 p-4 rounded-xl border border-slate-100 dark:border-slate-900 shadow-xs flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-emerald-500/10 text-emerald-600">
+        <div className="relative overflow-hidden bg-white dark:bg-slate-950 p-4 pt-5 rounded-2xl border border-[#D4AF37]/50 shadow-sm flex items-center gap-4 text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+          <div className="p-3 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
             <DollarSign className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] text-slate-400 font-mono block uppercase">Coût d'Investissement</span>
-            <span className="text-2xl font-black text-slate-900 dark:text-white">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block uppercase">Coût d'Investissement</span>
+            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
               {kpis.totalCost.toLocaleString()} DH
             </span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-950 p-4 rounded-xl border border-slate-100 dark:border-slate-900 shadow-xs flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-blue-500/10 text-blue-600">
+        <div className="relative overflow-hidden bg-white dark:bg-slate-950 p-4 pt-5 rounded-2xl border border-[#D4AF37]/50 shadow-sm flex items-center gap-4 text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+          <div className="p-3 rounded-lg bg-[#D4AF37]/10 text-[#D4AF37]">
             <Activity className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] text-slate-400 font-mono block uppercase">Durée de vie Moyenne</span>
-            <span className="text-2xl font-black text-slate-900 dark:text-white">{kpis.avgLifespan}h</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block uppercase">Durée de vie Moyenne</span>
+            <span className="text-2xl font-black text-[#D4AF37]">{kpis.avgLifespan}h</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-950 p-4 rounded-xl border border-slate-100 dark:border-slate-900 shadow-xs flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-rose-500/10 text-rose-600">
+        <div className="relative overflow-hidden bg-white dark:bg-slate-950 p-4 pt-5 rounded-2xl border border-[#D4AF37]/50 shadow-sm flex items-center gap-4 text-slate-900 dark:text-white hover:shadow-md transition-all duration-300">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+          <div className="p-3 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400">
             <AlertTriangle className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] text-slate-400 font-mono block uppercase">Accidentologie / Surchauffe</span>
-            <span className="text-2xl font-black text-slate-900 dark:text-white">{kpis.accidentalRate}%</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block uppercase">Accidentologie / Surchauffe</span>
+            <span className="text-2xl font-black text-red-600 dark:text-red-400">{kpis.accidentalRate}%</span>
           </div>
         </div>
       </div>
@@ -308,7 +312,8 @@ export function Pneumatiques() {
             className="space-y-4"
           >
             {/* Filter and Search Bar */}
-            <div className="bg-white dark:bg-slate-950 p-4 rounded-xl border border-slate-100 dark:border-slate-900 shadow-xs flex flex-col md:flex-row justify-between gap-4">
+            <div className="relative overflow-hidden bg-white dark:bg-slate-950 p-4 rounded-2xl border border-[#D4AF37]/30 shadow-sm flex flex-col md:flex-row justify-between gap-4">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <div className="flex flex-1 gap-2 max-w-lg">
                 <div className="relative flex-1">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -343,7 +348,8 @@ export function Pneumatiques() {
             </div>
 
             {/* Flat Table */}
-            <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-900 overflow-x-auto shadow-xs scroll-industrial">
+            <div className="relative overflow-hidden bg-white dark:bg-slate-950 rounded-2xl border border-[#D4AF37]/50 overflow-x-auto shadow-sm scroll-industrial">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <table className="w-full text-left border-collapse min-w-[1000px]">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-50 dark:border-slate-900/60 text-[10px] text-slate-400 font-mono uppercase">
@@ -425,7 +431,8 @@ export function Pneumatiques() {
             className="grid grid-cols-1 lg:grid-cols-2 gap-6"
           >
             {/* Chart 1: Reasons Distribution */}
-            <div className="bg-white dark:bg-slate-950 p-6 rounded-xl border border-slate-100 dark:border-slate-900 shadow-xs flex flex-col h-[380px]">
+            <div className="relative overflow-hidden bg-white dark:bg-slate-950 p-6 rounded-2xl border border-[#D4AF37]/50 shadow-sm flex flex-col h-[380px]">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-red-500" /> Distribution des Causes de Retrait
               </h3>
@@ -464,7 +471,8 @@ export function Pneumatiques() {
             </div>
 
             {/* Chart 2: Cumulative Tire Costs per Truck */}
-            <div className="bg-white dark:bg-slate-950 p-6 rounded-xl border border-slate-100 dark:border-slate-900 shadow-xs flex flex-col h-[380px]">
+            <div className="relative overflow-hidden bg-white dark:bg-slate-950 p-6 rounded-2xl border border-[#D4AF37]/50 shadow-sm flex flex-col h-[380px]">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-emerald-500" /> Investissements Pneumatiques par Engin
               </h3>
@@ -491,7 +499,8 @@ export function Pneumatiques() {
             </div>
 
             {/* Predictive Smart Alert card */}
-            <div className="lg:col-span-2 bg-amber-500/5 dark:bg-slate-900/40 p-6 rounded-xl border border-amber-500/10 dark:border-slate-900/60 space-y-3">
+            <div className="relative overflow-hidden bg-amber-500/5 dark:bg-slate-900/40 p-6 rounded-2xl border border-[#D4AF37]/40 dark:border-slate-900/60 space-y-3">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <h4 className="text-xs font-black text-amber-800 dark:text-amber-500 uppercase flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-amber-500" /> Module d'Analyse Prédictive & Durabilité SOU-GMAO
               </h4>

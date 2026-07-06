@@ -152,7 +152,8 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left pane: Fleet List */}
-        <Card className="lg:col-span-4 h-[750px] flex flex-col bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-900 shadow-sm">
+        <Card className="relative overflow-hidden lg:col-span-4 h-[750px] flex flex-col bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-2xl shadow-sm">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
           <CardHeader className="pb-3 shrink-0">
             <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
               <HeartPulse className="h-4.5 w-4.5 text-rose-500" /> List des Équipements
@@ -256,7 +257,8 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
                 const activeOrders = (workorders || []).filter(w => (w.machineCode === selectedEngin.matricule || w.enginId === selectedEngin.id) && w.status !== "CLOS" && w.status !== "RÉSOLU");
 
                 return (
-                  <Card className="bg-white dark:bg-slate-950 border-slate-150 dark:border-slate-900/60 shadow-md rounded-3xl overflow-hidden relative">
+                  <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 shadow-md rounded-2xl">
+                    <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                     <div className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-center justify-between">
                       
                       {/* Left: Metadata */}
@@ -280,17 +282,20 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
 
                         {/* Fast metrics */}
                         <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto md:mx-0">
-                          <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-900/50 p-2 rounded-xl">
-                            <span className="text-[8px] font-bold text-slate-400 uppercase block font-mono">Heures Service</span>
-                            <span className="text-xs font-black text-slate-800 dark:text-white font-mono">{selectedEngin.heures || selectedEngin.hours || 0} h</span>
+                          <div className="bg-white dark:bg-slate-900 border border-[#D4AF37]/40 p-2.5 rounded-xl shadow-xs relative overflow-hidden">
+                            <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-[#38BDF8]" />
+                            <span className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase block font-mono">Heures Service</span>
+                            <span className="text-xs font-black text-[#D4AF37] font-mono">{selectedEngin.heures || selectedEngin.hours || 0} h</span>
                           </div>
-                          <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-900/50 p-2 rounded-xl">
-                            <span className="text-[8px] font-bold text-slate-400 uppercase block font-mono">Dispo</span>
-                            <span className="text-xs font-black text-slate-800 dark:text-white font-mono">{selectedEngin.dispo !== undefined ? selectedEngin.dispo : 100}%</span>
+                          <div className="bg-white dark:bg-slate-900 border border-[#D4AF37]/40 p-2.5 rounded-xl shadow-xs relative overflow-hidden">
+                            <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-[#D4AF37]" />
+                            <span className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase block font-mono">Dispo</span>
+                            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono">{selectedEngin.dispo !== undefined ? selectedEngin.dispo : 100}%</span>
                           </div>
-                          <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-900/50 p-2 rounded-xl">
-                            <span className="text-[8px] font-bold text-slate-400 uppercase block font-mono">Anomalies</span>
-                            <span className="text-xs font-black text-rose-500 font-mono">{activePannes.length}</span>
+                          <div className="bg-white dark:bg-slate-900 border border-[#D4AF37]/40 p-2.5 rounded-xl shadow-xs relative overflow-hidden">
+                            <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-[#991B1B]" />
+                            <span className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase block font-mono">Anomalies</span>
+                            <span className="text-xs font-black text-red-600 dark:text-red-400 font-mono">{activePannes.length}</span>
                           </div>
                         </div>
                       </div>
@@ -369,7 +374,8 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
                 ];
 
                 return (
-                  <Card className="bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-900 shadow-sm">
+                  <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-2xl shadow-sm">
+                    <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
                         Diagnostic Organes & Sous-Systèmes
@@ -432,7 +438,8 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                 
                 {/* Save Diagnostics Notes */}
-                <Card className="md:col-span-6 bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-900 shadow-sm flex flex-col justify-between">
+                <Card className="relative overflow-hidden md:col-span-6 bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-2xl shadow-sm flex flex-col justify-between">
+                  <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
                       <MessageSquare className="h-4.5 w-4.5 text-sky-500" /> Observations & Notes
@@ -470,7 +477,8 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
                 </Card>
 
                 {/* active incidents logs */}
-                <Card className="md:col-span-6 bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-900 shadow-sm flex flex-col justify-between">
+                <Card className="relative overflow-hidden md:col-span-6 bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-2xl shadow-sm flex flex-col justify-between">
+                  <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
                       <Wrench className="h-4.5 w-4.5 text-amber-500" /> Anomalies & BT Actifs

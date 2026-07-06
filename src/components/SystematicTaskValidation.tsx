@@ -124,7 +124,8 @@ export const SystematicTaskValidation: React.FC<SystematicTaskValidationProps> =
   return (
     <div className="space-y-6" id="validation-systematic-container">
       {/* Filter and Overview header */}
-      <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4" id="validation-filters-card">
+      <div className="relative overflow-hidden bg-white p-5 rounded-2xl border border-[#D4AF37]/50 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4" id="validation-filters-card">
+        <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
         <div className="space-y-1">
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <ClipboardCheck className="h-5 w-5 text-sky-500" />
@@ -175,7 +176,8 @@ export const SystematicTaskValidation: React.FC<SystematicTaskValidationProps> =
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" id="validation-dashboard-grid">
           {/* Left panel: List of tourneys */}
           <div className="lg:col-span-5 space-y-4">
-            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-3">
+            <div className="relative overflow-hidden bg-white p-4 rounded-2xl border border-[#D4AF37]/30 shadow-sm space-y-3">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                 Tournées du jour ({filteredSheets.length})
               </h3>
@@ -240,7 +242,8 @@ export const SystematicTaskValidation: React.FC<SystematicTaskValidationProps> =
           {/* Right panel: Active validation view */}
           <div className="lg:col-span-7">
             {selectedSheet ? (
-              <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm space-y-6" id="validation-active-card">
+              <div className="relative overflow-hidden bg-white p-6 rounded-2xl border border-[#D4AF37]/50 shadow-sm space-y-6" id="validation-active-card">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                   <div className="space-y-1">

@@ -148,7 +148,8 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
   return (
     <div className="space-y-6" id="mechanic-systematic-container">
       {/* Filters and controls */}
-      <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4" id="mechanic-filters-card">
+      <div className="relative overflow-hidden bg-white p-5 rounded-2xl border border-[#D4AF37]/50 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4" id="mechanic-filters-card">
+        <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
         <div className="space-y-1">
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <ClipboardList className="h-5 w-5 text-sky-500" />
@@ -196,7 +197,8 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="mechanic-content-grid">
           {/* Tasks List */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm space-y-4">
+            <div className="relative overflow-hidden bg-white p-6 rounded-2xl border border-[#D4AF37]/50 shadow-sm space-y-4">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-3">
                   <div className={`px-2.5 py-1 text-xs font-semibold rounded-full flex items-center gap-1.5 ${
@@ -325,7 +327,8 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
           {/* Right sidebar with photo & saving */}
           <div className="space-y-4">
             {/* Photo upload card */}
-            <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-4" id="mechanic-photo-card">
+            <div className="relative overflow-hidden bg-white p-5 rounded-2xl border border-[#D4AF37]/30 shadow-sm space-y-4" id="mechanic-photo-card">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                 <Camera className="h-4.5 w-4.5 text-slate-500" />
                 Photo Justificative
@@ -378,7 +381,8 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
             </div>
 
             {/* Actions Card */}
-            <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-3" id="mechanic-actions-card">
+            <div className="relative overflow-hidden bg-white p-5 rounded-2xl border border-[#D4AF37]/30 shadow-sm space-y-3" id="mechanic-actions-card">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Actions de tournée</h3>
               
               <div className="space-y-2">

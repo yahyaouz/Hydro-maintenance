@@ -18,7 +18,8 @@ export const SystematicTasks: React.FC<SystematicTasksProps> = () => {
 
   if (!user) {
     return (
-      <div className="p-8 text-center text-slate-400 bg-white border border-slate-100 rounded-xl">
+      <div className="relative overflow-hidden p-8 text-center text-slate-400 bg-white border border-[#D4AF37]/50 rounded-2xl shadow-sm">
+        <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
         Veuillez vous connecter pour accéder aux tâches systématiques.
       </div>
     );
@@ -45,7 +46,8 @@ export const SystematicTasks: React.FC<SystematicTasksProps> = () => {
     <div className="space-y-6" id="systematic-tasks-root">
       {/* Role switching tab for Admins/Supervisors to inspect other screens */}
       {isSupervisor && (
-        <div className="bg-white px-5 py-3 rounded-xl border border-slate-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 no-print" id="role-override-pills">
+        <div className="relative overflow-hidden bg-white px-5 py-3 rounded-2xl border border-[#D4AF37]/50 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 no-print" id="role-override-pills">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
           <span className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1">
             <Sliders className="h-3.5 w-3.5" />
             Mode d'affichage (Simulateur Rôle) :

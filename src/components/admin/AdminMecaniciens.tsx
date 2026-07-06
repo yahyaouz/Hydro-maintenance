@@ -7,10 +7,10 @@ import {
   Sparkles, Star, Award, ShieldAlert, BookOpen, Clock, Heart, 
   Percent, File, Eye, Download, Info, Check, HelpCircle
 } from "lucide-react";
-import { useMecaniciens, DEFAULT_VISAS, DEFAULT_DOCUMENTS, DEFAULT_STATS } from "@/hooks/useMecaniciens";
+import { useMecaniciens, DEFAULT_DOCUMENTS, DEFAULT_STATS } from "@/hooks/useMecaniciens";
 import { useAuthStore } from "@/lib/store";
 import { toast } from "sonner";
-import { SiteID, Mecanicien, Visas, Documents } from "@/types";
+import { SiteID, Mecanicien, Documents } from "@/types";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +54,7 @@ export function AdminMecaniciens() {
   const [siteFilter, setSiteFilter] = React.useState<string>("TOUS");
   const [selectedMeca, setSelectedMeca] = React.useState<Mecanicien | null>(null);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [activeFormTab, setActiveFormTab] = React.useState<"infos" | "skills" | "visas" | "docs">("infos");
+  const [activeFormTab, setActiveFormTab] = React.useState<"infos" | "skills" | "docs">("infos");
 
   // Form states
   const [formUid, setFormUid] = React.useState("");
@@ -72,7 +72,6 @@ export function AdminMecaniciens() {
   const [formDateNaissance, setFormDateNaissance] = React.useState("");
   const [formDateEmbauche, setFormDateEmbauche] = React.useState("");
   const [formCompetences, setFormCompetences] = React.useState<string[]>([]);
-  const [formVisas, setFormVisas] = React.useState<Visas>(JSON.parse(JSON.stringify(DEFAULT_VISAS)));
   const [formDocuments, setFormDocuments] = React.useState<Documents>(JSON.parse(JSON.stringify(DEFAULT_DOCUMENTS)));
   const [formStats, setFormStats] = React.useState(DEFAULT_STATS);
   const [formActive, setFormActive] = React.useState(true);
@@ -109,29 +108,7 @@ export function AdminMecaniciens() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const getVisaStatus = (meca: Mecanicien) => {
-    if (!meca.visas) return { code: "neutre", label: "Aucun visa", color: "bg-slate-100 text-slate-700 border-slate-200" };
-    
-    let hasExpired = false;
-    let hasWarning = false;
-    let activeCount = 0;
 
-    Object.entries(meca.visas).forEach(([_, visa]) => {
-      if (visa.active) {
-        activeCount++;
-        const days = getDaysRemaining(visa.dateExpiration);
-        if (days !== null) {
-          if (days < 0) hasExpired = true;
-          else if (days <= 30) hasWarning = true;
-        }
-      }
-    });
-
-    if (activeCount === 0) return { code: "neutre", label: "Aucun visa", color: "bg-slate-100 text-slate-500 border-slate-200" };
-    if (hasExpired) return { code: "expire", label: "Visa Expiré", color: "bg-rose-100 text-rose-700 border-rose-200" };
-    if (hasWarning) return { code: "warning", label: "Échéance Proche", color: "bg-amber-100 text-amber-700 border-amber-200" };
-    return { code: "conforme", label: "Conforme", color: "bg-emerald-100 text-emerald-700 border-emerald-200" };
-  };
 
   // Filter mechanics
   const filteredMecaniciens = React.useMemo(() => {
@@ -168,7 +145,6 @@ export function AdminMecaniciens() {
     setFormDateNaissance("");
     setFormDateEmbauche(new Date().toISOString().split('T')[0]);
     setFormCompetences([]);
-    setFormVisas(JSON.parse(JSON.stringify(DEFAULT_VISAS)));
     setFormDocuments(JSON.parse(JSON.stringify(DEFAULT_DOCUMENTS)));
     setFormStats(DEFAULT_STATS);
     setFormActive(true);
@@ -200,7 +176,6 @@ export function AdminMecaniciens() {
     setFormDateNaissance(meca.dateNaissance || "");
     setFormDateEmbauche(meca.dateEmbauche || "");
     setFormCompetences(meca.competences || []);
-    setFormVisas(meca.visas ? JSON.parse(JSON.stringify(meca.visas)) : JSON.parse(JSON.stringify(DEFAULT_VISAS)));
     setFormDocuments(meca.documents ? JSON.parse(JSON.stringify(meca.documents)) : JSON.parse(JSON.stringify(DEFAULT_DOCUMENTS)));
     setFormStats(meca.stats || DEFAULT_STATS);
     setFormActive(meca.active !== false);
@@ -244,7 +219,6 @@ export function AdminMecaniciens() {
       adresse: formAdresse.trim(),
       dateNaissance: formDateNaissance,
       dateEmbauche: formDateEmbauche,
-      visas: formVisas,
       documents: formDocuments,
       stats: formStats,
       active: formActive,
@@ -320,29 +294,7 @@ export function AdminMecaniciens() {
     );
   };
 
-  // Visa active toggle
-  const toggleVisaActive = (visaKey: keyof Visas) => {
-    setFormVisas(prev => {
-      const copy = { ...prev };
-      copy[visaKey] = {
-        active: !copy[visaKey].active,
-        dateExpiration: !copy[visaKey].active ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null
-      };
-      return copy;
-    });
-  };
 
-  // Expiration date change
-  const handleVisaDateChange = (visaKey: keyof Visas, dateValue: string) => {
-    setFormVisas(prev => {
-      const copy = { ...prev };
-      copy[visaKey] = {
-        ...copy[visaKey],
-        dateExpiration: dateValue || null
-      };
-      return copy;
-    });
-  };
 
   return (
     <div className="space-y-6">
@@ -376,7 +328,7 @@ export function AdminMecaniciens() {
       </div>
 
       {/* Stats Quickbar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <Card className="border-slate-200 shadow-none">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-slate-100 text-slate-600">
@@ -385,48 +337,6 @@ export function AdminMecaniciens() {
             <div>
               <p className="text-[10px] uppercase font-bold text-slate-400 font-mono tracking-wider">Effectif Référentiel</p>
               <h3 className="text-xl font-black text-slate-900">{mecaniciens.length} techniciens</h3>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 shadow-none">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600">
-              <CheckCircle className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400 font-mono tracking-wider">Habilités LOTO</p>
-              <h3 className="text-xl font-black text-emerald-700">
-                {mecaniciens.filter(m => m.visas?.LOTO?.active).length} habilités
-              </h3>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 shadow-none">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-rose-50 text-rose-600">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400 font-mono tracking-wider">Alertes Visas/Habil.</p>
-              <h3 className="text-xl font-black text-rose-700">
-                {mecaniciens.filter(m => getVisaStatus(m).code === "expire").length} anomalies
-              </h3>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 shadow-none">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-amber-50 text-amber-600">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400 font-mono tracking-wider">Renouvellements Proches</p>
-              <h3 className="text-xl font-black text-amber-700">
-                {mecaniciens.filter(m => getVisaStatus(m).code === "warning").length} échéances
-              </h3>
             </div>
           </CardContent>
         </Card>
@@ -496,13 +406,11 @@ export function AdminMecaniciens() {
                     <th className="py-3 px-4">Matricule</th>
                     <th className="py-3 px-4">Site / Affectation</th>
                     <th className="py-3 px-4">Compétences clés</th>
-                    <th className="py-3 px-4">Habilitations & Visas</th>
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
                   {filteredMecaniciens.map((meca) => {
-                    const visaInfo = getVisaStatus(meca);
                     return (
                       <tr key={meca.uid} className="hover:bg-slate-50/60 transition-all">
                         {/* Identity Column */}
@@ -578,20 +486,7 @@ export function AdminMecaniciens() {
                           </div>
                         </td>
 
-                        {/* Visas security */}
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-2">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-black rounded-full border ${visaInfo.color} uppercase tracking-wider`}>
-                              <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                              {visaInfo.label}
-                            </span>
-                            <div className="flex gap-1 text-[9px] text-slate-400 font-mono">
-                              {meca.visas?.LOTO?.active && <span title="LOTO" className="font-bold text-emerald-600">LOTO</span>}
-                              {meca.visas?.CONFINE?.active && <span title="Espace Confiné" className="font-bold text-sky-600">CONF</span>}
-                              {meca.visas?.HAUTEUR?.active && <span title="Travail en Hauteur" className="font-bold text-indigo-600">HAUT</span>}
-                            </div>
-                          </div>
-                        </td>
+
 
                         {/* Actions buttons */}
                         <td className="py-3.5 px-4 text-right">
@@ -641,7 +536,7 @@ export function AdminMecaniciens() {
                   {isEditing ? `✏️ Profil de : ${formPrenom} ${formNom}` : "➕ Créer un profil de technicien de maintenance"}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500 mt-1">
-                  Tous les documents et visas sécuritaires sont archivés dans le dossier cloud du mécanicien.
+                  Tous les documents professionnels sont archivés dans le dossier cloud du mécanicien.
                 </DialogDescription>
               </div>
             </div>
@@ -675,18 +570,6 @@ export function AdminMecaniciens() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveFormTab("visas")}
-              className={`px-4 py-2 text-xs font-bold uppercase rounded-lg transition-all flex items-center gap-1.5 ${
-                activeFormTab === "visas" 
-                  ? "bg-white text-slate-900 border border-slate-200/80 shadow-xs" 
-                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-100/50"
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5 text-emerald-500" />
-              3. Visas de Sécurité
-            </button>
-            <button
-              type="button"
               onClick={() => setActiveFormTab("docs")}
               className={`px-4 py-2 text-xs font-bold uppercase rounded-lg transition-all flex items-center gap-1.5 ${
                 activeFormTab === "docs" 
@@ -695,7 +578,7 @@ export function AdminMecaniciens() {
               }`}
             >
               <FileText className="w-3.5 h-3.5 text-sky-500" />
-              4. Documents Cloud
+              3. Documents Cloud
             </button>
           </div>
 
@@ -991,89 +874,7 @@ export function AdminMecaniciens() {
               </div>
             )}
 
-            {/* TAB 3: SAFETY VISAS */}
-            {activeFormTab === "visas" && (
-              <div className="space-y-6">
-                <div>
-                  <Label className="text-xs font-black text-slate-800 flex items-center gap-1">
-                    <Shield className="w-4 h-4 text-emerald-500" />
-                    VISAS & HABILITATIONS DE SÉCURITÉ MINES
-                  </Label>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Activer un visa pour autoriser les affectations de maintenance spécifiques. Les alertes jaunes signalent un visa expirant sous 30 jours.
-                  </p>
-                </div>
 
-                {/* Expiration warnings block */}
-                <div className="space-y-4">
-                  {(Object.keys(formVisas) as Array<keyof Visas>).map((key) => {
-                    const visaObj = formVisas[key];
-                    const daysRemaining = getDaysRemaining(visaObj.dateExpiration);
-                    
-                    let alertWidget = null;
-                    if (visaObj.active && daysRemaining !== null) {
-                      if (daysRemaining < 0) {
-                        alertWidget = (
-                          <div className="flex items-center gap-2 p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs font-medium">
-                            <ShieldAlert className="w-4 h-4 text-rose-500 animate-pulse" />
-                            <span>⚠️ ALERTE DE SÉCURITÉ CRITIQUE : Le visa <strong>{key}</strong> a expiré il y a {Math.abs(daysRemaining)} jours !</span>
-                          </div>
-                        );
-                      } else if (daysRemaining <= 30) {
-                        alertWidget = (
-                          <div className="flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs font-medium">
-                            <AlertTriangle className="w-4 h-4 text-amber-500 animate-pulse" />
-                            <span>⚠️ ATTENTION : Échéance proche ! Le visa <strong>{key}</strong> expire dans {daysRemaining} jours.</span>
-                          </div>
-                        );
-                      }
-                    }
-
-                    return (
-                      <div key={key} className="space-y-2">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3.5 bg-slate-50 border border-slate-200 rounded-xl gap-4">
-                          <div className="flex items-start gap-3">
-                            <div className="pt-0.5">
-                              <input
-                                type="checkbox"
-                                checked={visaObj.active}
-                                onChange={() => toggleVisaActive(key)}
-                                className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 w-4.5 h-4.5 cursor-pointer"
-                              />
-                            </div>
-                            <div>
-                              <span className="font-mono text-[11px] font-black uppercase text-slate-800">
-                                {key === "LOTO" && "Consignation LOTO (Lock Out Tag Out)"}
-                                {key === "HAUTEUR" && "Travail en Hauteur"}
-                                {key === "CONFINE" && "Entrée en Espace Confiné"}
-                                {key === "ELECTRIQUE_HV" && "Habilitation Électrique Haute Tension (HT)"}
-                                {key === "CHARGEUR" && "Autorisation de conduite Chargeur Souterrain"}
-                              </span>
-                              <p className="text-[10px] text-slate-400 mt-0.5">
-                                Requis pour les interventions sur {key.toLowerCase().replace("_", " ")}
-                              </p>
-                            </div>
-                          </div>
-
-                          {visaObj.active && (
-                            <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
-                              <Label className="text-[10px] font-bold text-slate-500 whitespace-nowrap">Expiration :</Label>
-                              <Input
-                                type="date"
-                                value={visaObj.dateExpiration || ""}
-                                onChange={(e) => handleVisaDateChange(key, e.target.value)}
-                                className="h-8 text-xs rounded-lg w-36 bg-white"
-                              />
-                            </div>
-                          )}
-                        </div>
-                        {alertWidget}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* TAB 4: DOCUMENTS ARCHIVE */}
             {activeFormTab === "docs" && (
@@ -1092,7 +893,6 @@ export function AdminMecaniciens() {
                   {([
                     { key: "contrat", label: "Contrat de Travail Actif" },
                     { key: "diplome", label: "Diplôme principal ou Certificats" },
-                    { key: "visaMedical", label: "Visa d'Aptitude Médicale" },
                     { key: "attestationFormation", label: "Attestation de Formation Initiale" },
                     { key: "caces", label: "Permis / CACES minier" }
                   ] as Array<{ key: keyof Documents; label: string }>).map(({ key, label }) => {

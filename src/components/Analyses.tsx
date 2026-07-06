@@ -512,42 +512,44 @@ export default function Analyses() {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               
               {/* Card 1: Compliance PM Globale */}
-              <Card className="bg-white border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+              <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm flex flex-col justify-between text-slate-900 dark:text-white transition-all duration-300 hover:shadow-md">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                 <div>
-                  <span className="text-[10px] font-mono font-black uppercase text-slate-400 block mb-1">
+                  <span className="text-[10px] font-mono font-black uppercase text-slate-500 dark:text-slate-400 block mb-1">
                     🎯 COMPLIANCE PM GLOBALE CE MOIS
                   </span>
                   <div className="flex items-baseline justify-between mb-2">
                     <span className={`text-3xl font-black font-mono ${
-                      complianceGlobale === null ? 'text-slate-400' :
-                      complianceGlobale >= 80 ? 'text-emerald-600' :
-                      complianceGlobale >= 60 ? 'text-amber-500' : 'text-red-600'
-                    }`}>
+                      complianceGlobale === null ? 'text-slate-450' :
+                      complianceGlobale >= 80 ? 'text-emerald-600 dark:text-emerald-400' :
+                      complianceGlobale >= 60 ? 'text-amber-500 dark:text-amber-400' : 'text-red-600 dark:text-red-400'
+                     }`}>
                       {complianceGlobale !== null ? `${complianceGlobale}%` : '—'}
                     </span>
-                    <Badge className="bg-slate-50 text-slate-500 border border-slate-200 text-[9px] font-mono">Obj: 80%</Badge>
+                    <Badge className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 text-[9px] font-mono">Obj: 80%</Badge>
                   </div>
                   {complianceGlobale !== null && (
-                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                    <div className="w-full bg-slate-100 dark:bg-slate-900 rounded-full h-1.5 overflow-hidden">
                       <div 
                         className={`h-full rounded-full transition-all duration-500 ${
-                          complianceGlobale >= 80 ? 'bg-emerald-500' :
-                          complianceGlobale >= 60 ? 'bg-amber-500' : 'bg-red-500'
+                          complianceGlobale >= 80 ? 'bg-emerald-500 dark:bg-emerald-400' :
+                          complianceGlobale >= 60 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-red-500 dark:bg-red-400'
                         }`}
                         style={{ width: `${complianceGlobale}%` }}
                       />
                     </div>
                   )}
                 </div>
-                <p className="text-[9.5px] font-mono text-slate-500 mt-3 leading-tight">
+                <p className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 mt-3 leading-tight">
                   {complianceGlobale !== null ? 'Prévu et réalisé conformément aux fréquences GMAO.' : 'Aucune tâche préventive planifiée ce mois.'}
                 </p>
               </Card>
 
               {/* Card 2: Ratio Préventif / Correctif */}
-              <Card className="bg-white border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+              <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm flex flex-col justify-between text-slate-900 dark:text-white transition-all duration-300 hover:shadow-md">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                 <div>
-                  <span className="text-[10px] font-mono font-black uppercase text-slate-400 block mb-1">
+                  <span className="text-[10px] font-mono font-black uppercase text-slate-500 dark:text-slate-400 block mb-1">
                     ⚙️ RATIO PREV / CORR
                   </span>
                   <div className="flex items-center gap-4 h-[60px]">
@@ -570,39 +572,40 @@ export default function Analyses() {
                             </PieChart>
                           </ResponsiveContainer>
                         </div>
-                        <div className="font-mono text-xs text-slate-600">
+                        <div className="font-mono text-xs text-slate-700 dark:text-slate-300">
                           <div className="flex items-center gap-1.5">
                             <span className="h-2 w-2 rounded-full bg-[#D4A017]" />
                             <span>Prev: {ratioPreventifCorrectif.preventifPct}%</span>
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-slate-400" />
+                            <span className="h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-600" />
                             <span>Corr: {ratioPreventifCorrectif.correctifPct}%</span>
                           </div>
                         </div>
                       </>
                     ) : (
-                      <span className="text-[11px] text-slate-400 font-mono italic">Aucune intervention ce mois.</span>
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono italic">Aucune intervention ce mois.</span>
                     )}
                   </div>
                 </div>
-                <p className="text-[9.5px] font-mono text-slate-500 mt-2 leading-tight">
+                <p className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 mt-2 leading-tight">
                   Total : {ratioPreventifCorrectif.total} intervention(s) clôturée(s).
                 </p>
               </Card>
 
               {/* Card 3: Validation en Attente (+48h) */}
-              <Card className="bg-white border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+              <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm flex flex-col justify-between text-slate-900 dark:text-white transition-all duration-300 hover:shadow-md">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                 <div>
-                  <span className="text-[10px] font-mono font-black uppercase text-slate-400 block mb-1">
+                  <span className="text-[10px] font-mono font-black uppercase text-slate-500 dark:text-slate-400 block mb-1">
                     📂 ATTENTE VALIDATION RESPONSABLE
                   </span>
                   <div className="flex items-center justify-between mb-2">
-                    <span className={`text-3xl font-black font-mono ${tachesEnAttenteValidation.length > 0 ? 'text-red-600 animate-pulse' : 'text-emerald-600'}`}>
+                    <span className={`text-3xl font-black font-mono ${tachesEnAttenteValidation.length > 0 ? 'text-red-600 dark:text-red-400 animate-pulse' : 'text-emerald-600 dark:text-emerald-400'}`}>
                       {tachesEnAttenteValidation.length}
                     </span>
                     {tachesEnAttenteValidation.length === 0 && (
-                      <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[8.5px] font-mono">
+                      <Badge className="bg-emerald-50 dark:bg-emerald-950/45 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 text-[8.5px] font-mono">
                         Responsable réactif ✓
                       </Badge>
                     )}
@@ -610,30 +613,31 @@ export default function Analyses() {
                   {tachesEnAttenteValidation.length > 0 && (
                     <div className="space-y-1 overflow-hidden">
                       {tachesEnAttenteValidation.slice(0, 2).map(t => (
-                        <div key={t.id} className="text-[9px] font-mono text-slate-600 truncate border-l border-slate-200 pl-1.5">
-                          <span className="font-bold">{t.enginId}</span> — {t.label}
+                        <div key={t.id} className="text-[9px] font-mono text-slate-600 dark:text-slate-300 truncate border-l border-slate-300 dark:border-slate-700 pl-1.5">
+                          <span className="font-bold text-[#D4AF37]">{t.enginId}</span> — {t.label}
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-                <p className="text-[9.5px] font-mono text-slate-500 mt-2 leading-none">
+                <p className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 mt-2 leading-none">
                   Tâches closes par l'opérateur en attente de visa.
                 </p>
               </Card>
 
               {/* Card 4: Signalements critiques ignorés */}
-              <Card className="bg-white border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+              <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm flex flex-col justify-between text-slate-900 dark:text-white transition-all duration-300 hover:shadow-md">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                 <div>
-                  <span className="text-[10px] font-mono font-black uppercase text-slate-400 block mb-1">
+                  <span className="text-[10px] font-mono font-black uppercase text-slate-500 dark:text-slate-400 block mb-1">
                     ⚠️ ALERTES PANNES SANS ACTION
                   </span>
                   <div className="flex items-center justify-between mb-2">
-                    <span className={`text-3xl font-black font-mono ${pannesCritiquesNonTraitees.length > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                    <span className={`text-3xl font-black font-mono ${pannesCritiquesNonTraitees.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                       {pannesCritiquesNonTraitees.length}
                     </span>
                     {pannesCritiquesNonTraitees.length === 0 && (
-                      <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[8.5px] font-mono">
+                      <Badge className="bg-emerald-50 dark:bg-emerald-950/45 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 text-[8.5px] font-mono">
                         Suivi impeccable ✓
                       </Badge>
                     )}
@@ -641,14 +645,14 @@ export default function Analyses() {
                   {pannesCritiquesNonTraitees.length > 0 && (
                     <div className="space-y-1 overflow-hidden">
                       {pannesCritiquesNonTraitees.slice(0, 2).map(p => (
-                        <div key={p.id} className="text-[9px] font-mono text-slate-600 truncate border-l border-red-200 pl-1.5">
-                          <span className="font-bold text-red-600">⚠️ {p.enginId}</span> — Cat: {p.categorie}
+                        <div key={p.id} className="text-[9px] font-mono text-slate-600 dark:text-slate-300 truncate border-l border-red-200 dark:border-red-900/40 pl-1.5">
+                          <span className="font-bold text-red-600 dark:text-red-400">⚠️ {p.enginId}</span> — Cat: {p.categorie}
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-                <p className="text-[9.5px] font-mono text-slate-500 mt-2 leading-none">
+                <p className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 mt-2 leading-none">
                   Déclarations terrain sans diagnostic depuis +24h.
                 </p>
               </Card>
@@ -659,7 +663,8 @@ export default function Analyses() {
             <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
               
               {/* Compliance Par Chantier list */}
-              <Card className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+              <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                 <CardHeader className="p-0 pb-4 border-b border-slate-100 flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-xs font-mono font-black uppercase text-slate-800 tracking-wide">
@@ -706,7 +711,8 @@ export default function Analyses() {
               </Card>
 
               {/* Active Proactive Alerts List */}
-              <Card className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+              <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                 <div>
                   <CardHeader className="p-0 pb-4 border-b border-slate-100 flex flex-row items-center justify-between">
                     <div>
@@ -853,7 +859,8 @@ export default function Analyses() {
             <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
               
               {/* Other Mechanics list */}
-              <Card className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+              <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                 <CardHeader className="p-0 pb-4 border-b border-slate-100 flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-xs font-mono font-black uppercase text-slate-800 tracking-wide">
@@ -893,7 +900,8 @@ export default function Analyses() {
               </Card>
 
               {/* 30 Days Trend Graph */}
-              <Card className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+              <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                 <CardHeader className="p-0 pb-4 border-b border-slate-100 flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-xs font-mono font-black uppercase text-slate-800 tracking-wide">
@@ -937,7 +945,8 @@ export default function Analyses() {
           <TabsContent value="fiabilite" className="mt-6 space-y-6">
             
             {/* Reliability Grid per Machine */}
-            <Card className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+            <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <CardHeader className="p-0 pb-4 border-b border-slate-100 flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-xs font-mono font-black uppercase text-slate-800 tracking-wide">
@@ -1002,7 +1011,8 @@ export default function Analyses() {
             <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
               
               {/* Category distribution */}
-              <Card className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+              <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                 <CardHeader className="p-0 pb-4 border-b border-slate-100 flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-xs font-mono font-black uppercase text-slate-800 tracking-wide">
@@ -1034,7 +1044,8 @@ export default function Analyses() {
               </Card>
 
               {/* Recent Breakdowns Timeline */}
-              <Card className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+              <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                 <CardHeader className="p-0 pb-4 border-b border-slate-100 flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-xs font-mono font-black uppercase text-slate-800 tracking-wide">
@@ -1085,7 +1096,8 @@ export default function Analyses() {
             <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
               
               {/* Rapport Mensuel Generation */}
-              <Card className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+              <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                 <div>
                   <CardHeader className="p-0 pb-4 border-b border-slate-100">
                     <CardTitle className="text-xs font-mono font-black uppercase text-slate-800 tracking-wide flex items-center gap-1.5">
@@ -1116,7 +1128,8 @@ export default function Analyses() {
               </Card>
 
               {/* CSV exports */}
-              <Card className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+              <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
                 <div>
                   <CardHeader className="p-0 pb-4 border-b border-slate-100">
                     <CardTitle className="text-xs font-mono font-black uppercase text-slate-800 tracking-wide flex items-center gap-1.5">

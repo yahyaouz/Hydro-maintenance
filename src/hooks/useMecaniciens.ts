@@ -12,22 +12,12 @@ import {
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { toast } from "sonner";
 import { useAuthStore } from "@/lib/store";
-import { SiteID, Mecanicien, MecanicienStats, Visas, Documents, VisaStatus } from "@/types";
-export type { Mecanicien, MecanicienStats, Visas, Documents, VisaStatus };
-
-// Default visas and documents structures to prevent undefined crashes
-export const DEFAULT_VISAS: Visas = {
-  LOTO: { active: false, dateExpiration: null },
-  HAUTEUR: { active: false, dateExpiration: null },
-  CONFINE: { active: false, dateExpiration: null },
-  ELECTRIQUE_HV: { active: false, dateExpiration: null },
-  CHARGEUR: { active: false, dateExpiration: null }
-};
+import { SiteID, Mecanicien, MecanicienStats, Documents } from "@/types";
+export type { Mecanicien, MecanicienStats, Documents };
 
 export const DEFAULT_DOCUMENTS: Documents = {
   contrat: "",
   diplome: "",
-  visaMedical: "",
   attestationFormation: "",
   caces: ""
 };
@@ -68,7 +58,7 @@ export function useMecaniciens() {
           const data = docSnap.data();
           
           // Detect older schema that needs non-destructive migration
-          const needsMigration = !data.uid || !data.visas || !data.documents || !data.stats || !data.prenom || !data.nom;
+          const needsMigration = !data.uid || !data.documents || !data.stats || !data.prenom || !data.nom;
           const docUid = data.uid || docSnap.id;
           
           // Split old full name if present
@@ -97,13 +87,6 @@ export function useMecaniciens() {
             adresse: data.adresse || "",
             dateNaissance: data.dateNaissance || "",
             dateEmbauche: data.dateEmbauche || new Date().toISOString().split('T')[0],
-            visas: data.visas || {
-              LOTO: { active: !!data.visaLOTO, dateExpiration: data.visas?.LOTO?.dateExpiration || null },
-              HAUTEUR: { active: !!data.visaHauteur, dateExpiration: data.visas?.HAUTEUR?.dateExpiration || null },
-              CONFINE: { active: !!data.visaConfine, dateExpiration: data.visas?.CONFINE?.dateExpiration || null },
-              ELECTRIQUE_HV: { active: !!data.visas?.ELECTRIQUE_HV?.active, dateExpiration: data.visas?.ELECTRIQUE_HV?.dateExpiration || null },
-              CHARGEUR: { active: !!data.visas?.CHARGEUR?.active, dateExpiration: data.visas?.CHARGEUR?.dateExpiration || null }
-            },
             documents: data.documents || DEFAULT_DOCUMENTS,
             stats: data.stats || DEFAULT_STATS,
             active: data.active !== false,

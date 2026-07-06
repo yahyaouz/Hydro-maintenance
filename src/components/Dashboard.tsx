@@ -177,10 +177,10 @@ export function Dashboard() {
     const openWOs = filteredOrders.filter(wo => wo.status !== 'CLOS' && wo.status !== 'RÉSOLU');
     if (filteredOrders.length === 0) {
       return [
-        { name: "Critique", value: 0, color: "#EF4444" },
-        { name: "Élevé", value: 0, color: "#F97316" },
-        { name: "Moyen", value: 0, color: "#EAB308" },
-        { name: "Bas", value: 0, color: "#10B981" }
+        { name: "Critique", value: 0, color: "#DC2626" },
+        { name: "Élevé", value: 0, color: "#D97706" },
+        { name: "Moyen", value: 0, color: "#F59E0B" },
+        { name: "Bas", value: 0, color: "#059669" }
       ];
     }
     
@@ -203,10 +203,10 @@ export function Dashboard() {
     const countBas = Math.max(0, openWOs.length - totalCalculated);
 
     return [
-      { name: "Critique", value: countCritique, color: "#EF4444" },
-      { name: "Élevé", value: countEleve, color: "#F97316" },
-      { name: "Moyen", value: countMoyen, color: "#EAB308" },
-      { name: "Bas", value: countBas, color: "#10B981" }
+      { name: "Critique", value: countCritique, color: "#DC2626" },
+      { name: "Élevé", value: countEleve, color: "#D97706" },
+      { name: "Moyen", value: countMoyen, color: "#F59E0B" },
+      { name: "Bas", value: countBas, color: "#059669" }
     ];
   }, [filteredOrders]);
 
@@ -306,11 +306,11 @@ export function Dashboard() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
-      className="flex-1 bg-slate-50 dark:bg-[#070b13] text-slate-900 dark:text-slate-100 min-h-screen font-sans p-4 lg:p-6 space-y-6 overflow-y-auto"
+      className="flex-1 bg-white dark:bg-[#070b13] text-slate-900 dark:text-slate-100 min-h-screen font-sans p-4 lg:p-6 space-y-6 overflow-y-auto"
     >
       {/* CORRECTION 1 : GORGEOUS UNIFIED BANNER */}
-      <div id="dashboard-banner" className="bg-white dark:bg-[#0c1220]/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#D4AF37] via-amber-500 to-[#D4AF37] rounded-t-2xl" />
+      <div id="dashboard-banner" className="bg-white dark:bg-[#0c1220]/80 backdrop-blur-md border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 rounded-2xl p-5 shadow-sm relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B] rounded-t-2xl" />
         
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-400 to-[#D4AF37] flex items-center justify-center shadow-md shadow-amber-500/10 shrink-0">
@@ -339,7 +339,7 @@ export function Dashboard() {
             <Button
               variant="outline"
               onClick={() => setActiveSite("TOUS")}
-              className="text-xs font-bold border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-900"
+              className="text-xs font-bold border-slate-100 text-slate-600 hover:bg-slate-100 dark:border-slate-800/40 dark:text-slate-400 dark:hover:bg-slate-900"
             >
               Vue Globale
             </Button>
@@ -356,19 +356,20 @@ export function Dashboard() {
       {/* WIDGET 1 — HEADER KPIs (5 cards) */}
       <div id="kpis-header" className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {/* KPI 1: MTTR */}
-        <div className="bg-white dark:bg-[#0c1220]/50 border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-sm flex flex-col justify-between">
+        <div className="relative overflow-hidden bg-slate-950 dark:bg-black border border-[#D4AF37]/50 p-4 pt-5 rounded-xl shadow-sm flex flex-col justify-between text-white">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">MTTR (ce mois)</span>
-            <Clock className="h-4 w-4 text-amber-500" />
+            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">MTTR (ce mois)</span>
+            <Clock className="h-4 w-4 text-[#D4AF37]" />
           </div>
           <div className="my-2">
-            <h2 className={`font-mono text-slate-900 dark:text-white ${mttr !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
+            <h2 className={`font-mono text-[#D4AF37] ${mttr !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
               {mttr !== null ? `${mttr}h` : "Données insuffisantes"}
             </h2>
             {mttr !== null && (
               <div className="flex items-center gap-1 text-[10px] mt-1">
-                <TrendingDown className="h-3 w-3 text-emerald-500" />
-                <span className="text-emerald-600 font-semibold">-0.4h</span>
+                <TrendingDown className="h-3 w-3 text-emerald-400" />
+                <span className="text-emerald-400 font-semibold">-0.4h</span>
                 <span className="text-slate-400">vs mois dern.</span>
               </div>
             )}
@@ -376,19 +377,20 @@ export function Dashboard() {
         </div>
 
         {/* KPI 2: MTBF */}
-        <div className="bg-white dark:bg-[#0c1220]/50 border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-sm flex flex-col justify-between">
+        <div className="relative overflow-hidden bg-slate-950 dark:bg-black border border-[#D4AF37]/50 p-4 pt-5 rounded-xl shadow-sm flex flex-col justify-between text-white">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">MTBF</span>
-            <Gauge className="h-4 w-4 text-blue-500" />
+            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">MTBF</span>
+            <Gauge className="h-4 w-4 text-[#D4AF37]" />
           </div>
           <div className="my-2">
-            <h2 className={`font-mono text-slate-900 dark:text-white ${mtbf !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
+            <h2 className={`font-mono text-[#D4AF37] ${mtbf !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
               {mtbf !== null ? `${mtbf}h` : "Données insuffisantes"}
             </h2>
             {mtbf !== null && (
               <div className="flex items-center gap-1 text-[10px] mt-1">
-                <TrendingUp className="h-3 w-3 text-emerald-500" />
-                <span className="text-emerald-600 font-semibold">+8h</span>
+                <TrendingUp className="h-3 w-3 text-emerald-400" />
+                <span className="text-emerald-400 font-semibold">+8h</span>
                 <span className="text-slate-400">vs mois dern.</span>
               </div>
             )}
@@ -396,19 +398,20 @@ export function Dashboard() {
         </div>
 
         {/* KPI 3: Taux Dispo */}
-        <div className="bg-white dark:bg-[#0c1220]/50 border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-sm flex flex-col justify-between">
+        <div className="relative overflow-hidden bg-slate-950 dark:bg-black border border-[#D4AF37]/50 p-4 pt-5 rounded-xl shadow-sm flex flex-col justify-between text-white">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Taux Dispo</span>
-            <Activity className="h-4 w-4 text-emerald-500" />
+            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Taux Dispo</span>
+            <Activity className="h-4 w-4 text-[#D4AF37]" />
           </div>
           <div className="my-2">
-            <h2 className={`font-mono text-slate-900 dark:text-white ${dispoRate !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
+            <h2 className={`font-mono text-[#D4AF37] ${dispoRate !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
               {dispoRate !== null ? `${dispoRate}%` : "Données insuffisantes"}
             </h2>
             {dispoRate !== null && (
               <div className="flex items-center gap-1 text-[10px] mt-1">
-                <TrendingUp className="h-3 w-3 text-emerald-500" />
-                <span className="text-emerald-600 font-semibold">+1.2%</span>
+                <TrendingUp className="h-3 w-3 text-emerald-400" />
+                <span className="text-emerald-400 font-semibold">+1.2%</span>
                 <span className="text-slate-400">vs mois dern.</span>
               </div>
             )}
@@ -416,19 +419,20 @@ export function Dashboard() {
         </div>
 
         {/* KPI 4: Backlog OT */}
-        <div className="bg-white dark:bg-[#0c1220]/50 border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-sm flex flex-col justify-between">
+        <div className="relative overflow-hidden bg-slate-950 dark:bg-black border border-[#D4AF37]/50 p-4 pt-5 rounded-xl shadow-sm flex flex-col justify-between text-white">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Backlog OT</span>
+            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Backlog OT</span>
             <Wrench className="h-4 w-4 text-[#D4AF37]" />
           </div>
           <div className="my-2">
-            <h2 className={`font-mono text-slate-900 dark:text-white ${totalOpenOTs !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
+            <h2 className={`font-mono text-[#D4AF37] ${totalOpenOTs !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
               {totalOpenOTs !== null ? `${totalOpenOTs} ouverts` : "Données insuffisantes"}
             </h2>
             {totalOpenOTs !== null && (
               <div className="flex items-center gap-1 text-[10px] mt-1">
-                <TrendingDown className="h-3 w-3 text-emerald-500" />
-                <span className="text-emerald-600 font-semibold">-3</span>
+                <TrendingDown className="h-3 w-3 text-emerald-400" />
+                <span className="text-emerald-400 font-semibold">-3</span>
                 <span className="text-slate-400">vs mois dern.</span>
               </div>
             )}
@@ -436,19 +440,20 @@ export function Dashboard() {
         </div>
 
         {/* KPI 5: Coût / heure */}
-        <div className="bg-white dark:bg-[#0c1220]/50 border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-sm col-span-2 md:col-span-1 flex flex-col justify-between">
+        <div className="relative overflow-hidden bg-slate-950 dark:bg-black border border-[#D4AF37]/50 p-4 pt-5 rounded-xl shadow-sm col-span-2 md:col-span-1 flex flex-col justify-between text-white">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Coût / heure</span>
-            <DollarSign className="h-4 w-4 text-rose-500" />
+            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Coût / heure</span>
+            <DollarSign className="h-4 w-4 text-[#D4AF37]" />
           </div>
           <div className="my-2">
-            <h2 className={`font-mono text-slate-900 dark:text-white ${costPerHour !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
+            <h2 className={`font-mono text-[#D4AF37] ${costPerHour !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
               {costPerHour !== null ? `${costPerHour} DH/h` : "Données insuffisantes"}
             </h2>
             {costPerHour !== null && (
               <div className="flex items-center gap-1 text-[10px] mt-1">
-                <TrendingDown className="h-3 w-3 text-emerald-500" />
-                <span className="text-emerald-600 font-semibold">-12 DH</span>
+                <TrendingDown className="h-3 w-3 text-emerald-400" />
+                <span className="text-emerald-400 font-semibold">-12 DH</span>
                 <span className="text-slate-400">vs mois dern.</span>
               </div>
             )}
@@ -463,11 +468,12 @@ export function Dashboard() {
         <div className="xl:col-span-2 space-y-6">
           
           {/* WIDGET 2 — COURBE ANNUELLE */}
-          <div className="bg-white dark:bg-[#0c1220]/50 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm space-y-4">
+          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
+            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] to-[#991B1B]" />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="h-2 w-2 rounded-full bg-red-600" />
                   Évolution Annuelle des Événements
                 </h3>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -477,7 +483,7 @@ export function Dashboard() {
             </div>
 
             <div className="h-[200px] w-full flex flex-col items-center justify-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/30 dark:bg-slate-900/10 p-6 text-center">
-              <Database className="h-8 w-8 text-slate-400 mb-2 animate-pulse" />
+              <Database className="h-8 w-8 text-slate-400 mb-2" />
               <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
                 Historique non disponible — en attente d'intégration des données
               </p>
@@ -485,11 +491,12 @@ export function Dashboard() {
           </div>
 
           {/* WIDGET 3 — CONSOMMATION MENSUELLE */}
-          <div className="bg-white dark:bg-[#0c1220]/50 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm space-y-4">
+          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
+            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] to-[#991B1B]" />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                  <span className="h-2 w-2 rounded-full bg-amber-600" />
                   Consommation Carburant & Lubrifiants
                 </h3>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -499,7 +506,7 @@ export function Dashboard() {
             </div>
 
             <div className="h-[180px] w-full flex flex-col items-center justify-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/30 dark:bg-slate-900/10 p-6 text-center">
-              <Droplets className="h-8 w-8 text-slate-400 mb-2 animate-pulse" />
+              <Droplets className="h-8 w-8 text-slate-400 mb-2" />
               <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
                 Historique non disponible — en attente d'intégration des données
               </p>
@@ -507,10 +514,11 @@ export function Dashboard() {
           </div>
 
           {/* WIDGET 7 — CARNET DE SANTÉ RAPIDE */}
-          <div className="bg-white dark:bg-[#0c1220]/50 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm space-y-4">
+          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
+            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] to-[#991B1B]" />
             <div>
               <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                <span className="h-2 w-2 rounded-full bg-red-600" />
                 Carnet de Santé Rapide — Top 3 Engins à Risque
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -519,7 +527,7 @@ export function Dashboard() {
             </div>
 
             <div className="h-[120px] w-full flex flex-col items-center justify-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/30 dark:bg-slate-900/10 p-6 text-center">
-              <Activity className="h-6 w-6 text-slate-400 mb-2 animate-pulse" />
+              <Activity className="h-6 w-6 text-slate-400 mb-2" />
               <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
                 Données insuffisantes — module en cours de calcul
               </p>
@@ -532,10 +540,11 @@ export function Dashboard() {
         <div className="space-y-6">
           
           {/* WIDGET 4 — BACKLOG MAINTENANCE (DONUT) */}
-          <div className="bg-white dark:bg-[#0c1220]/50 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm space-y-4">
+          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
+            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] to-[#991B1B]" />
             <div>
               <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-[#D4AF37] animate-pulse" />
+                <span className="h-2 w-2 rounded-full bg-[#D4AF37]" />
                 Backlog des Ordres de Travail
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -638,10 +647,11 @@ export function Dashboard() {
           </div>
 
           {/* WIDGET 5 — MÉCANICIENS DU JOUR */}
-          <div className="bg-white dark:bg-[#0c1220]/50 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm space-y-4">
+          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
+            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] to-[#991B1B]" />
             <div>
               <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="h-2 w-2 rounded-full bg-emerald-600" />
                 Mécaniciens en Poste aujourd'hui
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -654,7 +664,7 @@ export function Dashboard() {
             ) : filteredMecaniciensOfTheDay.length === 0 ? (
               <p className="text-xs text-slate-400 italic">Aucune donnée de présence disponible</p>
             ) : (
-              <div className="space-y-3">
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filteredMecaniciensOfTheDay.map((mech) => {
                   const score = mech.stats?.scoreMensuel ?? 0;
                   const hasGoodScore = score >= 85;
@@ -663,7 +673,7 @@ export function Dashboard() {
                   return (
                     <div 
                       key={mech.id || mech.uid}
-                      className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-850 rounded-xl"
+                      className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
                     >
                       <img 
                         src={photoUrl} 
@@ -708,10 +718,11 @@ export function Dashboard() {
           </div>
 
           {/* WIDGET 6 — ALERTES LIVE */}
-          <div className="bg-white dark:bg-[#0c1220]/50 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm space-y-4">
+          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
+            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] to-[#991B1B]" />
             <div>
               <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-rose-600 animate-pulse" />
+                <span className="h-2 w-2 rounded-full bg-red-600" />
                 Alertes Live
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -722,7 +733,7 @@ export function Dashboard() {
             {lastPannesLive.length === 0 ? (
               <p className="text-xs text-slate-400 italic">Aucune alerte récente</p>
             ) : (
-              <div className="space-y-2.5">
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {lastPannesLive.map((alert) => {
                   const severity = (alert.gravite || alert.severity || "MAJEUR").toUpperCase();
                   const description = alert.typePanne || alert.description || alert.problemDescription || "Panne signalée";
@@ -730,23 +741,23 @@ export function Dashboard() {
                   return (
                     <div 
                       key={alert.id}
-                      className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex justify-between items-center gap-3 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
+                      className="py-3 flex justify-between items-center gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition-colors first:pt-0 last:pb-0"
                     >
                       <div className="min-w-0 flex-1 space-y-0.5">
                         <div className="flex items-center gap-2">
                           <span className={`inline-block h-2 w-2 rounded-full ${
                             severity === "CRITIQUE" 
-                              ? "bg-red-500 animate-ping" 
+                              ? "bg-red-600" 
                               : severity === "MAJEUR" 
-                                ? "bg-amber-500" 
-                                : "bg-blue-500"
+                                ? "bg-amber-600" 
+                                : "bg-emerald-600"
                           }`} />
                           <span className={`text-[9px] font-black tracking-wider uppercase ${
                             severity === "CRITIQUE" 
                               ? "text-red-600 dark:text-red-400" 
                               : severity === "MAJEUR" 
                                 ? "text-amber-600 dark:text-amber-400" 
-                                : "text-blue-600 dark:text-blue-400"
+                                : "text-emerald-600 dark:text-emerald-400"
                           }`}>
                             {severity}
                           </span>

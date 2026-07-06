@@ -85,7 +85,7 @@ export function normalizeSite(site: string): string {
   const s = site.toUpperCase().trim();
   if (s.includes("SMI")) return "SMI";
   if (s.includes("OUMEJRANE") || s.includes("OUM")) return "OUMEJRANE";
-  if (s.includes("KOUDIA") || s.includes("KOUDIAT") || s.includes("AICHA")) return "KOUDIAT AICHA";
+  if (s.includes("KOUDIA") || s.includes("KOUDIAT") || s.includes("AICHA")) return "KOUDIA";
   if (s.includes("BOU-AZZER") || s.includes("BOU_AZZER") || s.includes("BOUAZZER") || s.includes("AZZER")) return "BOU-AZZER";
   if (s.includes("OUANSIMI") || s.includes("SIMI")) return "OUANSIMI";
   return s; // retour par défaut
