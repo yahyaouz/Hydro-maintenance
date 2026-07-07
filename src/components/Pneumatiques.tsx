@@ -35,6 +35,7 @@ export function Pneumatiques() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("TOUTES");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isSubmittingConso, setIsSubmittingConso] = useState<boolean>(false);
 
   // Form State
   const [newRecord, setNewRecord] = useState({
@@ -129,11 +130,14 @@ export function Pneumatiques() {
   // Handles tire report form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingConso) return;
+
     if (!newRecord.enginId || !newRecord.numeroSerie || !newRecord.changePar || !newRecord.validePar) {
       toast.error("Veuillez remplir tous les champs obligatoires");
       return;
     }
 
+    setIsSubmittingConso(true);
     try {
       await addPneumatiqueRecord(newRecord);
       setShowAddForm(false);
@@ -147,6 +151,8 @@ export function Pneumatiques() {
       }));
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsSubmittingConso(false);
     }
   };
 
@@ -731,9 +737,10 @@ export function Pneumatiques() {
                   </Button>
                   <Button
                     type="submit"
+                    disabled={isSubmittingConso}
                     className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black uppercase text-xs rounded-lg px-6"
                   >
-                    Enregistrer Rapport
+                    {isSubmittingConso ? "Enregistrement..." : "Enregistrer Rapport"}
                   </Button>
                 </div>
               </form>
