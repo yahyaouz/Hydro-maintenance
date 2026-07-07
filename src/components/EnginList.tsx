@@ -88,7 +88,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
 
   // Load equipements from Firestore
   const { data: allEquipements, loading } = useCollection<any>("engins");
-  const { data: allWorkorders } = useCollection<any>("workorders");
+  const { data: allWorkorders } = useCollection<any>("maintenanceTasks");
 
   // State
   const [activeTab, setActiveTab] = React.useState<"LHD" | "VL" | "PERFORATEUR" | "CARNET">("LHD");
@@ -182,11 +182,11 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
       // HSE Guard: Un engin ne peut pas être remis DISPONIBLE s'il possède au moins un BT actif de gravité CRITIQUE.
       if (editStatut === "actif") {
         const activeBTs = (allWorkorders || []).filter(
-          w => (w.machineCode === editingEquip.matricule || w.enginId === editingEquip.id) &&
-          w.status !== "CLOS" && w.status !== "RÉSOLU"
+          w => (w.enginId === editingEquip.id || w.enginId === editingEquip.matricule) &&
+          (w.statut === "NON_FAIT" || w.statut === "EN_COURS") && !w.deleted
         ).map(w => ({
-          status: w.status,
-          severity: (w.severity || w.priorite || "").toLowerCase()
+          status: w.statut || w.status,
+          severity: (w.priorite || w.severity || "").toLowerCase()
         }));
 
         const validation = BusinessRules.validateAvailabilityState(

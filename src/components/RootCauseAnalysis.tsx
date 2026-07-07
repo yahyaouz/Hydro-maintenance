@@ -36,7 +36,7 @@ export function RootCauseAnalysis() {
   const { rcas, loading, saveRCA, deleteRCA } = useRCA();
 
   // Load existing workorders & engines to link
-  const { data: workorders } = useCollection<any>("workorders");
+  const { data: workorders } = useCollection<any>("maintenanceTasks");
   const { data: engins } = useCollection<any>("engins");
 
   const [selectedRcaId, setSelectedRcaId] = React.useState<string | null>(null);
@@ -96,9 +96,9 @@ export function RootCauseAnalysis() {
     if (workOrderId && workorders) {
       const wo = workorders.find(w => w.id === workOrderId);
       if (wo) {
-        setMachineCode(wo.machineCode || wo.enginMatricule || "");
+        setMachineCode(wo.enginId || wo.enginModele || "");
         if (!title) {
-          setTitle(`Analyse RCA - Défaillance ${wo.machineCode || ""} (${wo.title || ""})`);
+          setTitle(`Analyse RCA - Défaillance ${wo.enginId || ""} (${wo.label || wo.title || ""})`);
         }
       }
     }
@@ -570,9 +570,9 @@ export function RootCauseAnalysis() {
                       className="w-full text-xs h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-850 px-3 outline-none focus:ring-1 focus:ring-sky-500 text-slate-800 dark:text-slate-100"
                     >
                       <option value="">-- Sélectionner un Bon (Optionnel) --</option>
-                      {(workorders || []).filter(w => !activeSite || activeSite === "TOUS" || w.siteId === activeSite).map(w => (
+                      {(workorders || []).filter(w => !activeSite || activeSite === "TOUS" || w.siteId === activeSite || w.site === activeSite).map(w => (
                         <option key={w.id} value={w.id}>
-                          {w.machineCode || "Engin"} - {w.title || w.description} ({w.id.substring(0, 5).toUpperCase()})
+                          {w.enginId || "Engin"} - {w.label || w.title || w.description} ({w.id.substring(0, 5).toUpperCase()})
                         </option>
                       ))}
                     </select>

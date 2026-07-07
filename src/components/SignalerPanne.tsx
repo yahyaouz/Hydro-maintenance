@@ -142,6 +142,8 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill, descriptionPref
       if (arretMachine) {
         await updateDoc(doc(db, 'engins', enginId), {
           etat: 'En maintenance',
+          statut: 'panne',
+          dispo: 0,
           updatedAt: Timestamp.now()
         });
       }

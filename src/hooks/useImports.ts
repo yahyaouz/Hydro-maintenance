@@ -501,6 +501,16 @@ export function useImports() {
         }
       });
 
+      // Fetch all engins to resolve matricule to enginId
+      const enginsSnap = await getDocs(collection(db, "engins"));
+      const enginsMap = new Map<string, any>();
+      enginsSnap.forEach(d => {
+        const e = d.data();
+        if (e.matricule) {
+          enginsMap.set(e.matricule.toUpperCase().trim(), { id: d.id, ...e });
+        }
+      });
+
       const rows = csvToObjects(fileContent);
       if (rows.length === 0) {
         throw new Error("Le fichier CSV est vide ou n'a pas pu être parsé.");
@@ -523,6 +533,11 @@ export function useImports() {
         const status = (row.statut || "FERME").toUpperCase().trim();
         const piecesUtiliseesRaw = row.pieces_utilisees || "";
 
+        // CATEGORY PARSING
+        const VALID_CATEGORIES = ["Mécanique", "Hydraulique", "Électrique", "Pneumatique", "Transmission", "Freinage", "Autre"];
+        const catValue = (row.categorie || "").trim();
+        const categorie = VALID_CATEGORIES.includes(catValue) ? catValue : "Non catégorisé";
+
         // VALIDATIONS
         if (!matriculeMec) {
           result.errorCount++;
@@ -533,6 +548,14 @@ export function useImports() {
         if (!enginMatricule) {
           result.errorCount++;
           result.errors.push({ line: lineNum, message: "Matricule engin manquant.", raw: rawLine });
+          continue;
+        }
+
+        // Validate engin exists in our base
+        const matchedEngin = enginsMap.get(enginMatricule);
+        if (!matchedEngin) {
+          result.errorCount++;
+          result.errors.push({ line: lineNum, message: `Engin matricule '${enginMatricule}' introuvable dans la base de données.`, raw: rawLine });
           continue;
         }
 
@@ -573,6 +596,8 @@ export function useImports() {
             mecanicienNom: matchedMec?.displayName || `Tech ${matriculeMec}`,
             date: dateStr,
             enginMatricule,
+            enginId: matchedEngin.id,
+            categorie,
             typeIntervention,
             heureDebutReelle,
             heureFinReelle,

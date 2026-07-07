@@ -85,7 +85,7 @@ export function Dashboard() {
 
   // Firestore real collections subscriptions
   const { data: enginsLive } = useCollection<any>('engins');
-  const { data: workOrdersLive } = useCollection<any>('workorders');
+  const { data: workOrdersLive } = useCollection<any>('maintenanceTasks');
   const { data: pannesLive } = useCollection<any>('pannes');
 
   // Normalizer status
@@ -118,7 +118,7 @@ export function Dashboard() {
 
   const filteredOrders = React.useMemo(() => {
     if (!workOrdersLive) return [];
-    return workOrdersLive.filter(b => activeSite === "TOUS" || b.siteId === activeSite || b.site === activeSite);
+    return workOrdersLive.filter(b => (activeSite === "TOUS" || b.siteId === activeSite || b.site === activeSite) && b.deleted !== true);
   }, [workOrdersLive, activeSite]);
 
   const filteredPannes = React.useMemo(() => {
@@ -128,7 +128,7 @@ export function Dashboard() {
 
   // Executive KPIs Calculation
   const mttr = React.useMemo(() => {
-    const closedWOs = filteredOrders.filter(wo => wo.status === 'CLOS' || wo.status === 'RÉSOLU');
+    const closedWOs = filteredOrders.filter(wo => wo.statut === 'FAIT' || wo.statut === 'VALIDE');
     if (closedWOs.length === 0) return null;
     let totalDuration = 0;
     let count = 0;
@@ -169,7 +169,7 @@ export function Dashboard() {
   }, [filteredEngins, getNormalizedStatus]);
 
   const backlogOTCount = React.useMemo(() => {
-    return filteredOrders.filter(wo => wo.status !== 'CLOS' && wo.status !== 'RÉSOLU').length;
+    return filteredOrders.filter(wo => wo.statut === 'NON_FAIT' || wo.statut === 'EN_COURS').length;
   }, [filteredOrders]);
 
   const costPerHour = React.useMemo(() => {
@@ -179,7 +179,7 @@ export function Dashboard() {
 
   // Backlog Donut Data
   const backlogDonutData = React.useMemo(() => {
-    const openWOs = filteredOrders.filter(wo => wo.status !== 'CLOS' && wo.status !== 'RÉSOLU');
+    const openWOs = filteredOrders.filter(wo => wo.statut === 'NON_FAIT' || wo.statut === 'EN_COURS');
     if (filteredOrders.length === 0) {
       return [
         { name: "Critique", value: 0, color: "#DC2626" },
@@ -196,12 +196,12 @@ export function Dashboard() {
 
     const countEleve = openWOs.filter(wo => {
       const sev = (wo.severity || wo.priorite || '').toLowerCase();
-      return sev === 'eleve' || sev === 'élevé' || sev === 'medium' || sev === 'moyen';
+      return sev === 'eleve' || sev === 'élevé' || sev === 'medium' || sev === 'moyen' || sev === 'normale';
     }).length;
 
     const countMoyen = openWOs.filter(wo => {
       const sev = (wo.severity || wo.priorite || '').toLowerCase();
-      return sev === 'normal' || sev === 'bas' || sev === 'low';
+      return sev === 'normal' || sev === 'bas' || sev === 'low' || sev === 'basse';
     }).length;
 
     const totalCalculated = countCritique + countEleve + countMoyen;
@@ -237,16 +237,16 @@ export function Dashboard() {
   const filteredOTList = React.useMemo(() => {
     if (!selectedSeverity) return [];
     return filteredOrders.filter(wo => {
-      if (wo.status === 'CLOS' || wo.status === 'RÉSOLU') return false;
+      if (wo.statut !== 'NON_FAIT' && wo.statut !== 'EN_COURS') return false;
       const sev = (wo.severity || wo.priorite || '').toLowerCase();
       if (selectedSeverity === "Critique") {
         return sev.includes('critique') || sev.includes('critical') || sev.includes('haute') || sev.includes('high');
       }
       if (selectedSeverity === "Élevé") {
-        return sev === 'eleve' || sev === 'élevé' || sev === 'medium' || sev === 'moyen';
+        return sev === 'eleve' || sev === 'élevé' || sev === 'medium' || sev === 'moyen' || sev === 'normale';
       }
       if (selectedSeverity === "Moyen") {
-        return sev === 'normal' || sev === 'bas' || sev === 'low';
+        return sev === 'normal' || sev === 'bas' || sev === 'low' || sev === 'basse';
       }
       return sev === '';
     }).slice(0, 4);
@@ -736,7 +736,7 @@ export function Dashboard() {
                             <span className="text-slate-500 dark:text-slate-400 ml-1.5 truncate block">{wo.label || wo.problemDescription}</span>
                           </div>
                           <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[8.5px] uppercase shrink-0">
-                            {wo.status}
+                            {wo.statut || wo.status}
                           </Badge>
                         </div>
                       ))}

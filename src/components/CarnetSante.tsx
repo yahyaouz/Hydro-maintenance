@@ -44,7 +44,7 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
 
   // Fetch active breakdowns and work orders
   const { data: pannes, loading: loadingPannes } = useCollection<any>("pannes");
-  const { data: workorders, loading: loadingWorkorders } = useCollection<any>("workorders");
+  const { data: workorders, loading: loadingWorkorders } = useCollection<any>("maintenanceTasks");
 
   // Hook for carnet state
   const { profiles, saveProfile, computeHealthScore } = useCarnetSante();
@@ -182,7 +182,7 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
                 const col = getScoreColor(score);
                 const isSelected = engin.id === selectedEnginId;
                 const activePannesCount = (pannes || []).filter(p => p.enginId === engin.id && p.statut !== "RÉSOLU" && !p.deleted).length;
-                const activeOrdersCount = (workorders || []).filter(w => (w.machineCode === engin.matricule || w.enginId === engin.id) && w.status !== "CLOS" && w.status !== "RÉSOLU").length;
+                const activeOrdersCount = (workorders || []).filter(w => (w.enginId === engin.id || w.enginId === engin.matricule) && (w.statut === "NON_FAIT" || w.statut === "EN_COURS") && !w.deleted).length;
 
                 return (
                   <button
@@ -254,7 +254,7 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
                 const score = getEnginScore(selectedEngin);
                 const col = getScoreColor(score);
                 const activePannes = (pannes || []).filter(p => p.enginId === selectedEngin.id && p.statut !== "RÉSOLU" && !p.deleted);
-                const activeOrders = (workorders || []).filter(w => (w.machineCode === selectedEngin.matricule || w.enginId === selectedEngin.id) && w.status !== "CLOS" && w.status !== "RÉSOLU");
+                const activeOrders = (workorders || []).filter(w => (w.enginId === selectedEngin.id || w.enginId === selectedEngin.matricule) && (w.statut === "NON_FAIT" || w.statut === "EN_COURS") && !w.deleted);
 
                 return (
                   <Card className="relative overflow-hidden bg-white dark:bg-slate-950 border border-[#D4AF37]/50 shadow-md rounded-2xl">
@@ -490,7 +490,7 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
                   <CardContent className="flex-1 overflow-y-auto max-h-[220px] p-4 space-y-3">
                     {(() => {
                       const activePannes = (pannes || []).filter(p => p.enginId === selectedEngin.id && p.statut !== "RÉSOLU" && !p.deleted);
-                      const activeOrders = (workorders || []).filter(w => (w.machineCode === selectedEngin.matricule || w.enginId === selectedEngin.id) && w.status !== "CLOS" && w.status !== "RÉSOLU");
+                      const activeOrders = (workorders || []).filter(w => (w.enginId === selectedEngin.id || w.enginId === selectedEngin.matricule) && (w.statut === "NON_FAIT" || w.statut === "EN_COURS") && !w.deleted);
 
                       if (activePannes.length === 0 && activeOrders.length === 0) {
                         return (
@@ -521,17 +521,17 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
                           ))}
 
                           {activeOrders.map(bt => (
-                            <div key={bt.id} className="p-3 rounded-xl bg-sky-50/20 dark:bg-sky-950/5 border border-sky-100/40 dark:border-sky-900/20 text-left flex justify-between gap-2 items-center">
+                            <div key={bt.id} className="p-3 rounded-xl bg-sky-50/20 dark:bg-sky-950/5 border border-sky-100/40 dark:border-rose-900/20 text-left flex justify-between gap-2 items-center">
                               <div className="space-y-0.5 min-w-0">
                                 <span className="text-[8px] font-mono font-bold text-sky-500 uppercase">
                                   BON TRAVAIL • BT-{bt.id.substring(0, 4).toUpperCase()}
                                 </span>
                                 <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase truncate">
-                                  {bt.title || bt.description}
+                                  {bt.label || bt.title || bt.description}
                                 </h4>
                               </div>
-                              <Badge className="bg-sky-520 text-white font-mono text-[8px] tracking-wider px-1.5 shrink-0">
-                                {bt.status || "PLANIFIÉ"}
+                              <Badge className="bg-sky-500 text-white font-mono text-[8px] tracking-wider px-1.5 shrink-0">
+                                {bt.statut || bt.status || "PLANIFIÉ"}
                               </Badge>
                             </div>
                           ))}

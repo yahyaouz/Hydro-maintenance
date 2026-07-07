@@ -564,7 +564,11 @@ export function ImportConfig() {
               <CardContent className="p-5 space-y-4">
                 <div className="text-[11px] bg-slate-50 text-slate-600 rounded-lg p-2.5 font-mono space-y-1">
                   <span className="font-bold text-slate-700 uppercase block mb-1">Structure attendue (realisation.csv) :</span>
-                  <code>mecanicien_matricule, date, engin_matricule, type_intervention, heure_debut_reelle, heure_fin_reelle, duree_heures, description_travaux, statut, pieces_utilisees</code>
+                  <code>mecanicien_matricule, date, engin_matricule, type_intervention, heure_debut_reelle, heure_fin_reelle, duree_heures, description_travaux, statut, pieces_utilisees, categorie</code>
+                  <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                    * La colonne <strong>categorie</strong> doit contenir l'une des valeurs suivantes : <code>Mécanique</code>, <code>Hydraulique</code>, <code>Électrique</code>, <code>Pneumatique</code>, <code>Transmission</code>, <code>Freinage</code>, <code>Autre</code>.
+                    Si la colonne est absente, vide ou contient une valeur invalide, la valeur <code>"Non catégorisé"</code> sera automatiquement attribuée (sans deviner).
+                  </p>
                 </div>
 
                 <div

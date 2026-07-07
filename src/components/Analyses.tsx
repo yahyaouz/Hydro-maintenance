@@ -31,11 +31,12 @@ export default function Analyses() {
 
   const { user, activeSite } = useAuthStore();
 
-  // 4 Firestore collections read in real-time
+  // 5 Firestore collections read in real-time
   const { data: rawEngins, loading: enginsLoading } = useCollection<any>('engins');
   const { data: rawTasks, loading: tasksLoading } = useCollection<any>('maintenanceTasks');
   const { data: rawPannes, loading: pannesLoading } = useCollection<any>('pannes');
   const { data: rawMecaniciens, loading: mecaniciensLoading } = useCollection<any>('mecaniciens');
+  const { data: rawInterventions, loading: interventionsLoading } = useCollection<any>('interventions');
 
   // Filter helper based on role and activeSite
   const filterBySite = <T extends { siteId?: string; deleted?: boolean }>(data: T[] | null) => {
@@ -51,8 +52,9 @@ export default function Analyses() {
   const tasks = useMemo(() => filterBySite(rawTasks), [rawTasks, activeSite, user]);
   const pannes = useMemo(() => filterBySite(rawPannes), [rawPannes, activeSite, user]);
   const mecaniciens = useMemo(() => filterBySite(rawMecaniciens), [rawMecaniciens, activeSite, user]);
+  const interventions = useMemo(() => filterBySite(rawInterventions), [rawInterventions, activeSite, user]);
 
-  const isLoading = enginsLoading || tasksLoading || pannesLoading || mecaniciensLoading || !rawEngins || !rawTasks || !rawPannes || !rawMecaniciens;
+  const isLoading = enginsLoading || tasksLoading || pannesLoading || mecaniciensLoading || interventionsLoading || !rawEngins || !rawTasks || !rawPannes || !rawMecaniciens || !rawInterventions;
 
   // Relative time helper
   const getRelativeTime = (dateStr: string) => {
@@ -454,33 +456,65 @@ export default function Analyses() {
   };
 
   // ----------------------------------------------------
-  // PANNES ANALYSIS DATA PROCESSING
+  // PANNES ANALYSIS DATA PROCESSING (FUSIONNÉ : PANNES + INTERVENTIONS CORRECTIVES)
   // ----------------------------------------------------
+  const evenementsMaintenance = useMemo(() => {
+    // 1. Filtered and closed pannes
+    const pannesEvents = pannes
+      .filter(p => p.statut === "CLOS")
+      .map(p => ({
+        id: p.id,
+        enginId: p.enginId,
+        categorie: p.categorie || "Non catégorisé",
+        siteId: p.siteId,
+        date: p.dateDeclaration,
+        statut: p.statut,
+        source: "panne" as const,
+        dureeHeures: p.dureePanneHeures || p.dureeInterventionHeures || 0
+      }));
+
+    // 2. Filtered correctif interventions
+    const interventionsEvents = interventions
+      .filter(i => i.typeIntervention === "CORRECTIF")
+      .map(i => ({
+        id: i.id,
+        enginId: i.enginId,
+        categorie: i.categorie || "Non catégorisé",
+        siteId: i.siteId,
+        date: i.date,
+        statut: "CLOS", // they are already executed/closed interventions
+        source: "intervention_importee" as const,
+        dureeHeures: i.dureeHeures || 0
+      }));
+
+    return [...pannesEvents, ...interventionsEvents];
+  }, [pannes, interventions]);
+
   const pannesByPeriodAndSite = useMemo(() => {
     const limitDate = new Date();
     limitDate.setDate(limitDate.getDate() - periodePannes);
     
-    // Active pannes filtered by period
-    const activePannesFiltered = pannes.filter(p => p.dateDeclaration && new Date(p.dateDeclaration) >= limitDate);
+    // Active events filtered by period
+    const activeEventsFiltered = evenementsMaintenance.filter(e => e.date && new Date(e.date) >= limitDate);
 
-    // Previous period pannes (for comparison)
+    // Previous period events (for comparison)
     const prevLimitDate = new Date();
     prevLimitDate.setDate(prevLimitDate.getDate() - (periodePannes * 2));
-    const prevPannesFiltered = pannes.filter(p => {
-      if (!p.dateDeclaration) return false;
-      const d = new Date(p.dateDeclaration);
+    const prevEventsFiltered = evenementsMaintenance.filter(e => {
+      if (!e.date) return false;
+      const d = new Date(e.date);
       return d >= prevLimitDate && d < limitDate;
     });
 
-    return { active: activePannesFiltered, previous: prevPannesFiltered };
-  }, [pannes, periodePannes]);
+    return { active: activeEventsFiltered, previous: prevEventsFiltered };
+  }, [evenementsMaintenance, periodePannes]);
 
   const categoryStats = useMemo(() => {
     const activeList = pannesByPeriodAndSite.active;
     const prevList = pannesByPeriodAndSite.previous;
 
-    const cats: ("Mécanique" | "Hydraulique" | "Électrique" | "Pneumatique" | "Transmission" | "Freinage" | "Autre")[] = [
-      "Mécanique", "Hydraulique", "Électrique", "Pneumatique", "Transmission", "Freinage", "Autre"
+    const cats: ("Mécanique" | "Hydraulique" | "Électrique" | "Pneumatique" | "Transmission" | "Freinage" | "Autre" | "Non catégorisé")[] = [
+      "Mécanique", "Hydraulique", "Électrique", "Pneumatique", "Transmission", "Freinage", "Autre", "Non catégorisé"
     ];
 
     const stats = cats.map(cat => {
@@ -514,17 +548,17 @@ export default function Analyses() {
     if (!isAdminOrDirection || activeSite !== 'TOUS') return null;
 
     const sites = ['SMI', 'OUMEJRANE', 'KOUDIA', 'OUANSIMI', 'BOU-AZZER'];
-    const cats = ["Mécanique", "Hydraulique", "Électrique", "Pneumatique", "Transmission", "Freinage", "Autre"];
+    const cats = ["Mécanique", "Hydraulique", "Électrique", "Pneumatique", "Transmission", "Freinage", "Autre", "Non catégorisé"];
 
     const limitDate = new Date();
     limitDate.setDate(limitDate.getDate() - periodePannes);
 
-    const activeRawPannes = (rawPannes || []).filter(p => !p.deleted && p.dateDeclaration && new Date(p.dateDeclaration) >= limitDate);
+    const activeEvents = evenementsMaintenance.filter(e => e.date && new Date(e.date) >= limitDate);
 
     const table = sites.map(site => {
       const row: Record<string, any> = { siteCode: site };
       cats.forEach(cat => {
-        row[cat] = activeRawPannes.filter(p => p.siteId === site && p.categorie === cat).length;
+        row[cat] = activeEvents.filter(e => e.siteId === site && e.categorie === cat).length;
       });
       return row;
     });
@@ -537,7 +571,7 @@ export default function Analyses() {
     });
 
     return { table, maxPerCategory, categories: cats, sites };
-  }, [rawPannes, activeSite, user, periodePannes]);
+  }, [evenementsMaintenance, activeSite, user, periodePannes]);
 
   // ----------------------------------------------------
   // TEMPORAL EVOLUTION & HISTORICAL TRENDS
@@ -567,10 +601,10 @@ export default function Analyses() {
       }
     };
 
-    (rawPannes || []).forEach(p => checkAndSet(p.dateDeclaration));
+    evenementsMaintenance.forEach(e => checkAndSet(e.date));
     (rawTasks || []).forEach(t => checkAndSet(t.datePlanifiee));
     return earliest;
-  }, [rawPannes, rawTasks]);
+  }, [evenementsMaintenance, rawTasks]);
 
   const getSiteMonthlyData = React.useCallback((siteId: string, monthKey: string, date: Date) => {
     const earliestMonth = new Date(earliestDate.getFullYear(), earliestDate.getMonth(), 1);
@@ -581,25 +615,24 @@ export default function Analyses() {
     }
 
     const siteEngins = (rawEngins || []).filter(e => !e.deleted && e.siteId === siteId);
-    const sitePannesMonth = (rawPannes || []).filter(p => 
-      !p.deleted && 
-      p.siteId === siteId && 
-      p.dateDeclaration && 
-      p.dateDeclaration.startsWith(monthKey)
+    const siteEventsMonth = evenementsMaintenance.filter(e => 
+      e.siteId === siteId && 
+      e.date && 
+      e.date.startsWith(monthKey)
     );
 
-    const pannesCount = sitePannesMonth.length;
+    const pannesCount = siteEventsMonth.length;
     let dispoRate: number | null = null;
     let mtbf: number | null = null;
 
     if (siteEngins.length > 0) {
       let totalDispo = 0;
       siteEngins.forEach(e => {
-        const enginePannesInMonth = sitePannesMonth.filter(p => p.enginId === e.id);
-        if (enginePannesInMonth.length === 0) {
+        const engineEventsInMonth = siteEventsMonth.filter(ev => ev.enginId === e.id);
+        if (engineEventsInMonth.length === 0) {
           totalDispo += 100;
         } else {
-          const hasOpen = enginePannesInMonth.some(p => p.statut !== 'CLOS');
+          const hasOpen = engineEventsInMonth.some(ev => ev.statut !== 'CLOS');
           if (hasOpen) {
             totalDispo += 0;
           } else {
@@ -612,7 +645,7 @@ export default function Analyses() {
     }
 
     return { pannesCount: pannesCount, dispoRate, mtbf };
-  }, [rawEngins, rawPannes, earliestDate]);
+  }, [rawEngins, evenementsMaintenance, earliestDate]);
 
   const temporalDataActiveSite = useMemo(() => {
     return monthsList.map(m => {
@@ -631,8 +664,8 @@ export default function Analyses() {
         };
       }
 
-      const pannesInMonth = pannes.filter(p => p.dateDeclaration && p.dateDeclaration.startsWith(monthKey));
-      const pannesCount = pannesInMonth.length;
+      const eventsInMonth = evenementsMaintenance.filter(e => e.date && e.date.startsWith(monthKey));
+      const pannesCount = eventsInMonth.length;
 
       let dispoValue: number | null = null;
       let mtbfValue: number | null = null;
@@ -640,11 +673,11 @@ export default function Analyses() {
       if (engins.length > 0) {
         let totalDispo = 0;
         engins.forEach(e => {
-          const enginePannesInMonth = pannesInMonth.filter(p => p.enginId === e.id);
-          if (enginePannesInMonth.length === 0) {
+          const engineEventsInMonth = eventsInMonth.filter(ev => ev.enginId === e.id);
+          if (engineEventsInMonth.length === 0) {
             totalDispo += 100;
           } else {
-            const hasOpen = enginePannesInMonth.some(p => p.statut !== 'CLOS');
+            const hasOpen = engineEventsInMonth.some(ev => ev.statut !== 'CLOS');
             if (hasOpen) {
               totalDispo += 0;
             } else {
@@ -663,7 +696,7 @@ export default function Analyses() {
         mtbf: mtbfValue
       };
     });
-  }, [monthsList, pannes, engins, earliestDate]);
+  }, [monthsList, evenementsMaintenance, engins, earliestDate]);
 
   const siteAData = useMemo(() => {
     return monthsList.map(m => {
@@ -1568,7 +1601,8 @@ export default function Analyses() {
                                   "Pneumatique": "#10b981",
                                   "Transmission": "#a855f7",
                                   "Freinage": "#ef4444",
-                                  "Autre": "#64748b"
+                                  "Autre": "#64748b",
+                                  "Non catégorisé": "#94a3b8"
                                 };
                                 const fill = colors[entry.name] || "#3b82f6";
                                 return <Cell key={`cell-${idx}`} fill={fill} />;
@@ -1577,6 +1611,9 @@ export default function Analyses() {
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
+                      <p className="text-[10px] text-slate-400 font-mono italic text-center mt-2 bg-slate-50 py-1 rounded-md border border-slate-100">
+                        * Inclut les pannes déclarées et les interventions correctives importées
+                      </p>
                     </div>
 
                     {/* Right: Top 3 trends */}
@@ -1682,6 +1719,11 @@ export default function Analyses() {
                       })}
                     </tbody>
                   </table>
+                </div>
+                <div className="p-3 bg-slate-50/50 border-t border-slate-100 text-center">
+                  <p className="text-[10px] text-slate-400 font-mono italic">
+                    * Inclut les pannes déclarées et les interventions correctives importées
+                  </p>
                 </div>
               </Card>
             )}
@@ -1790,6 +1832,9 @@ export default function Analyses() {
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
+                <p className="text-[10px] text-slate-400 font-mono italic text-center mt-2 bg-slate-50 py-1 rounded-md border border-slate-100">
+                  * Inclut les pannes déclarées et les interventions correctives importées
+                </p>
               </CardContent>
             </Card>
 
