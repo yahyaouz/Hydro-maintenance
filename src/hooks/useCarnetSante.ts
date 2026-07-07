@@ -25,7 +25,13 @@ export function calculSecoursSante(engin: any): number {
   }
   
   // Status deduction
-  const status = (engin.statut || engin.status || "").toLowerCase();
+  let status = (engin.statut || engin.status || "").toLowerCase();
+  if (!status && engin.etat) {
+    const et = engin.etat.toLowerCase();
+    if (et === 'en maintenance') status = 'maintenance';
+    else if (et === 'en panne' || et === 'hors service') status = 'panne';
+    else if (et === 'opérationnel') status = 'actif';
+  }
   if (status === "panne") {
     score -= 40;
   } else if (status === "maintenance") {

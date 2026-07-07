@@ -37,6 +37,8 @@ export interface Engin {
   siteId: SiteID;
   heuresMarche: number;
   etat: string;
+  statut?: string;
+  dispo?: number;
   deleted?: boolean;
 }
 

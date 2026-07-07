@@ -141,7 +141,7 @@ export function Alertes() {
         // Rule 3 & 4: PANNE_24H and PANNE_48H
         // ----------------------------------------------------
         for (const panne of pannes) {
-          if (panne.deleted || panne.statut === 'CLOS' || panne.statut === 'RESOLU') continue;
+          if (panne.deleted || panne.statut === 'CLOS') continue;
 
           const decDate = panne.dateDeclaration ? new Date(panne.dateDeclaration) : new Date(panne.createdAt?.seconds * 1000 || now);
           const elapsedHours = (now.getTime() - decDate.getTime()) / (3600 * 1000);
@@ -244,7 +244,11 @@ export function Alertes() {
         // Rule 7: ENGIN_INACTIF
         // ----------------------------------------------------
         for (const engin of engins) {
-          if (engin.deleted || engin.id.startsWith('temp_') || engin.etat === 'Vendu' || engin.etat === 'Hors service') continue;
+          const activeStatut = (engin.statut || '').toLowerCase();
+          const isOut = engin.statut !== undefined 
+            ? (activeStatut === 'hors service' || activeStatut === 'vendu') 
+            : (engin.etat === 'Vendu' || engin.etat === 'Hors service');
+          if (engin.deleted || engin.id.startsWith('temp_') || isOut) continue;
 
           const lastUpdate = engin.updatedAt ? new Date(engin.updatedAt.seconds ? engin.updatedAt.seconds * 1000 : engin.updatedAt) : null;
           if (lastUpdate) {

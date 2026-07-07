@@ -141,12 +141,16 @@ export default function TachesPlanning() {
 
   // Multi-site permissions filtering
   const filteredEngins = React.useMemo(() => {
-    return engins.filter(e => 
-      e.deleted !== true &&
-      e.etat !== "Hors service" && e.etat !== "Vendu" &&
-      (user?.role === 'ADMIN' || user?.role === 'DIRECTION' || e.siteId === user?.siteId) &&
-      (activeSite === 'TOUS' || e.siteId === activeSite)
-    );
+    return engins.filter(e => {
+      const activeStatut = (e.statut || '').toLowerCase();
+      const isOut = e.statut !== undefined 
+        ? (activeStatut === 'hors service' || activeStatut === 'vendu') 
+        : (e.etat === "Hors service" || e.etat === "Vendu");
+      return e.deleted !== true &&
+        !isOut &&
+        (user?.role === 'ADMIN' || user?.role === 'DIRECTION' || e.siteId === user?.siteId) &&
+        (activeSite === 'TOUS' || e.siteId === activeSite);
+    });
   }, [engins, user, activeSite]);
 
   const filteredMecaniciens = React.useMemo(() => {
@@ -394,10 +398,30 @@ export default function TachesPlanning() {
         }
 
         // 2. Prepare task updates
-        const taskUpdates = {
+        const taskUpdates: any = {
           ...fields,
           updatedAt: Timestamp.now()
         };
+
+        if (
+          fields.statut === 'EN_COURS' &&
+          taskData.type === 'CORRECTIF' &&
+          (fields as any).datePriseEnCharge === undefined &&
+          !taskData.datePriseEnCharge
+        ) {
+          const now = Timestamp.now();
+          taskUpdates.datePriseEnCharge = now;
+
+          // Propagate datePriseEnCharge to the associated panne document atomically
+          if (taskData.panneId) {
+            const panneRef = doc(db, 'pannes', taskData.panneId);
+            transaction.update(panneRef, {
+              datePriseEnCharge: now,
+              updatedAt: now
+            });
+          }
+        }
+
         transaction.update(taskRef, taskUpdates);
 
         // 3. Handle downstream status updates atomically when completed
@@ -406,16 +430,34 @@ export default function TachesPlanning() {
           // A. Corrective task completion -> close associated panne & set engine back to Operational
           if (taskData.type === 'CORRECTIF' && taskData.panneId) {
             const panneRef = doc(db, 'pannes', taskData.panneId);
-            transaction.update(panneRef, {
+            const panneSnap = await transaction.get(panneRef);
+            const panneData = panneSnap.exists() ? panneSnap.data() : null;
+
+            const panneUpdates: any = {
               statut: 'CLOS',
               solution: fields.commentaire || "Fiche d'intervention validée.",
+              dateResolution: Timestamp.now(),
               updatedAt: Timestamp.now()
-            });
+            };
+
+            // Safeguard: Ensure datePriseEnCharge is populated on the panne document
+            if (panneData && !panneData.datePriseEnCharge) {
+              if (taskData.datePriseEnCharge) {
+                panneUpdates.datePriseEnCharge = taskData.datePriseEnCharge;
+              } else if (taskUpdates.datePriseEnCharge) {
+                panneUpdates.datePriseEnCharge = taskUpdates.datePriseEnCharge;
+              } else {
+                panneUpdates.datePriseEnCharge = taskData.createdAt || Timestamp.now();
+              }
+            }
+
+            transaction.update(panneRef, panneUpdates);
 
             if (taskData.enginId) {
               const enginRef = doc(db, 'engins', taskData.enginId);
               transaction.update(enginRef, {
-                etat: 'Opérationnel',
+                statut: 'actif',
+                dispo: 100,
                 updatedAt: Timestamp.now()
               });
             }
@@ -427,7 +469,8 @@ export default function TachesPlanning() {
             const enginSnap = await transaction.get(enginRef);
             if (enginSnap.exists()) {
               transaction.update(enginRef, {
-                etat: 'Opérationnel',
+                statut: 'actif',
+                dispo: 100,
                 updatedAt: Timestamp.now()
               });
             }
@@ -625,7 +668,7 @@ export default function TachesPlanning() {
     const tasksMois = filteredTasks.filter(t => t.datePlanifiee.startsWith(currentMonthStr));
     const total = tasksMois.length;
     const faites = tasksMois.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
-    const perfGlobale = total > 0 ? Math.round((faites / total) * 100) : 85;
+    const perfGlobale = total > 0 ? Math.round((faites / total) * 100) : null;
 
     const prev = tasksMois.filter(t => t.type === 'PREVENTIF' || t.type === 'QUOTIDIEN').length;
     const corr = tasksMois.filter(t => t.type === 'CORRECTIF').length;
@@ -1015,11 +1058,12 @@ export default function TachesPlanning() {
               ))}
 
               {visibleTasks.length === 0 && (
-                <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-400 gap-2 bg-white rounded-3xl border border-slate-150">
-                  <AlertTriangle className="h-8 w-8 text-slate-300" />
-                  <p className="font-black text-xs uppercase tracking-wider text-slate-500">Aucune tâche trouvée</p>
+                <div className="relative overflow-hidden col-span-full py-12 flex flex-col items-center justify-center text-slate-500 gap-2 bg-white rounded-2xl border border-[#D4AF37]/40 shadow-sm animate-in fade-in duration-150">
+                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+                  <AlertTriangle className="h-8 w-8 text-amber-500 animate-pulse mb-1" />
+                  <p className="font-black text-xs uppercase tracking-wider text-slate-800">Aucune tâche trouvée</p>
                   {/* V4-TYPO: replaced text-[10px] with text-caption */}
-                  <p className="text-caption text-slate-400 font-medium">Modifiez vos critères de filtrage</p>
+                  <p className="text-caption text-slate-500 font-medium">Modifiez vos critères de filtrage</p>
                 </div>
               )}
             </div>
@@ -1164,7 +1208,9 @@ export default function TachesPlanning() {
                   <div>
                     {/* V4-TYPO: replaced text-[9px] with text-caption */}
                     <span className="text-caption font-bold text-slate-500 dark:text-slate-400 uppercase">Taux de Shift</span>
-                    <h3 className="text-lg font-black text-[#D4AF37]">{kpis.perfGlobale}%</h3>
+                    <h3 className={`font-black text-[#D4AF37] ${kpis.perfGlobale !== null ? 'text-lg' : 'text-xs'}`}>
+                      {kpis.perfGlobale !== null ? `${kpis.perfGlobale}%` : 'Données insuffisantes'}
+                    </h3>
                   </div>
                 </CardContent>
               </Card>
@@ -1735,6 +1781,8 @@ export default function TachesPlanning() {
                                   if (selectedPanne.enginId) {
                                     const enginRef = doc(db, 'engins', selectedPanne.enginId);
                                     await updateDoc(enginRef, {
+                                      statut: 'actif',
+                                      dispo: 100,
                                       etat: 'Opérationnel',
                                       updatedAt: Timestamp.now()
                                     });

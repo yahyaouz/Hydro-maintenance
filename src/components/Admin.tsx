@@ -48,6 +48,8 @@ interface Engin {
   dateEntreeService: string;
   etat: "Opérationnel" | "En maintenance" | "Hors service" | "Vendu";
   conducteurAssigne: string;
+  statut?: string;
+  dispo?: number;
 }
 
 interface Mecanicien {
@@ -108,100 +110,6 @@ export function Admin() {
   // RECONSTRUIT : Indicateur visuel simple de chargement
   const [loading, setLoading] = React.useState(true);
 
-  // RECONSTRUIT : Seeding check on load
-  React.useEffect(() => {
-    const checkAndSeed = async () => {
-      try {
-        const enginsRef = collection(db, 'engins');
-        const mecaRef = collection(db, 'mecaniciens');
-        const chantiersRef = collection(db, 'chantiers');
-        const pmIntervallesRef = collection(db, 'pmIntervalles');
-
-        const [enginsSnap, mecaSnap, chantiersSnap, pmIntervallesSnap] = await Promise.all([
-          getDocs(query(enginsRef, where('deleted', '!=', true))),
-          getDocs(query(mecaRef, where('deleted', '!=', true))),
-          getDocs(query(chantiersRef, where('deleted', '!=', true))),
-          getDocs(query(pmIntervallesRef, where('deleted', '!=', true)))
-        ]);
-
-        const batch = writeBatch(db);
-        let hasChanges = false;
-
-        if (enginsSnap.empty) {
-          const SEED_ENGINS = [
-            { id: "ST2G-01", modele: "ST2G", marque: "Epiroc", type: "Scooptram", siteId: "SMI", heuresMarche: 1450, dateEntreeService: "2021-03-10", etat: "Opérationnel", conducteurAssigne: "Non assigné", deleted: false, updatedAt: Timestamp.now() },
-            { id: "ST2D-01", modele: "ST2D", marque: "Epiroc", type: "Scooptram", siteId: "SMI", heuresMarche: 2890, dateEntreeService: "2020-09-18", etat: "Opérationnel", conducteurAssigne: "Non assigné", deleted: false, updatedAt: Timestamp.now() },
-            { id: "ST7-01",  modele: "ST7",  marque: "Epiroc", type: "Scooptram", siteId: "KOUDIA", heuresMarche: 820, dateEntreeService: "2022-12-05", etat: "Opérationnel", conducteurAssigne: "Non assigné", deleted: false, updatedAt: Timestamp.now() },
-            { id: "ST2G-02", modele: "ST2G", marque: "Epiroc", type: "Scooptram", siteId: "OUMEJRANE", heuresMarche: 1980, dateEntreeService: "2021-11-14", etat: "Opérationnel", conducteurAssigne: "Non assigné", deleted: false, updatedAt: Timestamp.now() },
-            { id: "ST2D-02", modele: "ST2D", marque: "Epiroc", type: "Scooptram", siteId: "BOU-AZZER", heuresMarche: 5200, dateEntreeService: "2017-06-25", etat: "En maintenance", conducteurAssigne: "Non assigné", deleted: false, updatedAt: Timestamp.now() },
-          ];
-          SEED_ENGINS.forEach(item => {
-            batch.set(doc(db, 'engins', item.id), item);
-          });
-          hasChanges = true;
-        }
-
-        if (mecaSnap.empty) {
-          const SEED_MECANICIENS = [
-            { id: "M001", nomComplet: "Abdellah Daoudi", poste: "Poste 1", specialite: "Moteur", telephone: "+212 611 223344", dateEmbauche: "2020-05-15", statut: "Actif", siteId: "SMI", deleted: false, updatedAt: Timestamp.now() },
-            { id: "M002", nomComplet: "Lahcen Ait", poste: "Poste 2", specialite: "Hydraulique", telephone: "+212 622 334455", dateEmbauche: "2019-11-10", statut: "Actif", siteId: "SMI", deleted: false, updatedAt: Timestamp.now() },
-            { id: "M003", nomComplet: "Mohamed El Amri", poste: "Poste 3", specialite: "Électrique", telephone: "+212 633 445566", dateEmbauche: "2021-02-01", statut: "Actif", siteId: "KOUDIA", deleted: false, updatedAt: Timestamp.now() },
-            { id: "M004", nomComplet: "Youssef Naciri", poste: "Poste 1", specialite: "Transmission", telephone: "+212 644 556677", dateEmbauche: "2018-04-12", statut: "Actif", siteId: "OUMEJRANE", deleted: false, updatedAt: Timestamp.now() },
-            { id: "M005", nomComplet: "Rachid Idrissi", poste: "Poste 2", specialite: "Généraliste", telephone: "+212 655 667788", dateEmbauche: "2022-08-20", statut: "Actif", siteId: "BOU-AZZER", deleted: false, updatedAt: Timestamp.now() },
-          ];
-          SEED_MECANICIENS.forEach(item => {
-            batch.set(doc(db, 'mecaniciens', item.id), item);
-          });
-          hasChanges = true;
-        }
-
-        if (chantiersSnap.empty) {
-          const SEED_CHANTIERS = [
-            { id: "SMI",       nomComplet: "Société Métallurgique d'Imiter", type: "Mine souterraine", localisation: "Imiter, Tinghir",   responsableId: "M001", statut: "Actif", deleted: false, updatedAt: Timestamp.now() },
-            { id: "OUMEJRANE", nomComplet: "Mine d'Oumejrane",               type: "Mine souterraine", localisation: "Oumejrane, Alnif", responsableId: "M004", statut: "Actif", deleted: false, updatedAt: Timestamp.now() },
-            { id: "KOUDIA",    nomComplet: "Koudiat Aïcha",                   type: "Mine souterraine", localisation: "Marrakech",        responsableId: "M003", statut: "Actif", deleted: false, updatedAt: Timestamp.now() },
-            { id: "OUANSIMI",  nomComplet: "Mine d'Ouansimi",                 type: "Mine souterraine", localisation: "Tiznit",           responsableId: "", statut: "Actif", deleted: false, updatedAt: Timestamp.now() },
-            { id: "BOU-AZZER", nomComplet: "Mine de Bou-Azzer",              type: "Mine souterraine", localisation: "Ouarzazate",       responsableId: "M005", statut: "Actif", deleted: false, updatedAt: Timestamp.now() },
-          ];
-          SEED_CHANTIERS.forEach(item => {
-            batch.set(doc(db, 'chantiers', item.id), item);
-          });
-          hasChanges = true;
-        }
-
-        if (pmIntervallesSnap.empty) {
-          const SEED_INTERVALLES = [
-            { typeEngin: "ST2G", operation: "Vidange moteur + filtre huile 15W-40",         intervalleHeures: 250,  produitHuile: "15W-40",       quantite: "8L",  priorite: "Haute", deleted: false, updatedAt: Timestamp.now() },
-            { typeEngin: "ST2G", operation: "Filtre air primaire + secondaire",              intervalleHeures: 500,  produitHuile: "Filtres OEM",  quantite: "N/A", priorite: "Normale", deleted: false, updatedAt: Timestamp.now() },
-            { typeEngin: "ST2G", operation: "Vidange hydraulique + filtres retour",          intervalleHeures: 1000, produitHuile: "ISO VG 46",    quantite: "12L", priorite: "Critique", deleted: false, updatedAt: Timestamp.now() },
-            { typeEngin: "ST2G", operation: "Vidange transmission + ponts SAE 140",          intervalleHeures: 2000, produitHuile: "SAE 140",      quantite: "15L", priorite: "Critique", deleted: false, updatedAt: Timestamp.now() },
-            { typeEngin: "ST2D", operation: "Vidange moteur Deutz + filtre huile",           intervalleHeures: 250,  produitHuile: "15W-40",       quantite: "6L",  priorite: "Haute", deleted: false, updatedAt: Timestamp.now() },
-            { typeEngin: "ST2D", operation: "Vidange hydraulique + filtre aspiration",       intervalleHeures: 1000, produitHuile: "ISO VG 46",    quantite: "10L", priorite: "Critique", deleted: false, updatedAt: Timestamp.now() },
-            { typeEngin: "ST7",  operation: "Vidange moteur Cummins QSB 4.5 + filtres",     intervalleHeures: 250,  produitHuile: "15W-40",       quantite: "14L", priorite: "Haute", deleted: false, updatedAt: Timestamp.now() },
-            { typeEngin: "ST7",  operation: "Vidange circuit hydraulique complet",           intervalleHeures: 1000, produitHuile: "ISO VG 46",    quantite: "50L", priorite: "Critique", deleted: false, updatedAt: Timestamp.now() },
-            { typeEngin: "ST7",  operation: "Vidange transmission + ponts Dana R32000",      intervalleHeures: 2000, produitHuile: "SAE 140",      quantite: "30L", priorite: "Critique", deleted: false, updatedAt: Timestamp.now() },
-            { typeEngin: "Générique", operation: "Graissage général pivots et articulations", intervalleHeures: 50, produitHuile: "Graisse EP2",  quantite: "N/A", priorite: "Haute", deleted: false, updatedAt: Timestamp.now() },
-            { typeEngin: "Générique", operation: "Vérification niveaux tous circuits",       intervalleHeures: 10,  produitHuile: "N/A",          quantite: "N/A", priorite: "Normale", deleted: false, updatedAt: Timestamp.now() },
-          ];
-          SEED_INTERVALLES.forEach(item => {
-            const ref = doc(collection(db, 'pmIntervalles'));
-            batch.set(ref, item);
-          });
-          hasChanges = true;
-        }
-
-        if (hasChanges) {
-          await batch.commit();
-          toast.success("Données d'initialisation (seeds) chargées dans Firestore !");
-        }
-      } catch (err: any) {
-        console.error("Erreur d'initialisation des données (seed):", err);
-        toast.error("Erreur d'initialisation des données Firestore : " + err.message);
-      }
-    };
-
-    checkAndSeed();
-  }, []);
 
   // RECONSTRUIT : Lecture Firestore en temps réel via onSnapshot
   React.useEffect(() => {
@@ -321,6 +229,20 @@ export function Admin() {
     }
 
     try {
+      const selectedEtat = data.etat || "Opérationnel";
+      let resolvedStatut = "actif";
+      let resolvedDispo = 100;
+      if (selectedEtat === "En maintenance") {
+        resolvedStatut = "maintenance";
+        resolvedDispo = 50;
+      } else if (selectedEtat === "Hors service") {
+        resolvedStatut = "panne";
+        resolvedDispo = 0;
+      } else if (selectedEtat === "Vendu") {
+        resolvedStatut = "vendu";
+        resolvedDispo = 0;
+      }
+
       if (editingItem) {
         const docRef = doc(db, 'engins', editingItem.id);
         const payload = {
@@ -330,7 +252,9 @@ export function Admin() {
           siteId: data.siteId || "SMI",
           heuresMarche: Number(data.heuresMarche) || 0,
           dateEntreeService: data.dateEntreeService || new Date().toISOString().split('T')[0],
-          etat: data.etat || "Opérationnel",
+          etat: selectedEtat,
+          statut: resolvedStatut,
+          dispo: resolvedDispo,
           conducteurAssigne: data.conducteurAssigne || "Non assigné",
           updatedAt: Timestamp.now()
         };
@@ -350,7 +274,9 @@ export function Admin() {
           siteId: data.siteId || "SMI",
           heuresMarche: Number(data.heuresMarche) || 0,
           dateEntreeService: data.dateEntreeService || new Date().toISOString().split('T')[0],
-          etat: data.etat || "Opérationnel",
+          etat: selectedEtat,
+          statut: resolvedStatut,
+          dispo: resolvedDispo,
           conducteurAssigne: data.conducteurAssigne || "Non assigné",
           deleted: false,
           updatedAt: Timestamp.now()
@@ -623,7 +549,10 @@ export function Admin() {
       return engins.filter(e => {
         const matchesQuery = e.id.toLowerCase().includes(q) || e.modele.toLowerCase().includes(q) || e.conducteurAssigne.toLowerCase().includes(q);
         const matchesChantier = filterOption1 === "Tous" || e.siteId === filterOption1;
-        const matchesEtat = filterOption2 === "Tous" || e.etat === filterOption2;
+        const currentEtat = e.statut !== undefined 
+          ? (e.statut === "actif" ? "Opérationnel" : e.statut === "maintenance" ? "En maintenance" : "Hors service")
+          : e.etat;
+        const matchesEtat = filterOption2 === "Tous" || currentEtat === filterOption2;
         return matchesQuery && matchesChantier && matchesEtat;
       });
     }
@@ -663,9 +592,18 @@ export function Admin() {
   const renderStats = () => {
     if (activeTab === "engins") {
       const total = engins.length;
-      const operationnels = engins.filter(e => e.etat === "Opérationnel").length;
-      const maintenance = engins.filter(e => e.etat === "En maintenance").length;
-      const hs = engins.filter(e => e.etat === "Hors service").length;
+      const operationnels = engins.filter(e => {
+        if (e.statut !== undefined) return e.statut === "actif";
+        return e.etat === "Opérationnel";
+      }).length;
+      const maintenance = engins.filter(e => {
+        if (e.statut !== undefined) return e.statut === "maintenance";
+        return e.etat === "En maintenance";
+      }).length;
+      const hs = engins.filter(e => {
+        if (e.statut !== undefined) return e.statut === "panne" || e.statut === "hors service" || e.statut === "arrêté";
+        return e.etat === "Hors service";
+      }).length;
 
       return (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1333,14 +1271,21 @@ export function Admin() {
                       <td className="py-4 px-4 text-xs text-slate-500 font-mono">{e.dateEntreeService}</td>
                       <td className="py-4 px-4 text-slate-600 text-xs font-medium">{e.conducteurAssigne}</td>
                       <td className="py-4 px-4 text-center">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                          e.etat === "Opérationnel" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                          e.etat === "En maintenance" ? "bg-amber-50 text-amber-700 border border-amber-200" :
-                          e.etat === "Hors service" ? "bg-rose-50 text-rose-700 border border-rose-200" :
-                          "bg-slate-50 text-slate-500 border border-slate-200"
-                        }`}>
-                          {e.etat}
-                        </span>
+                        {(() => {
+                          const currentEtat = e.statut !== undefined 
+                            ? (e.statut === "actif" ? "Opérationnel" : e.statut === "maintenance" ? "En maintenance" : "Hors service")
+                            : e.etat;
+                          return (
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                              currentEtat === "Opérationnel" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                              currentEtat === "En maintenance" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                              currentEtat === "Hors service" ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                              "bg-slate-50 text-slate-500 border border-slate-200"
+                            }`}>
+                              {currentEtat}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="py-4 px-6 text-center">
                         <div className="flex justify-center items-center gap-1.5">

@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { useMecaniciens, Mecanicien } from "@/hooks/useMecaniciens";
 import { useAuthStore } from "@/lib/store";
+import { useCollection } from "@/hooks/useCollection";
+import { MaintenanceTask } from "@/components/taches/types";
 import { 
   Users, Award, Search, Filter, CheckCircle2, XCircle, 
   Wrench, Clock, Phone, Mail, Calendar, MapPin, 
@@ -23,6 +25,46 @@ export function Mecaniciens() {
   const [selectedSkill, setSelectedSkill] = useState("TOUTES");
   const [activeSubTab, setActiveSubTab] = useState<"liste" | "classement">("liste");
   const [selectedMeca, setSelectedMeca] = useState<Mecanicien | null>(null);
+
+  // Load tasks for real workload analysis
+  const { data: tasks, loading: tasksLoading } = useCollection<MaintenanceTask>('maintenanceTasks', [], { limitNum: 1000 });
+
+  const isPrivileged = user?.role && ['ADMIN', 'DIRECTION', 'RESPONSABLE_MAINTENANCE'].includes(user.role);
+
+  const workloadData = useMemo(() => {
+    if (!mecaniciens) return [];
+    
+    // Filter active mechanics
+    const activeMecas = mecaniciens.filter(m => m.active !== false);
+
+    // Apply activeSite filter if not TOUS
+    const filteredMecas = activeSite === "TOUS" 
+      ? activeMecas 
+      : activeMecas.filter(m => m.siteId === activeSite);
+
+    return filteredMecas.map(m => {
+      // Find open tasks for this mechanic
+      const openTasks = tasks ? tasks.filter(t => 
+        t.mecanicienId === m.id && 
+        (t.statut === 'NON_FAIT' || t.statut === 'EN_COURS') && 
+        t.deleted !== true
+      ) : [];
+
+      const totalOpen = openTasks.length;
+      
+      // Breakdown by type (PREVENTIF/QUOTIDIEN vs CORRECTIF)
+      const preventifCount = openTasks.filter(t => t.type === 'PREVENTIF' || t.type === 'QUOTIDIEN').length;
+      const correctifCount = openTasks.filter(t => t.type === 'CORRECTIF').length;
+
+      return {
+        mecanicien: m,
+        totalOpen,
+        preventifCount,
+        correctifCount,
+        siteId: m.siteId
+      };
+    }).sort((a, b) => b.totalOpen - a.totalOpen); // Sort by workload descending
+  }, [mecaniciens, tasks, activeSite]);
 
   // List of unique skills across all mechanics
   const allSkills = useMemo(() => {
@@ -190,6 +232,141 @@ export function Mecaniciens() {
           </div>
         </div>
       </div>
+
+      {/* Charge de Travail Réelle & Équilibrage des Équipes */}
+      {isPrivileged && (
+        <div className="relative overflow-hidden bg-white dark:bg-slate-950 p-6 rounded-2xl border border-amber-500/30 shadow-sm">
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+          
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div>
+              <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-white uppercase flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-amber-500" />
+                Charge de Travail Réelle & Équilibrage des Équipes
+              </h3>
+              <p className="text-xs text-slate-500 font-mono mt-1">
+                Tâches ouvertes (NON_FAIT, EN_COURS) actuellement assignées à chaque mécanicien actif pour repérer et rééquilibrer la charge.
+              </p>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-3 text-[10px] font-mono uppercase bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
+              <span className="flex items-center gap-1.5 font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> &gt;8 Tâches (Surchargé)
+              </span>
+              <span className="flex items-center gap-1.5 font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 4-8 Tâches (Modéré)
+              </span>
+              <span className="flex items-center gap-1.5 font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> &lt;4 Tâches (Disponible)
+              </span>
+            </div>
+          </div>
+
+          {tasksLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-xs text-slate-400 font-mono ml-2">Analyse de la charge de travail...</span>
+            </div>
+          ) : workloadData.length === 0 ? (
+            <div className="text-center py-6 text-xs text-slate-400 font-mono">
+              Aucun mécanicien actif trouvé pour cette sélection.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {workloadData.map(({ mecanicien, totalOpen, preventifCount, correctifCount, siteId }) => {
+                const getStatusColor = (count: number) => {
+                  if (count > 8) return "bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50";
+                  if (count >= 4) return "bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50";
+                  return "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50";
+                };
+
+                const getStatusText = (count: number) => {
+                  if (count > 8) return "Surchargé";
+                  if (count >= 4) return "Modéré";
+                  return "Disponible";
+                };
+
+                const preventifPct = totalOpen > 0 ? Math.round((preventifCount / totalOpen) * 100) : 0;
+                const correctifPct = totalOpen > 0 ? Math.round((correctifCount / totalOpen) * 100) : 0;
+
+                return (
+                  <div 
+                    key={mecanicien.uid}
+                    className="relative bg-slate-50 dark:bg-slate-900/30 rounded-xl p-4 border border-slate-200 dark:border-slate-800 flex flex-col justify-between hover:border-amber-500/30 transition-all group"
+                  >
+                    {/* Site badge highlighted in top right */}
+                    <div className="absolute top-3 right-3 z-10">
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border shadow-xs ${getSiteColor(siteId)}`}>
+                        {siteId}
+                      </span>
+                    </div>
+
+                    {/* Header */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                        <img 
+                          src={mecanicien.photo || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150"} 
+                          alt="" 
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase truncate">
+                          {mecanicien.prenom} {mecanicien.nom}
+                        </h4>
+                        <span className="text-[9px] text-slate-400 font-mono uppercase block">{mecanicien.matricule}</span>
+                      </div>
+                    </div>
+
+                    {/* Stats & Badge */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono uppercase">Tâches assignées</span>
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${getStatusColor(totalOpen)}`}>
+                          {totalOpen} {totalOpen === 1 ? "tâche" : "tâches"} • {getStatusText(totalOpen)}
+                        </span>
+                      </div>
+
+                      {/* Distribution breakdown */}
+                      {totalOpen > 0 ? (
+                        <div className="space-y-1.5 pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
+                          <div className="flex justify-between text-[9px] font-mono uppercase text-slate-400">
+                            <span>🔩 Prev: {preventifCount} ({preventifPct}%)</span>
+                            <span>🚨 Corr: {correctifCount} ({correctifPct}%)</span>
+                          </div>
+                          
+                          {/* Split Progress Bar */}
+                          <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden flex">
+                            {preventifCount > 0 && (
+                              <div 
+                                className="bg-indigo-500 h-full transition-all" 
+                                style={{ width: `${preventifPct}%` }}
+                                title={`Préventif: ${preventifPct}%`}
+                              />
+                            )}
+                            {correctifCount > 0 && (
+                              <div 
+                                className="bg-amber-500 h-full transition-all" 
+                                style={{ width: `${correctifPct}%` }}
+                                title={`Correctif: ${correctifPct}%`}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-[9.5px] text-slate-400 dark:text-slate-500 italic font-mono text-center pt-2 border-t border-slate-200/40 dark:border-slate-800/40">
+                          Aucune tâche ouverte assignée.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="relative overflow-hidden bg-white dark:bg-slate-950 p-4 rounded-2xl border border-[#D4AF37]/30 shadow-sm flex flex-col md:flex-row gap-4">

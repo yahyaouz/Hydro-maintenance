@@ -90,6 +90,11 @@ export function Dashboard() {
 
   // Normalizer status
   const getNormalizedStatus = React.useCallback((e: any) => {
+    if (e.statut !== undefined || e.dispo !== undefined) {
+      if (e.dispo === 0 || e.statut === "panne") return "EN_PANNE";
+      if (e.statut === "maintenance" || (typeof e.dispo === "number" && e.dispo > 0 && e.dispo < 100)) return "EN_MAINTENANCE";
+      return "DISPONIBLE";
+    }
     if (e.status) {
       const s = e.status.toUpperCase();
       if (s === 'DISPONIBLE' || s === 'OPÉRATIONNEL' || s === 'OPERATIONNEL') return 'DISPONIBLE';
@@ -300,6 +305,37 @@ export function Dashboard() {
     });
     return sorted.slice(0, 3);
   }, [filteredPannes]);
+
+  const immobilisesList = React.useMemo(() => {
+    if (!filteredEngins) return [];
+    
+    const immob = filteredEngins.filter(e => {
+      if (e.statut !== undefined || e.dispo !== undefined) {
+        return e.statut === "panne" || e.statut === "maintenance" || (typeof e.dispo === "number" && e.dispo < 100);
+      }
+      const norm = getNormalizedStatus(e);
+      return norm === "EN_PANNE" || norm === "EN_MAINTENANCE";
+    });
+
+    const getMs = (val: any) => {
+      if (!val) return Date.now();
+      if (typeof val.toMillis === 'function') return val.toMillis();
+      if (typeof val.seconds === 'number') return val.seconds * 1000;
+      const d = new Date(val).getTime();
+      return isNaN(d) ? Date.now() : d;
+    };
+
+    // Sort by oldest updatedAt first
+    return [...immob].sort((a, b) => getMs(a.updatedAt) - getMs(b.updatedAt));
+  }, [filteredEngins, getNormalizedStatus]);
+
+  const showImmobilisesCard = React.useMemo(() => {
+    const isPrivileged = user?.role && ['ADMIN', 'DIRECTION', 'RESPONSABLE_MAINTENANCE'].includes(user.role);
+    if (activeSite === "TOUS") {
+      return isPrivileged;
+    }
+    return true;
+  }, [user, activeSite]);
 
   return (
     <motion.div 
@@ -539,6 +575,71 @@ export function Dashboard() {
         {/* RIGHT SECTION (Width: 1/3 on desktop) - Operational lists & Donut */}
         <div className="space-y-6">
           
+          {/* WIDGET : ENGINS IMMOBILISÉS */}
+          {showImmobilisesCard && (
+            <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />
+                  Engins immobilisés
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Équipements en panne ou en maintenance, triés du plus ancien au plus récent
+                </p>
+              </div>
+
+              {immobilisesList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-6 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-emerald-50/20 dark:bg-emerald-950/5">
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 font-mono uppercase">
+                    ✅ Aucun engin immobilisé actuellement
+                  </span>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {immobilisesList.map((e) => {
+                    const normStatus = getNormalizedStatus(e);
+                    const isPanne = normStatus === "EN_PANNE" || (e.statut && e.statut === "panne");
+                    const statusLabel = isPanne ? "Panne" : "Maintenance";
+                    const badgeColor = isPanne 
+                      ? "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/50" 
+                      : "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/50";
+
+                    return (
+                      <div key={e.id} className="py-3 flex justify-between items-center gap-3 first:pt-0 last:pb-0">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-slate-900 dark:text-white font-mono uppercase">
+                              {e.matricule || e.id}
+                            </span>
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${badgeColor}`}>
+                              {statusLabel}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-1">
+                            <span className="font-semibold">{e.modele || "Modèle inconnu"}</span>
+                            <span>•</span>
+                            <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[9px]">
+                              {e.siteId || e.site || "—"}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right shrink-0">
+                          <div className="text-[10px] font-mono text-slate-400 uppercase">Depuis</div>
+                          <div className="text-xs font-bold text-slate-700 dark:text-slate-300 font-mono mt-0.5 flex items-center justify-end gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            {formatTimeAgo(e.updatedAt)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* WIDGET 4 — BACKLOG MAINTENANCE (DONUT) */}
           <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
             <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] to-[#991B1B]" />

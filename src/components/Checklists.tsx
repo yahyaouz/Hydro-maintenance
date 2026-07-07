@@ -42,6 +42,9 @@ interface Engin {
   type: string;
   heuresMarche: number;
   siteId?: string;
+  etat?: string;
+  statut?: string;
+  dispo?: number;
 }
 
 interface Mecanicien {
@@ -161,7 +164,13 @@ export default function Checklists() {
   // Filtrer selon le rôle et le site
   const engins = React.useMemo(() => {
     if (!rawEngins) return [];
-    const actifs = rawEngins.filter((e: any) => !e.deleted && e.etat !== 'Hors service' && e.etat !== 'Vendu');
+    const actifs = rawEngins.filter((e: any) => {
+      const activeStatut = (e.statut || '').toLowerCase();
+      const isOut = e.statut !== undefined 
+        ? (activeStatut === 'hors service' || activeStatut === 'vendu') 
+        : (e.etat === 'Hors service' || e.etat === 'Vendu');
+      return !e.deleted && !isOut;
+    });
     if (user?.role === 'ADMIN' || user?.role === 'DIRECTION') {
       return activeSite === 'TOUS' ? actifs : actifs.filter((e: any) => e.siteId === activeSite);
     }
