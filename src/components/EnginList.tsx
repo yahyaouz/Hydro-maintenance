@@ -75,6 +75,7 @@ interface Engin {
   site: string;
   statut: "actif" | "maintenance" | "panne" | "hors service" | "arrêté";
   heures: number;
+  heuresMarche?: number;
   dispo: number;
 }
 
@@ -144,7 +145,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
     setEditSite(equip.site || equip.siteId || "SMI");
     setEditStatut(equip.statut || "actif");
     setEditType(equip.type || "");
-    setEditHeures(equip.heures || equip.km || 0);
+    setEditHeures(equip.heuresMarche || equip.heures || equip.km || 0);
     setEditAssocie(equip.associe || "");
     setIsEditModalOpen(true);
   };
@@ -217,6 +218,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
       if (editingEquip.categorie === "LHD") {
         const specs = ENGIN_SPECS[editType] || ENGIN_SPECS.ST2G;
         updatedData.heures = Number(editHeures) || 0;
+        updatedData.heuresMarche = Number(editHeures) || 0;
         updatedData.specs = {
           godet: specs.godet,
           reservoir: specs.reservoir,
@@ -231,6 +233,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
 
         updatedData.marque = brand;
         updatedData.heures = Number(editHeures) || 0;
+        updatedData.heuresMarche = Number(editHeures) || 0;
         updatedData.km = Number(editHeures) || 0;
         updatedData.specs = {
           usage: specs.usage,
@@ -303,6 +306,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
         docData.type = lhdType;
         docData.marque = "EPIROC";
         docData.heures = Number(lhdHeures) || 0;
+        docData.heuresMarche = Number(lhdHeures) || 0;
         docData.specs = {
           godet: specs.godet,
           reservoir: specs.reservoir,
@@ -318,6 +322,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
         docData.type = vlType;
         docData.marque = brand;
         docData.heures = Number(vlKm) || 0;
+        docData.heuresMarche = Number(vlKm) || 0;
         docData.km = Number(vlKm) || 0;
         docData.specs = {
           usage: specs.usage,
@@ -438,8 +443,8 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
     // Apply sorting
     if (sortBy === "heures") {
       list = [...list].sort((a, b) => {
-        const valA = a.heures || a.km || 0;
-        const valB = b.heures || b.km || 0;
+        const valA = a.heuresMarche || a.heures || a.km || 0;
+        const valB = b.heuresMarche || b.heures || b.km || 0;
         return valB - valA;
       });
     } else if (sortBy === "dispo") {
@@ -482,7 +487,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
     
     const totalWithDispo = baseList.length;
     const dispoSum = baseList.reduce((sum, e) => sum + (typeof e.dispo === "number" ? e.dispo : 100), 0);
-    const dispoMoy = totalWithDispo > 0 ? (dispoSum / totalWithDispo).toFixed(1) : "100.0";
+    const dispoMoy = totalWithDispo > 0 ? (dispoSum / totalWithDispo).toFixed(1) : null;
     
     return { activeCount, maintCount, panneCount, dispoMoy };
   }, [allEquipements, activeSite, activeTab, searchTerm]);
@@ -527,7 +532,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
 
     siteEqs.forEach(e => {
       const cat = (e.categorie || "LHD") as "LHD" | "VL" | "PERFORATEUR";
-      const val = e.heures || e.km || 0;
+      const val = e.heuresMarche || e.km || 0;
       
       if (cat === "LHD") {
         const nextT = Math.ceil((val + 0.1) / 250) * 250;
@@ -606,7 +611,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
     
     const isPanne = activeDiagEngin.statut === "panne";
     const isMaint = activeDiagEngin.statut === "maintenance";
-    const hrs = activeDiagEngin.heures || activeDiagEngin.km || 0;
+    const hrs = activeDiagEngin.heuresMarche || activeDiagEngin.heures || activeDiagEngin.km || 0;
     
     // Helpers to generate deterministic values based on hrs & state
     const seedValue = (offset: number) => {
@@ -788,7 +793,9 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
           </button>
 
           <div className="px-4 py-3 rounded-xl border bg-slate-50 text-slate-700 border-slate-200 flex flex-col items-center justify-center text-center select-none">
-            <span className="text-xl font-black leading-none mb-1 text-slate-800">{kpis.dispoMoy}%</span>
+            <span className="text-xl font-black leading-none mb-1 text-slate-800">
+              {kpis.dispoMoy !== null ? `${kpis.dispoMoy}%` : "—"}
+            </span>
             <span className="text-[10px] font-extrabold uppercase tracking-wider">Dispo Moy.</span>
           </div>
         </div>
@@ -1094,7 +1101,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                         <div className="flex items-center gap-6 text-center">
                           <div>
                             <span className="text-[9px] text-slate-400 font-bold uppercase block">Compteur heures</span>
-                            <span className="text-xs font-black text-slate-800 font-mono">{activeDiagEngin.heures || activeDiagEngin.km || 0} h</span>
+                            <span className="text-xs font-black text-slate-800 font-mono">{activeDiagEngin.heuresMarche || activeDiagEngin.heures || activeDiagEngin.km || 0} h</span>
                           </div>
                           <div>
                             <span className="text-[9px] text-slate-400 font-bold uppercase block">Disponibilité</span>
@@ -1351,7 +1358,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                     </div>
                     <div className="bg-slate-50 border border-slate-100 p-2 rounded-xl flex flex-col text-center">
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">⏱️ Heures</span>
-                      <span className="text-sm text-amber-700 font-black font-mono mt-0.5">{equip.heures || 0} h</span>
+                      <span className="text-sm text-amber-700 font-black font-mono mt-0.5">{equip.heuresMarche || equip.heures || 0} h</span>
                     </div>
                   </div>
 
@@ -1394,7 +1401,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
           {activeTab === "VL" && filteredEquipements.map((equip) => {
             const spec = getVehiSpec(equip.type);
             const isPanne = equip.statut === "panne";
-            const kmReading = equip.heures ? `${equip.heures} km` : (equip.km ? `${equip.km} km` : "0 km");
+            const kmReading = equip.heuresMarche ? `${equip.heuresMarche} km` : (equip.heures ? `${equip.heures} km` : (equip.km ? `${equip.km} km` : "0 km"));
             const borderCol = isPanne ? "border-rose-200" : equip.statut === "maintenance" ? "border-amber-200" : "border-slate-200/80";
             const glowCol = isPanne ? "hover:border-rose-455 hover:shadow-rose-50" : equip.statut === "maintenance" ? "hover:border-amber-455 hover:shadow-amber-50" : "hover:border-amber-500/30 hover:shadow-amber-50/50";
             

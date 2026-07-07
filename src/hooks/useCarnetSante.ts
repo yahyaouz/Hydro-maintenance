@@ -17,7 +17,7 @@ export function calculSecoursSante(engin: any): number {
   let score = 100;
   
   // Hours deduction
-  const hours = Number(engin.heures) || Number(engin.hours) || Number(engin.km) || Number(engin.compteur) || 0;
+  const hours = Number(engin.heuresMarche) || Number(engin.heures) || Number(engin.hours) || Number(engin.km) || Number(engin.compteur) || 0;
   if (hours > 0) {
     // Deduct up to 25 points based on operating hours (aging factor)
     const ageDeduction = Math.min(25, (hours / 10000) * 25);
@@ -126,7 +126,7 @@ export function useCarnetSante() {
     });
 
     // Age deduction (max 15 points)
-    const hours = Number(engin.heures) || Number(engin.hours) || Number(engin.km) || Number(engin.compteur) || 0;
+    const hours = Number(engin.heuresMarche) || Number(engin.heures) || Number(engin.hours) || Number(engin.km) || Number(engin.compteur) || 0;
     const ageDeduction = Math.min(15, (hours / 15000) * 15);
     score -= ageDeduction;
 

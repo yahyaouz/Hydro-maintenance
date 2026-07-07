@@ -298,9 +298,9 @@ export function useImports() {
           // 2. Update engine hours in engins collection
           const enginRef = doc(db, "engins", matchedEngin.id);
           // Only update if the imported counter is greater or equal to current to avoid reverting
-          if (heuresMoteur >= (matchedEngin.heures || 0)) {
-            writeBatch(db).update(enginRef, { heures: heuresMoteur });
-            matchedEngin.heures = heuresMoteur;
+          if (heuresMoteur >= (matchedEngin.heuresMarche || 0)) {
+            writeBatch(db).update(enginRef, { heuresMarche: heuresMoteur });
+            matchedEngin.heuresMarche = heuresMoteur;
           }
         });
 

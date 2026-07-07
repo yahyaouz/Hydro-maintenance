@@ -159,7 +159,7 @@ export function ReferentielTechnique() {
                     <span className="text-[9px] font-black uppercase tracking-wider">UTILISATION</span>
                   </div>
                   <p className="font-mono text-lg font-black text-slate-800">
-                    {selectedEngin.heures !== undefined ? `${selectedEngin.heures} Hrs` : selectedEngin.km !== undefined ? `${selectedEngin.km} Km` : "—"}
+                    {(selectedEngin.heuresMarche !== undefined && selectedEngin.heuresMarche !== null) ? `${selectedEngin.heuresMarche} Hrs` : selectedEngin.heures !== undefined ? `${selectedEngin.heures} Hrs` : selectedEngin.km !== undefined ? `${selectedEngin.km} Km` : "—"}
                   </p>
                   <p className="text-[9px] font-bold text-slate-400 uppercase">
                     Compteur cumulé réel

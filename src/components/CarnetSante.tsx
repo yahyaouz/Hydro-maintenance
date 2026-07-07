@@ -206,7 +206,7 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
                       <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-550 font-mono">
                         <span>{engin.marque} {engin.type}</span>
                         <span>•</span>
-                        <span>{engin.heures || engin.hours || engin.km || 0} hrs</span>
+                        <span>{engin.heuresMarche || engin.heures || engin.hours || engin.km || 0} hrs</span>
                       </div>
                       
                       {(activePannesCount > 0 || activeOrdersCount > 0) && (
@@ -285,7 +285,7 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
                           <div className="bg-white dark:bg-slate-900 border border-[#D4AF37]/40 p-2.5 rounded-xl shadow-xs relative overflow-hidden">
                             <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-[#38BDF8]" />
                             <span className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase block font-mono">Heures Service</span>
-                            <span className="text-xs font-black text-[#D4AF37] font-mono">{selectedEngin.heures || selectedEngin.hours || 0} h</span>
+                            <span className="text-xs font-black text-[#D4AF37] font-mono">{selectedEngin.heuresMarche || selectedEngin.heures || selectedEngin.hours || 0} h</span>
                           </div>
                           <div className="bg-white dark:bg-slate-900 border border-[#D4AF37]/40 p-2.5 rounded-xl shadow-xs relative overflow-hidden">
                             <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-[#D4AF37]" />
