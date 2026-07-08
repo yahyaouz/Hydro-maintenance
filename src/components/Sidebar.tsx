@@ -103,40 +103,40 @@ export function Sidebar({
   // Original categories and page names/labels
   const menuCategories: MenuCategory[] = [
     {
-      title: "SUPERVISION & OPÉRATIONS",
+      title: "VUE D'ENSEMBLE",
       items: [
-        { id: "dashboard", label: "Supervision Flotte", icon: LayoutDashboard },
-        { id: "alertes", label: "Alertes & Vigilance Métier", icon: Bell },
+        { id: "dashboard", label: "Tableau de Bord", icon: LayoutDashboard },
+        { id: "alertes", label: "Alertes & Pannes", icon: Bell },
       ]
     },
     {
       title: "MAINTENANCE PRÉVENTIVE",
       items: [
-        { id: "carnet_sante", label: "Carnet de Santé Flotte", icon: HeartPulse },
-        { id: "systematique", label: "TÂCHES SYSTÉMATIQUES", icon: ClipboardCheck },
+        { id: "carnet_sante", label: "Santé des Engins", icon: HeartPulse },
+        { id: "systematique", label: "Contrôles Réguliers", icon: ClipboardCheck },
         { id: "taches_planning", label: "Planning des Tâches", icon: ClipboardCheck },
         { id: "checklists", label: "Fiches de Contrôle", icon: ClipboardCheck },
       ]
     },
     {
-      title: "RESSOURCES & PARC",
+      title: "ENGINS & ÉQUIPE",
       items: [
-        { id: "engins", label: "Gestion du Parc", icon: Circle },
-        { id: "mecaniciens", label: "Collaborateurs", icon: Wrench },
+        { id: "engins", label: "Les Engins", icon: Circle },
+        { id: "mecaniciens", label: "Mécaniciens", icon: Wrench },
         { id: "pneumatiques", label: "Pneumatiques", icon: Circle },
       ]
     },
     {
-      title: "AMÉLIORATION CONTINUE",
+      title: "STATISTIQUES",
       items: [
-        { id: "rca", label: "Analyse de Cause Racine (RCA)", icon: Microscope },
-        { id: "analyses", label: "Analyses & KPI", icon: FileText },
+        { id: "rca", label: "Causes des Pannes", icon: Microscope },
+        { id: "analyses", label: "Chiffres & Résultats", icon: FileText },
       ]
     },
     {
-      title: "CONFIGURATION & SYSTÈME",
+      title: "RÉGLAGES",
       items: [
-        { id: "referentiel", label: "Référentiel Technique", icon: Settings },
+        { id: "referentiel", label: "Fiches Techniques", icon: Settings },
         { id: "import_config", label: "Import & Paramètres", icon: Download },
       ]
     }
@@ -144,9 +144,9 @@ export function Sidebar({
 
   // Dynamically add Admin module for admin users
   if (isAdmin) {
-    const systemCategory = menuCategories.find(cat => cat.title === "CONFIGURATION & SYSTÈME");
+    const systemCategory = menuCategories.find(cat => cat.title === "RÉGLAGES");
     if (systemCategory) {
-      systemCategory.items.push({ id: "admin", label: "Privilèges & Droits", icon: Shield });
+      systemCategory.items.push({ id: "admin", label: "Comptes & Accès", icon: Shield });
     }
   }
 

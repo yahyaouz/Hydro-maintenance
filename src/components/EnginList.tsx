@@ -90,6 +90,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
   // Load equipements from Firestore
   const { data: allEquipements, loading } = useCollection<any>("engins");
   const { data: allWorkorders } = useCollection<any>("maintenanceTasks");
+  const { data: allPannes } = useCollection<any>("pannes");
 
   // State
   const [activeTab, setActiveTab] = React.useState<"LHD" | "VL" | "PERFORATEUR" | "CARNET">("LHD");
@@ -605,79 +606,40 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
     return found;
   }, [advancedMechanics.siteEqs, selectedDiagnosticId]);
 
-  // Deterministic health diagnostic data for sub-systems
-  const selectedEnginDiagnostics = React.useMemo(() => {
+  // Selected engine's real diagnostic details (breakdown, intervention, status, horas)
+  const realDiagnostics = React.useMemo(() => {
     if (!activeDiagEngin) return null;
-    
-    const isPanne = activeDiagEngin.statut === "panne";
-    const isMaint = activeDiagEngin.statut === "maintenance";
-    const hrs = activeDiagEngin.heuresMarche || activeDiagEngin.heures || activeDiagEngin.km || 0;
-    
-    // Helpers to generate deterministic values based on hrs & state
-    const seedValue = (offset: number) => {
-      const val = Math.floor(hrs + offset) % 25;
-      return val;
+
+    // 1. Get current status
+    const currentStatus = activeDiagEngin.statut || "actif";
+
+    // 2. Find the last declared panne for this engine
+    const enginePannes = (allPannes || [])
+      .filter((p: any) => p.enginId === activeDiagEngin.id && !p.deleted)
+      .sort((a: any, b: any) => {
+        const dateA = a.dateDeclaration ? new Date(a.dateDeclaration).getTime() : 0;
+        const dateB = b.dateDeclaration ? new Date(b.dateDeclaration).getTime() : 0;
+        return dateB - dateA;
+      });
+    const lastPanne = enginePannes[0] || null;
+
+    // 3. Find the last intervention (workorder) for this engine
+    const engineWorkorders = (allWorkorders || [])
+      .filter((w: any) => (w.enginId === activeDiagEngin.id || w.enginId === activeDiagEngin.matricule) && !w.deleted)
+      .sort((a: any, b: any) => {
+        const dateA = a.datePlanifiee ? new Date(a.datePlanifiee).getTime() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
+        const dateB = b.datePlanifiee ? new Date(b.datePlanifiee).getTime() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+        return dateB - dateA;
+      });
+    const lastIntervention = engineWorkorders[0] || null;
+
+    return {
+      currentStatus,
+      lastPanne,
+      lastIntervention,
+      heuresMarche: activeDiagEngin.heuresMarche || activeDiagEngin.heures || activeDiagEngin.km || 0
     };
-
-    // Sub-system 1: Moteur
-    let motScore = 95 - seedValue(3);
-    let motStatus = "Paramètres de combustion optimaux. Pression de turbo nominale.";
-    let motSeverity: "ok" | "warning" | "alert" = "ok";
-    if (isPanne) {
-      motScore = 55 - seedValue(1);
-      motStatus = "Surchauffe moteur signalée. Coupure automatique de sécurité engagée.";
-      motSeverity = "alert";
-    } else if (isMaint) {
-      motScore = 80;
-      motStatus = "Vidange moteur et remplacement des filtres (air/gasoil) planifiés.";
-      motSeverity = "warning";
-    } else if (seedValue(7) > 20) {
-      motScore = 82;
-      motStatus = "Légère baisse de pression d'huile au ralenti. À surveiller.";
-      motSeverity = "warning";
-    }
-
-    // Sub-system 2: Hydraulique
-    let hydScore = 98 - seedValue(5);
-    let hydStatus = "Débit pompes principal optimal. Absence de fuites externes.";
-    let hydSeverity: "ok" | "warning" | "alert" = "ok";
-    if (isPanne && seedValue(2) > 10) {
-      hydScore = 48 - seedValue(3);
-      hydStatus = "Alerte : Chute de pression hydraulique sur le circuit de direction.";
-      hydSeverity = "alert";
-    } else if (seedValue(9) > 18) {
-      hydScore = 79;
-      hydStatus = "Température huile hydraulique élevée (82°C). Nettoyer le refroidisseur.";
-      hydSeverity = "warning";
-    }
-
-    // Sub-system 3: Cinématique (Transmission)
-    let cinScore = 94 - seedValue(8);
-    let cinStatus = "Pressions d'embrayage conformes. Convertisseur de couple stable.";
-    let cinSeverity: "ok" | "warning" | "alert" = "ok";
-    if (isMaint && seedValue(4) > 10) {
-      cinScore = 75;
-      cinStatus = "Contrôle des jeux de transmission et graissage des cardans requis.";
-      cinSeverity = "warning";
-    }
-
-    // Sub-system 4: Freinage
-    let frScore = 96 - seedValue(11);
-    let frStatus = "Pression des accumulateurs nominale. Épaisseur des disques ok.";
-    let frSeverity: "ok" | "warning" | "alert" = "ok";
-    if (seedValue(13) > 18) {
-      frScore = 68;
-      frStatus = "Alerte : Usure avancée des disques de freins (côté pont Kessler).";
-      frSeverity = "alert";
-    }
-
-    return [
-      { name: "MOTEUR & ÉCHAPPEMENT", score: motScore, status: motStatus, severity: frSeverity === "alert" ? "warning" : motSeverity, icon: Cpu },
-      { name: "HYDRAULIQUE (POMPES/VALVES)", score: hydScore, status: hydStatus, severity: hydSeverity, icon: RotateCw },
-      { name: "CHAÎNE CINÉMATIQUE (TRANS)", score: cinScore, status: cinStatus, severity: cinSeverity, icon: Truck },
-      { name: "SÉCURITÉ & FREINAGE", score: frScore, status: frStatus, severity: frSeverity, icon: AlertTriangle },
-    ];
-  }, [activeDiagEngin]);
+  }, [activeDiagEngin, allPannes, allWorkorders]);
 
   // Tab specs list
   const tabItems = [
@@ -1114,62 +1076,100 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                         </div>
                       </div>
 
-                      {/* 4 Organes Grid */}
+                      {/* IoT Warning Banner */}
+                      <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50 text-slate-700 flex flex-col sm:flex-row items-start sm:items-center gap-3 shadow-xs">
+                        <div className="p-2 rounded-lg bg-slate-200/60 text-slate-600">
+                          <Info className="h-4 w-4" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider block">INFO SYSTÈME • CAPTEURS IoT</span>
+                          <p className="text-[11px] font-extrabold text-slate-700 leading-normal">
+                            Diagnostic détaillé par sous-système non disponible — nécessite une intégration capteurs IoT non installée sur cette flotte
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Real Engine Diagnostics / Overview */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {selectedEnginDiagnostics?.map((org, idx) => {
-                          const IconComp = org.icon;
-                          const isWarning = org.severity === "warning";
-                          const isAlert = org.severity === "alert";
-                          const colScore = isAlert ? "text-rose-600" : isWarning ? "text-amber-600" : "text-emerald-600";
-                          const bgScore = isAlert ? "bg-rose-500" : isWarning ? "bg-amber-500" : "bg-emerald-500";
-
-                          return (
-                            <div 
-                              key={idx} 
-                              className={`border rounded-xl p-4 bg-white flex flex-col justify-between space-y-4 hover:shadow-md transition-all ${
-                                isAlert ? "border-rose-200" : isWarning ? "border-amber-200" : "border-slate-100"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between gap-2 border-b border-slate-50 pb-2">
-                                <div className="flex items-center gap-2">
-                                  <div className={`p-1.5 rounded-lg ${isAlert ? "bg-rose-50 text-rose-600" : isWarning ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"}`}>
-                                    <IconComp className="h-3.5 w-3.5" />
-                                  </div>
-                                  <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">{org.name}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[9px] text-slate-400 font-extrabold uppercase">SCORE SANTÉ:</span>
-                                  <span className={`text-xs font-black font-mono ${colScore}`}>{org.score}%</span>
-                                </div>
+                        {/* Box 1: Dernière Panne Réelle */}
+                        <div className="border border-slate-200/80 rounded-xl p-4 bg-white flex flex-col justify-between space-y-3">
+                          <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-lg bg-rose-50 text-rose-600">
+                                <AlertTriangle className="h-3.5 w-3.5" />
                               </div>
-
-                              {/* Diagnostic text */}
-                              <div className="space-y-1.5">
-                                <div className="bg-slate-50/50 p-2.5 rounded-lg border border-slate-100 text-[11px] text-slate-600 font-medium leading-relaxed">
-                                  🤖 {org.status}
-                                </div>
-                              </div>
-
-                              {/* Progress bar */}
-                              <div className="space-y-1">
-                                <div className="bg-slate-100 h-1.5 w-full rounded-full overflow-hidden">
-                                  <div className={`h-full rounded-full ${bgScore}`} style={{ width: `${org.score}%` }} />
-                                </div>
-                              </div>
-
-                              {/* Action recommendation */}
-                              <div className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-none">
-                                {isAlert ? (
-                                  <span className="text-rose-600">⚠️ ACTION CRITIQUE: Halte immédiate & inspection en atelier requise</span>
-                                ) : isWarning ? (
-                                  <span className="text-amber-700">⏳ RECOMMANDATION: À planifier d'ici l'entretien des 250h</span>
-                                ) : (
-                                  <span className="text-emerald-700">✔️ AUCUN DÉFAUT: Contrôles périodiques de routine suffisants</span>
-                                )}
-                              </div>
+                              <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">DERNIÈRE PANNE DÉCLARÉE</span>
                             </div>
-                          );
-                        })}
+                            {realDiagnostics?.lastPanne && (
+                              <Badge className="bg-rose-500 text-white font-mono text-[8px] tracking-wider px-1.5">
+                                {realDiagnostics.lastPanne.gravite || "MOYENNE"}
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="space-y-2 min-h-[60px] flex flex-col justify-center">
+                            {realDiagnostics?.lastPanne ? (
+                              <>
+                                <p className="text-xs font-black text-slate-800 uppercase">
+                                  {realDiagnostics.lastPanne.description || "Pas de description"}
+                                </p>
+                                <div className="flex items-center gap-2 text-[9px] text-slate-400 font-mono">
+                                  <span>Numéro: {realDiagnostics.lastPanne.numero || "N/A"}</span>
+                                  <span>•</span>
+                                  <span>Statut: {realDiagnostics.lastPanne.statut || "N/A"}</span>
+                                  <span>•</span>
+                                  <span>Déclaré le: {realDiagnostics.lastPanne.dateDeclaration ? realDiagnostics.lastPanne.dateDeclaration.split('T')[0] : "N/A"}</span>
+                                </div>
+                              </>
+                            ) : (
+                              <p className="text-xs font-medium text-slate-500 italic text-center py-2">
+                                Aucune panne déclarée enregistrée pour cet engin.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Box 2: Dernière Intervention Réelle */}
+                        <div className="border border-slate-200/80 rounded-xl p-4 bg-white flex flex-col justify-between space-y-3">
+                          <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-lg bg-amber-50 text-amber-700">
+                                <Wrench className="h-3.5 w-3.5" />
+                              </div>
+                              <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">DERNIÈRE INTERVENTION (BT)</span>
+                            </div>
+                            {realDiagnostics?.lastIntervention && (
+                              <Badge className="bg-amber-500 text-slate-950 font-mono text-[8px] tracking-wider px-1.5">
+                                {realDiagnostics.lastIntervention.statut || "PLANIFIÉ"}
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="space-y-2 min-h-[60px] flex flex-col justify-center">
+                            {realDiagnostics?.lastIntervention ? (
+                              <>
+                                <p className="text-xs font-black text-slate-800 uppercase line-clamp-2">
+                                  {realDiagnostics.lastIntervention.label || "Pas de libellé"}
+                                </p>
+                                <div className="flex items-center gap-2 text-[9px] text-slate-400 font-mono">
+                                  <span>Type: {realDiagnostics.lastIntervention.type || "N/A"}</span>
+                                  <span>•</span>
+                                  <span>Priorité: {realDiagnostics.lastIntervention.priorite || "N/A"}</span>
+                                  {realDiagnostics.lastIntervention.mecanicienNom && (
+                                    <>
+                                      <span>•</span>
+                                      <span>Par: {realDiagnostics.lastIntervention.mecanicienNom}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </>
+                            ) : (
+                              <p className="text-xs font-medium text-slate-500 italic text-center py-2">
+                                Aucune intervention enregistrée pour cet engin.
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
