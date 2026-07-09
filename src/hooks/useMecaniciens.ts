@@ -1,5 +1,5 @@
-// Hook useMecaniciens.ts - Phase 2 Refactoring
-import { useState, useEffect } from "react";
+// Hook useMecaniciens.ts - Phase 2 Refactoring with Dynamic Real-time Stats
+import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { 
   collection, 
@@ -7,7 +7,6 @@ import {
   doc, 
   setDoc, 
   deleteDoc,
-  getDocs
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { toast } from "sonner";
@@ -27,97 +26,236 @@ export const DEFAULT_STATS: MecanicienStats = {
   interventionsCeMois: 0,
   derniereIntervention: "",
   scoreMensuel: 100,
-  mttrMoyen: 0,
-  tauxResolutionPremiereFois: 100,
-  tauxTournéesCompletes: 100,
+  mttrMoyen: null,
+  tauxResolutionPremiereFois: null,
+  tauxTournéesCompletes: null,
   heuresInterventionCeMois: 0
 };
 
-
 export function useMecaniciens() {
-  const [mecaniciens, setMecaniciens] = useState<Mecanicien[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [mecaniciensRaw, setMecaniciensRaw] = useState<any[]>([]);
+  const [tasksRaw, setTasksRaw] = useState<any[]>([]);
+  const [pannesRaw, setPannesRaw] = useState<any[]>([]);
+  
+  const [loadingMeca, setLoadingMeca] = useState(true);
+  const [loadingTasks, setLoadingTasks] = useState(true);
+  const [loadingPannes, setLoadingPannes] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
   const { user } = useAuthStore();
 
   useEffect(() => {
     if (!user || user.active === false) {
-      setLoading(false);
+      setLoadingMeca(false);
+      setLoadingTasks(false);
+      setLoadingPannes(false);
       return;
     }
 
-    // Read from 'mecaniciens' Firestore collection in real time
-    const unsubscribe = onSnapshot(collection(db, "mecaniciens"), async (snapshot) => {
+    // 1. Read from 'mecaniciens' Firestore collection
+    const unsubMeca = onSnapshot(collection(db, "mecaniciens"), (snapshot) => {
       setError(null);
-      if (snapshot.empty) {
-        setMecaniciens([]);
-        setLoading(false);
-      } else {
-        const list: Mecanicien[] = [];
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          
-          // Detect older schema that needs non-destructive migration
-          const needsMigration = !data.uid || !data.documents || !data.stats || !data.prenom || !data.nom;
-          const docUid = data.uid || docSnap.id;
-          
-          // Split old full name if present
-          let finalNom = data.nom || "";
-          let finalPrenom = data.prenom || "";
-          if (!finalNom && !finalPrenom && data.nomComplet) {
-            const parts = data.nomComplet.trim().split(/\s+/);
-            finalPrenom = parts[0] || "";
-            finalNom = parts.slice(1).join(" ") || "";
-          }
-
-          const processed: Mecanicien = {
-            id: docSnap.id,
-            uid: docUid,
-            matricule: data.matricule || docSnap.id,
-            nom: finalNom || "Nom",
-            prenom: finalPrenom || "Prénom",
-            photo: data.photo || "",
-            siteId: data.siteId || "SMI",
-            poste: data.poste || "Poste 1",
-            equipe: data.equipe || "A",
-            competences: data.competences || [],
-            telephone: data.telephone || "",
-            telephoneUrgence: data.telephoneUrgence || "",
-            email: data.email || "",
-            adresse: data.adresse || "",
-            dateNaissance: data.dateNaissance || "",
-            dateEmbauche: data.dateEmbauche || new Date().toISOString().split('T')[0],
-            documents: data.documents || DEFAULT_DOCUMENTS,
-            stats: data.stats || DEFAULT_STATS,
-            active: data.active !== false,
-            source: data.source || "MIGRATION_SPRINT6",
-            userUid: data.userUid || null
-          };
-          
-          const canMigrate = user?.role === "ADMIN" || user?.role === "RESPONSABLE_MAINTENANCE";
-          if (needsMigration && canMigrate) {
-            // Write migrated document back to Firestore asynchronously only if user is authorized
-            setDoc(doc(db, "mecaniciens", docSnap.id), {
-              ...processed,
-              updatedAt: new Date().toISOString()
-            }, { merge: true }).catch(err => {
-              console.warn(`Could not update mecanicien ${docSnap.id} schema:`, err);
-            });
-          }
-
-          list.push(processed);
-        });
-        setMecaniciens(list);
-        setLoading(false);
-      }
+      const list: any[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      setMecaniciensRaw(list);
+      setLoadingMeca(false);
     }, (err) => {
       console.error("Error fetching mecaniciens:", err);
       setError("Erreur de connexion Firestore");
-      setLoading(false);
+      setLoadingMeca(false);
     });
 
-    return () => unsubscribe();
+    // 2. Read from 'maintenanceTasks' Firestore collection
+    const unsubTasks = onSnapshot(collection(db, "maintenanceTasks"), (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      setTasksRaw(list);
+      setLoadingTasks(false);
+    }, (err) => {
+      console.error("Error fetching maintenanceTasks:", err);
+      setLoadingTasks(false);
+    });
+
+    // 3. Read from 'pannes' Firestore collection
+    const unsubPannes = onSnapshot(collection(db, "pannes"), (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      setPannesRaw(list);
+      setLoadingPannes(false);
+    }, (err) => {
+      console.error("Error fetching pannes:", err);
+      setLoadingPannes(false);
+    });
+
+    return () => {
+      unsubMeca();
+      unsubTasks();
+      unsubPannes();
+    };
   }, [user?.role, user?.uid, user?.active]);
+
+  // Compute stats and mecaniciens list dynamically
+  const mecaniciens = useMemo(() => {
+    const currentMonthStr = new Date().toISOString().substring(0, 7);
+
+    const getHoursFromDuree = (duree: string): number => {
+      if (duree === '15min') return 0.25;
+      if (duree === '30min') return 0.5;
+      if (duree === '1h') return 1;
+      if (duree === '2h') return 2;
+      if (duree === '4h') return 4;
+      if (duree === '6h') return 6;
+      if (duree === '1j') return 8;
+      return 0;
+    };
+
+    const parseToDate = (field: any): Date | null => {
+      if (!field) return null;
+      if (field && typeof field === 'object' && field.seconds !== undefined) {
+        return new Date(field.seconds * 1000);
+      }
+      const d = new Date(field);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    return mecaniciensRaw.map((data) => {
+      const docUid = data.uid || data.id;
+
+      // Split old full name if present
+      let finalNom = data.nom || "";
+      let finalPrenom = data.prenom || "";
+      if (!finalNom && !finalPrenom && data.nomComplet) {
+        const parts = data.nomComplet.trim().split(/\s+/);
+        finalPrenom = parts[0] || "";
+        finalNom = parts.slice(1).join(" ") || "";
+      }
+
+      // --- CRITÈRE 1: tauxTournéesCompletes ---
+      const tasksMeca = tasksRaw.filter(t => 
+        t.mecanicienId === data.id && 
+        t.datePlanifiee?.startsWith(currentMonthStr) &&
+        t.deleted !== true
+      );
+      const totalTasks = tasksMeca.length;
+      const faitesTasks = tasksMeca.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
+      const tauxTournéesCompletes = totalTasks > 0 ? Math.round((faitesTasks / totalTasks) * 100) : null;
+
+      // --- CRITÈRE 2: mttrMoyen ---
+      const mecaPannes = pannesRaw.filter(p => 
+        (p.mecanicienAssigne === data.id || p.mecanicienAssigne === docUid) &&
+        p.statut === 'CLOS' &&
+        p.deleted !== true &&
+        p.datePriseEnCharge &&
+        p.dateResolution
+      );
+
+      let mttrMoyen: number | null = null;
+      if (mecaPannes.length > 0) {
+        let totalRepairHours = 0;
+        let validCount = 0;
+        mecaPannes.forEach(p => {
+          const dPrise = parseToDate(p.datePriseEnCharge);
+          const dRes = parseToDate(p.dateResolution);
+          if (dPrise && dRes) {
+            const diffMs = dRes.getTime() - dPrise.getTime();
+            const diffHours = Math.max(0, diffMs / (1000 * 60 * 60)); // in hours
+            totalRepairHours += diffHours;
+            validCount++;
+          }
+        });
+        if (validCount > 0) {
+          mttrMoyen = Math.round((totalRepairHours / validCount) * 10) / 10;
+        }
+      }
+
+      // --- CRITÈRE 3: tauxResolutionPremiereFois ---
+      // Toujours null car aucun champ 'reouverte: boolean' n'existe actuellement pour le tracer proprement.
+      const tauxResolutionPremiereFois = null;
+
+      // Dynamic workload & intervention stats
+      const mecaTasksAll = tasksRaw.filter(t => t.mecanicienId === data.id && t.deleted !== true);
+      const mecaTasksFaitAll = mecaTasksAll.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE');
+
+      let derniereIntervention = data.stats?.derniereIntervention || "";
+      if (mecaTasksFaitAll.length > 0) {
+        const sorted = [...mecaTasksFaitAll].sort((a, b) => b.datePlanifiee.localeCompare(a.datePlanifiee));
+        derniereIntervention = sorted[0].datePlanifiee;
+      }
+
+      const totalInterventions = mecaTasksFaitAll.length;
+      
+      const mecaTasksFaitCeMois = mecaTasksFaitAll.filter(t => t.datePlanifiee?.startsWith(currentMonthStr));
+      const interventionsCeMois = mecaTasksFaitCeMois.length;
+
+      const heuresInterventionCeMois = Math.round(mecaTasksFaitCeMois.reduce((sum, t) => sum + getHoursFromDuree(t.dureeEstimee || ''), 0) * 10) / 10;
+
+      // Compute general monthly performance score based on tauxTournéesCompletes
+      const scoreMensuel = tauxTournéesCompletes !== null ? tauxTournéesCompletes : (data.stats?.scoreMensuel || 100);
+
+      const processedStats: MecanicienStats = {
+        totalInterventions,
+        interventionsCeMois,
+        derniereIntervention,
+        scoreMensuel,
+        mttrMoyen,
+        tauxResolutionPremiereFois,
+        tauxTournéesCompletes,
+        heuresInterventionCeMois
+      };
+
+      const processed: Mecanicien = {
+        id: data.id,
+        uid: docUid,
+        matricule: data.matricule || data.id,
+        nom: finalNom || "Nom",
+        prenom: finalPrenom || "Prénom",
+        photo: data.photo || "",
+        siteId: data.siteId || "SMI",
+        poste: data.poste || "Poste 1",
+        equipe: data.equipe || "A",
+        competences: data.competences || [],
+        telephone: data.telephone || "",
+        telephoneUrgence: data.telephoneUrgence || "",
+        email: data.email || "",
+        adresse: data.adresse || "",
+        dateNaissance: data.dateNaissance || "",
+        dateEmbauche: data.dateEmbauche || new Date().toISOString().split('T')[0],
+        documents: data.documents || DEFAULT_DOCUMENTS,
+        stats: processedStats,
+        active: data.active !== false,
+        source: data.source || "MIGRATION_SPRINT6",
+        userUid: data.userUid || null
+      };
+
+      return processed;
+    });
+  }, [mecaniciensRaw, tasksRaw, pannesRaw]);
+
+  // Handle automatic schema migration in the background
+  useEffect(() => {
+    const canMigrate = user?.role === "ADMIN" || user?.role === "RESPONSABLE_MAINTENANCE";
+    if (!canMigrate || mecaniciens.length === 0) return;
+
+    mecaniciens.forEach((m) => {
+      const raw = mecaniciensRaw.find(r => r.id === m.id);
+      if (!raw) return;
+      const needsMigration = !raw.uid || !raw.documents || !raw.stats || !raw.prenom || !raw.nom;
+      if (needsMigration) {
+        setDoc(doc(db, "mecaniciens", m.id), {
+          ...m,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(err => {
+          console.warn(`Could not update mecanicien ${m.id} schema:`, err);
+        });
+      }
+    });
+  }, [mecaniciens, user?.role, mecaniciensRaw]);
 
   const saveMecanicien = async (meca: Mecanicien) => {
     try {
@@ -176,6 +314,8 @@ export function useMecaniciens() {
       });
     }
   };
+
+  const loading = loadingMeca || loadingTasks || loadingPannes;
 
   return { 
     mecaniciens, 

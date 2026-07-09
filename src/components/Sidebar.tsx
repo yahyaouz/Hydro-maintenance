@@ -100,6 +100,23 @@ export function Sidebar({
     return notifications ? notifications.filter((n) => !n.read).length : 0;
   }, [notifications]);
 
+  const MENU_VISIBILITY: Record<string, string[]> = {
+    dashboard: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"],
+    alertes: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"],
+    carnet_sante: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER"],
+    systematique: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"],
+    taches_planning: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"],
+    checklists: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"],
+    engins: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN"],
+    mecaniciens: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER"],
+    pneumatiques: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN"],
+    rca: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE"],
+    analyses: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE"],
+    referentiel: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"],
+    import_config: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "SECRETAIRE"],
+    admin: ["ADMIN"]
+  };
+
   // Original categories and page names/labels
   const menuCategories: MenuCategory[] = [
     {
@@ -149,6 +166,18 @@ export function Sidebar({
       systemCategory.items.push({ id: "admin", label: "Comptes & Accès", icon: Shield });
     }
   }
+
+  // Filter categories by user role
+  const userRole = user?.role || "MECANICIEN";
+  const filteredCategories = menuCategories
+    .map(category => ({
+      ...category,
+      items: category.items.filter(item => {
+        const allowedRoles = MENU_VISIBILITY[item.id];
+        return allowedRoles ? allowedRoles.includes(userRole) : true;
+      })
+    }))
+    .filter(category => category.items.length > 0);
 
   // Common render of the sidebar content to keep it DRY for Desktop & Mobile
   const renderSidebarContent = (isMobile = false, isCollapsedDesktop = false) => (
@@ -244,7 +273,7 @@ export function Sidebar({
 
       {/* Navigation menu list grouped by categories */}
       <nav className={cn("flex-1 overflow-y-auto py-4 space-y-4", isCollapsedDesktop ? "px-1.5" : "px-3")} role="navigation" aria-label="Menu principal">
-        {menuCategories.map((category) => (
+        {filteredCategories.map((category) => (
           <div key={category.title} className="space-y-1">
             {/* Category title header */}
             {!isCollapsedDesktop && (

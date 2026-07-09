@@ -52,11 +52,6 @@ service cloud.firestore {
       allow delete: if isSignedIn() && getUserData().role == 'ADMIN';
     }
 
-    match /sites/{siteId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && getUserData().role == 'ADMIN';
-    }
-
     match /engins/{enginId} {
       allow read: if isSignedIn();
       // Protect against dirty overwriting and enforce global LOTO lock rules on server-side
@@ -90,7 +85,7 @@ service cloud.firestore {
       allow read: if isSignedIn();
       // Authorized maintenance crews can engage, approve or release LOTO locks
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
-        isRole('CHEF_QUART') || isRole('MECANICIEN') || isRole('ADMIN')
+        isRole('MECANICIEN') || isRole('ADMIN')
       );
     }
 
@@ -153,11 +148,6 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isSignedIn() && isRole('ADMIN');
-    }
-
-    match /demandesIntervention/{diId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
     }
 
     match /rapportsFinIntervention/{rfiId} {
@@ -261,6 +251,12 @@ service cloud.firestore {
         );
         allow update, delete: if isSignedIn() && isRole('ADMIN');
       }
+    }
+
+    match /systemLogs/{logId} {
+      allow read: if isSignedIn() && isRole('ADMIN');
+      allow create: if isSignedIn();
+      allow update, delete: if false;
     }
   }
 }

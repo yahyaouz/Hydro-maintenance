@@ -111,6 +111,5 @@ export interface RootCauseAnalysis {
   siteId: SiteID;
   createdAt: string;
   updatedAt: string;
-  aiAnalysis?: string;
 }
 

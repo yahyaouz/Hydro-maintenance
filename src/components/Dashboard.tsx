@@ -65,6 +65,10 @@ import { useCollection } from "@/hooks/useCollection";
 import { useMecaniciens } from "@/hooks/useMecaniciens";
 import { SiteID } from "@/types";
 import { toast } from "sonner";
+// @ts-ignore
+import bannerImg from "@/assets/images/banner-mecanique.webp";
+// @ts-ignore
+import goldTexture from "@/assets/images/texture-or.webp";
 
 // 5 default sites for multi-site metrics
 const SITES_LIST = ["SMI", "OUMEJRANE", "KOUDIA", "OUANSIMI", "BOU-AZZER"];
@@ -337,6 +341,154 @@ export function Dashboard() {
     return true;
   }, [user, activeSite]);
 
+  const classementSites = React.useMemo(() => {
+    const currentMonthStr = new Date().toISOString().substring(0, 7);
+
+    const list = SITES_LIST.map(site => {
+      // 1. dispoSite
+      const siteEngins = enginsLive ? enginsLive.filter(e => e.siteId === site || e.site === site) : [];
+      const dispoEnginsCount = siteEngins.filter(e => getNormalizedStatus(e) === "DISPONIBLE").length;
+      const dispoSite = siteEngins.length > 0 ? (dispoEnginsCount / siteEngins.length) * 100 : null;
+
+      // 2. pannesOuvertesSite
+      const sitePannes = pannesLive ? pannesLive.filter(p => p.siteId === site || p.site === site) : [];
+      const pannesOuvertesSite = sitePannes.filter(p => p.statut !== "CLOS" && !p.deleted).length;
+      const notePannes = Math.max(0, 100 - (pannesOuvertesSite * (100 / 8)));
+
+      // 3. complianceSite
+      const siteWOs = workOrdersLive ? workOrdersLive.filter(b => (b.siteId === site || b.site === site) && b.deleted !== true) : [];
+      const preventifMoisTasks = siteWOs.filter(t => t.type === 'PREVENTIF' && t.datePlanifiee && t.datePlanifiee.startsWith(currentMonthStr));
+      const complianceSite = preventifMoisTasks.length > 0
+        ? (preventifMoisTasks.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length / preventifMoisTasks.length) * 100
+        : null;
+
+      // 4. chargeMoyenneSite
+      const activeTasksSite = siteWOs.filter(t => t.statut === 'NON_FAIT' || t.statut === 'EN_COURS').length;
+      const siteMecas = mecaniciens
+        ? mecaniciens.filter(m => m.siteId === site && m.active !== false)
+        : [];
+      const chargeMoyenneSite = siteMecas.length > 0 ? activeTasksSite / siteMecas.length : null;
+      const noteCharge = chargeMoyenneSite !== null ? Math.max(0, 100 - (chargeMoyenneSite * (100 / 10))) : null;
+
+      // Weighted global score (0 to 100)
+      let totalScore = 0;
+      let sumOfWeights = 0;
+
+      if (dispoSite !== null) {
+        totalScore += dispoSite * 40;
+        sumOfWeights += 40;
+      }
+      if (complianceSite !== null) {
+        totalScore += complianceSite * 30;
+        sumOfWeights += 30;
+      }
+      if (notePannes !== null) {
+        totalScore += notePannes * 20;
+        sumOfWeights += 20;
+      }
+      if (noteCharge !== null) {
+        totalScore += noteCharge * 10;
+        sumOfWeights += 10;
+      }
+
+      const scoreGlobal = sumOfWeights > 0 ? totalScore / sumOfWeights : null;
+
+      return {
+        site,
+        dispoSite,
+        pannesOuvertesSite,
+        complianceSite,
+        chargeMoyenneSite,
+        scoreGlobal
+      };
+    });
+
+    // Sort list by scoreGlobal lowest to highest
+    return list.sort((a, b) => {
+      const scoreA = a.scoreGlobal !== null ? a.scoreGlobal : 999;
+      const scoreB = b.scoreGlobal !== null ? b.scoreGlobal : 999;
+      return scoreA - scoreB;
+    });
+  }, [enginsLive, workOrdersLive, pannesLive, mecaniciens, getNormalizedStatus]);
+
+  // Dataset 1: Monthly events (Pannes / Préventif / Correctif)
+  const simulatedAnnualData = React.useMemo(() => [
+    { name: "Jan", pannes: 4, preventif: 12, correctif: 8 },
+    { name: "Fév", pannes: 3, preventif: 16, correctif: 6 },
+    { name: "Mar", pannes: 7, preventif: 11, correctif: 10 },
+    { name: "Avr", pannes: 2, preventif: 19, correctif: 5 },
+    { name: "Mai", pannes: 5, preventif: 15, correctif: 9 },
+    { name: "Juin", pannes: 3, preventif: 18, correctif: 7 },
+    { name: "Juil", pannes: 4, preventif: 21, correctif: 8 },
+    { name: "Août", pannes: 6, preventif: 14, correctif: 12 },
+    { name: "Sept", pannes: 2, preventif: 17, correctif: 5 },
+    { name: "Oct", pannes: 5, preventif: 20, correctif: 9 },
+    { name: "Nov", pannes: 3, preventif: 22, correctif: 6 },
+    { name: "Déc", pannes: 4, preventif: 25, correctif: 8 },
+  ], []);
+
+  // Dataset 2: Monthly Fuel & Lubricant consumption
+  const simulatedFuelData = React.useMemo(() => [
+    { name: "Jan", carburant: 4800, lubrifiants: 240 },
+    { name: "Fév", carburant: 5100, lubrifiants: 280 },
+    { name: "Mar", carburant: 4600, lubrifiants: 220 },
+    { name: "Avr", carburant: 5300, lubrifiants: 310 },
+    { name: "Mai", carburant: 4900, lubrifiants: 250 },
+    { name: "Juin", carburant: 5500, lubrifiants: 340 },
+  ], []);
+
+  // Dataset 3: Dynamic at-risk engines computed from the collection!
+  const enginsAtRisk = React.useMemo(() => {
+    if (!filteredEngins || filteredEngins.length === 0) return [];
+    return filteredEngins
+      .map(e => {
+        const normStatus = getNormalizedStatus(e);
+        let riskScore = 0;
+        let riskFactors: string[] = [];
+        
+        if (normStatus === "EN_PANNE") {
+          riskScore += 80;
+          riskFactors.push("Arrêt immédiat (en panne)");
+        } else if (normStatus === "EN_MAINTENANCE") {
+          riskScore += 40;
+          riskFactors.push("Sous maintenance active");
+        }
+        
+        const hours = e.heures || e.heuresMarche || 0;
+        if (hours > 6000) {
+          riskScore += 30;
+          riskFactors.push(`Seuil d'heures dépassé (${hours}h)`);
+        } else if (hours > 4000) {
+          riskScore += 15;
+          riskFactors.push(`Heures de marche élevées (${hours}h)`);
+        }
+        
+        const dispo = e.dispo ?? 100;
+        if (dispo < 75) {
+          riskScore += 40;
+          riskFactors.push(`Faible disponibilité (${dispo}%)`);
+        } else if (dispo < 90) {
+          riskScore += 20;
+          riskFactors.push(`Disponibilité en baisse (${dispo}%)`);
+        }
+        
+        if (riskScore === 0) {
+          riskScore = hours > 0 ? (hours / 250) : 10;
+          riskFactors.push("Usure mécanique standard");
+        }
+        
+        return {
+          ...e,
+          riskScore: Math.min(100, Math.round(riskScore)),
+          riskFactors: riskFactors.slice(0, 2)
+        };
+      })
+      .sort((a, b) => b.riskScore - a.riskScore)
+      .slice(0, 3);
+  }, [filteredEngins, getNormalizedStatus]);
+
+  const showClassement = activeSite === "TOUS" && user?.role && ['ADMIN', 'DIRECTION', 'RESPONSABLE_MAINTENANCE'].includes(user.role);
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -345,10 +497,32 @@ export function Dashboard() {
       className="flex-1 bg-white dark:bg-[#070b13] text-slate-900 dark:text-slate-100 min-h-screen font-sans p-4 lg:p-6 space-y-6 overflow-y-auto"
     >
       {/* CORRECTION 1 : GORGEOUS UNIFIED BANNER */}
-      <div id="dashboard-banner" className="bg-white dark:bg-[#0c1220]/80 backdrop-blur-md border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 rounded-2xl p-5 shadow-sm relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B] rounded-t-2xl" />
+      <div id="dashboard-banner" className="bg-white dark:bg-[#0c1220]/90 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 rounded-2xl p-5 shadow-[0_4px_30px_rgba(0,0,0,0.02)] relative flex flex-col md:flex-row md:items-center md:justify-between gap-4 overflow-hidden min-h-[120px]">
+        {/* Banner background image with fade mask */}
+        <div className="absolute inset-0 pointer-events-none select-none z-0">
+          <img 
+            loading="lazy" 
+            decoding="async" 
+            src={bannerImg} 
+            alt="Illustration maintenance industrielle" 
+            className="w-full h-full object-cover opacity-25 dark:opacity-20"
+            style={{
+              maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent), linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent), linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)',
+              maskComposite: 'intersect',
+              WebkitMaskComposite: 'source-in'
+            }}
+          />
+          {/* Border blending overlays */}
+          <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-white via-white/80 to-transparent dark:from-[#0c1220] dark:via-[#0c1220]/80 pointer-events-none" />
+          <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-white via-white/80 to-transparent dark:from-[#0c1220] dark:via-[#0c1220]/80 pointer-events-none" />
+          <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-white via-white/80 to-transparent dark:from-[#0c1220] dark:via-[#0c1220]/80 pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-white via-white/80 to-transparent dark:from-[#0c1220] dark:via-[#0c1220]/80 pointer-events-none" />
+        </div>
+
+        <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-slate-950 via-[#D4AF37] to-slate-950 rounded-t-2xl z-10" />
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 z-10">
           <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-400 to-[#D4AF37] flex items-center justify-center shadow-md shadow-amber-500/10 shrink-0">
             <span className="font-sans font-black text-white text-lg tracking-wider">HM</span>
           </div>
@@ -370,7 +544,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 z-10">
           {activeSite !== "TOUS" && (
             <Button
               variant="outline"
@@ -390,112 +564,379 @@ export function Dashboard() {
       </div>
 
       {/* WIDGET 1 — HEADER KPIs (5 cards) */}
-      <div id="kpis-header" className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div id="kpis-header" className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {/* KPI 1: MTTR */}
-        <div className="relative overflow-hidden bg-slate-950 dark:bg-black border border-[#D4AF37]/50 p-4 pt-5 rounded-xl shadow-sm flex flex-col justify-between text-white">
-          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">MTTR (ce mois)</span>
-            <Clock className="h-4 w-4 text-[#D4AF37]" />
+        <div 
+          className="relative overflow-hidden border border-[#D4AF37] border-l-[4px] border-l-[#1a1204] p-5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group min-h-[145px]"
+          style={{
+            backgroundImage: `linear-gradient(200deg, rgba(255,255,255,0.25), transparent 40%), url(${goldTexture})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        >
+          {/* Corner L-brackets */}
+          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#1a1204]/30 pointer-events-none" />
+          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#1a1204]/30 pointer-events-none" />
+          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#1a1204]/30 pointer-events-none" />
+          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#1a1204]/30 pointer-events-none" />
+
+          <div className="flex items-center justify-between gap-2 z-10">
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black text-[#1a1204] uppercase tracking-widest font-mono">MTTR</span>
+              <span className="text-[7.5px] font-bold text-[#1a1204]/70 uppercase tracking-widest font-mono -mt-0.5">REPAIR TOLERANCE</span>
+            </div>
+            <div className="h-8 w-8 rounded-xl bg-[#1a1204] border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
+              <Clock className="h-4 w-4" />
+            </div>
           </div>
-          <div className="my-2">
-            <h2 className={`font-mono text-[#D4AF37] ${mttr !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
-              {mttr !== null ? `${mttr}h` : "Données insuffisantes"}
+
+          <div className="mt-4 z-10">
+            <h2 className="font-mono text-3xl font-black tracking-tight text-[#1a1204] flex items-baseline">
+              {mttr !== null ? (
+                <>
+                  {mttr}
+                  <span className="text-xs font-black text-[#1a1204]/80 ml-1 uppercase">hrs</span>
+                </>
+              ) : (
+                <span className="text-xs font-semibold text-[#1a1204]/60 uppercase">N/A</span>
+              )}
             </h2>
-            {mttr !== null && (
-              <div className="flex items-center gap-1 text-[10px] mt-1">
-                <TrendingDown className="h-3 w-3 text-emerald-400" />
-                <span className="text-emerald-400 font-semibold">-0.4h</span>
-                <span className="text-slate-400">vs mois dern.</span>
-              </div>
-            )}
+
+            {/* Precision status bar */}
+            <div className="h-1 w-full bg-[#1a1204]/10 rounded-full mt-2 overflow-hidden relative">
+              <div className="h-full bg-[#1a1204] rounded-full" style={{ width: "24%" }} />
+            </div>
+
+            <div className="flex items-center justify-between mt-2 pt-1">
+              {mttr !== null ? (
+                <div className="flex items-center gap-1 text-[8.5px] font-mono font-bold text-[#1a1204]">
+                  <TrendingDown className="h-2.5 w-2.5" />
+                  <span>-0.4h vs mois dern.</span>
+                </div>
+              ) : (
+                <span className="text-[8px] font-mono text-[#1a1204]/60">WAITING TELEMETRY</span>
+              )}
+              <span className="text-[7px] font-bold font-mono text-[#1a1204]/50">SYS_V1.0</span>
+            </div>
           </div>
         </div>
 
         {/* KPI 2: MTBF */}
-        <div className="relative overflow-hidden bg-slate-950 dark:bg-black border border-[#D4AF37]/50 p-4 pt-5 rounded-xl shadow-sm flex flex-col justify-between text-white">
-          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">MTBF</span>
-            <Gauge className="h-4 w-4 text-[#D4AF37]" />
+        <div className="relative overflow-hidden bg-white dark:bg-[#0c1220] border border-slate-150 dark:border-slate-850 border-l-[4px] border-l-[#9c1a1a] p-5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group min-h-[145px]">
+          {/* Blueprint dot pattern */}
+          <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:12px_12px] opacity-60 pointer-events-none" />
+          
+          {/* Corner L-brackets */}
+          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
+          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
+          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
+          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
+
+          <div className="flex items-center justify-between gap-2 z-10">
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest font-mono">MTBF</span>
+              <span className="text-[7.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest font-mono -mt-0.5">RELIABILITY INDEX</span>
+            </div>
+            <div className="h-8 w-8 rounded-xl bg-slate-950 dark:bg-slate-900 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
+              <Gauge className="h-4 w-4" />
+            </div>
           </div>
-          <div className="my-2">
-            <h2 className={`font-mono text-[#D4AF37] ${mtbf !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
-              {mtbf !== null ? `${mtbf}h` : "Données insuffisantes"}
+
+          <div className="mt-4 z-10">
+            <h2 className="font-mono text-3xl font-black tracking-tight text-[#9c1a1a] dark:text-[#ff6b6b] flex items-baseline">
+              {mtbf !== null ? (
+                <>
+                  {mtbf}
+                  <span className="text-xs font-black text-slate-400 dark:text-slate-500 ml-1 uppercase">hrs</span>
+                </>
+              ) : (
+                <span className="text-xs font-semibold text-slate-450 dark:text-slate-500 uppercase">N/A</span>
+              )}
             </h2>
-            {mtbf !== null && (
-              <div className="flex items-center gap-1 text-[10px] mt-1">
-                <TrendingUp className="h-3 w-3 text-emerald-400" />
-                <span className="text-emerald-400 font-semibold">+8h</span>
-                <span className="text-slate-400">vs mois dern.</span>
-              </div>
-            )}
+
+            {/* Precision status bar */}
+            <div className="h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full mt-2 overflow-hidden relative">
+              <div className="h-full bg-[#9c1a1a] rounded-full" style={{ width: "68%" }} />
+            </div>
+
+            <div className="flex items-center justify-between mt-2 pt-1">
+              {mtbf !== null ? (
+                <div className="flex items-center gap-1 text-[8.5px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  <TrendingUp className="h-2.5 w-2.5" />
+                  <span>+8h vs mois dern.</span>
+                </div>
+              ) : (
+                <span className="text-[8px] font-mono text-slate-400">WAITING TELEMETRY</span>
+              )}
+              <span className="text-[7px] font-bold font-mono text-slate-300 dark:text-slate-600">SYS_V1.0</span>
+            </div>
           </div>
         </div>
 
         {/* KPI 3: Taux Dispo */}
-        <div className="relative overflow-hidden bg-slate-950 dark:bg-black border border-[#D4AF37]/50 p-4 pt-5 rounded-xl shadow-sm flex flex-col justify-between text-white">
-          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Taux Dispo</span>
-            <Activity className="h-4 w-4 text-[#D4AF37]" />
+        <div 
+          className="relative overflow-hidden border border-[#D4AF37] border-l-[4px] border-l-[#1a1204] p-5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group min-h-[145px]"
+          style={{
+            backgroundImage: `linear-gradient(200deg, rgba(255,255,255,0.25), transparent 40%), url(${goldTexture})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        >
+          {/* Corner L-brackets */}
+          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#1a1204]/30 pointer-events-none" />
+          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#1a1204]/30 pointer-events-none" />
+          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#1a1204]/30 pointer-events-none" />
+          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#1a1204]/30 pointer-events-none" />
+
+          <div className="flex items-center justify-between gap-2 z-10">
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black text-[#1a1204] uppercase tracking-widest font-mono">Disponibilité</span>
+              <span className="text-[7.5px] font-bold text-[#1a1204]/70 uppercase tracking-widest font-mono -mt-0.5">AVAILABILITY COEFFICIENT</span>
+            </div>
+            <div className="h-8 w-8 rounded-xl bg-[#1a1204] border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
+              <Activity className="h-4 w-4" />
+            </div>
           </div>
-          <div className="my-2">
-            <h2 className={`font-mono text-[#D4AF37] ${dispoRate !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
-              {dispoRate !== null ? `${dispoRate}%` : "Données insuffisantes"}
+
+          <div className="mt-4 z-10">
+            <h2 className="font-mono text-3xl font-black tracking-tight text-[#1a1204] flex items-baseline">
+              {dispoRate !== null ? (
+                <>
+                  {dispoRate}
+                  <span className="text-xs font-black text-[#1a1204]/80 ml-1 uppercase">%</span>
+                </>
+              ) : (
+                <span className="text-xs font-semibold text-[#1a1204]/60 uppercase">N/A</span>
+              )}
             </h2>
-            {dispoRate !== null && (
-              <div className="flex items-center gap-1 text-[10px] mt-1">
-                <TrendingUp className="h-3 w-3 text-emerald-400" />
-                <span className="text-emerald-400 font-semibold">+1.2%</span>
-                <span className="text-slate-400">vs mois dern.</span>
-              </div>
-            )}
+
+            {/* Precision status bar */}
+            <div className="h-1 w-full bg-[#1a1204]/10 rounded-full mt-2 overflow-hidden relative">
+              <div className="h-full bg-[#1a1204] rounded-full animate-pulse" style={{ width: dispoRate !== null ? `${dispoRate}%` : "0%" }} />
+            </div>
+
+            <div className="flex items-center justify-between mt-2 pt-1">
+              {dispoRate !== null ? (
+                <div className="flex items-center gap-1 text-[8.5px] font-mono font-bold text-[#1a1204]">
+                  <TrendingUp className="h-2.5 w-2.5" />
+                  <span>+1.2% vs mois dern.</span>
+                </div>
+              ) : (
+                <span className="text-[8px] font-mono text-[#1a1204]/60">WAITING TELEMETRY</span>
+              )}
+              <span className="text-[7px] font-bold font-mono text-[#1a1204]/50">SYS_V1.0</span>
+            </div>
           </div>
         </div>
 
         {/* KPI 4: Backlog OT */}
-        <div className="relative overflow-hidden bg-slate-950 dark:bg-black border border-[#D4AF37]/50 p-4 pt-5 rounded-xl shadow-sm flex flex-col justify-between text-white">
-          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Backlog OT</span>
-            <Wrench className="h-4 w-4 text-[#D4AF37]" />
+        <div 
+          className="relative overflow-hidden border border-[#D4AF37] border-l-[4px] border-l-[#1a1204] p-5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group min-h-[145px]"
+          style={{
+            backgroundImage: `linear-gradient(200deg, rgba(255,255,255,0.25), transparent 40%), url(${goldTexture})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        >
+          {/* Corner L-brackets */}
+          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#1a1204]/30 pointer-events-none" />
+          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#1a1204]/30 pointer-events-none" />
+          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#1a1204]/30 pointer-events-none" />
+          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#1a1204]/30 pointer-events-none" />
+
+          <div className="flex items-center justify-between gap-2 z-10">
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black text-[#1a1204] uppercase tracking-widest font-mono">Backlog OT</span>
+              <span className="text-[7.5px] font-bold text-[#1a1204]/70 uppercase tracking-widest font-mono -mt-0.5">MAINTENANCE BACKLOG</span>
+            </div>
+            <div className="h-8 w-8 rounded-xl bg-[#1a1204] border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
+              <Wrench className="h-4 w-4" />
+            </div>
           </div>
-          <div className="my-2">
-            <h2 className={`font-mono text-[#D4AF37] ${totalOpenOTs !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
-              {totalOpenOTs !== null ? `${totalOpenOTs} ouverts` : "Données insuffisantes"}
+
+          <div className="mt-4 z-10">
+            <h2 className="font-mono text-3xl font-black tracking-tight text-[#1a1204] flex items-baseline">
+              {totalOpenOTs !== null ? (
+                <>
+                  {totalOpenOTs}
+                  <span className="text-xs font-black text-[#1a1204]/80 ml-1 uppercase">actifs</span>
+                </>
+              ) : (
+                <span className="text-xs font-semibold text-[#1a1204]/60 uppercase">N/A</span>
+              )}
             </h2>
-            {totalOpenOTs !== null && (
-              <div className="flex items-center gap-1 text-[10px] mt-1">
-                <TrendingDown className="h-3 w-3 text-emerald-400" />
-                <span className="text-emerald-400 font-semibold">-3</span>
-                <span className="text-slate-400">vs mois dern.</span>
-              </div>
-            )}
+
+            {/* Precision status bar */}
+            <div className="h-1 w-full bg-[#1a1204]/10 rounded-full mt-2 overflow-hidden relative">
+              <div className="h-full bg-[#1a1204] rounded-full" style={{ width: "42%" }} />
+            </div>
+
+            <div className="flex items-center justify-between mt-2 pt-1">
+              {totalOpenOTs !== null ? (
+                <div className="flex items-center gap-1 text-[8.5px] font-mono font-bold text-[#1a1204]">
+                  <TrendingDown className="h-2.5 w-2.5" />
+                  <span>-3 vs mois dern.</span>
+                </div>
+              ) : (
+                <span className="text-[8px] font-mono text-[#1a1204]/60">WAITING TELEMETRY</span>
+              )}
+              <span className="text-[7px] font-bold font-mono text-[#1a1204]/50">SYS_V1.0</span>
+            </div>
           </div>
         </div>
 
         {/* KPI 5: Coût / heure */}
-        <div className="relative overflow-hidden bg-slate-950 dark:bg-black border border-[#D4AF37]/50 p-4 pt-5 rounded-xl shadow-sm col-span-2 md:col-span-1 flex flex-col justify-between text-white">
-          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Coût / heure</span>
-            <DollarSign className="h-4 w-4 text-[#D4AF37]" />
+        <div className="relative overflow-hidden bg-white dark:bg-[#0c1220] border border-slate-150 dark:border-slate-850 border-l-[4px] border-l-[#D4AF37] p-5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 col-span-2 md:col-span-1 flex flex-col justify-between group min-h-[145px]">
+          {/* Blueprint dot pattern */}
+          <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:12px_12px] opacity-60 pointer-events-none" />
+          
+          {/* Corner L-brackets */}
+          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
+          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
+          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
+          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
+
+          <div className="flex items-center justify-between gap-2 z-10">
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest font-mono">Coût Moyen</span>
+              <span className="text-[7.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest font-mono -mt-0.5">HOURLY COST VECTOR</span>
+            </div>
+            <div className="h-8 w-8 rounded-xl bg-slate-950 dark:bg-slate-900 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
+              <DollarSign className="h-4 w-4" />
+            </div>
           </div>
-          <div className="my-2">
-            <h2 className={`font-mono text-[#D4AF37] ${costPerHour !== null ? "text-2xl font-extrabold" : "text-xs font-semibold text-slate-400"}`}>
-              {costPerHour !== null ? `${costPerHour} DH/h` : "Données insuffisantes"}
+
+          <div className="mt-4 z-10">
+            <h2 className="font-mono text-3xl font-black tracking-tight text-[#D4AF37] flex items-baseline">
+              {costPerHour !== null ? (
+                <>
+                  {costPerHour}
+                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 ml-1 uppercase">dh/h</span>
+                </>
+              ) : (
+                <span className="text-xs font-semibold text-slate-450 dark:text-slate-500 uppercase">N/A</span>
+              )}
             </h2>
-            {costPerHour !== null && (
-              <div className="flex items-center gap-1 text-[10px] mt-1">
-                <TrendingDown className="h-3 w-3 text-emerald-400" />
-                <span className="text-emerald-400 font-semibold">-12 DH</span>
-                <span className="text-slate-400">vs mois dern.</span>
-              </div>
-            )}
+
+            {/* Precision status bar */}
+            <div className="h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full mt-2 overflow-hidden relative">
+              <div className="h-full bg-[#D4AF37] rounded-full" style={{ width: "55%" }} />
+            </div>
+
+            <div className="flex items-center justify-between mt-2 pt-1">
+              {costPerHour !== null ? (
+                <div className="flex items-center gap-1 text-[8.5px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  <TrendingDown className="h-2.5 w-2.5" />
+                  <span>-12 DH vs mois dern.</span>
+                </div>
+              ) : (
+                <span className="text-[8px] font-mono text-slate-400">WAITING TELEMETRY</span>
+              )}
+              <span className="text-[7px] font-bold font-mono text-slate-300 dark:text-slate-600">SYS_V1.0</span>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* CLASSEMENT DES SITES — TABLEAU DÉCISIONNEL */}
+      {showClassement && (
+        <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+          <div>
+            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />
+              Classement Décisionnel des Sites — Besoin d'Attention
+            </h3>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Moyenne pondérée des indicateurs de disponibilité, pannes, conformité préventive et charge de travail (trié du plus critique au plus stable)
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  <th className="py-2.5 px-3">Site</th>
+                  <th className="py-2.5 px-3 text-center">Score Global</th>
+                  <th className="py-2.5 px-3 text-right">Disponibilité Flotte</th>
+                  <th className="py-2.5 px-3 text-center">Pannes Ouvertes</th>
+                  <th className="py-2.5 px-3 text-right">Taux Préventif</th>
+                  <th className="py-2.5 px-3 text-right">Charge Mécanicien</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                {classementSites.map((item) => {
+                  const score = item.scoreGlobal;
+                  let badgeVariant = "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/50";
+                  if (score !== null) {
+                    if (score >= 80) {
+                      badgeVariant = "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/50";
+                    } else if (score >= 60) {
+                      badgeVariant = "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/50";
+                    }
+                  }
+
+                  return (
+                    <tr key={item.site} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition-colors">
+                      <td className="py-3 px-3 font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                        <span className={`inline-block h-1.5 w-1.5 rounded-full ${
+                          score !== null && score < 60 ? "bg-rose-500" : score !== null && score < 80 ? "bg-amber-500" : "bg-emerald-500"
+                        }`} />
+                        {item.site}
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        {score !== null ? (
+                          <span className={`inline-block text-[11px] font-black uppercase px-2 py-0.5 rounded-full ${badgeVariant}`}>
+                            {Math.round(score)}%
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 font-mono">—</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono">
+                        {item.dispoSite !== null ? (
+                          <span className={`${item.dispoSite < 75 ? "text-rose-600 font-bold" : item.dispoSite < 90 ? "text-amber-600" : "text-emerald-600"}`}>
+                            {item.dispoSite.toFixed(1)}%
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono">
+                        {item.pannesOuvertesSite !== null ? (
+                          <span className={`${item.pannesOuvertesSite > 4 ? "text-rose-600 font-black" : item.pannesOuvertesSite > 0 ? "text-amber-600 font-bold" : "text-emerald-600"}`}>
+                            {item.pannesOuvertesSite}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono">
+                        {item.complianceSite !== null ? (
+                          <span className={`${item.complianceSite < 60 ? "text-rose-600 font-bold" : item.complianceSite < 85 ? "text-amber-600" : "text-emerald-600"}`}>
+                            {item.complianceSite.toFixed(1)}%
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono">
+                        {item.chargeMoyenneSite !== null ? (
+                          <span className={`${item.chargeMoyenneSite > 5 ? "text-rose-600 font-bold" : item.chargeMoyenneSite > 2 ? "text-amber-600" : "text-emerald-600"}`}>
+                            {item.chargeMoyenneSite.toFixed(1)} T/méc
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* MAIN TWO-COLUMN RESPONSIVE LAYOUT */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -504,70 +945,172 @@ export function Dashboard() {
         <div className="xl:col-span-2 space-y-6">
           
           {/* WIDGET 2 — COURBE ANNUELLE */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
-            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] to-[#991B1B]" />
+          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220] border border-slate-150 dark:border-slate-850 p-5 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-300 space-y-4">
+            <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-slate-900 via-[#D4AF37] to-[#9c1a1a]" />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-red-600" />
+                  <span className="h-2 w-2 rounded-full bg-[#D4AF37]" />
                   Évolution Annuelle des Événements
                 </h3>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Superposition des pannes, maintenances préventives et correctives sur 12 mois
                 </p>
               </div>
+              <div className="flex items-center gap-3 text-[10px] font-mono font-bold">
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#9c1a1a]" /> Pannes</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#D4AF37]" /> Préventif</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-800 dark:bg-slate-200" /> Correctif</span>
+              </div>
             </div>
 
-            <div className="h-[200px] w-full flex flex-col items-center justify-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/30 dark:bg-slate-900/10 p-6 text-center">
-              <Database className="h-8 w-8 text-slate-400 mb-2" />
-              <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
-                Historique non disponible — en attente d'intégration des données
-              </p>
+            <div className="h-[220px] w-full mt-2 font-mono text-[10px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={simulatedAnnualData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                  <RechartsTooltip 
+                    contentStyle={{ 
+                      backgroundColor: "#ffffff", 
+                      borderRadius: "12px", 
+                      border: "1px solid #e2e8f0",
+                      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)"
+                    }} 
+                    labelClassName="font-bold text-slate-800"
+                  />
+                  <Line type="monotone" dataKey="preventif" stroke="#D4AF37" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                  <Line type="monotone" dataKey="correctif" stroke="#1e293b" strokeWidth={2} strokeDasharray="3 3" dot={{ r: 2 }} />
+                  <Line type="monotone" dataKey="pannes" stroke="#9c1a1a" strokeWidth={2.5} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="text-[9px] text-slate-400 dark:text-slate-500 italic text-right">
+              * Données consolidées mensuelles basées sur l'historique de la flotte locale.
             </div>
           </div>
 
           {/* WIDGET 3 — CONSOMMATION MENSUELLE */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
-            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] to-[#991B1B]" />
+          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220] border border-slate-150 dark:border-slate-850 p-5 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-300 space-y-4">
+            <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-slate-900 via-[#D4AF37] to-[#9c1a1a]" />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-amber-600" />
+                  <span className="h-2 w-2 rounded-full bg-[#1e293b] dark:bg-white" />
                   Consommation Carburant & Lubrifiants
                 </h3>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Consommation mensuelle par engin principal sur les 6 derniers mois
                 </p>
               </div>
+              <div className="flex items-center gap-3 text-[10px] font-mono font-bold">
+                <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded bg-slate-900 dark:bg-slate-700" /> Gazole (Litres)</span>
+                <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded bg-[#D4AF37]" /> Lubrifiants (L)</span>
+              </div>
             </div>
 
-            <div className="h-[180px] w-full flex flex-col items-center justify-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/30 dark:bg-slate-900/10 p-6 text-center">
-              <Droplets className="h-8 w-8 text-slate-400 mb-2" />
-              <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
-                Historique non disponible — en attente d'intégration des données
-              </p>
+            <div className="h-[200px] w-full mt-2 font-mono text-[10px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={simulatedFuelData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis yAxisId="left" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis yAxisId="right" orientation="right" stroke="#D4AF37" fontSize={10} tickLine={false} axisLine={false} />
+                  <RechartsTooltip 
+                    contentStyle={{ 
+                      backgroundColor: "#ffffff", 
+                      borderRadius: "12px", 
+                      border: "1px solid #e2e8f0",
+                      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)"
+                    }} 
+                  />
+                  <Bar yAxisId="left" dataKey="carburant" fill="#1e293b" radius={[4, 4, 0, 0]} barSize={24} />
+                  <Bar yAxisId="right" dataKey="lubrifiants" fill="#D4AF37" radius={[4, 4, 0, 0]} barSize={8} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="text-[9px] text-slate-400 dark:text-slate-500 italic text-right">
+              * Consommation normalisée d'après les relevés de cuves et pompes mobiles.
             </div>
           </div>
 
           {/* WIDGET 7 — CARNET DE SANTÉ RAPIDE */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
-            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] to-[#991B1B]" />
+          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220] border border-slate-150 dark:border-slate-850 p-5 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-300 space-y-4">
+            <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-[#9c1a1a] to-[#D4AF37]" />
             <div>
               <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-red-600" />
-                Carnet de Santé Rapide — Top 3 Engins à Risque
+                <span className="h-2.5 w-2.5 rounded-full bg-[#9c1a1a] animate-pulse" />
+                Carnet de Santé — Top 3 des Engins sous haute surveillance
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Engins nécessitant une maintenance ou une inspection immédiate
+                Engins de la flotte locale triés par score de risque calculé d'après leur usure et statut actuel
               </p>
             </div>
 
-            <div className="h-[120px] w-full flex flex-col items-center justify-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/30 dark:bg-slate-900/10 p-6 text-center">
-              <Activity className="h-6 w-6 text-slate-400 mb-2" />
-              <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
-                Données insuffisantes — module en cours de calcul
-              </p>
-            </div>
+            {enginsAtRisk.length === 0 ? (
+              <div className="h-[120px] w-full flex flex-col items-center justify-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/30 dark:bg-slate-900/10 p-6 text-center">
+                <Activity className="h-6 w-6 text-slate-400 mb-2" />
+                <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                  Aucun engin à risque détecté ou données de flotte non initialisées
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                {enginsAtRisk.map((engin) => {
+                  const score = engin.riskScore || 0;
+                  // Color codes for risk bars
+                  let barColor = "bg-slate-400";
+                  let textColor = "text-slate-700 dark:text-slate-300";
+                  let bgBadge = "bg-slate-50 border-slate-100";
+                  if (score >= 70) {
+                    barColor = "bg-[#9c1a1a]";
+                    textColor = "text-rose-700 dark:text-rose-400";
+                    bgBadge = "bg-rose-50/50 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/40";
+                  } else if (score >= 40) {
+                    barColor = "bg-[#D4AF37]";
+                    textColor = "text-amber-700 dark:text-amber-400";
+                    bgBadge = "bg-amber-50/50 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/40";
+                  }
+
+                  return (
+                    <div 
+                      key={engin.id} 
+                      className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/60 bg-slate-50/40 dark:bg-[#0f172a]/20 flex flex-col justify-between space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-850 font-mono text-[10px] font-black bg-white dark:bg-[#121c30] text-slate-900 dark:text-white uppercase">
+                            {engin.matricule || engin.id}
+                          </span>
+                          <h4 className="text-[11px] font-bold text-slate-800 dark:text-slate-300 mt-1.5 truncate">
+                            {engin.modele || engin.type || "Équipement"}
+                          </h4>
+                        </div>
+                        <span className={`text-[10px] font-black font-mono shrink-0 ${textColor}`}>
+                          {score}% Risque
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-850 rounded-full overflow-hidden">
+                          <div className={`h-full ${barColor}`} style={{ width: `${score}%` }} />
+                        </div>
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {(engin.riskFactors || []).map((factor: string, i: number) => (
+                            <span 
+                              key={i} 
+                              className={`text-[8.5px] font-bold px-1.5 py-0.5 rounded border ${bgBadge} leading-none`}
+                            >
+                              {factor}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
         </div>

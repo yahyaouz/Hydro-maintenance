@@ -82,9 +82,9 @@ export interface MecanicienStats {
   interventionsCeMois: number;
   derniereIntervention: string;
   scoreMensuel: number;
-  mttrMoyen: number;
-  tauxResolutionPremiereFois: number;
-  tauxTournéesCompletes: number;
+  mttrMoyen: number | null;
+  tauxResolutionPremiereFois: number | null;
+  tauxTournéesCompletes: number | null;
   heuresInterventionCeMois: number;
 }
 

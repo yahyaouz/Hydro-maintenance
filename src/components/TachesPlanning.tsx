@@ -293,9 +293,10 @@ export default function TachesPlanning() {
 
               const threshold = intervalle.intervalleHeures * 0.9;
               if (hoursSinceLastPm >= threshold) {
-                // V4-FIRESTORE: Deterministic ID pattern: pm_${enginId}_${type}_${heures}
+                // V4-FIRESTORE: Deterministic ID pattern: pm_${enginId}_${type}_${heures}_cycle${cycleNumber}
                 const cleanOp = intervalle.operation.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-                const taskId = `pm_${engin.id}_${cleanOp}_${intervalle.intervalleHeures}`;
+                const cycleNumber = Math.floor((engin.heuresMarche || 0) / intervalle.intervalleHeures);
+                const taskId = `pm_${engin.id}_${cleanOp}_${intervalle.intervalleHeures}_cycle${cycleNumber}`;
 
                 const alreadyGenerated = tasks.some(t => t.id === taskId && !t.deleted);
                 if (alreadyGenerated) continue;
@@ -651,16 +652,23 @@ export default function TachesPlanning() {
         t.statut === 'NON_FAIT' && 
         t.datePlanifiee < new Date().toISOString().split('T')[0]
       ).length;
-      const rate = total > 0 ? Math.round((faites / total) * 100) : 0;
+      const rate = total > 0 ? Math.round((faites / total) * 100) : null;
 
       const badges: string[] = [];
-      if (rate >= 90) badges.push('🏆 Champion');
-      if (rate >= 80) badges.push('⭐ Spécialiste');
-      if (retard === 0 && faites > 0) badges.push('🔥 Série Or');
-      else if (retard <= 2 && faites > 0) badges.push('🔥 Série Argent');
+      if (rate !== null) {
+        if (rate >= 90) badges.push('🏆 Champion');
+        if (rate >= 80) badges.push('⭐ Spécialiste');
+        if (retard === 0 && faites > 0) badges.push('🔥 Série Or');
+        else if (retard <= 2 && faites > 0) badges.push('🔥 Série Argent');
+      }
 
       return { meca, total, faites, retard, rate, badges };
-    }).sort((a, b) => b.rate - a.rate);
+    }).sort((a, b) => {
+      if (a.rate === null && b.rate === null) return 0;
+      if (a.rate === null) return 1;
+      if (b.rate === null) return -1;
+      return b.rate - a.rate;
+    });
   }, [filteredMecaniciens, filteredTasks]);
 
   const kpis = React.useMemo(() => {
@@ -673,10 +681,10 @@ export default function TachesPlanning() {
     const prev = tasksMois.filter(t => t.type === 'PREVENTIF' || t.type === 'QUOTIDIEN').length;
     const corr = tasksMois.filter(t => t.type === 'CORRECTIF').length;
     const totalType = prev + corr;
-    const prevPercent = totalType > 0 ? Math.round((prev / totalType) * 100) : 75;
+    const prevPercent = totalType > 0 ? Math.round((prev / totalType) * 100) : null;
 
     const topNom = statsParMeca[0]?.meca.nomComplet || 'Aucun';
-    const topRate = statsParMeca[0]?.rate || 0;
+    const topRate = statsParMeca[0]?.rate ?? null;
 
     return { perfGlobale, prevPercent, topNom, topRate };
   }, [filteredTasks, statsParMeca]);
@@ -1224,7 +1232,9 @@ export default function TachesPlanning() {
                   <div>
                     {/* V4-TYPO: replaced text-[9px] with text-caption */}
                     <span className="text-caption font-bold text-slate-500 dark:text-slate-400 uppercase">Prophète du Mois</span>
-                    <h3 className="text-sm font-black text-slate-800 dark:text-white truncate">{kpis.topNom}</h3>
+                    <h3 className={`font-black text-slate-800 dark:text-white truncate ${kpis.topRate === null ? 'text-[11px] leading-snug whitespace-normal' : 'text-sm'}`}>
+                      {kpis.topRate !== null ? kpis.topNom : 'Aucun classement disponible ce mois-ci'}
+                    </h3>
                   </div>
                 </CardContent>
               </Card>
@@ -1238,7 +1248,9 @@ export default function TachesPlanning() {
                   <div>
                     {/* V4-TYPO: replaced text-[9px] with text-caption */}
                     <span className="text-caption font-bold text-slate-500 dark:text-slate-400 uppercase">Score Moyen d'exécution</span>
-                    <h3 className="text-lg font-black text-[#D4AF37]">{kpis.topRate}%</h3>
+                    <h3 className={`font-black text-[#D4AF37] ${kpis.topRate !== null ? 'text-lg' : 'text-xs'}`}>
+                      {kpis.topRate !== null ? `${kpis.topRate}%` : 'Données insuffisantes'}
+                    </h3>
                   </div>
                 </CardContent>
               </Card>
@@ -1252,7 +1264,9 @@ export default function TachesPlanning() {
                   <div>
                     {/* V4-TYPO: replaced text-[9px] with text-caption */}
                     <span className="text-caption font-bold text-slate-500 dark:text-slate-400 uppercase">Ratio Préventif / Correctif</span>
-                    <h3 className="text-lg font-black text-[#D4AF37]">{kpis.prevPercent}% / {100 - kpis.prevPercent}%</h3>
+                    <h3 className={`font-black text-[#D4AF37] ${kpis.prevPercent !== null ? 'text-lg' : 'text-xs'}`}>
+                      {kpis.prevPercent !== null ? `${kpis.prevPercent}% / ${100 - kpis.prevPercent}%` : 'Données insuffisantes'}
+                    </h3>
                   </div>
                 </CardContent>
               </Card>
@@ -1300,12 +1314,16 @@ export default function TachesPlanning() {
                           {stat.faites} / {stat.total}
                         </td>
                         <td className="p-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <span className="font-black text-slate-800">{stat.rate}%</span>
-                            <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-[#D4AF37]" style={{ width: `${stat.rate}%` }} />
+                          {stat.rate !== null ? (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <span className="font-black text-slate-800">{stat.rate}%</span>
+                              <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-[#D4AF37]" style={{ width: `${stat.rate}%` }} />
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <span className="text-slate-400 italic font-medium">Aucune tâche ce mois-ci</span>
+                          )}
                         </td>
                         <td className="p-4 text-center">
                           {/* V4-TYPO: replaced text-[9px] with text-caption */}

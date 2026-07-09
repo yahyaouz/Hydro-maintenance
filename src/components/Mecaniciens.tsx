@@ -89,18 +89,26 @@ export function Mecaniciens() {
   // Global KPIs based on filtered list
   const kpis = useMemo(() => {
     if (filteredMecaniciens.length === 0) {
-      return { total: 0, avgScore: 0, avgResolution: 0, avgMttr: 0 };
+      return { total: 0, avgScore: 0, avgResolution: null as number | null, avgMttr: null as number | null };
     }
     const total = filteredMecaniciens.length;
     const avgScore = filteredMecaniciens.reduce((acc, m) => acc + m.stats.scoreMensuel, 0) / total;
-    const avgResolution = filteredMecaniciens.reduce((acc, m) => acc + m.stats.tauxResolutionPremiereFois, 0) / total;
-    const avgMttr = filteredMecaniciens.reduce((acc, m) => acc + m.stats.mttrMoyen, 0) / total;
+    
+    const withResolution = filteredMecaniciens.filter(m => m.stats.tauxResolutionPremiereFois !== null);
+    const avgResolution = withResolution.length > 0 
+      ? withResolution.reduce((acc, m) => acc + (m.stats.tauxResolutionPremiereFois || 0), 0) / withResolution.length 
+      : null;
+
+    const withMttr = filteredMecaniciens.filter(m => m.stats.mttrMoyen !== null);
+    const avgMttr = withMttr.length > 0 
+      ? withMttr.reduce((acc, m) => acc + (m.stats.mttrMoyen || 0), 0) / withMttr.length 
+      : null;
 
     return {
       total,
       avgScore: Math.round(avgScore * 10) / 10,
-      avgResolution: Math.round(avgResolution * 10) / 10,
-      avgMttr: Math.round(avgMttr * 10) / 10
+      avgResolution: avgResolution !== null ? Math.round(avgResolution * 10) / 10 : null,
+      avgMttr: avgMttr !== null ? Math.round(avgMttr * 10) / 10 : null
     };
   }, [filteredMecaniciens]);
 
@@ -112,13 +120,23 @@ export function Mecaniciens() {
   // Prepare radar data for selected mechanic details
   const radarData = useMemo(() => {
     if (!selectedMeca) return [];
-    return [
+    const data = [
       { subject: "Score Mensuel", value: selectedMeca.stats.scoreMensuel },
-      { subject: "Résol. 1ère Fois", value: selectedMeca.stats.tauxResolutionPremiereFois },
-      { subject: "Tournées Compl.", value: selectedMeca.stats.tauxTournéesCompletes },
+      { 
+        subject: selectedMeca.stats.tauxResolutionPremiereFois !== null ? "Résol. 1ère Fois" : "Résol. 1ère Fois (—)", 
+        value: selectedMeca.stats.tauxResolutionPremiereFois !== null ? selectedMeca.stats.tauxResolutionPremiereFois : 0 
+      },
+      { 
+        subject: selectedMeca.stats.tauxTournéesCompletes !== null ? "Tournées Compl." : "Tournées Compl. (—)", 
+        value: selectedMeca.stats.tauxTournéesCompletes !== null ? selectedMeca.stats.tauxTournéesCompletes : 0 
+      },
       { subject: "Heures/1.5", value: Math.min(100, (selectedMeca.stats.heuresInterventionCeMois / 160) * 100) },
-      { subject: "Rapidité (MTTR)", value: Math.max(0, 100 - (selectedMeca.stats.mttrMoyen * 15)) }
+      { 
+        subject: selectedMeca.stats.mttrMoyen !== null ? "Rapidité (MTTR)" : "Rapidité (—)", 
+        value: selectedMeca.stats.mttrMoyen !== null ? Math.max(0, 100 - (selectedMeca.stats.mttrMoyen * 15)) : 0 
+      }
     ];
+    return data;
   }, [selectedMeca]);
 
   const copyToClipboard = (text: string, label: string) => {
@@ -156,7 +174,7 @@ export function Mecaniciens() {
             Gestion des Équipes & Mécaniciens
           </h2>
           <p className="text-xs text-slate-500 font-mono mt-1">
-            Visualisation des fiches de compétences, certifications LOTO et score de performance.
+            Visualisation des fiches de compétences et du score de performance des équipes de maintenance.
           </p>
         </div>
 
@@ -217,7 +235,7 @@ export function Mecaniciens() {
           </div>
           <div>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block uppercase">Résol. 1er coup moyen</span>
-            <span className="text-2xl font-black text-[#D4AF37]">{kpis.avgResolution}%</span>
+            <span className="text-2xl font-black text-[#D4AF37]">{kpis.avgResolution !== null ? `${kpis.avgResolution}%` : "—"}</span>
           </div>
         </div>
 
@@ -228,7 +246,7 @@ export function Mecaniciens() {
           </div>
           <div>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block uppercase">MTTR Moyen (heures)</span>
-            <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{kpis.avgMttr}h</span>
+            <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{kpis.avgMttr !== null ? `${kpis.avgMttr}h` : "—"}</span>
           </div>
         </div>
       </div>
@@ -788,34 +806,42 @@ export function Mecaniciens() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 border-t border-slate-150 dark:border-slate-800 pt-4">
                         <div className="text-center">
                           <span className="text-[9px] text-slate-400 font-mono block uppercase">MTTR Moyen</span>
-                          <span className="text-sm font-black text-slate-850 dark:text-white mt-1 block">{selectedMeca.stats.mttrMoyen}h</span>
+                          <span className="text-sm font-black text-slate-850 dark:text-white mt-1 block">
+                            {selectedMeca.stats.mttrMoyen !== null ? `${selectedMeca.stats.mttrMoyen}h` : "Données insuffisantes"}
+                          </span>
                         </div>
                         <div className="text-center">
                           <span className="text-[9px] text-slate-400 font-mono block uppercase">Tournées Compl.</span>
-                          <span className="text-sm font-black text-slate-850 dark:text-white mt-1 block">{selectedMeca.stats.tauxTournéesCompletes}%</span>
+                          <span className="text-sm font-black text-slate-850 dark:text-white mt-1 block">
+                            {selectedMeca.stats.tauxTournéesCompletes !== null ? `${selectedMeca.stats.tauxTournéesCompletes}%` : "Données insuffisantes"}
+                          </span>
                         </div>
                         <div className="text-center">
                           <span className="text-[9px] text-slate-400 font-mono block uppercase">Résol. 1er coup</span>
-                          <span className="text-sm font-black text-slate-850 dark:text-white mt-1 block">{selectedMeca.stats.tauxResolutionPremiereFois}%</span>
+                          <span className="text-sm font-black text-slate-850 dark:text-white mt-1 block">
+                            {selectedMeca.stats.tauxResolutionPremiereFois !== null ? `${selectedMeca.stats.tauxResolutionPremiereFois}%` : "—"}
+                          </span>
                         </div>
                         <div className="text-center">
                           <span className="text-[9px] text-slate-400 font-mono block uppercase">Dernière act.</span>
                           <span className="text-xs font-black text-slate-850 dark:text-white mt-1 block truncate">
-                            {new Date(selectedMeca.stats.derniereIntervention).toLocaleDateString()}
+                            {selectedMeca.stats.derniereIntervention ? new Date(selectedMeca.stats.derniereIntervention).toLocaleDateString() : "—"}
                           </span>
                         </div>
                       </div>
                     </div>
 
                     {/* Operational trace details */}
-                    <div className="bg-amber-500/5 dark:bg-slate-900/40 p-4 rounded-xl border border-amber-500/10 dark:border-slate-900/60 flex items-center gap-3">
-                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></div>
-                      <div className="text-[10px] text-amber-800 dark:text-amber-400 font-mono leading-relaxed">
-                        <strong>LOG SPRINT 4 :</strong> Cette fiche est actuellement alimentée par des données mockées identifiées 
-                        par la source <code className="bg-amber-500/10 px-1 rounded uppercase font-black">{selectedMeca.source}</code>. 
-                        Au Sprint 6, ce profil sera synchronisé automatiquement avec les données d'import SAP/GMAO.
+                    {selectedMeca.source !== "PRODUCTION_IMPORT" && selectedMeca.source !== "ADMIN_CREATION" && (
+                      <div className="bg-amber-500/5 dark:bg-slate-900/40 p-4 rounded-xl border border-amber-500/10 dark:border-slate-900/60 flex items-center gap-3">
+                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></div>
+                        <div className="text-[10px] text-amber-800 dark:text-amber-400 font-mono leading-relaxed">
+                          <strong>LOG SPRINT 4 :</strong> Cette fiche est actuellement alimentée par des données mockées identifiées 
+                          par la source <code className="bg-amber-500/10 px-1 rounded uppercase font-black">{selectedMeca.source}</code>. 
+                          Au Sprint 6, ce profil sera synchronisé automatiquement avec les données d'import SAP/GMAO.
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -42,9 +42,9 @@ export function RootCauseAnalysis() {
   const [selectedRcaId, setSelectedRcaId] = React.useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [generatingAI, setGeneratingAI] = React.useState(false);
 
   // Form State
+  const [formSiteId, setFormSiteId] = React.useState("");
   const [workOrderId, setWorkOrderId] = React.useState("");
   const [machineCode, setMachineCode] = React.useState("");
   const [title, setTitle] = React.useState("");
@@ -96,57 +96,23 @@ export function RootCauseAnalysis() {
     if (workOrderId && workorders) {
       const wo = workorders.find(w => w.id === workOrderId);
       if (wo) {
-        setMachineCode(wo.enginId || wo.enginModele || "");
+        const matchingEngin = (engins || []).find(e => e.id === wo.enginId);
+        const resolvedMatricule = matchingEngin?.matricule || wo.enginModele || "";
+        setMachineCode(resolvedMatricule);
         if (!title) {
-          setTitle(`Analyse RCA - Défaillance ${wo.enginId || ""} (${wo.label || wo.title || ""})`);
+          setTitle(`Analyse RCA - Défaillance ${resolvedMatricule} (${wo.label || wo.title || ""})`);
         }
       }
     }
-  }, [workOrderId, workorders, title]);
-
-  const handleGenerateAIAnalysis = async (rca: RCAType) => {
-    // CORRECTION 2 — COMMENTAIRE EXPLICATIF STRUCTURÉ DU MOCK IA :
-    // ANALYSE IA SIMULÉE — Cette fonctionnalité est simulée localement (mock) pour l'instant.
-    // Elle sera entièrement interfacée avec l'assistant centralisé Hydromines basé sur le modèle
-    // de langage Gemini API au SPRINT 6 (Intégration & Assistant Intelligent) afin d'évaluer 
-    // dynamiquement la pertinence des 5 Pourquoi et de suggérer des actions correctives éprouvées.
-    
-    setGeneratingAI(true);
-    toast.info("L'assistant Hydromines analyse les causes racines...");
-
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const aiReport = `### RAPPORT D'ANALYSE IA ASSISTÉE — SOU-GMAO ASSISTANT
-*Émis automatiquement pour le chantier ${rca.siteId}*
-
-**1. Pertinence des 5 Pourquoi :**
-- La décomposition causale est de haute qualité. Le cheminement entre la panne de surface et la cause racine organisationnelle (${rca.rootCause}) est valide sur le plan thermodynamique et mécanique.
-
-**2. Analyse Technique Générée :**
-- L'incident est symptomatique d'une fatigue mécanique accélérée par des conditions ambiantes sévères (humidité élevée sous terre et abrasion due aux particules de minerai).
-- Le délai moyen d'intervention (MTTR) sur ce type d'organe aurait pu être réduit de 20% si un kit de rechange standardisé avait été stocké au point d'ancrage chantier.
-
-**3. Suggestions d'Actions Correctives Supplémentaires :**
-- **Action IA 1 :** Mettre en place un capteur de vibration haute fréquence sur l'arbre de transmission pour détecter les anomalies de charge 15h avant défaillance.
-- **Action IA 2 :** Former les opérateurs à la ronde visuelle de graissage d'urgence au début de chaque poste de travail souterrain.
-- **Action IA 3 :** Réviser la périodicité du changement de joints d'étanchéité de 250h à 180h pour l'exploitation en milieu acide.`;
-
-    try {
-      await saveRCA({
-        ...rca,
-        aiAnalysis: aiReport,
-        updatedAt: new Date().toISOString()
-      });
-      toast.success("Analyse IA générée et intégrée au rapport RCA !");
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setGeneratingAI(false);
-    }
-  };
+  }, [workOrderId, workorders, engins, title]);
 
   const handleCreateRCA = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (activeSite === "TOUS" && !formSiteId) {
+      toast.error("Le site d'exploitation est requis.");
+      return;
+    }
 
     if (!title.trim() || !machineCode.trim()) {
       toast.error("Le titre et le code machine sont requis.");
@@ -164,7 +130,7 @@ export function RootCauseAnalysis() {
       fiveWhys,
       rootCause: rootCause.trim(),
       preventiveActions: preventiveActionsInput.split("\n").map(a => a.trim()).filter(Boolean),
-      siteId: activeSite === "TOUS" ? "SMI" : activeSite,
+      siteId: (activeSite === "TOUS" ? formSiteId : activeSite) as any,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -183,6 +149,7 @@ export function RootCauseAnalysis() {
       setFiveWhys(["", "", "", "", ""]);
       setRootCause("");
       setPreventiveActionsInput("");
+      setFormSiteId("");
     } catch (err) {
       console.error(err);
     }
@@ -471,54 +438,6 @@ export function RootCauseAnalysis() {
 
                 </div>
 
-                {/* Gemini intelligent assistant analysis */}
-                <div className="border-t border-slate-50 dark:border-slate-900/60 pt-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                      <Sparkles className="h-4.5 w-4.5 text-purple-500 animate-pulse" /> Diagnostic & Recommandations IA
-                    </h3>
-                    {!selectedRca.aiAnalysis && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleGenerateAIAnalysis(selectedRca)}
-                        disabled={generatingAI}
-                        className="bg-purple-600 hover:bg-purple-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl h-8 px-3 flex items-center gap-1 border-none cursor-pointer"
-                      >
-                        <Zap className="h-3.5 w-3.5" />
-                        {generatingAI ? "Calcul en cours..." : "Générer Analyse IA"}
-                      </Button>
-                    )}
-                  </div>
-
-                  {selectedRca.aiAnalysis ? (
-                    <div className="bg-purple-50/20 dark:bg-purple-950/5 border border-purple-100/40 dark:border-purple-900/20 rounded-2xl p-5 relative overflow-hidden text-left">
-                      <div className="absolute top-0 right-0 h-20 w-20 bg-purple-500/5 rounded-full blur-xl" />
-                      <div className="text-xs font-sans text-slate-700 dark:text-slate-300 space-y-3 whitespace-pre-line leading-relaxed">
-                        {selectedRca.aiAnalysis}
-                      </div>
-                      
-                      {/* Regeneration button */}
-                      <div className="mt-4 pt-3 border-t border-purple-100/30 flex justify-end">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleGenerateAIAnalysis(selectedRca)}
-                          disabled={generatingAI}
-                          className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/20 font-bold text-[9px] uppercase tracking-wider h-7"
-                        >
-                          <Zap className="h-3.5 w-3.5 mr-1" /> Régénérer l'analyse
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-900 p-6 rounded-2xl text-center space-y-2">
-                      <Sparkles className="h-6 w-6 text-purple-400 mx-auto animate-pulse" />
-                      <p className="text-[11px] text-slate-400 uppercase tracking-widest font-mono">Assistance IA Non Générée</p>
-                      <p className="text-[9px] text-slate-500 uppercase max-w-sm mx-auto">Activez l'analyse IA pour évaluer la qualité des 5 Pourquoi et recevoir des préconisations constructives de prévention.</p>
-                    </div>
-                  )}
-                </div>
-
               </CardContent>
             </Card>
           ) : (
@@ -560,6 +479,26 @@ export function RootCauseAnalysis() {
             <CardContent className="overflow-y-auto p-6 space-y-4">
               <form onSubmit={handleCreateRCA} className="space-y-4">
                 
+                {/* Site selection - visible only if activeSite === "TOUS" */}
+                {activeSite === "TOUS" && (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Site d'Exploitation <span className="text-red-500">*</span></label>
+                    <select
+                      value={formSiteId}
+                      onChange={(e) => setFormSiteId(e.target.value)}
+                      className="w-full text-xs h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-850 px-3 outline-none focus:ring-1 focus:ring-sky-500 text-slate-800 dark:text-slate-100"
+                      required
+                    >
+                      <option value="">-- Sélectionner un Site --</option>
+                      <option value="SMI">SMI</option>
+                      <option value="OUMEJRANE">OUMEJRANE</option>
+                      <option value="KOUDIA">KOUDIAT AICHA</option>
+                      <option value="OUANSIMI">OUANSIMI</option>
+                      <option value="BOU-AZZER">BOU-AZZER</option>
+                    </select>
+                  </div>
+                )}
+
                 {/* Linked work order selection */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
@@ -570,7 +509,11 @@ export function RootCauseAnalysis() {
                       className="w-full text-xs h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-850 px-3 outline-none focus:ring-1 focus:ring-sky-500 text-slate-800 dark:text-slate-100"
                     >
                       <option value="">-- Sélectionner un Bon (Optionnel) --</option>
-                      {(workorders || []).filter(w => !activeSite || activeSite === "TOUS" || w.siteId === activeSite || w.site === activeSite).map(w => (
+                      {(workorders || []).filter(w => {
+                        const targetSite = activeSite === "TOUS" ? formSiteId : activeSite;
+                        if (!targetSite) return false;
+                        return w.siteId === targetSite || w.site === targetSite;
+                      }).map(w => (
                         <option key={w.id} value={w.id}>
                           {w.enginId || "Engin"} - {w.label || w.title || w.description} ({w.id.substring(0, 5).toUpperCase()})
                         </option>
@@ -587,7 +530,11 @@ export function RootCauseAnalysis() {
                       required
                     >
                       <option value="">-- Sélectionner l'Équipement --</option>
-                      {(engins || []).filter(e => !activeSite || activeSite === "TOUS" || (e.siteId || e.site || "").toUpperCase() === activeSite.toUpperCase()).map(e => (
+                      {(engins || []).filter(e => {
+                        const targetSite = activeSite === "TOUS" ? formSiteId : activeSite;
+                        if (!targetSite) return false;
+                        return (e.siteId || e.site || "").toUpperCase() === targetSite.toUpperCase();
+                      }).map(e => (
                         <option key={e.id} value={e.matricule}>
                           {e.matricule} ({e.marque} {e.type})
                         </option>
