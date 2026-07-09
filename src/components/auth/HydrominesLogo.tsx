@@ -1,6 +1,6 @@
 import * as React from "react";
 // @ts-ignore
-import hydrominesLogo from "@/assets/images/hydromines_logo.jpg";
+import hydrominesLogo from "@/assets/images/logo_hydromines.jpg";
 
 interface HydrominesLogoProps {
   className?: string;

@@ -387,3 +387,47 @@ button,
   font-weight: 950;
   display: inline-block;
 }
+
+/* Custom Gold Scrollbar for Sidebar */
+.gold-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #D4AF37 transparent;
+}
+
+.gold-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.gold-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.gold-scrollbar::-webkit-scrollbar-thumb {
+  background: #D4AF37;
+  border-radius: 4px;
+}
+
+.gold-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #B8860B;
+}
+
+/* Scrollbar up/down arrows */
+.gold-scrollbar::-webkit-scrollbar-button:single-button {
+  background-size: 8px;
+  background-repeat: no-repeat;
+  background-position: center;
+  height: 12px;
+  width: 8px;
+  display: block;
+}
+
+/* Up arrow - Sky Blue */
+.gold-scrollbar::-webkit-scrollbar-button:single-button:vertical:decrement {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230EA5E9' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'><polyline points='18 15 12 9 6 15'></polyline></svg>");
+}
+
+/* Down arrow - Dark Red */
+.gold-scrollbar::-webkit-scrollbar-button:single-button:vertical:increment {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239E1A1A' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+}
+

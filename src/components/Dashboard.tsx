@@ -32,7 +32,9 @@ import {
   ShieldCheck,
   CheckSquare,
   FileText,
-  Gauge
+  Gauge,
+  Sun,
+  Moon
 } from "lucide-react";
 import { 
   Card, 
@@ -53,6 +55,8 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  AreaChart,
+  Area,
   Cell,
   PieChart,
   Pie,
@@ -69,13 +73,34 @@ import { toast } from "sonner";
 import bannerImg from "@/assets/images/banner-mecanique.webp";
 // @ts-ignore
 import goldTexture from "@/assets/images/texture-or.webp";
+// @ts-ignore
+import hydrominesLogo from "@/assets/images/logo_hydromines.jpg";
 
 // 5 default sites for multi-site metrics
 const SITES_LIST = ["SMI", "OUMEJRANE", "KOUDIA", "OUANSIMI", "BOU-AZZER"];
 
 export function Dashboard() {
-  const { activeSite, setActiveSite, user } = useAuthStore();
+  const { activeSite, setActiveSite, user, theme, setTheme } = useAuthStore();
   const [isSignalerPanneOpen, setIsSignalerPanneOpen] = React.useState(false);
+  
+  const isDark = theme === "dark";
+
+  // Theme-adaptive classes for premium light / dark integration
+  const mainBgClass = isDark 
+    ? "bg-gradient-to-b from-[#090e18] to-[#04060b] text-[#F4EAD4]" 
+    : "bg-white text-slate-800";
+  
+  const cardBgClass = isDark
+    ? "bg-gradient-to-br from-[#121824] to-[#0a0d16] border border-[#D4AF37]/25"
+    : "bg-gradient-to-br from-white to-[#FDFBF7] border border-[#D4AF37]/40 shadow-[0_8px_30px_rgba(212,175,55,0.06)]";
+
+  const textTitleClass = isDark ? "text-[#FFFDF9]" : "text-amber-950";
+  const textMutedClass = isDark ? "text-[#A49F8D]" : "text-slate-600";
+  const borderClass = isDark ? "border-[#D4AF37]/10" : "border-[#D4AF37]/25";
+  const bgSubtleClass = isDark ? "bg-[#0d121d]" : "bg-amber-50/50";
+  const bgSubtle50Class = isDark ? "bg-[#0d121d]/50" : "bg-amber-50/30";
+  const bgSubtle12Class = isDark ? "bg-[#121824]" : "bg-slate-100";
+  const hoverClass = isDark ? "hover:bg-[#D4AF37]/5" : "hover:bg-amber-50/50";
   
   // Visibility of annual curves
   const [visibleCurves, setVisibleCurves] = React.useState({
@@ -212,10 +237,10 @@ export function Dashboard() {
     const countBas = Math.max(0, openWOs.length - totalCalculated);
 
     return [
-      { name: "Critique", value: countCritique, color: "#DC2626" },
-      { name: "Élevé", value: countEleve, color: "#D97706" },
-      { name: "Moyen", value: countMoyen, color: "#F59E0B" },
-      { name: "Bas", value: countBas, color: "#059669" }
+      { name: "Critique", value: countCritique, color: "#EF4444" },
+      { name: "Élevé", value: countEleve, color: "#F59E0B" },
+      { name: "Moyen", value: countMoyen, color: "#D4AF37" },
+      { name: "Bas", value: countBas, color: "#8A6623" }
     ];
   }, [filteredOrders]);
 
@@ -494,71 +519,151 @@ export function Dashboard() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
-      className="flex-1 bg-white dark:bg-[#070b13] text-slate-900 dark:text-slate-100 min-h-screen font-sans p-4 lg:p-6 space-y-6 overflow-y-auto"
+      className={`flex-1 min-h-screen font-sans p-4 lg:p-6 space-y-6 overflow-y-auto transition-colors duration-500 ${mainBgClass}`}
     >
       {/* CORRECTION 1 : GORGEOUS UNIFIED BANNER */}
-      <div id="dashboard-banner" className="bg-white dark:bg-[#0c1220]/90 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 rounded-2xl p-5 shadow-[0_4px_30px_rgba(0,0,0,0.02)] relative flex flex-col md:flex-row md:items-center md:justify-between gap-4 overflow-hidden min-h-[120px]">
-        {/* Banner background image with fade mask */}
-        <div className="absolute inset-0 pointer-events-none select-none z-0">
+      <div 
+        id="dashboard-banner" 
+        className={`relative overflow-hidden border-2 border-[#D4AF37] p-7 md:p-10 pb-16 md:pb-16 rounded-3xl transition-all duration-500 flex flex-col md:flex-row md:items-center md:justify-between gap-6 min-h-[210px] md:min-h-[240px] ${
+          isDark 
+            ? "shadow-[0_12px_40px_rgba(212,175,55,0.12)]" 
+            : "shadow-[0_12px_40px_rgba(212,175,55,0.06)]"
+        }`}
+        style={{
+          backgroundImage: isDark
+            ? `linear-gradient(135deg, rgba(22, 17, 8, 0.95) 0%, rgba(10, 8, 4, 0.98) 100%), url(${goldTexture})`
+            : 'none',
+          backgroundColor: isDark ? 'transparent' : '#ffffff',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      >
+        {/* SMALL TOP-CENTERED SUN/MOON THEME TOGGLER */}
+        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-30">
+          <button
+            onClick={() => {
+              const newTheme = isDark ? "light" : "dark";
+              setTheme(newTheme);
+              toast.success(`Mode ${newTheme === "light" ? "CLAIR ☀️" : "SOMBRE 🌙"} activé`);
+            }}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full border text-[9.5px] font-black font-mono uppercase tracking-widest transition-all duration-300 shadow-lg hover:scale-[1.04] cursor-pointer ${
+              isDark 
+                ? "bg-[#1E1402]/90 border-[#D4AF37]/50 text-[#FFFDF9] hover:bg-[#D4AF37]/25" 
+                : "bg-white/95 border-[#D4AF37] text-amber-950 hover:bg-amber-50"
+            }`}
+            style={{ textShadow: isDark ? '0 1px 2px rgba(0,0,0,0.4)' : 'none' }}
+          >
+            {isDark ? (
+              <>
+                <Sun className="h-3 w-3 text-amber-400 animate-spin" style={{ animationDuration: '6s' }} />
+                <span>MODE CLAIR</span>
+              </>
+            ) : (
+              <>
+                <Moon className="h-3 w-3 text-slate-700" />
+                <span>MODE SOMBRE</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Banner background image covering the entire right portion of the banner */}
+        <div className="absolute right-0 top-0 bottom-0 w-full md:w-[50%] lg:w-[45%] pointer-events-none select-none z-0">
           <img 
             loading="lazy" 
             decoding="async" 
             src={bannerImg} 
             alt="Illustration maintenance industrielle" 
-            className="w-full h-full object-cover opacity-25 dark:opacity-20"
-            style={{
-              maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent), linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)',
-              WebkitMaskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent), linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)',
-              maskComposite: 'intersect',
-              WebkitMaskComposite: 'source-in'
-            }}
+            className={`w-full h-full object-cover object-right transition-all duration-500 ${
+              isDark 
+                ? "opacity-60 md:opacity-85 mix-blend-screen" 
+                : "opacity-75 md:opacity-95 mix-blend-multiply"
+            }`}
           />
-          {/* Border blending overlays */}
-          <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-white via-white/80 to-transparent dark:from-[#0c1220] dark:via-[#0c1220]/80 pointer-events-none" />
-          <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-white via-white/80 to-transparent dark:from-[#0c1220] dark:via-[#0c1220]/80 pointer-events-none" />
-          <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-white via-white/80 to-transparent dark:from-[#0c1220] dark:via-[#0c1220]/80 pointer-events-none" />
-          <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-white via-white/80 to-transparent dark:from-[#0c1220] dark:via-[#0c1220]/80 pointer-events-none" />
+          {/* Smooth overlay gradient to fade seamlessly into the background on the left */}
+          <div className={`absolute inset-0 bg-gradient-to-r ${isDark ? "from-[#0a0804] via-[#0a0804]/70" : "from-white via-white/70"} to-transparent`} />
+          <div className={`absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t ${isDark ? "from-[#0a0804]" : "from-white"} to-transparent`} />
+          <div className={`absolute inset-x-0 top-0 h-12 bg-gradient-to-b ${isDark ? "from-[#0a0804]" : "from-white"} to-transparent`} />
         </div>
 
-        <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-slate-950 via-[#D4AF37] to-slate-950 rounded-t-2xl z-10" />
+        <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-amber-600 via-[#D4AF37] to-amber-950 rounded-t-3xl z-10" />
         
-        <div className="flex items-center gap-4 z-10">
-          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-400 to-[#D4AF37] flex items-center justify-center shadow-md shadow-amber-500/10 shrink-0">
-            <span className="font-sans font-black text-white text-lg tracking-wider">HM</span>
+        {/* L-brackets for the banner too to match the KPIs theme perfectly */}
+        <div className="absolute top-2 left-2 w-2 h-2 border-t border-l border-[#D4AF37]/50 pointer-events-none" />
+        <div className="absolute top-2 right-2 w-2 h-2 border-t border-r border-[#D4AF37]/50 pointer-events-none" />
+        <div className="absolute bottom-2 left-2 w-2 h-2 border-b border-l border-[#D4AF37]/50 pointer-events-none" />
+        <div className="absolute bottom-2 right-2 w-2 h-2 border-b border-r border-[#D4AF37]/50 pointer-events-none" />
+
+        <div className="flex items-center gap-5 z-10">
+          {/* Logo container, sized 4x the original small HM box (h-12 w-12 is 48x48, h-24 w-24 is 96x96 which is 4 times the area!) */}
+          <div className={`h-24 w-24 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden transition-all ${
+            isDark 
+              ? "bg-gradient-to-br from-[#D4AF37] to-[#8B5E1A] border-2 border-[#D4AF37] shadow-lg" 
+              : "bg-white shadow-sm"
+          }`}>
+            <img 
+              src={hydrominesLogo} 
+              alt="Hydromines Logo" 
+              className="w-full h-full object-contain p-1"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono font-bold tracking-widest text-[#D4AF37] uppercase flex items-center gap-1 drop-shadow-[0_0_8px_rgba(212,175,55,0.3)]">
-                <Sparkles className="h-3 w-3" /> HYDROMINES COCKPIT
+              <span className="text-[10px] font-mono font-black tracking-widest uppercase flex items-center gap-1">
+                <Sparkles className="h-3 w-3 animate-pulse text-[#D4AF37] drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]" />
+                <span className={isDark ? "text-sky-400" : "text-sky-600"}>HYDRO</span>
+                <span className={isDark ? "text-red-500" : "text-red-700"}>MINES</span>
+                <span className="text-[#D4AF37] ml-1 drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]">COCKPIT</span>
               </span>
-              <Badge variant="outline" className="text-[9px] font-bold font-mono border-amber-200 text-amber-600 bg-amber-50/50 uppercase dark:border-amber-800 dark:text-amber-400">
+              <Badge variant="outline" className={`text-[9px] font-black font-mono uppercase tracking-wider ${
+                isDark 
+                  ? "border-[#D4AF37]/40 text-[#FFFDF9] bg-[#1E1402]" 
+                  : "border-[#D4AF37] text-amber-950 bg-amber-50"
+              }`}>
                 Site : {activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
               </Badge>
             </div>
-            <h1 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-0.5">
+            <h1 
+              className="text-xl md:text-2xl lg:text-3xl font-black tracking-tight mt-1 bg-gradient-to-r from-[#A07810] via-[#D4AF37] to-[#805F0D] bg-clip-text text-transparent" 
+              style={{ 
+                textShadow: 'none',
+                filter: 'none',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+            >
               {activeSite === 'TOUS' ? "Supervision Flotte Globale" : `Cockpit Tactique • ${activeSite}`}
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className={`text-xs md:text-sm font-medium mt-1 ${isDark ? "text-[#F4EAD4]" : "text-slate-600"}`} style={isDark ? { textShadow: '0 1px 2px rgba(0,0,0,0.8)' } : undefined}>
               Analyses décisionnelles préventives et supervision résiliente
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 z-10">
-          {activeSite !== "TOUS" && (
+        {activeSite !== "TOUS" && (
+          <div className="absolute top-4 right-4 md:static z-10">
             <Button
               variant="outline"
               onClick={() => setActiveSite("TOUS")}
-              className="text-xs font-bold border-slate-100 text-slate-600 hover:bg-slate-100 dark:border-slate-800/40 dark:text-slate-400 dark:hover:bg-slate-900"
+              className={`text-xs font-black h-9 uppercase tracking-wider border-2 transition-all ${
+                isDark 
+                  ? "border-[#D4AF37]/40 text-[#FFFDF9] bg-[#1E1402]/80 hover:bg-[#D4AF37]/15 hover:border-[#D4AF37]" 
+                  : "border-[#D4AF37]/60 text-amber-950 bg-white/90 hover:bg-amber-50 hover:border-[#D4AF37]"
+              }`}
             >
               Vue Globale
             </Button>
-          )}
+          </div>
+        )}
+
+        {/* Button placed at bottom center of the banner */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex justify-center w-full px-4">
           <Button
             onClick={() => setIsSignalerPanneOpen(true)}
-            className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold text-xs uppercase tracking-wider h-10 px-4 shadow-sm shrink-0"
+            className="bg-gradient-to-r from-red-700 to-rose-700 hover:from-red-650 hover:to-rose-650 text-white font-black text-[10.5px] uppercase tracking-widest h-9 px-5 shadow-[0_0_15px_rgba(220,38,38,0.4)] hover:shadow-[0_0_22px_rgba(220,38,38,0.7)] border-2 border-[#D4AF37] shrink-0 transition-all duration-300 hover:scale-[1.02]"
           >
-            <AlertTriangle className="h-4 w-4 mr-2 animate-pulse" /> Signaler une panne
+            <AlertTriangle className="h-3.5 w-3.5 mr-1.5 animate-pulse text-[#D4AF37]" /> Signaler une panne
           </Button>
         </div>
       </div>
@@ -567,272 +672,280 @@ export function Dashboard() {
       <div id="kpis-header" className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {/* KPI 1: MTTR */}
         <div 
-          className="relative overflow-hidden border border-[#D4AF37] border-l-[4px] border-l-[#1a1204] p-5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group min-h-[145px]"
+          className="relative overflow-hidden border-2 border-[#D4AF37] border-l-[5px] border-l-[#D4AF37] p-5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.15)] hover:shadow-[0_12px_36px_rgba(212,175,55,0.3)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group min-h-[165px]"
           style={{
-            backgroundImage: `linear-gradient(200deg, rgba(255,255,255,0.25), transparent 40%), url(${goldTexture})`,
+            backgroundImage: `linear-gradient(135deg, rgba(212, 175, 55, 0.45) 0%, rgba(139, 92, 26, 0.75) 50%, rgba(40, 25, 5, 0.92) 100%), url(${goldTexture})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center'
           }}
         >
           {/* Corner L-brackets */}
-          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#1a1204]/30 pointer-events-none" />
-          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#1a1204]/30 pointer-events-none" />
-          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#1a1204]/30 pointer-events-none" />
-          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#1a1204]/30 pointer-events-none" />
+          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D4AF37]/50 pointer-events-none" />
 
           <div className="flex items-center justify-between gap-2 z-10">
             <div className="flex flex-col">
-              <span className="text-[9px] font-black text-[#1a1204] uppercase tracking-widest font-mono">MTTR</span>
-              <span className="text-[7.5px] font-bold text-[#1a1204]/70 uppercase tracking-widest font-mono -mt-0.5">REPAIR TOLERANCE</span>
+              <span className="text-sm md:text-base font-black text-[#FFFDF9] uppercase tracking-wider font-mono" style={{ textShadow: '0 1.5px 3px rgba(0,0,0,0.8)' }}>MTTR</span>
+              <span className="text-[8.5px] md:text-[9.5px] font-bold text-[#F4EAD4] uppercase tracking-widest font-mono -mt-0.5" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>REPAIR TOLERANCE</span>
             </div>
-            <div className="h-8 w-8 rounded-xl bg-[#1a1204] border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
+            <div className="h-8 w-8 rounded-xl bg-[#1E1402] border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
               <Clock className="h-4 w-4" />
             </div>
           </div>
 
           <div className="mt-4 z-10">
-            <h2 className="font-mono text-3xl font-black tracking-tight text-[#1a1204] flex items-baseline">
+            <h2 className="font-mono text-3xl md:text-4xl font-black tracking-tight text-white flex items-baseline" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
               {mttr !== null ? (
                 <>
                   {mttr}
-                  <span className="text-xs font-black text-[#1a1204]/80 ml-1 uppercase">hrs</span>
+                  <span className="text-xs font-black text-[#F4EAD4] ml-1 uppercase">hrs</span>
                 </>
               ) : (
-                <span className="text-xs font-semibold text-[#1a1204]/60 uppercase">N/A</span>
+                <span className="text-xs font-bold text-slate-300 uppercase">N/A</span>
               )}
             </h2>
 
             {/* Precision status bar */}
-            <div className="h-1 w-full bg-[#1a1204]/10 rounded-full mt-2 overflow-hidden relative">
-              <div className="h-full bg-[#1a1204] rounded-full" style={{ width: "24%" }} />
+            <div className="h-1 w-full bg-black/40 rounded-full mt-2 overflow-hidden relative border border-[#D4AF37]/20">
+              <div className="h-full bg-[#D4AF37] rounded-full" style={{ width: "24%" }} />
             </div>
 
             <div className="flex items-center justify-between mt-2 pt-1">
               {mttr !== null ? (
-                <div className="flex items-center gap-1 text-[8.5px] font-mono font-bold text-[#1a1204]">
+                <div className="flex items-center gap-1 text-[9px] font-mono font-black text-emerald-300" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
                   <TrendingDown className="h-2.5 w-2.5" />
                   <span>-0.4h vs mois dern.</span>
                 </div>
               ) : (
-                <span className="text-[8px] font-mono text-[#1a1204]/60">WAITING TELEMETRY</span>
+                <span className="text-[8px] font-mono font-bold text-[#F4EAD4]/80" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>WAITING TELEMETRY</span>
               )}
-              <span className="text-[7px] font-bold font-mono text-[#1a1204]/50">SYS_V1.0</span>
+              <span className="text-[7.5px] font-black font-mono text-[#D4AF37]/80" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>SYS_V1.0</span>
             </div>
           </div>
         </div>
 
         {/* KPI 2: MTBF */}
-        <div className="relative overflow-hidden bg-white dark:bg-[#0c1220] border border-slate-150 dark:border-slate-850 border-l-[4px] border-l-[#9c1a1a] p-5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group min-h-[145px]">
-          {/* Blueprint dot pattern */}
-          <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:12px_12px] opacity-60 pointer-events-none" />
-          
+        <div 
+          className="relative overflow-hidden border-2 border-[#D4AF37] border-l-[5px] border-l-[#D4AF37] p-5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.15)] hover:shadow-[0_12px_36px_rgba(212,175,55,0.3)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group min-h-[165px]"
+          style={{
+            backgroundImage: `linear-gradient(135deg, rgba(212, 175, 55, 0.45) 0%, rgba(139, 92, 26, 0.75) 50%, rgba(40, 25, 5, 0.92) 100%), url(${goldTexture})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        >
           {/* Corner L-brackets */}
-          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
-          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
-          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
-          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
+          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D4AF37]/50 pointer-events-none" />
 
           <div className="flex items-center justify-between gap-2 z-10">
             <div className="flex flex-col">
-              <span className="text-[9px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest font-mono">MTBF</span>
-              <span className="text-[7.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest font-mono -mt-0.5">RELIABILITY INDEX</span>
+              <span className="text-sm md:text-base font-black text-[#FFFDF9] uppercase tracking-wider font-mono" style={{ textShadow: '0 1.5px 3px rgba(0,0,0,0.8)' }}>MTBF</span>
+              <span className="text-[8.5px] md:text-[9.5px] font-bold text-[#F4EAD4] uppercase tracking-widest font-mono -mt-0.5" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>RELIABILITY INDEX</span>
             </div>
-            <div className="h-8 w-8 rounded-xl bg-slate-950 dark:bg-slate-900 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
+            <div className="h-8 w-8 rounded-xl bg-[#1E1402] border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
               <Gauge className="h-4 w-4" />
             </div>
           </div>
 
           <div className="mt-4 z-10">
-            <h2 className="font-mono text-3xl font-black tracking-tight text-[#9c1a1a] dark:text-[#ff6b6b] flex items-baseline">
+            <h2 className="font-mono text-3xl md:text-4xl font-black tracking-tight text-white flex items-baseline" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
               {mtbf !== null ? (
                 <>
                   {mtbf}
-                  <span className="text-xs font-black text-slate-400 dark:text-slate-500 ml-1 uppercase">hrs</span>
+                  <span className="text-xs font-black text-[#F4EAD4] ml-1 uppercase">hrs</span>
                 </>
               ) : (
-                <span className="text-xs font-semibold text-slate-450 dark:text-slate-500 uppercase">N/A</span>
+                <span className="text-xs font-bold text-slate-300 uppercase">N/A</span>
               )}
             </h2>
 
             {/* Precision status bar */}
-            <div className="h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full mt-2 overflow-hidden relative">
-              <div className="h-full bg-[#9c1a1a] rounded-full" style={{ width: "68%" }} />
+            <div className="h-1 w-full bg-black/40 rounded-full mt-2 overflow-hidden relative border border-[#D4AF37]/20">
+              <div className="h-full bg-[#D4AF37] rounded-full" style={{ width: "68%" }} />
             </div>
 
             <div className="flex items-center justify-between mt-2 pt-1">
               {mtbf !== null ? (
-                <div className="flex items-center gap-1 text-[8.5px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                <div className="flex items-center gap-1 text-[9px] font-mono font-black text-emerald-300" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
                   <TrendingUp className="h-2.5 w-2.5" />
                   <span>+8h vs mois dern.</span>
                 </div>
               ) : (
-                <span className="text-[8px] font-mono text-slate-400">WAITING TELEMETRY</span>
+                <span className="text-[8px] font-mono font-bold text-[#F4EAD4]/80" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>WAITING TELEMETRY</span>
               )}
-              <span className="text-[7px] font-bold font-mono text-slate-300 dark:text-slate-600">SYS_V1.0</span>
+              <span className="text-[7.5px] font-black font-mono text-[#D4AF37]/80" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>SYS_V1.0</span>
             </div>
           </div>
         </div>
 
         {/* KPI 3: Taux Dispo */}
         <div 
-          className="relative overflow-hidden border border-[#D4AF37] border-l-[4px] border-l-[#1a1204] p-5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group min-h-[145px]"
+          className="relative overflow-hidden border-2 border-[#D4AF37] border-l-[5px] border-l-[#D4AF37] p-5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.15)] hover:shadow-[0_12px_36px_rgba(212,175,55,0.3)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group min-h-[165px]"
           style={{
-            backgroundImage: `linear-gradient(200deg, rgba(255,255,255,0.25), transparent 40%), url(${goldTexture})`,
+            backgroundImage: `linear-gradient(135deg, rgba(212, 175, 55, 0.45) 0%, rgba(139, 92, 26, 0.75) 50%, rgba(40, 25, 5, 0.92) 100%), url(${goldTexture})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center'
           }}
         >
           {/* Corner L-brackets */}
-          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#1a1204]/30 pointer-events-none" />
-          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#1a1204]/30 pointer-events-none" />
-          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#1a1204]/30 pointer-events-none" />
-          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#1a1204]/30 pointer-events-none" />
+          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D4AF37]/50 pointer-events-none" />
 
           <div className="flex items-center justify-between gap-2 z-10">
             <div className="flex flex-col">
-              <span className="text-[9px] font-black text-[#1a1204] uppercase tracking-widest font-mono">Disponibilité</span>
-              <span className="text-[7.5px] font-bold text-[#1a1204]/70 uppercase tracking-widest font-mono -mt-0.5">AVAILABILITY COEFFICIENT</span>
+              <span className="text-sm md:text-base font-black text-[#FFFDF9] uppercase tracking-wider font-mono" style={{ textShadow: '0 1.5px 3px rgba(0,0,0,0.8)' }}>Disponibilité</span>
+              <span className="text-[8.5px] md:text-[9.5px] font-bold text-[#F4EAD4] uppercase tracking-widest font-mono -mt-0.5" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>AVAILABILITY COEFFICIENT</span>
             </div>
-            <div className="h-8 w-8 rounded-xl bg-[#1a1204] border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
+            <div className="h-8 w-8 rounded-xl bg-[#1E1402] border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
               <Activity className="h-4 w-4" />
             </div>
           </div>
 
           <div className="mt-4 z-10">
-            <h2 className="font-mono text-3xl font-black tracking-tight text-[#1a1204] flex items-baseline">
+            <h2 className="font-mono text-3xl md:text-4xl font-black tracking-tight text-white flex items-baseline" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
               {dispoRate !== null ? (
                 <>
                   {dispoRate}
-                  <span className="text-xs font-black text-[#1a1204]/80 ml-1 uppercase">%</span>
+                  <span className="text-xs font-black text-[#F4EAD4] ml-1 uppercase">%</span>
                 </>
               ) : (
-                <span className="text-xs font-semibold text-[#1a1204]/60 uppercase">N/A</span>
+                <span className="text-xs font-bold text-slate-300 uppercase">N/A</span>
               )}
             </h2>
 
             {/* Precision status bar */}
-            <div className="h-1 w-full bg-[#1a1204]/10 rounded-full mt-2 overflow-hidden relative">
-              <div className="h-full bg-[#1a1204] rounded-full animate-pulse" style={{ width: dispoRate !== null ? `${dispoRate}%` : "0%" }} />
+            <div className="h-1 w-full bg-black/40 rounded-full mt-2 overflow-hidden relative border border-[#D4AF37]/20">
+              <div className="h-full bg-[#D4AF37] rounded-full animate-pulse" style={{ width: dispoRate !== null ? `${dispoRate}%` : "0%" }} />
             </div>
 
             <div className="flex items-center justify-between mt-2 pt-1">
               {dispoRate !== null ? (
-                <div className="flex items-center gap-1 text-[8.5px] font-mono font-bold text-[#1a1204]">
+                <div className="flex items-center gap-1 text-[9px] font-mono font-black text-emerald-300" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
                   <TrendingUp className="h-2.5 w-2.5" />
                   <span>+1.2% vs mois dern.</span>
                 </div>
               ) : (
-                <span className="text-[8px] font-mono text-[#1a1204]/60">WAITING TELEMETRY</span>
+                <span className="text-[8px] font-mono font-bold text-[#F4EAD4]/80" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>WAITING TELEMETRY</span>
               )}
-              <span className="text-[7px] font-bold font-mono text-[#1a1204]/50">SYS_V1.0</span>
+              <span className="text-[7.5px] font-black font-mono text-[#D4AF37]/80" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>SYS_V1.0</span>
             </div>
           </div>
         </div>
 
         {/* KPI 4: Backlog OT */}
         <div 
-          className="relative overflow-hidden border border-[#D4AF37] border-l-[4px] border-l-[#1a1204] p-5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group min-h-[145px]"
+          className="relative overflow-hidden border-2 border-[#D4AF37] border-l-[5px] border-l-[#D4AF37] p-5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.15)] hover:shadow-[0_12px_36px_rgba(212,175,55,0.3)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group min-h-[165px]"
           style={{
-            backgroundImage: `linear-gradient(200deg, rgba(255,255,255,0.25), transparent 40%), url(${goldTexture})`,
+            backgroundImage: `linear-gradient(135deg, rgba(212, 175, 55, 0.45) 0%, rgba(139, 92, 26, 0.75) 50%, rgba(40, 25, 5, 0.92) 100%), url(${goldTexture})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center'
           }}
         >
           {/* Corner L-brackets */}
-          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#1a1204]/30 pointer-events-none" />
-          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#1a1204]/30 pointer-events-none" />
-          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#1a1204]/30 pointer-events-none" />
-          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#1a1204]/30 pointer-events-none" />
+          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D4AF37]/50 pointer-events-none" />
 
           <div className="flex items-center justify-between gap-2 z-10">
             <div className="flex flex-col">
-              <span className="text-[9px] font-black text-[#1a1204] uppercase tracking-widest font-mono">Backlog OT</span>
-              <span className="text-[7.5px] font-bold text-[#1a1204]/70 uppercase tracking-widest font-mono -mt-0.5">MAINTENANCE BACKLOG</span>
+              <span className="text-sm md:text-base font-black text-[#FFFDF9] uppercase tracking-wider font-mono" style={{ textShadow: '0 1.5px 3px rgba(0,0,0,0.8)' }}>Backlog OT</span>
+              <span className="text-[8.5px] md:text-[9.5px] font-bold text-[#F4EAD4] uppercase tracking-widest font-mono -mt-0.5" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>MAINTENANCE BACKLOG</span>
             </div>
-            <div className="h-8 w-8 rounded-xl bg-[#1a1204] border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
+            <div className="h-8 w-8 rounded-xl bg-[#1E1402] border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
               <Wrench className="h-4 w-4" />
             </div>
           </div>
 
           <div className="mt-4 z-10">
-            <h2 className="font-mono text-3xl font-black tracking-tight text-[#1a1204] flex items-baseline">
+            <h2 className="font-mono text-3xl md:text-4xl font-black tracking-tight text-white flex items-baseline" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
               {totalOpenOTs !== null ? (
                 <>
                   {totalOpenOTs}
-                  <span className="text-xs font-black text-[#1a1204]/80 ml-1 uppercase">actifs</span>
+                  <span className="text-xs font-black text-[#F4EAD4] ml-1 uppercase">actifs</span>
                 </>
               ) : (
-                <span className="text-xs font-semibold text-[#1a1204]/60 uppercase">N/A</span>
+                <span className="text-xs font-bold text-slate-300 uppercase">N/A</span>
               )}
             </h2>
 
             {/* Precision status bar */}
-            <div className="h-1 w-full bg-[#1a1204]/10 rounded-full mt-2 overflow-hidden relative">
-              <div className="h-full bg-[#1a1204] rounded-full" style={{ width: "42%" }} />
+            <div className="h-1 w-full bg-black/40 rounded-full mt-2 overflow-hidden relative border border-[#D4AF37]/20">
+              <div className="h-full bg-[#D4AF37] rounded-full" style={{ width: "42%" }} />
             </div>
 
             <div className="flex items-center justify-between mt-2 pt-1">
               {totalOpenOTs !== null ? (
-                <div className="flex items-center gap-1 text-[8.5px] font-mono font-bold text-[#1a1204]">
+                <div className="flex items-center gap-1 text-[9px] font-mono font-black text-emerald-300" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
                   <TrendingDown className="h-2.5 w-2.5" />
                   <span>-3 vs mois dern.</span>
                 </div>
               ) : (
-                <span className="text-[8px] font-mono text-[#1a1204]/60">WAITING TELEMETRY</span>
+                <span className="text-[8px] font-mono font-bold text-[#F4EAD4]/80" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>WAITING TELEMETRY</span>
               )}
-              <span className="text-[7px] font-bold font-mono text-[#1a1204]/50">SYS_V1.0</span>
+              <span className="text-[7.5px] font-black font-mono text-[#D4AF37]/80" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>SYS_V1.0</span>
             </div>
           </div>
         </div>
 
-        {/* KPI 5: Coût / heure */}
-        <div className="relative overflow-hidden bg-white dark:bg-[#0c1220] border border-slate-150 dark:border-slate-850 border-l-[4px] border-l-[#D4AF37] p-5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 col-span-2 md:col-span-1 flex flex-col justify-between group min-h-[145px]">
-          {/* Blueprint dot pattern */}
-          <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:12px_12px] opacity-60 pointer-events-none" />
-          
+        {/* KPI 5: Coût Moyen */}
+        <div 
+          className="relative overflow-hidden border-2 border-[#D4AF37] border-l-[5px] border-l-[#D4AF37] p-5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.15)] hover:shadow-[0_12px_36px_rgba(212,175,55,0.3)] hover:-translate-y-1 transition-all duration-300 col-span-2 md:col-span-1 flex flex-col justify-between group min-h-[165px]"
+          style={{
+            backgroundImage: `linear-gradient(135deg, rgba(212, 175, 55, 0.45) 0%, rgba(139, 92, 26, 0.75) 50%, rgba(40, 25, 5, 0.92) 100%), url(${goldTexture})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        >
           {/* Corner L-brackets */}
-          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
-          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
-          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
-          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-slate-300/60 dark:border-slate-700/60 pointer-events-none" />
+          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D4AF37]/50 pointer-events-none" />
 
           <div className="flex items-center justify-between gap-2 z-10">
             <div className="flex flex-col">
-              <span className="text-[9px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest font-mono">Coût Moyen</span>
-              <span className="text-[7.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest font-mono -mt-0.5">HOURLY COST VECTOR</span>
+              <span className="text-sm md:text-base font-black text-[#FFFDF9] uppercase tracking-wider font-mono" style={{ textShadow: '0 1.5px 3px rgba(0,0,0,0.8)' }}>Coût Moyen</span>
+              <span className="text-[8.5px] md:text-[9.5px] font-bold text-[#F4EAD4] uppercase tracking-widest font-mono -mt-0.5" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>HOURLY COST VECTOR</span>
             </div>
-            <div className="h-8 w-8 rounded-xl bg-slate-950 dark:bg-slate-900 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
+            <div className="h-8 w-8 rounded-xl bg-[#1E1402] border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37] shadow-md group-hover:scale-105 transition-transform duration-300">
               <DollarSign className="h-4 w-4" />
             </div>
           </div>
 
           <div className="mt-4 z-10">
-            <h2 className="font-mono text-3xl font-black tracking-tight text-[#D4AF37] flex items-baseline">
+            <h2 className="font-mono text-3xl md:text-4xl font-black tracking-tight text-white flex items-baseline" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
               {costPerHour !== null ? (
                 <>
                   {costPerHour}
-                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 ml-1 uppercase">dh/h</span>
+                  <span className="text-[10px] font-black text-[#F4EAD4] ml-1 uppercase">dh/h</span>
                 </>
               ) : (
-                <span className="text-xs font-semibold text-slate-450 dark:text-slate-500 uppercase">N/A</span>
+                <span className="text-xs font-bold text-slate-300 uppercase">N/A</span>
               )}
             </h2>
 
             {/* Precision status bar */}
-            <div className="h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full mt-2 overflow-hidden relative">
+            <div className="h-1 w-full bg-black/40 rounded-full mt-2 overflow-hidden relative border border-[#D4AF37]/20">
               <div className="h-full bg-[#D4AF37] rounded-full" style={{ width: "55%" }} />
             </div>
 
             <div className="flex items-center justify-between mt-2 pt-1">
               {costPerHour !== null ? (
-                <div className="flex items-center gap-1 text-[8.5px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                <div className="flex items-center gap-1 text-[9px] font-mono font-black text-emerald-300" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
                   <TrendingDown className="h-2.5 w-2.5" />
                   <span>-12 DH vs mois dern.</span>
                 </div>
               ) : (
-                <span className="text-[8px] font-mono text-slate-400">WAITING TELEMETRY</span>
+                <span className="text-[8px] font-mono font-bold text-[#F4EAD4]/80" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>WAITING TELEMETRY</span>
               )}
-              <span className="text-[7px] font-bold font-mono text-slate-300 dark:text-slate-600">SYS_V1.0</span>
+              <span className="text-[7.5px] font-black font-mono text-[#D4AF37]/80" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>SYS_V1.0</span>
             </div>
           </div>
         </div>
@@ -840,14 +953,21 @@ export function Dashboard() {
 
       {/* CLASSEMENT DES SITES — TABLEAU DÉCISIONNEL */}
       {showClassement && (
-        <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
-          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+        <div className={`relative overflow-hidden ${cardBgClass} border-2 p-5 rounded-2xl space-y-4`}>
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-600 via-[#D4AF37] to-amber-950" />
+          
+          {/* L-brackets */}
+          <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D4AF37]/50 pointer-events-none" />
+          <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D4AF37]/50 pointer-events-none" />
+
           <div>
-            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />
+            <h3 className="text-sm font-black text-[#D4AF37] uppercase tracking-wider flex items-center gap-2 font-mono">
+              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
               Classement Décisionnel des Sites — Besoin d'Attention
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className={`text-[11px] ${textMutedClass} font-medium mt-0.5`}>
               Moyenne pondérée des indicateurs de disponibilité, pannes, conformité préventive et charge de travail (trié du plus critique au plus stable)
             </p>
           </div>
@@ -855,7 +975,7 @@ export function Dashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                <tr className={`border-b ${borderClass} text-[10px] font-black uppercase tracking-wider ${textMutedClass}`}>
                   <th className="py-2.5 px-3">Site</th>
                   <th className="py-2.5 px-3 text-center">Score Global</th>
                   <th className="py-2.5 px-3 text-right">Disponibilité Flotte</th>
@@ -864,23 +984,23 @@ export function Dashboard() {
                   <th className="py-2.5 px-3 text-right">Charge Mécanicien</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+              <tbody className={`divide-y ${borderClass} font-semibold ${textTitleClass}`}>
                 {classementSites.map((item) => {
                   const score = item.scoreGlobal;
-                  let badgeVariant = "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/50";
+                  let badgeVariant = "bg-red-950/40 text-red-400 border border-red-900/60";
                   if (score !== null) {
                     if (score >= 80) {
-                      badgeVariant = "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/50";
+                      badgeVariant = "bg-emerald-950/40 text-emerald-400 border border-emerald-900/60";
                     } else if (score >= 60) {
-                      badgeVariant = "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/50";
+                      badgeVariant = "bg-amber-950/40 text-amber-300 border border-amber-900/60";
                     }
                   }
 
                   return (
-                    <tr key={item.site} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition-colors">
-                      <td className="py-3 px-3 font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <tr key={item.site} className={`${hoverClass} transition-colors`}>
+                      <td className="py-3 px-3 font-bold uppercase tracking-wider flex items-center gap-2">
                         <span className={`inline-block h-1.5 w-1.5 rounded-full ${
-                          score !== null && score < 60 ? "bg-rose-500" : score !== null && score < 80 ? "bg-amber-500" : "bg-emerald-500"
+                          score !== null && score < 60 ? "bg-red-500" : score !== null && score < 80 ? "bg-amber-500" : "bg-emerald-500"
                         }`} />
                         {item.site}
                       </td>
@@ -890,43 +1010,43 @@ export function Dashboard() {
                             {Math.round(score)}%
                           </span>
                         ) : (
-                          <span className="text-slate-400 font-mono">—</span>
+                          <span className={`${textMutedClass} font-mono`}>—</span>
                         )}
                       </td>
                       <td className="py-3 px-3 text-right font-mono">
                         {item.dispoSite !== null ? (
-                          <span className={`${item.dispoSite < 75 ? "text-rose-600 font-bold" : item.dispoSite < 90 ? "text-amber-600" : "text-emerald-600"}`}>
+                          <span className={`${item.dispoSite < 75 ? "text-red-400 font-bold" : item.dispoSite < 90 ? "text-amber-400" : "text-emerald-400 font-bold"}`}>
                             {item.dispoSite.toFixed(1)}%
                           </span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className={textMutedClass}>—</span>
                         )}
                       </td>
                       <td className="py-3 px-3 text-center font-mono">
                         {item.pannesOuvertesSite !== null ? (
-                          <span className={`${item.pannesOuvertesSite > 4 ? "text-rose-600 font-black" : item.pannesOuvertesSite > 0 ? "text-amber-600 font-bold" : "text-emerald-600"}`}>
+                          <span className={`${item.pannesOuvertesSite > 4 ? "text-red-400 font-black" : item.pannesOuvertesSite > 0 ? "text-amber-400 font-bold" : "text-emerald-400"}`}>
                             {item.pannesOuvertesSite}
                           </span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className={textMutedClass}>—</span>
                         )}
                       </td>
                       <td className="py-3 px-3 text-right font-mono">
                         {item.complianceSite !== null ? (
-                          <span className={`${item.complianceSite < 60 ? "text-rose-600 font-bold" : item.complianceSite < 85 ? "text-amber-600" : "text-emerald-600"}`}>
+                          <span className={`${item.complianceSite < 60 ? "text-red-400 font-bold" : item.complianceSite < 85 ? "text-amber-400" : "text-emerald-400"}`}>
                             {item.complianceSite.toFixed(1)}%
                           </span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className={textMutedClass}>—</span>
                         )}
                       </td>
                       <td className="py-3 px-3 text-right font-mono">
                         {item.chargeMoyenneSite !== null ? (
-                          <span className={`${item.chargeMoyenneSite > 5 ? "text-rose-600 font-bold" : item.chargeMoyenneSite > 2 ? "text-amber-600" : "text-emerald-600"}`}>
+                          <span className={`${item.chargeMoyenneSite > 5 ? "text-red-400 font-bold" : item.chargeMoyenneSite > 2 ? "text-amber-400" : "text-emerald-400"}`}>
                             {item.chargeMoyenneSite.toFixed(1)} T/méc
                           </span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className={textMutedClass}>—</span>
                         )}
                       </td>
                     </tr>
@@ -945,66 +1065,100 @@ export function Dashboard() {
         <div className="xl:col-span-2 space-y-6">
           
           {/* WIDGET 2 — COURBE ANNUELLE */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220] border border-slate-150 dark:border-slate-850 p-5 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-300 space-y-4">
-            <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-slate-900 via-[#D4AF37] to-[#9c1a1a]" />
+          <div className={`relative overflow-hidden ${cardBgClass} p-5 rounded-2xl transition-all duration-300 space-y-4`}>
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-600 via-[#D4AF37] to-amber-950" />
+            
+            {/* L-brackets */}
+            <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D4AF37]/35 pointer-events-none" />
+
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-[#D4AF37]" />
+                <h3 className="text-sm font-black text-[#D4AF37] uppercase tracking-wider flex items-center gap-2 font-mono">
+                  <span className="h-2 w-2 rounded-full bg-[#D4AF37] animate-pulse" />
                   Évolution Annuelle des Événements
                 </h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                <p className={`text-[11px] ${textMutedClass} font-medium mt-0.5`}>
                   Superposition des pannes, maintenances préventives et correctives sur 12 mois
                 </p>
               </div>
-              <div className="flex items-center gap-3 text-[10px] font-mono font-bold">
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#9c1a1a]" /> Pannes</span>
+              <div className="flex items-center gap-3 text-[10px] font-mono font-black">
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#EF4444]" /> Pannes</span>
                 <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#D4AF37]" /> Préventif</span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-800 dark:bg-slate-200" /> Correctif</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#8A6623]" /> Correctif</span>
               </div>
             </div>
 
             <div className="h-[220px] w-full mt-2 font-mono text-[10px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={simulatedAnnualData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                <AreaChart data={simulatedAnnualData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="goldLineGradient" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#A07810" />
+                      <stop offset="30%" stopColor="#D4AF37" />
+                      <stop offset="70%" stopColor="#FFFDF0" />
+                      <stop offset="100%" stopColor="#B8860B" />
+                    </linearGradient>
+                    <linearGradient id="goldAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#D4AF37" stopOpacity={isDark ? 0.20 : 0.08} />
+                      <stop offset="100%" stopColor="#D4AF37" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="pannesAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#EF4444" stopOpacity={0.12} />
+                      <stop offset="100%" stopColor="#EF4444" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="correctifAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#8A6623" stopOpacity={0.08} />
+                      <stop offset="100%" stopColor="#8A6623" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "#D4AF37" : "#8A6623"} strokeOpacity={0.08} />
+                  <XAxis dataKey="name" stroke={isDark ? "#A49F8D" : "#78350f"} strokeOpacity={0.6} fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke={isDark ? "#A49F8D" : "#78350f"} strokeOpacity={0.6} fontSize={10} tickLine={false} axisLine={false} />
                   <RechartsTooltip 
                     contentStyle={{ 
-                      backgroundColor: "#ffffff", 
-                      borderRadius: "12px", 
-                      border: "1px solid #e2e8f0",
-                      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)"
+                      backgroundColor: isDark ? "rgba(13, 17, 29, 0.95)" : "rgba(255, 255, 255, 0.98)", 
+                      borderRadius: "14px", 
+                      border: "2px solid #D4AF37",
+                      boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.1)"
                     }} 
-                    labelClassName="font-bold text-slate-800"
+                    labelClassName={`font-bold font-mono tracking-wider text-xs ${textTitleClass}`}
                   />
-                  <Line type="monotone" dataKey="preventif" stroke="#D4AF37" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                  <Line type="monotone" dataKey="correctif" stroke="#1e293b" strokeWidth={2} strokeDasharray="3 3" dot={{ r: 2 }} />
-                  <Line type="monotone" dataKey="pannes" stroke="#9c1a1a" strokeWidth={2.5} dot={{ r: 3 }} />
-                </LineChart>
+                  <Area type="monotone" dataKey="preventif" stroke="url(#goldLineGradient)" strokeWidth={3.5} fill="url(#goldAreaGradient)" activeDot={{ r: 6, fill: "#FFEAA7", stroke: "#805F0D", strokeWidth: 2 }} dot={{ r: 3, fill: "#D4AF37", stroke: "none" }} />
+                  <Area type="monotone" dataKey="correctif" stroke="#8A6623" strokeWidth={2} strokeDasharray="4 4" fill="url(#correctifAreaGradient)" activeDot={{ r: 5 }} dot={{ r: 2, fill: "#8A6623", stroke: "none" }} />
+                  <Area type="monotone" dataKey="pannes" stroke="#EF4444" strokeWidth={2.5} fill="url(#pannesAreaGradient)" activeDot={{ r: 5 }} dot={{ r: 3, fill: "#EF4444", stroke: "none" }} />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
-            <div className="text-[9px] text-slate-400 dark:text-slate-500 italic text-right">
+            <div className={`text-[9px] ${textMutedClass} italic text-right font-mono`}>
               * Données consolidées mensuelles basées sur l'historique de la flotte locale.
             </div>
           </div>
 
           {/* WIDGET 3 — CONSOMMATION MENSUELLE */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220] border border-slate-150 dark:border-slate-850 p-5 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-300 space-y-4">
-            <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-slate-900 via-[#D4AF37] to-[#9c1a1a]" />
+          <div className={`relative overflow-hidden ${cardBgClass} p-5 rounded-2xl transition-all duration-300 space-y-4`}>
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-600 via-[#D4AF37] to-amber-950" />
+            
+            {/* L-brackets */}
+            <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D4AF37]/35 pointer-events-none" />
+
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-[#1e293b] dark:bg-white" />
+                <h3 className="text-sm font-black text-[#D4AF37] uppercase tracking-wider flex items-center gap-2 font-mono">
+                  <span className={`h-2 w-2 rounded-full ${isDark ? "bg-[#A49F8D]" : "bg-amber-600"}`} />
                   Consommation Carburant & Lubrifiants
                 </h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                <p className={`text-[11px] ${textMutedClass} font-medium mt-0.5`}>
                   Consommation mensuelle par engin principal sur les 6 derniers mois
                 </p>
               </div>
-              <div className="flex items-center gap-3 text-[10px] font-mono font-bold">
-                <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded bg-slate-900 dark:bg-slate-700" /> Gazole (Litres)</span>
+              <div className="flex items-center gap-3 text-[10px] font-mono font-black">
+                <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded bg-[#4E412A] border border-[#D4AF37]/40" /> Gazole (Litres)</span>
                 <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded bg-[#D4AF37]" /> Lubrifiants (L)</span>
               </div>
             </div>
@@ -1012,45 +1166,53 @@ export function Dashboard() {
             <div className="h-[200px] w-full mt-2 font-mono text-[10px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={simulatedFuelData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
-                  <YAxis yAxisId="left" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#D4AF37" strokeOpacity={0.10} />
+                  <XAxis dataKey="name" stroke={isDark ? "#A49F8D" : "#78350f"} strokeOpacity={0.6} fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis yAxisId="left" stroke={isDark ? "#A49F8D" : "#78350f"} strokeOpacity={0.6} fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis yAxisId="right" orientation="right" stroke="#D4AF37" fontSize={10} tickLine={false} axisLine={false} />
                   <RechartsTooltip 
                     contentStyle={{ 
-                      backgroundColor: "#ffffff", 
+                      backgroundColor: isDark ? "#0d111d" : "#ffffff", 
                       borderRadius: "12px", 
-                      border: "1px solid #e2e8f0",
-                      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)"
+                      border: "1px solid rgba(212, 175, 55, 0.4)",
+                      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)"
                     }} 
+                    labelClassName={`font-bold ${textTitleClass}`}
                   />
-                  <Bar yAxisId="left" dataKey="carburant" fill="#1e293b" radius={[4, 4, 0, 0]} barSize={24} />
+                  <Bar yAxisId="left" dataKey="carburant" fill="#4E412A" stroke="#D4AF37" strokeOpacity={0.4} radius={[4, 4, 0, 0]} barSize={24} />
                   <Bar yAxisId="right" dataKey="lubrifiants" fill="#D4AF37" radius={[4, 4, 0, 0]} barSize={8} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="text-[9px] text-slate-400 dark:text-slate-500 italic text-right">
+            <div className={`text-[9px] ${textMutedClass} italic text-right font-mono`}>
               * Consommation normalisée d'après les relevés de cuves et pompes mobiles.
             </div>
           </div>
 
           {/* WIDGET 7 — CARNET DE SANTÉ RAPIDE */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220] border border-slate-150 dark:border-slate-850 p-5 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-300 space-y-4">
-            <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-[#9c1a1a] to-[#D4AF37]" />
+          <div className={`relative overflow-hidden ${cardBgClass} p-5 rounded-2xl transition-all duration-300 space-y-4`}>
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#9c1a1a] to-[#D4AF37]" />
+            
+            {/* L-brackets */}
+            <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D4AF37]/35 pointer-events-none" />
+
             <div>
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#9c1a1a] animate-pulse" />
+              <h3 className="text-sm font-black text-[#D4AF37] uppercase tracking-wider flex items-center gap-2 font-mono">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#EF4444] animate-pulse" />
                 Carnet de Santé — Top 3 des Engins sous haute surveillance
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className={`text-[11px] ${textMutedClass} font-medium mt-0.5`}>
                 Engins de la flotte locale triés par score de risque calculé d'après leur usure et statut actuel
               </p>
             </div>
 
             {enginsAtRisk.length === 0 ? (
-              <div className="h-[120px] w-full flex flex-col items-center justify-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/30 dark:bg-slate-900/10 p-6 text-center">
-                <Activity className="h-6 w-6 text-slate-400 mb-2" />
-                <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+              <div className={`h-[120px] w-full flex flex-col items-center justify-center border border-dashed border-[#D4AF37]/20 rounded-xl ${bgSubtleClass} p-6 text-center`}>
+                <Activity className={`h-6 w-6 ${textMutedClass} mb-2`} />
+                <p className={`text-xs font-bold ${textMutedClass}`}>
                   Aucun engin à risque détecté ou données de flotte non initialisées
                 </p>
               </div>
@@ -1059,30 +1221,30 @@ export function Dashboard() {
                 {enginsAtRisk.map((engin) => {
                   const score = engin.riskScore || 0;
                   // Color codes for risk bars
-                  let barColor = "bg-slate-400";
-                  let textColor = "text-slate-700 dark:text-slate-300";
-                  let bgBadge = "bg-slate-50 border-slate-100";
+                  let barColor = "bg-[#A49F8D]";
+                  let textColor = isDark ? "text-[#A49F8D]" : "text-slate-600";
+                  let bgBadge = "bg-[#0d121d] border-[#D4AF37]/20 text-[#FFFDF9]";
                   if (score >= 70) {
-                    barColor = "bg-[#9c1a1a]";
-                    textColor = "text-rose-700 dark:text-rose-400";
-                    bgBadge = "bg-rose-50/50 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/40";
+                    barColor = "bg-gradient-to-r from-red-600 to-rose-600";
+                    textColor = "text-red-400 font-bold";
+                    bgBadge = "bg-red-950/40 text-red-400 border border-red-900/40";
                   } else if (score >= 40) {
-                    barColor = "bg-[#D4AF37]";
-                    textColor = "text-amber-700 dark:text-amber-400";
-                    bgBadge = "bg-amber-50/50 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/40";
+                    barColor = "bg-gradient-to-r from-[#D4AF37] to-amber-600";
+                    textColor = "text-[#D4AF37] font-bold";
+                    bgBadge = "bg-amber-950/40 text-amber-300 border border-amber-900/40";
                   }
 
                   return (
                     <div 
                       key={engin.id} 
-                      className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/60 bg-slate-50/40 dark:bg-[#0f172a]/20 flex flex-col justify-between space-y-3"
+                      className={`p-4 rounded-xl border border-[#D4AF37]/15 ${bgSubtle50Class} flex flex-col justify-between space-y-3`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <span className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-850 font-mono text-[10px] font-black bg-white dark:bg-[#121c30] text-slate-900 dark:text-white uppercase">
+                          <span className="px-2 py-0.5 rounded border border-[#D4AF37]/30 font-mono text-[10px] font-black bg-[#1E1402] text-[#FFFDF9] uppercase">
                             {engin.matricule || engin.id}
                           </span>
-                          <h4 className="text-[11px] font-bold text-slate-800 dark:text-slate-300 mt-1.5 truncate">
+                          <h4 className={`text-[11px] font-bold ${textTitleClass} mt-1.5 truncate`}>
                             {engin.modele || engin.type || "Équipement"}
                           </h4>
                         </div>
@@ -1092,14 +1254,14 @@ export function Dashboard() {
                       </div>
 
                       <div className="space-y-1">
-                        <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-850 rounded-full overflow-hidden">
+                        <div className={`h-1.5 w-full ${bgSubtle12Class} rounded-full overflow-hidden border ${borderClass}`}>
                           <div className={`h-full ${barColor}`} style={{ width: `${score}%` }} />
                         </div>
                         <div className="flex flex-wrap gap-1 pt-1">
                           {(engin.riskFactors || []).map((factor: string, i: number) => (
                             <span 
                               key={i} 
-                              className={`text-[8.5px] font-bold px-1.5 py-0.5 rounded border ${bgBadge} leading-none`}
+                              className={`text-[8.5px] font-black px-1.5 py-0.5 rounded border ${bgBadge} leading-none font-mono`}
                             >
                               {factor}
                             </span>
@@ -1120,58 +1282,65 @@ export function Dashboard() {
           
           {/* WIDGET : ENGINS IMMOBILISÉS */}
           {showImmobilisesCard && (
-            <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
-              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+            <div className={`relative overflow-hidden ${cardBgClass} p-5 rounded-2xl transition-all duration-300 space-y-4`}>
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-600 via-[#D4AF37] to-amber-950" />
+              
+              {/* L-brackets */}
+              <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D4AF37]/35 pointer-events-none" />
+              <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D4AF37]/35 pointer-events-none" />
+              <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D4AF37]/35 pointer-events-none" />
+              <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D4AF37]/35 pointer-events-none" />
+
               <div>
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />
+                <h3 className="text-sm font-black text-[#D4AF37] uppercase tracking-wider flex items-center gap-2 font-mono">
+                  <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
                   Engins immobilisés
                 </h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                <p className={`text-[11px] ${textMutedClass} font-medium mt-0.5`}>
                   Équipements en panne ou en maintenance, triés du plus ancien au plus récent
                 </p>
               </div>
 
               {immobilisesList.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-6 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-emerald-50/20 dark:bg-emerald-950/5">
-                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 font-mono uppercase">
+                <div className={`flex flex-col items-center justify-center py-6 border border-dashed border-[#D4AF37]/20 rounded-xl ${bgSubtleClass}`}>
+                  <span className="text-[10px] font-black text-emerald-400 font-mono uppercase">
                     ✅ Aucun engin immobilisé actuellement
                   </span>
                 </div>
               ) : (
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                <div className={`divide-y ${borderClass}`}>
                   {immobilisesList.map((e) => {
                     const normStatus = getNormalizedStatus(e);
                     const isPanne = normStatus === "EN_PANNE" || (e.statut && e.statut === "panne");
                     const statusLabel = isPanne ? "Panne" : "Maintenance";
                     const badgeColor = isPanne 
-                      ? "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/50" 
-                      : "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/50";
+                      ? "bg-red-950/40 text-red-400 border border-red-900/40" 
+                      : "bg-amber-950/40 text-amber-300 border border-amber-900/40";
 
                     return (
                       <div key={e.id} className="py-3 flex justify-between items-center gap-3 first:pt-0 last:pb-0">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-black text-slate-900 dark:text-white font-mono uppercase">
+                            <span className={`text-xs font-black ${textTitleClass} font-mono uppercase`}>
                               {e.matricule || e.id}
                             </span>
-                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${badgeColor}`}>
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${badgeColor} font-mono`}>
                               {statusLabel}
                             </span>
                           </div>
-                          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-1">
+                          <div className={`flex items-center gap-1.5 text-[10px] ${textMutedClass} mt-1`}>
                             <span className="font-semibold">{e.modele || "Modèle inconnu"}</span>
                             <span>•</span>
-                            <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[9px]">
+                            <span className={`font-mono ${bgSubtle12Class} border border-[#D4AF37]/15 ${textTitleClass} px-1.5 py-0.5 rounded text-[9px]`}>
                               {e.siteId || e.site || "—"}
                             </span>
                           </div>
                         </div>
                         
                         <div className="text-right shrink-0">
-                          <div className="text-[10px] font-mono text-slate-400 uppercase">Depuis</div>
-                          <div className="text-xs font-bold text-slate-700 dark:text-slate-300 font-mono mt-0.5 flex items-center justify-end gap-1">
-                            <Clock className="w-3 h-3 text-slate-400" />
+                          <div className={`text-[10px] font-mono ${textMutedClass} uppercase`}>Depuis</div>
+                          <div className={`text-xs font-bold ${textTitleClass} font-mono mt-0.5 flex items-center justify-end gap-1`}>
+                            <Clock className="w-3 h-3 text-[#D4AF37]/80" />
                             {formatTimeAgo(e.updatedAt)}
                           </div>
                         </div>
@@ -1184,14 +1353,21 @@ export function Dashboard() {
           )}
 
           {/* WIDGET 4 — BACKLOG MAINTENANCE (DONUT) */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
-            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] to-[#991B1B]" />
+          <div className={`relative overflow-hidden ${cardBgClass} p-5 rounded-2xl transition-all duration-300 space-y-4`}>
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-600 via-[#D4AF37] to-amber-950" />
+            
+            {/* L-brackets */}
+            <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D4AF37]/35 pointer-events-none" />
+
             <div>
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-sm font-black text-[#D4AF37] uppercase tracking-wider flex items-center gap-2 font-mono">
                 <span className="h-2 w-2 rounded-full bg-[#D4AF37]" />
                 Backlog des Ordres de Travail
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className={`text-[11px] ${textMutedClass} font-medium mt-0.5`}>
                 Répartition des OT ouverts par criticité. Cliquez sur une section.
               </p>
             </div>
@@ -1224,10 +1400,10 @@ export function Dashboard() {
 
               {/* Central Text inside Donut */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-3xl font-black font-mono tracking-tight text-slate-900 dark:text-white">
+                <span className={`text-3xl font-black font-mono tracking-tight ${textTitleClass}`}>
                   {totalOpenOTs}
                 </span>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-450 text-slate-500">
+                <span className={`text-[9px] font-bold uppercase tracking-widest ${textMutedClass}`}>
                   OT ouverts
                 </span>
               </div>
@@ -1241,15 +1417,15 @@ export function Dashboard() {
                   onClick={() => handlePieSectionClick(entry)}
                   className={`p-2 rounded-lg border text-left flex items-center justify-between transition-all ${
                     selectedSeverity === entry.name
-                      ? "bg-slate-100 dark:bg-slate-900 border-slate-400 dark:border-slate-600 font-extrabold"
-                      : "bg-slate-50 dark:bg-slate-900/30 border-slate-100 dark:border-slate-800"
+                      ? "bg-[#1E1402] border-[#D4AF37] font-black text-[#FFFDF9]"
+                      : `${bgSubtle50Class} ${borderClass} ${textMutedClass}`
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
                     <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-                    <span className="text-[11px] text-slate-700 dark:text-slate-300">{entry.name}</span>
+                    <span className="text-[11px] font-mono">{entry.name}</span>
                   </div>
-                  <span className="font-mono font-bold text-slate-900 dark:text-white">{entry.value}</span>
+                  <span className={`font-mono font-bold ${selectedSeverity === entry.name ? "text-[#FFFDF9]" : textTitleClass}`}>{entry.value}</span>
                 </button>
               ))}
             </div>
@@ -1261,24 +1437,24 @@ export function Dashboard() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2 overflow-hidden"
+                  className={`pt-3 border-t ${borderClass} space-y-2 overflow-hidden`}
                 >
-                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase">
+                  <div className="flex justify-between items-center text-[10px] font-black text-[#D4AF37] uppercase font-mono">
                     <span>OTs {selectedSeverity} :</span>
-                    <button onClick={() => setSelectedSeverity(null)} className="text-red-500 hover:underline">Fermer</button>
+                    <button onClick={() => setSelectedSeverity(null)} className="text-red-400 hover:underline">Fermer</button>
                   </div>
                   
                   {filteredOTList.length === 0 ? (
-                    <p className="text-[10px] text-slate-400 italic">Aucun OT actif de cette catégorie.</p>
+                    <p className={`text-[10px] ${textMutedClass} italic font-mono`}>Aucun OT actif de cette catégorie.</p>
                   ) : (
                     <div className="space-y-1.5">
                       {filteredOTList.map((wo) => (
-                        <div key={wo.id} className="p-2 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg flex items-center justify-between text-[10px] font-mono">
+                        <div key={wo.id} className={`p-2 ${bgSubtleClass} border border-[#D4AF37]/15 rounded-lg flex items-center justify-between text-[10px] font-mono`}>
                           <div className="truncate pr-2">
-                            <span className="font-bold text-slate-900 dark:text-white">{wo.code || `OT-${wo.id?.substring(0,4)}`}</span>
-                            <span className="text-slate-500 dark:text-slate-400 ml-1.5 truncate block">{wo.label || wo.problemDescription}</span>
+                            <span className={`font-bold ${textTitleClass}`}>{wo.code || `OT-${wo.id?.substring(0,4)}`}</span>
+                            <span className={`${textMutedClass} ml-1.5 truncate block`}>{wo.label || wo.problemDescription}</span>
                           </div>
-                          <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[8.5px] uppercase shrink-0">
+                          <Badge className="bg-amber-950/40 text-amber-300 border border-amber-900/40 text-[8.5px] uppercase shrink-0 font-mono">
                             {wo.statut || wo.status}
                           </Badge>
                         </div>
@@ -1291,24 +1467,31 @@ export function Dashboard() {
           </div>
 
           {/* WIDGET 5 — MÉCANICIENS DU JOUR */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
-            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] to-[#991B1B]" />
+          <div className={`relative overflow-hidden ${cardBgClass} p-5 rounded-2xl transition-all duration-300 space-y-4`}>
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-600 via-[#D4AF37] to-amber-950" />
+            
+            {/* L-brackets */}
+            <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D4AF37]/35 pointer-events-none" />
+
             <div>
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-600" />
+              <h3 className="text-sm font-black text-[#D4AF37] uppercase tracking-wider flex items-center gap-2 font-mono">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 Mécaniciens en Poste aujourd'hui
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className={`text-[11px] ${textMutedClass} font-medium mt-0.5`}>
                 Équipe technique active, score mensuel de performance et tournées
               </p>
             </div>
 
             {mecsLoading ? (
-              <p className="text-xs text-slate-400 italic">Chargement...</p>
+              <p className={`text-xs ${textMutedClass} italic font-mono`}>Chargement...</p>
             ) : filteredMecaniciensOfTheDay.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">Aucune donnée de présence disponible</p>
+              <p className={`text-xs ${textMutedClass} italic font-mono`}>Aucune donnée de présence disponible</p>
             ) : (
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              <div className={`divide-y ${borderClass}`}>
                 {filteredMecaniciensOfTheDay.map((mech) => {
                   const score = mech.stats?.scoreMensuel ?? 0;
                   const hasGoodScore = score >= 85;
@@ -1322,35 +1505,35 @@ export function Dashboard() {
                       <img 
                         src={photoUrl} 
                         alt={fullName} 
-                        className="h-10 w-10 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                        className="h-10 w-10 rounded-full object-cover border border-[#D4AF37]/25 shrink-0"
                         referrerPolicy="no-referrer"
                       />
                       <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex justify-between items-start gap-2">
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">{fullName}</h4>
+                          <h4 className={`text-xs font-bold ${textTitleClass} truncate`}>{fullName}</h4>
                           <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold ${
                             hasGoodScore
-                              ? "bg-emerald-50 text-emerald-600 border border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900"
-                              : "bg-red-50 text-red-600 border border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900"
+                              ? "bg-emerald-950/40 text-emerald-400 border border-emerald-900/40"
+                              : "bg-red-950/40 text-red-400 border border-red-900/40"
                           }`}>
                             {hasGoodScore ? "✅ Tournée faite" : "🔴 Tournée en retard"}
                           </span>
                         </div>
 
-                        <div className="flex justify-between text-[10px] text-slate-500">
+                        <div className={`flex justify-between text-[10px] ${textMutedClass}`}>
                           <span>{mech.poste || "Technicien"} - Équipe {mech.equipe || "A"}</span>
                           <span className="font-semibold">Dernière int : {formatTimeAgo(mech.stats?.derniereIntervention)}</span>
                         </div>
 
                         <div className="space-y-0.5">
-                          <div className="flex justify-between text-[8px] font-semibold text-slate-400">
+                          <div className={`flex justify-between text-[8px] font-semibold ${textMutedClass}`}>
                             <span>Score Mensuel</span>
                             <span>{score}%</span>
                           </div>
                           <Progress 
                             value={score} 
-                            className="h-1 bg-slate-200 dark:bg-slate-800"
-                            color={score > 85 ? "bg-emerald-500" : "bg-amber-500"}
+                            className={`h-1 ${bgSubtle12Class} border ${borderClass}`}
+                            color={score > 85 ? "bg-[#D4AF37]" : "bg-amber-600"}
                           />
                         </div>
                       </div>
@@ -1362,22 +1545,29 @@ export function Dashboard() {
           </div>
 
           {/* WIDGET 6 — ALERTES LIVE */}
-          <div className="relative overflow-hidden bg-white dark:bg-[#0c1220]/50 border border-[#D4AF37]/40 dark:border-[#D4AF37]/20 p-5 rounded-2xl shadow-sm space-y-4">
-            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] to-[#991B1B]" />
+          <div className={`relative overflow-hidden ${cardBgClass} p-5 rounded-2xl transition-all duration-300 space-y-4`}>
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-600 via-[#D4AF37] to-amber-950" />
+            
+            {/* L-brackets */}
+            <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D4AF37]/35 pointer-events-none" />
+            <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D4AF37]/35 pointer-events-none" />
+
             <div>
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-red-600" />
+              <h3 className="text-sm font-black text-[#D4AF37] uppercase tracking-wider flex items-center gap-2 font-mono">
+                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
                 Alertes Live
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className={`text-[11px] ${textMutedClass} font-medium mt-0.5`}>
                 Les 3 dernières alertes signalées sur les chantiers
               </p>
             </div>
 
             {lastPannesLive.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">Aucune alerte récente</p>
+              <p className={`text-xs ${textMutedClass} italic font-mono`}>Aucune alerte récente</p>
             ) : (
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              <div className={`divide-y ${borderClass}`}>
                 {lastPannesLive.map((alert) => {
                   const severity = (alert.gravite || alert.severity || "MAJEUR").toUpperCase();
                   const description = alert.typePanne || alert.description || alert.problemDescription || "Panne signalée";
@@ -1385,32 +1575,32 @@ export function Dashboard() {
                   return (
                     <div 
                       key={alert.id}
-                      className="py-3 flex justify-between items-center gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition-colors first:pt-0 last:pb-0"
+                      className={`py-3 flex justify-between items-center gap-3 ${hoverClass} transition-colors first:pt-0 last:pb-0`}
                     >
                       <div className="min-w-0 flex-1 space-y-0.5">
                         <div className="flex items-center gap-2">
                           <span className={`inline-block h-2 w-2 rounded-full ${
                             severity === "CRITIQUE" 
-                              ? "bg-red-600" 
+                              ? "bg-red-500" 
                               : severity === "MAJEUR" 
-                                ? "bg-amber-600" 
-                                : "bg-emerald-600"
+                                ? "bg-amber-500" 
+                                : "bg-emerald-500"
                           }`} />
-                          <span className={`text-[9px] font-black tracking-wider uppercase ${
+                          <span className={`text-[9px] font-black tracking-wider uppercase font-mono ${
                             severity === "CRITIQUE" 
-                              ? "text-red-600 dark:text-red-400" 
+                              ? "text-red-400" 
                               : severity === "MAJEUR" 
-                                ? "text-amber-600 dark:text-amber-400" 
-                                : "text-emerald-600 dark:text-emerald-400"
+                                ? "text-amber-400" 
+                                : "text-emerald-400"
                           }`}>
                             {severity}
                           </span>
                         </div>
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">{engin} - {description}</h4>
-                        <p className="text-[9px] text-slate-500">Site : {alert.siteId || alert.site || "—"}</p>
+                        <h4 className={`text-xs font-bold ${textTitleClass} truncate`}>{engin} - {description}</h4>
+                        <p className={`text-[9px] ${textMutedClass} font-mono`}>Site : {alert.siteId || alert.site || "—"}</p>
                       </div>
 
-                      <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                      <span className={`text-[10px] font-mono ${textMutedClass} shrink-0`}>
                         {formatTimeAgo(alert.createdAt)}
                       </span>
                     </div>

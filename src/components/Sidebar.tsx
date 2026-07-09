@@ -272,7 +272,7 @@ export function Sidebar({
       )}
 
       {/* Navigation menu list grouped by categories */}
-      <nav className={cn("flex-1 overflow-y-auto py-4 space-y-4", isCollapsedDesktop ? "px-1.5" : "px-3")} role="navigation" aria-label="Menu principal">
+      <nav className={cn("flex-1 overflow-y-auto py-4 space-y-4 gold-scrollbar", isCollapsedDesktop ? "px-1.5" : "px-3")} role="navigation" aria-label="Menu principal">
         {filteredCategories.map((category) => (
           <div key={category.title} className="space-y-1">
             {/* Category title header */}
