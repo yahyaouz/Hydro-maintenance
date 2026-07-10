@@ -223,7 +223,7 @@ export function ImportConfig() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `rapport_erreurs_${lastReport.platform.toLowerCase().replace(/\s+/g, "_")}.txt`;
+    link.download = `rapport_erreurs_${((lastReport && lastReport.platform) || "import").toLowerCase().replace(/\s+/g, "_")}.txt`;
     link.click();
     URL.revokeObjectURL(url);
   };

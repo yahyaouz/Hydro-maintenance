@@ -76,9 +76,9 @@ export function Pneumatiques() {
     return pneumatiques.filter(p => {
       const matchSite = activeSite === "TOUS" || p.siteId === activeSite;
       const matchSearch = 
-        p.enginId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.numeroSerie.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.marque.toLowerCase().includes(searchTerm.toLowerCase());
+        (p.enginId || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.numeroSerie || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.marque || "").toLowerCase().includes(searchTerm.toLowerCase());
       const matchBrand = selectedBrand === "TOUTES" || p.marque === selectedBrand;
       return matchSite && matchSearch && matchBrand;
     });
@@ -90,16 +90,17 @@ export function Pneumatiques() {
       return { totalCount: 0, totalCost: 0, avgLifespan: 0, accidentalRate: 0 };
     }
     const totalCount = filteredPneumatiques.length;
-    const totalCost = filteredPneumatiques.reduce((acc, p) => acc + p.cout, 0);
-    const avgLifespan = filteredPneumatiques.reduce((acc, p) => acc + p.ancienPneuDureeHeures, 0) / totalCount;
+    const totalCost = filteredPneumatiques.reduce((acc, p) => acc + (p.cout || 0), 0);
+    const avgLifespan = filteredPneumatiques.reduce((acc, p) => acc + (p.ancienPneuDureeHeures || 0), 0) / totalCount;
     
     // Count of pre-mature or accidental tire failures
-    const accidentalCount = filteredPneumatiques.filter(p => 
-      p.ancienPneuRaison.toLowerCase().includes("crevaison") || 
-      p.ancienPneuRaison.toLowerCase().includes("coupure") ||
-      p.ancienPneuRaison.toLowerCase().includes("impact") ||
-      p.ancienPneuRaison.toLowerCase().includes("surchauffe")
-    ).length;
+    const accidentalCount = filteredPneumatiques.filter(p => {
+      const raison = (p.ancienPneuRaison || "").toLowerCase();
+      return raison.includes("crevaison") || 
+             raison.includes("coupure") ||
+             raison.includes("impact") ||
+             raison.includes("surchauffe");
+    }).length;
 
     return {
       totalCount,
@@ -113,7 +114,8 @@ export function Pneumatiques() {
   const reasonsChartData = useMemo(() => {
     const counts: Record<string, number> = {};
     filteredPneumatiques.forEach(p => {
-      counts[p.ancienPneuRaison] = (counts[p.ancienPneuRaison] || 0) + 1;
+      const raison = p.ancienPneuRaison || "Non spécifiée";
+      counts[raison] = (counts[raison] || 0) + 1;
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
   }, [filteredPneumatiques]);
@@ -122,7 +124,8 @@ export function Pneumatiques() {
   const costsChartData = useMemo(() => {
     const costsByEngin: Record<string, number> = {};
     filteredPneumatiques.forEach(p => {
-      costsByEngin[p.enginId] = (costsByEngin[p.enginId] || 0) + p.cout;
+      const engin = p.enginId || "Inconnu";
+      costsByEngin[engin] = (costsByEngin[engin] || 0) + (p.cout || 0);
     });
     return Object.entries(costsByEngin).map(([name, cost]) => ({ name, cost }));
   }, [filteredPneumatiques]);
@@ -156,11 +159,12 @@ export function Pneumatiques() {
     }
   };
 
-  const getReasonColor = (reason: string) => {
-    if (reason.toLowerCase().includes("normal")) {
+  const getReasonColor = (reason?: string) => {
+    const norm = (reason || "").toLowerCase();
+    if (norm.includes("normal")) {
       return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
     }
-    if (reason.toLowerCase().includes("surchauffe") || reason.toLowerCase().includes("prononcée")) {
+    if (norm.includes("surchauffe") || norm.includes("prononcée")) {
       return "bg-amber-500/10 text-amber-600 border-amber-500/20";
     }
     return "bg-rose-500/10 text-rose-600 border-rose-500/20";

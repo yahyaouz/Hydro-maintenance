@@ -84,9 +84,9 @@ export function RootCauseAnalysis() {
       const q = searchTerm.toLowerCase().trim();
       if (!q) return true;
       return (
-        r.title.toLowerCase().includes(q) ||
-        r.machineCode.toLowerCase().includes(q) ||
-        r.workOrderId.toLowerCase().includes(q)
+        (r.title || "").toLowerCase().includes(q) ||
+        (r.machineCode || "").toLowerCase().includes(q) ||
+        (r.workOrderId || "").toLowerCase().includes(q)
       );
     });
   }, [rcas, activeSite, searchTerm]);

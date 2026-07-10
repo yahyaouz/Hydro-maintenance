@@ -27,7 +27,7 @@ export function calculSecoursSante(engin: any): number {
   // Status deduction
   let status = (engin.statut || engin.status || "").toLowerCase();
   if (!status && engin.etat) {
-    const et = engin.etat.toLowerCase();
+    const et = String(engin.etat).toLowerCase();
     if (et === 'en maintenance') status = 'maintenance';
     else if (et === 'en panne' || et === 'hors service') status = 'panne';
     else if (et === 'opérationnel') status = 'actif';

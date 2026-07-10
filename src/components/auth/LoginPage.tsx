@@ -122,7 +122,7 @@ export function LoginPage() {
       const userSnap = await getDoc(userRef);
 
       // SPECIAL ADMIN EMAIL RULE ( yahyaouzrirou@gmail.com )
-      if (verifiedUser.email.toLowerCase() === "yahyaouzrirou@gmail.com") {
+      if ((verifiedUser.email || "").toLowerCase() === "yahyaouzrirou@gmail.com") {
         const adminProfile: User = {
           uid: verifiedUser.uid,
           displayName: "Yahya Ouzrirou",
@@ -216,7 +216,7 @@ export function LoginPage() {
         return;
       }
 
-      if (verifiedUser.email.toLowerCase() === "yahyaouzrirou@gmail.com") {
+      if ((verifiedUser.email || "").toLowerCase() === "yahyaouzrirou@gmail.com") {
         const adminProfile: User = {
           uid: verifiedUser.uid,
           displayName: "Yahya Ouzrirou",

@@ -35,7 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/lib/store";
-import { collection, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, deleteDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { useCollection } from "@/hooks/useCollection";
@@ -289,13 +289,46 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
 
     setIsSubmitLoading(true);
 
+    const matriculeUpper = newMatricule.toUpperCase().trim();
+    
+    // Check if the matricule/ID already exists (case-insensitive check)
+    const exists = (allEquipements || []).some(
+      (eq: any) =>
+        eq.deleted !== true &&
+        ((eq.matricule || "").toUpperCase().trim() === matriculeUpper ||
+         (eq.id || "").toUpperCase().trim() === matriculeUpper)
+    );
+
+    if (exists) {
+      toast.error(`Le N° de Parc / Matricule ${matriculeUpper} existe déjà.`);
+      setIsSubmitLoading(false);
+      return;
+    }
+
     try {
+      // Resolve status, dispo, and etat like Admin.tsx
+      let resolvedStatut = "actif";
+      let resolvedDispo = 100;
+      let resolvedEtat = "Opérationnel";
+
+      if (newStatut === "maintenance") {
+        resolvedStatut = "maintenance";
+        resolvedDispo = 50;
+        resolvedEtat = "En maintenance";
+      } else if (newStatut === "panne" || newStatut === "hors service") {
+        resolvedStatut = "panne";
+        resolvedDispo = 0;
+        resolvedEtat = "Hors service";
+      }
+
       let docData: any = {
-        matricule: newMatricule.toUpperCase().trim(),
+        id: matriculeUpper,
+        matricule: matriculeUpper,
         site: newSite,
         siteId: newSite,
-        statut: newStatut,
-        dispo: newStatut === "actif" ? 100 : 0,
+        statut: resolvedStatut,
+        dispo: resolvedDispo,
+        etat: resolvedEtat,
         categorie: category,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -337,7 +370,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
 
         docData.type = perfModel;
         docData.marque = brand;
-        docData.serie = newMatricule.toUpperCase().trim();
+        docData.serie = matriculeUpper;
         docData.associe = perfAssocie.trim() ? perfAssocie.toUpperCase().trim() : "";
         docData.specs = {
           pression: specs.pression,
@@ -347,8 +380,9 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
         };
       }
 
-      await addDoc(collection(db, "engins"), docData);
-      toast.success(`Équipement ${newMatricule.toUpperCase()} ajouté avec succès !`);
+      const docRef = doc(db, "engins", matriculeUpper);
+      await setDoc(docRef, docData);
+      toast.success(`Équipement ${matriculeUpper} ajouté avec succès !`);
 
       // Reset
       setNewMatricule("");
@@ -427,7 +461,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
       const catMatch = eCat === activeTab;
 
       // 3. Search Match
-      const query = searchTerm.toLowerCase().trim();
+      const query = (searchTerm || "").toLowerCase().trim();
       const searchMatch = !query || 
         (e.matricule || "").toLowerCase().includes(query) ||
         (e.type || "").toLowerCase().includes(query) ||
@@ -436,7 +470,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
 
       // 4. Status Match
       const eStatut = (e.statut || "").toLowerCase();
-      const statusMatch = !statusFilter || eStatut === statusFilter.toLowerCase();
+      const statusMatch = !statusFilter || eStatut === (statusFilter || "").toLowerCase();
 
       return siteMatch && catMatch && searchMatch && statusMatch;
     });
@@ -472,7 +506,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
       const eCat = e.categorie || "LHD";
       const catMatch = eCat === activeTab;
 
-      const query = searchTerm.toLowerCase().trim();
+      const query = (searchTerm || "").toLowerCase().trim();
       const searchMatch = !query || 
         (e.matricule || "").toLowerCase().includes(query) ||
         (e.type || "").toLowerCase().includes(query) ||

@@ -577,7 +577,12 @@ export function useImports() {
 
         // Determine site from user map or fallback to SMI
         const matchedMec = usersMap.get(matriculeMec);
-        const site = matchedMec?.siteId || "SMI";
+        if (!matchedMec) {
+          result.errorCount++;
+          result.errors.push({ line: lineNum, message: `Mécanicien avec matricule '${matriculeMec}' introuvable — ligne ignorée.`, raw: rawLine });
+          continue;
+        }
+        const site = matchedMec.siteId;
 
         // Site isolation filter
         if (activeSite !== "TOUS" && site !== activeSite) {

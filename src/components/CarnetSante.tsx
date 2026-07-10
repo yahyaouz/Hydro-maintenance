@@ -355,11 +355,11 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
                 // Analyze subsystems health
                 const getSubsystemStatus = (name: string) => {
                   const relevantPannes = activePannes.filter(p => {
-                    const cat = (p.categorie || p.category || "").toUpperCase();
+                    const cat = String(p.categorie || p.category || "").toUpperCase();
                     return cat.includes(name.toUpperCase());
                   });
                   if (relevantPannes.length > 0) {
-                    const hasCrit = relevantPannes.some(p => ["critique", "haute", "élevée"].includes((p.gravite || "moyenne").toLowerCase()));
+                    const hasCrit = relevantPannes.some(p => ["critique", "haute", "élevée"].includes(String(p.gravite || "moyenne").toLowerCase()));
                     return { status: hasCrit ? "DANGER" : "AVERTISSEMENT", iconColor: hasCrit ? "text-rose-500" : "text-amber-500", issuesCount: relevantPannes.length };
                   }
                   return { status: "NOMINAL", iconColor: "text-emerald-500", issuesCount: 0 };

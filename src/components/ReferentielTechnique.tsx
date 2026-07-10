@@ -35,7 +35,7 @@ export function ReferentielTechnique() {
   }, [selectedEnginId, engins]);
 
   const getStatutBadge = (statut: string) => {
-    const s = (statut || "actif").toLowerCase();
+    const s = String(statut || "actif").toLowerCase();
     switch (s) {
       case "actif":
       case "disponible":

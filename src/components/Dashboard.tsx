@@ -219,17 +219,17 @@ export function Dashboard() {
     }
     
     const countCritique = openWOs.filter(wo => {
-      const sev = (wo.severity || wo.priorite || '').toLowerCase();
+      const sev = String(wo.severity || wo.priorite || '').toLowerCase();
       return sev.includes('critique') || sev.includes('critical') || sev.includes('haute') || sev.includes('high');
     }).length;
 
     const countEleve = openWOs.filter(wo => {
-      const sev = (wo.severity || wo.priorite || '').toLowerCase();
+      const sev = String(wo.severity || wo.priorite || '').toLowerCase();
       return sev === 'eleve' || sev === 'élevé' || sev === 'medium' || sev === 'moyen' || sev === 'normale';
     }).length;
 
     const countMoyen = openWOs.filter(wo => {
-      const sev = (wo.severity || wo.priorite || '').toLowerCase();
+      const sev = String(wo.severity || wo.priorite || '').toLowerCase();
       return sev === 'normal' || sev === 'bas' || sev === 'low' || sev === 'basse';
     }).length;
 
@@ -267,7 +267,7 @@ export function Dashboard() {
     if (!selectedSeverity) return [];
     return filteredOrders.filter(wo => {
       if (wo.statut !== 'NON_FAIT' && wo.statut !== 'EN_COURS') return false;
-      const sev = (wo.severity || wo.priorite || '').toLowerCase();
+      const sev = String(wo.severity || wo.priorite || '').toLowerCase();
       if (selectedSeverity === "Critique") {
         return sev.includes('critique') || sev.includes('critical') || sev.includes('haute') || sev.includes('high');
       }
@@ -1493,8 +1493,8 @@ export function Dashboard() {
             ) : (
               <div className={`divide-y ${borderClass}`}>
                 {filteredMecaniciensOfTheDay.map((mech) => {
-                  const score = mech.stats?.scoreMensuel ?? 0;
-                  const hasGoodScore = score >= 85;
+                  const score = mech.stats?.scoreMensuel;
+                  const hasGoodScore = score !== null && score !== undefined ? score >= 85 : false;
                   const fullName = `${mech.prenom || ""} ${mech.nom || ""}`.trim() || "Mécanicien";
                   const photoUrl = mech.photo || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`;
                   return (
@@ -1528,13 +1528,15 @@ export function Dashboard() {
                         <div className="space-y-0.5">
                           <div className={`flex justify-between text-[8px] font-semibold ${textMutedClass}`}>
                             <span>Score Mensuel</span>
-                            <span>{score}%</span>
+                            <span>{score !== null && score !== undefined ? `${score}%` : "N/A"}</span>
                           </div>
-                          <Progress 
-                            value={score} 
-                            className={`h-1 ${bgSubtle12Class} border ${borderClass}`}
-                            color={score > 85 ? "bg-[#D4AF37]" : "bg-amber-600"}
-                          />
+                          {score !== null && score !== undefined && (
+                            <Progress 
+                              value={score} 
+                              className={`h-1 ${bgSubtle12Class} border ${borderClass}`}
+                              color={score > 85 ? "bg-[#D4AF37]" : "bg-amber-600"}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>

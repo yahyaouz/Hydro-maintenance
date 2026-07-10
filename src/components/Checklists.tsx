@@ -179,11 +179,15 @@ export default function Checklists() {
 
   const mecaniciens = React.useMemo(() => {
     if (!rawMecaniciens) return [];
-    const actifs = rawMecaniciens.filter((m: any) => !m.deleted && m.statut === 'Actif');
+    const actifs = rawMecaniciens.filter((m: any) => !m.deleted && (m.statut === 'Actif' || (m.statut === undefined && m.active !== false)));
+    const mappedActifs = actifs.map((m: any) => ({
+      ...m,
+      nomComplet: m.nomComplet || `${m.prenom || ""} ${m.nom || ""}`.trim() || m.id || ""
+    }));
     if (user?.role === 'ADMIN' || user?.role === 'DIRECTION') {
-      return activeSite === 'TOUS' ? actifs : actifs.filter((m: any) => m.siteId === activeSite);
+      return activeSite === 'TOUS' ? mappedActifs : mappedActifs.filter((m: any) => m.siteId === activeSite);
     }
-    return actifs.filter((m: any) => m.siteId === user?.siteId);
+    return mappedActifs.filter((m: any) => m.siteId === user?.siteId);
   }, [rawMecaniciens, user, activeSite]);
 
   const submissions = React.useMemo(() => {
@@ -516,10 +520,10 @@ export default function Checklists() {
   const filteredHistory = submissions.filter(s => {
     const query = historySearch.toLowerCase();
     const matchesQuery = 
-      s.enginId.toLowerCase().includes(query) || 
-      s.signataire.toLowerCase().includes(query) || 
-      s.enginModele.toLowerCase().includes(query) ||
-      s.poste.toLowerCase().includes(query);
+      (s.enginId || "").toLowerCase().includes(query) || 
+      (s.signataire || "").toLowerCase().includes(query) || 
+      (s.enginModele || "").toLowerCase().includes(query) ||
+      (s.poste || "").toLowerCase().includes(query);
     
     const matchesType = historyTypeFilter === "Tous" || s.type === historyTypeFilter;
     return matchesQuery && matchesType;
@@ -1127,7 +1131,7 @@ export default function Checklists() {
               <div className="pt-2 border-t border-slate-200 md:border-t-0">
                 <span className="text-slate-400 uppercase tracking-wider font-extrabold text-[9px] block">Statut Global :</span>
                 <p className="mt-0.5">
-                  {Object.values(viewingSubmission.items).includes("KO") ? (
+                  {Object.values(viewingSubmission.items || {}).includes("KO") ? (
                     <span className="font-black text-rose-600">⚠️ ANOMALIE DÉTECTÉE</span>
                   ) : (
                     <span className="font-black text-emerald-600">✅ CONFORME</span>
@@ -1136,12 +1140,12 @@ export default function Checklists() {
               </div>
               <div className="pt-2 border-t border-slate-200 md:border-t-0">
                 <span className="text-slate-400 uppercase tracking-wider font-extrabold text-[9px] block">Points contrôlés :</span>
-                <p className="font-bold text-slate-700 mt-0.5">{Object.keys(viewingSubmission.items).length}</p>
+                <p className="font-bold text-slate-700 mt-0.5">{Object.keys(viewingSubmission.items || {}).length}</p>
               </div>
               <div className="pt-2 border-t border-slate-200 md:border-t-0">
                 <span className="text-slate-400 uppercase tracking-wider font-extrabold text-[9px] block">Conformité :</span>
                 <p className="font-bold text-slate-700 mt-0.5">
-                  {Object.values(viewingSubmission.items).filter(v => v === "OK").length} conformes
+                  {Object.values(viewingSubmission.items || {}).filter(v => v === "OK").length} conformes
                 </p>
               </div>
             </div>
@@ -1158,7 +1162,7 @@ export default function Checklists() {
 
                 return Object.entries(grouped).map(([sectionTitle, items]) => {
                   // Vérifier s'il y a des anomalies dans cette section
-                  const sectionHasKo = items.some(item => viewingSubmission.items[item.id] === "KO");
+                  const sectionHasKo = items.some(item => viewingSubmission.items && viewingSubmission.items[item.id] === "KO");
 
                   return (
                     <div key={sectionTitle} className="border border-slate-200 rounded-xl overflow-hidden print:avoid-break">
@@ -1167,7 +1171,7 @@ export default function Checklists() {
                       <div className={`px-4 py-2 border-b border-slate-200 flex justify-between items-center ${
                         sectionHasKo ? "bg-rose-50" : "bg-slate-50"
                       }`}>
-                        <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-800">
+                      <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-800">
                           {sectionTitle}
                         </h4>
                         {sectionHasKo && (
@@ -1180,7 +1184,7 @@ export default function Checklists() {
                       {/* Items List */}
                       <div className="divide-y divide-slate-100 bg-white text-[11px]">
                         {items.map(item => {
-                          const status = viewingSubmission.items[item.id] || "NONE";
+                          const status = (viewingSubmission.items && viewingSubmission.items[item.id]) || "NONE";
                           return (
                             <div key={item.id} className="p-3 flex justify-between items-center gap-4">
                               <span className="text-slate-700 font-medium leading-relaxed">

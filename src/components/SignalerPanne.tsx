@@ -89,7 +89,17 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill, descriptionPref
       orderBy('numero', 'desc')
     );
     const snap = await getDocs(q);
-    const lastNum = snap.empty ? 0 : parseInt(snap.docs[0].data().numero.split('-')[2], 10);
+    let lastNum = 0;
+    if (!snap.empty) {
+      const numStr = snap.docs[0].data().numero || "";
+      const parts = numStr.split('-');
+      if (parts.length >= 3) {
+        const parsed = parseInt(parts[2], 10);
+        if (!isNaN(parsed)) {
+          lastNum = parsed;
+        }
+      }
+    }
     return `PAN-${year}-${String(lastNum + 1).padStart(4, '0')}`;
   }
 

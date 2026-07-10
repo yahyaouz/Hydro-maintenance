@@ -14,6 +14,7 @@ import {
   Info
 } from "lucide-react";
 import { toast } from "sonner";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 interface SystematicTaskMechanicProps {
   user: User;
@@ -27,9 +28,10 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
   );
   const [sheet, setSheet] = useState<SystematicTaskSheet | null>(null);
   const [localTasks, setLocalTasks] = useState<SystematicTaskItem[]>([]);
-  const [photoBase64, setPhotoBase64] = useState<string>("");
+  const [photoUrl, setPhotoUrl] = useState<string>("");
   const [loadingSheet, setLoadingSheet] = useState(false);
   const [savingProgress, setSavingProgress] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // Load or create sheet
   const loadSheet = async () => {
@@ -44,7 +46,7 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
       );
       setSheet(activeSheet);
       setLocalTasks(activeSheet.tasks || []);
-      setPhotoBase64(activeSheet.photo || "");
+      setPhotoUrl(activeSheet.photo || "");
     } catch (err) {
       console.error(err);
       toast.error("Impossible de charger ou créer la tournée.");
@@ -75,8 +77,8 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
     );
   };
 
-  // Handle image upload and conversion to base64
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle image upload to Firebase Storage
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -85,16 +87,35 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPhotoBase64(reader.result as string);
-      toast.success("Photo chargée avec succès !");
-    };
-    reader.readAsDataURL(file);
+    if (!sheet) {
+      toast.error("Impossible d'associer la photo : aucune tournée chargée.");
+      return;
+    }
+
+    setUploadingPhoto(true);
+    const toastId = toast.loading("Téléchargement de la photo...");
+    try {
+      const storage = getStorage();
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
+      const timestamp = Date.now();
+      const path = `systematicTasks/${sheet.id}/${timestamp}_${cleanFileName}`;
+      
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      
+      setPhotoUrl(url);
+      toast.success("Photo chargée avec succès !", { id: toastId });
+    } catch (err) {
+      console.error("Erreur lors de l'upload de la photo :", err);
+      toast.error("Erreur lors de l'envoi de la photo vers Firebase Storage.", { id: toastId });
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const handleRemovePhoto = () => {
-    setPhotoBase64("");
+    setPhotoUrl("");
     toast.info("Photo supprimée.");
   };
 
@@ -103,7 +124,7 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
     if (!sheet) return;
     setSavingProgress(true);
     try {
-      await saveSheetProgress(sheet.id, localTasks, photoBase64 || undefined, false);
+      await saveSheetProgress(sheet.id, localTasks, photoUrl || undefined, false);
       // Reload sheet to get fresh statuses
       await loadSheet();
     } catch (err) {
@@ -130,7 +151,7 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
 
     setSavingProgress(true);
     try {
-      await saveSheetProgress(sheet.id, localTasks, photoBase64 || undefined, true);
+      await saveSheetProgress(sheet.id, localTasks, photoUrl || undefined, true);
       await loadSheet();
     } catch (err) {
       console.error(err);
@@ -337,10 +358,15 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
                 Uploadez une image de fin de tournée pour prouver la propreté du poste ou l'anomalie détectée.
               </p>
 
-              {photoBase64 ? (
+              {uploadingPhoto ? (
+                <div className="border border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center space-y-3" id="photo-uploading-spinner">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-sky-500 border-t-transparent" />
+                  <span className="text-xs text-slate-500">Téléchargement en cours...</span>
+                </div>
+              ) : photoUrl ? (
                 <div className="relative group rounded-lg overflow-hidden border border-slate-200" id="photo-preview-container">
                   <img 
-                    src={photoBase64} 
+                    src={photoUrl} 
                     alt="Tournée justificatif" 
                     className="w-full h-44 object-cover"
                   />
@@ -364,11 +390,11 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
                     id="systematic-photo-file-input"
                     className="hidden"
                     onChange={handlePhotoUpload}
-                    disabled={isSheetLocked}
+                    disabled={isSheetLocked || uploadingPhoto}
                   />
                   <label 
-                    htmlFor={isSheetLocked ? undefined : "systematic-photo-file-input"}
-                    className={`flex flex-col items-center justify-center cursor-pointer space-y-2 ${isSheetLocked ? "opacity-50 cursor-not-allowed" : ""}`}
+                    htmlFor={isSheetLocked || uploadingPhoto ? undefined : "systematic-photo-file-input"}
+                    className={`flex flex-col items-center justify-center cursor-pointer space-y-2 ${isSheetLocked || uploadingPhoto ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <div className="p-3 bg-slate-50 text-slate-500 rounded-full">
                       <Camera className="h-6 w-6" />
@@ -393,8 +419,8 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
                   className="w-full bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-semibold py-2.5 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-all"
                   id="btn-save-draft"
                 >
-                  <Save className="h-4 w-4" />
-                  {savingProgress ? "Sauvegarde..." : "Sauvegarder Brouillon"}
+                  <Save className="h-4 w-4 animate-pulse" />
+                  {savingProgress ? "Enregistrement..." : "Sauvegarder Brouillon"}
                 </button>
 
                 <button
@@ -404,8 +430,8 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
                   className="w-full bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white font-semibold py-2.5 px-4 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm transition-all"
                   id="btn-finalize-sheet"
                 >
-                  <CheckCircle className="h-4 w-4" />
-                  Finaliser & Clôturer la Tournée
+                  <CheckCircle className="h-4 w-4 animate-pulse" />
+                  {savingProgress ? "Enregistrement..." : "Finaliser & Clôturer la Tournée"}
                 </button>
               </div>
 

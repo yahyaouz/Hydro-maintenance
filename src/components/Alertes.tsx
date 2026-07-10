@@ -75,7 +75,7 @@ export function Alertes() {
         // Rule 1 & 2: PM_OVERDUE and PM_CRITICAL
         // ----------------------------------------------------
         for (const engin of engins) {
-          if (engin.deleted || engin.id.startsWith('temp_')) continue;
+          if (engin.deleted || (engin.id || '').startsWith('temp_')) continue;
 
           const modelIntervalles = pmIntervalles.filter(
             (i: any) => i.typeEngin === engin.modele || i.typeEngin === 'Générique'
@@ -88,7 +88,7 @@ export function Alertes() {
 
             const lastPm = enginTasks
               .filter((t: any) => t.statut === 'FAIT' || t.statut === 'VALIDE')
-              .filter((t: any) => t.label?.toLowerCase().includes(intervalle.operation?.substring(0, 20).toLowerCase()))
+              .filter((t: any) => (t.label || "").toLowerCase().includes((intervalle.operation || "").substring(0, 20).toLowerCase()))
               .sort((a: any, b: any) => (b.heuresEnginAuMoment || 0) - (a.heuresEnginAuMoment || 0))[0];
 
             const lastPmHours = lastPm ? (lastPm.heuresEnginAuMoment || 0) : 0;
@@ -97,15 +97,17 @@ export function Alertes() {
             const overdueThreshold = intervalle.intervalleHeures;
             const criticalThreshold = intervalle.intervalleHeures * 1.1;
 
+            const currentOpName = intervalle.operation || "Opération";
+
             if (hoursSinceLastPm >= criticalThreshold) {
-              const safeOperationId = intervalle.operation.replace(/[^a-zA-Z0-9]/g, '_');
+              const safeOperationId = currentOpName.replace(/[^a-zA-Z0-9]/g, '_');
               batchAlerts.push({
                 id: `pm_critical_${engin.id}_${safeOperationId}`,
                 code: 'PM_CRITICAL',
                 type: 'Maintenance préventive très dépassée',
                 severity: 'RED',
                 title: `PM CRITIQUE DÉPASSÉ • ${engin.id}`,
-                message: `L'opération ${intervalle.operation} est dépassée depuis ${Math.round(hoursSinceLastPm - overdueThreshold)}h (Heures actuelles: ${engin.heuresMarche}h, Intervalle: ${overdueThreshold}h).`,
+                message: `L'opération ${currentOpName} est dépassée depuis ${Math.round(hoursSinceLastPm - overdueThreshold)}h (Heures actuelles: ${engin.heuresMarche}h, Intervalle: ${overdueThreshold}h).`,
                 siteId: engin.siteId,
                 targetId: engin.id,
                 emailSent: false,
@@ -113,17 +115,17 @@ export function Alertes() {
                 status: 'ACTIVE',
                 createdAt: now.toISOString(),
                 updatedAt: now.toISOString(),
-                details: { operation: intervalle.operation, hoursSinceLastPm, threshold: overdueThreshold }
+                details: { operation: currentOpName, hoursSinceLastPm, threshold: overdueThreshold }
               });
             } else if (hoursSinceLastPm >= overdueThreshold) {
-              const safeOperationId = intervalle.operation.replace(/[^a-zA-Z0-9]/g, '_');
+              const safeOperationId = currentOpName.replace(/[^a-zA-Z0-9]/g, '_');
               batchAlerts.push({
                 id: `pm_overdue_${engin.id}_${safeOperationId}`,
                 code: 'PM_OVERDUE',
                 type: 'Maintenance préventive dépassée',
                 severity: 'YELLOW',
                 title: `PM REQUIS • ${engin.id}`,
-                message: `L'opération ${intervalle.operation} doit être planifiée. Heures cumulées depuis le dernier PM: ${Math.round(hoursSinceLastPm)}h / ${overdueThreshold}h.`,
+                message: `L'opération ${currentOpName} doit être planifiée. Heures cumulées depuis le dernier PM: ${Math.round(hoursSinceLastPm)}h / ${overdueThreshold}h.`,
                 siteId: engin.siteId,
                 targetId: engin.id,
                 emailSent: false,
@@ -131,7 +133,7 @@ export function Alertes() {
                 status: 'ACTIVE',
                 createdAt: now.toISOString(),
                 updatedAt: now.toISOString(),
-                details: { operation: intervalle.operation, hoursSinceLastPm, threshold: overdueThreshold }
+                details: { operation: currentOpName, hoursSinceLastPm, threshold: overdueThreshold }
               });
             }
           }
@@ -215,7 +217,7 @@ export function Alertes() {
         // Rule 6: GASOIL_ANORMAL
         // ----------------------------------------------------
         for (const engin of engins) {
-          if (engin.deleted || engin.id.startsWith('temp_')) continue;
+          if (engin.deleted || (engin.id || '').startsWith('temp_')) continue;
 
           const avgConso = engin.consommationMoyenne || engin.fuelAvg || 0;
           const lastConso = engin.derniereConsommation || engin.fuelLast || 0;
@@ -248,7 +250,7 @@ export function Alertes() {
           const isOut = engin.statut !== undefined 
             ? (activeStatut === 'hors service' || activeStatut === 'vendu') 
             : (engin.etat === 'Vendu' || engin.etat === 'Hors service');
-          if (engin.deleted || engin.id.startsWith('temp_') || isOut) continue;
+          if (engin.deleted || (engin.id || '').startsWith('temp_') || isOut) continue;
 
           const lastUpdate = engin.updatedAt ? new Date(engin.updatedAt.seconds ? engin.updatedAt.seconds * 1000 : engin.updatedAt) : null;
           if (lastUpdate) {

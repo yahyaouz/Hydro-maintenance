@@ -69,7 +69,7 @@ export function Mecaniciens() {
   // List of unique skills across all mechanics
   const allSkills = useMemo(() => {
     const skillsSet = new Set<string>();
-    mecaniciens.forEach(m => m.competences.forEach(c => skillsSet.add(c)));
+    mecaniciens.forEach(m => (m.competences || []).forEach(c => skillsSet.add(c)));
     return Array.from(skillsSet);
   }, [mecaniciens]);
 
@@ -78,10 +78,10 @@ export function Mecaniciens() {
     return mecaniciens.filter(m => {
       const matchSite = activeSite === "TOUS" || m.siteId === activeSite;
       const matchSearch = 
-        m.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.matricule.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchSkill = selectedSkill === "TOUTES" || m.competences.includes(selectedSkill);
+        (m.nom || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (m.prenom || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (m.matricule || "").toLowerCase().includes(searchTerm.toLowerCase());
+      const matchSkill = selectedSkill === "TOUTES" || (m.competences || []).includes(selectedSkill);
       return matchSite && matchSearch && matchSkill;
     });
   }, [mecaniciens, activeSite, searchTerm, selectedSkill]);
@@ -89,10 +89,13 @@ export function Mecaniciens() {
   // Global KPIs based on filtered list
   const kpis = useMemo(() => {
     if (filteredMecaniciens.length === 0) {
-      return { total: 0, avgScore: 0, avgResolution: null as number | null, avgMttr: null as number | null };
+      return { total: 0, avgScore: null as number | null, avgResolution: null as number | null, avgMttr: null as number | null };
     }
     const total = filteredMecaniciens.length;
-    const avgScore = filteredMecaniciens.reduce((acc, m) => acc + m.stats.scoreMensuel, 0) / total;
+    const withScore = filteredMecaniciens.filter(m => m.stats.scoreMensuel !== null && m.stats.scoreMensuel !== undefined);
+    const avgScore = withScore.length > 0
+      ? withScore.reduce((acc, m) => acc + (m.stats.scoreMensuel as number), 0) / withScore.length
+      : null;
     
     const withResolution = filteredMecaniciens.filter(m => m.stats.tauxResolutionPremiereFois !== null);
     const avgResolution = withResolution.length > 0 
@@ -106,7 +109,7 @@ export function Mecaniciens() {
 
     return {
       total,
-      avgScore: Math.round(avgScore * 10) / 10,
+      avgScore: avgScore !== null ? Math.round(avgScore * 10) / 10 : null,
       avgResolution: avgResolution !== null ? Math.round(avgResolution * 10) / 10 : null,
       avgMttr: avgMttr !== null ? Math.round(avgMttr * 10) / 10 : null
     };
@@ -114,14 +117,22 @@ export function Mecaniciens() {
 
   // Sorted mechanics for leaderboard
   const leaderboardMecaniciens = useMemo(() => {
-    return [...filteredMecaniciens].sort((a, b) => b.stats.scoreMensuel - a.stats.scoreMensuel);
+    return [...filteredMecaniciens].sort((a, b) => {
+      const scoreA = a.stats.scoreMensuel !== null && a.stats.scoreMensuel !== undefined ? a.stats.scoreMensuel : -1;
+      const scoreB = b.stats.scoreMensuel !== null && b.stats.scoreMensuel !== undefined ? b.stats.scoreMensuel : -1;
+      return scoreB - scoreA;
+    });
   }, [filteredMecaniciens]);
 
   // Prepare radar data for selected mechanic details
   const radarData = useMemo(() => {
     if (!selectedMeca) return [];
+    const scoreVal = selectedMeca.stats.scoreMensuel !== null && selectedMeca.stats.scoreMensuel !== undefined ? selectedMeca.stats.scoreMensuel : 0;
     const data = [
-      { subject: "Score Mensuel", value: selectedMeca.stats.scoreMensuel },
+      { 
+        subject: selectedMeca.stats.scoreMensuel !== null && selectedMeca.stats.scoreMensuel !== undefined ? "Score Mensuel" : "Score Mensuel (—)", 
+        value: scoreVal 
+      },
       { 
         subject: selectedMeca.stats.tauxResolutionPremiereFois !== null ? "Résol. 1ère Fois" : "Résol. 1ère Fois (—)", 
         value: selectedMeca.stats.tauxResolutionPremiereFois !== null ? selectedMeca.stats.tauxResolutionPremiereFois : 0 
@@ -224,7 +235,7 @@ export function Mecaniciens() {
           </div>
           <div>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block uppercase">Score Mensuel Moyen</span>
-            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{kpis.avgScore}%</span>
+            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{kpis.avgScore !== null ? `${kpis.avgScore}%` : "—"}</span>
           </div>
         </div>
 
@@ -486,7 +497,7 @@ export function Mecaniciens() {
                   <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-100 dark:border-slate-900">
                     <div>
                       <span className="text-[9px] text-slate-400 font-mono uppercase block">Score Mensuel</span>
-                      <span className="text-xs font-black text-slate-850 dark:text-white">{m.stats.scoreMensuel}%</span>
+                      <span className="text-xs font-black text-slate-850 dark:text-white">{m.stats.scoreMensuel !== null && m.stats.scoreMensuel !== undefined ? `${m.stats.scoreMensuel}%` : "N/A"}</span>
                     </div>
                     <div>
                       <span className="text-[9px] text-slate-400 font-mono uppercase block">Total Interventions</span>
@@ -526,7 +537,7 @@ export function Mecaniciens() {
                 <div className="flex flex-col items-center">
                   <div className="text-center mb-2">
                     <span className="text-xs font-black text-slate-500 font-mono block">2ème Place</span>
-                    <span className="text-[11px] text-slate-400 font-mono">{leaderboardMecaniciens[1].stats.scoreMensuel}%</span>
+                    <span className="text-[11px] text-slate-400 font-mono">{leaderboardMecaniciens[1].stats.scoreMensuel !== null && leaderboardMecaniciens[1].stats.scoreMensuel !== undefined ? `${leaderboardMecaniciens[1].stats.scoreMensuel}%` : "N/A"}</span>
                   </div>
                   <div className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-slate-300 shadow-md">
                     <img 
@@ -556,7 +567,7 @@ export function Mecaniciens() {
                       <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
                       1ère Place
                     </span>
-                    <span className="text-sm font-black text-amber-500 font-mono">{leaderboardMecaniciens[0].stats.scoreMensuel}%</span>
+                    <span className="text-sm font-black text-amber-500 font-mono">{leaderboardMecaniciens[0].stats.scoreMensuel !== null && leaderboardMecaniciens[0].stats.scoreMensuel !== undefined ? `${leaderboardMecaniciens[0].stats.scoreMensuel}%` : "N/A"}</span>
                   </div>
                   <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-amber-500 shadow-lg scale-105">
                     <img 
@@ -583,7 +594,7 @@ export function Mecaniciens() {
                 <div className="flex flex-col items-center">
                   <div className="text-center mb-2">
                     <span className="text-xs font-black text-amber-700 font-mono block">3ème Place</span>
-                    <span className="text-[11px] text-slate-400 font-mono">{leaderboardMecaniciens[2].stats.scoreMensuel}%</span>
+                    <span className="text-[11px] text-slate-400 font-mono">{leaderboardMecaniciens[2].stats.scoreMensuel !== null && leaderboardMecaniciens[2].stats.scoreMensuel !== undefined ? `${leaderboardMecaniciens[2].stats.scoreMensuel}%` : "N/A"}</span>
                   </div>
                   <div className="relative w-18 h-18 rounded-full overflow-hidden border-4 border-amber-700/60 shadow-md">
                     <img 
@@ -655,10 +666,10 @@ export function Mecaniciens() {
                         <div className="w-16 bg-slate-100 dark:bg-slate-900 h-2 rounded-full overflow-hidden">
                           <div 
                             className="bg-amber-500 h-full rounded-full" 
-                            style={{ width: `${m.stats.scoreMensuel}%` }}
+                            style={{ width: `${m.stats.scoreMensuel ?? 0}%` }}
                           />
                         </div>
-                        <span className="text-xs font-black font-mono text-slate-850 dark:text-white">{m.stats.scoreMensuel}%</span>
+                        <span className="text-xs font-black font-mono text-slate-850 dark:text-white">{m.stats.scoreMensuel !== null && m.stats.scoreMensuel !== undefined ? `${m.stats.scoreMensuel}%` : "N/A"}</span>
                       </div>
                     </div>
                   </div>

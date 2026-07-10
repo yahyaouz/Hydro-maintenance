@@ -81,7 +81,7 @@ export interface MecanicienStats {
   totalInterventions: number;
   interventionsCeMois: number;
   derniereIntervention: string;
-  scoreMensuel: number;
+  scoreMensuel: number | null;
   mttrMoyen: number | null;
   tauxResolutionPremiereFois: number | null;
   tauxTournéesCompletes: number | null;
@@ -95,6 +95,7 @@ export interface Mecanicien {
   matricule: string;
   nom: string;
   prenom: string;
+  nomComplet?: string;
   photo: string; // URL Firebase Storage ou base64
   siteId: SiteID;
   poste: string; // "Poste 1" | "Poste 2" | "Poste 3"
@@ -109,6 +110,7 @@ export interface Mecanicien {
   documents?: Documents;
   stats: MecanicienStats;
   active: boolean;
+  statut?: string;
   source: "MOCK_SPRINT4" | "PRODUCTION_IMPORT" | "ADMIN_CREATION";
   updatedAt?: string;
 }

@@ -131,7 +131,7 @@ export function useMecaniciens() {
       let finalNom = data.nom || "";
       let finalPrenom = data.prenom || "";
       if (!finalNom && !finalPrenom && data.nomComplet) {
-        const parts = data.nomComplet.trim().split(/\s+/);
+        const parts = String(data.nomComplet || "").trim().split(/\s+/);
         finalPrenom = parts[0] || "";
         finalNom = parts.slice(1).join(" ") || "";
       }
@@ -184,8 +184,8 @@ export function useMecaniciens() {
 
       let derniereIntervention = data.stats?.derniereIntervention || "";
       if (mecaTasksFaitAll.length > 0) {
-        const sorted = [...mecaTasksFaitAll].sort((a, b) => b.datePlanifiee.localeCompare(a.datePlanifiee));
-        derniereIntervention = sorted[0].datePlanifiee;
+        const sorted = [...mecaTasksFaitAll].sort((a, b) => (b.datePlanifiee || "").localeCompare(a.datePlanifiee || ""));
+        derniereIntervention = sorted[0].datePlanifiee || "";
       }
 
       const totalInterventions = mecaTasksFaitAll.length;
@@ -196,7 +196,7 @@ export function useMecaniciens() {
       const heuresInterventionCeMois = Math.round(mecaTasksFaitCeMois.reduce((sum, t) => sum + getHoursFromDuree(t.dureeEstimee || ''), 0) * 10) / 10;
 
       // Compute general monthly performance score based on tauxTournéesCompletes
-      const scoreMensuel = tauxTournéesCompletes !== null ? tauxTournéesCompletes : (data.stats?.scoreMensuel || 100);
+      const scoreMensuel = tauxTournéesCompletes !== null ? tauxTournéesCompletes : (data.stats?.scoreMensuel ?? null);
 
       const processedStats: MecanicienStats = {
         totalInterventions,
@@ -215,6 +215,7 @@ export function useMecaniciens() {
         matricule: data.matricule || data.id,
         nom: finalNom || "Nom",
         prenom: finalPrenom || "Prénom",
+        nomComplet: data.nomComplet || `${finalPrenom || ""} ${finalNom || ""}`.trim() || data.id || "",
         photo: data.photo || "",
         siteId: data.siteId || "SMI",
         poste: data.poste || "Poste 1",
@@ -229,6 +230,7 @@ export function useMecaniciens() {
         documents: data.documents || DEFAULT_DOCUMENTS,
         stats: processedStats,
         active: data.active !== false,
+        statut: data.statut || (data.active !== false ? "Actif" : "Inactif"),
         source: data.source || "MIGRATION_SPRINT6",
         userUid: data.userUid || null
       };

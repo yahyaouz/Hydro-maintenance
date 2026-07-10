@@ -219,7 +219,7 @@ export default function TachesPlanning() {
           // 1. Tâches Quotidiennes
           for (const engin of filteredEngins) {
             // V4-FIRESTORE: Ignore temp engins from offline queue until they are replayed/resolved
-            if (engin.id.startsWith('temp_')) continue;
+            if ((engin.id || '').startsWith('temp_')) continue;
 
             // V4-HEURES-IMPORT: Skip generation if hours are 0, null, or undefined
             if (engin.heuresMarche === 0 || engin.heuresMarche === null || engin.heuresMarche === undefined) continue;
@@ -270,7 +270,7 @@ export default function TachesPlanning() {
           // 2. Tâches Préventives PM
           for (const engin of filteredEngins) {
             // V4-FIRESTORE: Ignore temp engins from offline queue
-            if (engin.id.startsWith('temp_')) continue;
+            if ((engin.id || '').startsWith('temp_')) continue;
 
             // V4-HEURES-IMPORT: Skip generation if hours are 0, null, or undefined
             if (engin.heuresMarche === 0 || engin.heuresMarche === null || engin.heuresMarche === undefined) continue;
@@ -283,7 +283,7 @@ export default function TachesPlanning() {
               const completedTasks = tasks.filter(t => 
                 t.enginId === engin.id &&
                 t.type === 'PREVENTIF' &&
-                t.label.includes(intervalle.operation.substring(0, 20)) &&
+                (t.label || "").includes((intervalle.operation || "").substring(0, 20)) &&
                 (t.statut === 'FAIT' || t.statut === 'VALIDE') &&
                 !t.deleted
               );
@@ -541,9 +541,9 @@ export default function TachesPlanning() {
       // Search Query
       if (searchQuery.trim() !== "") {
         const query = searchQuery.toLowerCase();
-        const matchesLabel = t.label.toLowerCase().includes(query);
-        const matchesEngin = t.enginId.toLowerCase().includes(query);
-        const matchesMeca = t.mecanicienNom.toLowerCase().includes(query);
+        const matchesLabel = (t.label || "").toLowerCase().includes(query);
+        const matchesEngin = (t.enginId || "").toLowerCase().includes(query);
+        const matchesMeca = (t.mecanicienNom || "").toLowerCase().includes(query);
         if (!matchesLabel && !matchesEngin && !matchesMeca) return false;
       }
 
@@ -623,7 +623,7 @@ export default function TachesPlanning() {
         const completed = filteredTasks.filter(t => 
           t.enginId === engin.id && 
           t.type === 'PREVENTIF' &&
-          t.label.includes(intervalle.operation.substring(0, 20)) &&
+          (t.label || "").includes((intervalle.operation || "").substring(0, 20)) &&
           (t.statut === 'FAIT' || t.statut === 'VALIDE')
         );
         completed.sort((a, b) => (b.heuresEnginAuMoment || 0) - (a.heuresEnginAuMoment || 0));
@@ -644,13 +644,13 @@ export default function TachesPlanning() {
     return filteredMecaniciens.map(meca => {
       const tasksMeca = filteredTasks.filter(t => 
         t.mecanicienId === meca.id && 
-        t.datePlanifiee.startsWith(currentMonthStr)
+        (t.datePlanifiee || '').startsWith(currentMonthStr)
       );
       const total = tasksMeca.length;
       const faites = tasksMeca.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
       const retard = tasksMeca.filter(t => 
         t.statut === 'NON_FAIT' && 
-        t.datePlanifiee < new Date().toISOString().split('T')[0]
+        (t.datePlanifiee || '') < new Date().toISOString().split('T')[0]
       ).length;
       const rate = total > 0 ? Math.round((faites / total) * 100) : null;
 
@@ -673,7 +673,7 @@ export default function TachesPlanning() {
 
   const kpis = React.useMemo(() => {
     const currentMonthStr = new Date().toISOString().substring(0, 7);
-    const tasksMois = filteredTasks.filter(t => t.datePlanifiee.startsWith(currentMonthStr));
+    const tasksMois = filteredTasks.filter(t => (t.datePlanifiee || '').startsWith(currentMonthStr));
     const total = tasksMois.length;
     const faites = tasksMois.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
     const perfGlobale = total > 0 ? Math.round((faites / total) * 100) : null;
@@ -1442,10 +1442,10 @@ export default function TachesPlanning() {
                     {filteredPannes.filter(p => {
                       if (!searchQuery) return true;
                       const q = searchQuery.toLowerCase();
-                      return (p.numero?.toLowerCase().includes(q) || 
-                              p.description?.toLowerCase().includes(q) || 
-                              p.categorie?.toLowerCase().includes(q) ||
-                              p.enginId?.toLowerCase().includes(q));
+                      return ((p.numero || "").toLowerCase().includes(q) || 
+                              (p.description || "").toLowerCase().includes(q) || 
+                              (p.categorie || "").toLowerCase().includes(q) || 
+                              (p.enginId || "").toLowerCase().includes(q));
                     }).map(panne => {
                       const isSelected = selectedPanne?.id === panne.id;
                       const isCritique = panne.gravite === 'Critique';

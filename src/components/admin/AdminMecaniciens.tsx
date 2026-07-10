@@ -75,6 +75,7 @@ export function AdminMecaniciens() {
   const [formDocuments, setFormDocuments] = React.useState<Documents>(JSON.parse(JSON.stringify(DEFAULT_DOCUMENTS)));
   const [formStats, setFormStats] = React.useState(DEFAULT_STATS);
   const [formActive, setFormActive] = React.useState(true);
+  const [formStatut, setFormStatut] = React.useState<string>("Actif");
   const [formUserUid, setFormUserUid] = React.useState<string | null>(null);
   const [isEditing, setIsEditing] = React.useState(false);
 
@@ -116,9 +117,9 @@ export function AdminMecaniciens() {
       const matchSiteGlobal = activeSite === "TOUS" || m.siteId === activeSite;
       const matchSiteFilter = siteFilter === "TOUS" || m.siteId === siteFilter;
       const matchSearch = 
-        m.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.matricule.toLowerCase().includes(searchTerm.toLowerCase());
+        (m.nom || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (m.prenom || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (m.matricule || "").toLowerCase().includes(searchTerm.toLowerCase());
       return matchSiteGlobal && matchSiteFilter && matchSearch;
     });
   }, [mecaniciens, activeSite, siteFilter, searchTerm]);
@@ -130,7 +131,7 @@ export function AdminMecaniciens() {
       return;
     }
     setIsEditing(false);
-    setFormUid("meca-" + Date.now());
+    setFormUid("");
     setFormMatricule("");
     setFormNom("");
     setFormPrenom("");
@@ -148,6 +149,7 @@ export function AdminMecaniciens() {
     setFormDocuments(JSON.parse(JSON.stringify(DEFAULT_DOCUMENTS)));
     setFormStats(DEFAULT_STATS);
     setFormActive(true);
+    setFormStatut("Actif");
     setFormUserUid(null);
 
     setActiveFormTab("infos");
@@ -179,6 +181,7 @@ export function AdminMecaniciens() {
     setFormDocuments(meca.documents ? JSON.parse(JSON.stringify(meca.documents)) : JSON.parse(JSON.stringify(DEFAULT_DOCUMENTS)));
     setFormStats(meca.stats || DEFAULT_STATS);
     setFormActive(meca.active !== false);
+    setFormStatut(meca.statut || (meca.active !== false ? "Actif" : "Inactif"));
     setFormUserUid(meca.userUid || null);
 
     setActiveFormTab("infos");
@@ -193,19 +196,29 @@ export function AdminMecaniciens() {
       return;
     }
 
-    // Check duplicate matricule on creation
+    const mId = formMatricule.trim().toUpperCase();
+
+    // Check duplicate matricule or ID on creation
     if (!isEditing) {
-      const exists = mecaniciens.some(m => m.matricule.toLowerCase() === formMatricule.trim().toLowerCase());
+      const exists = mecaniciens.some(
+        m =>
+          (m.matricule || "").toLowerCase() === mId.toLowerCase() ||
+          (m.id || "").toLowerCase() === mId.toLowerCase() ||
+          (m.uid || "").toLowerCase() === mId.toLowerCase()
+      );
       if (exists) {
         toast.error(`Le matricule ${formMatricule} est déjà attribué à un autre mécanicien.`);
         return;
       }
     }
 
+    const finalUid = isEditing ? formUid : mId;
+
     const mecaData: Mecanicien = {
-      uid: formUid,
+      id: finalUid,
+      uid: finalUid,
       userUid: formUserUid,
-      matricule: formMatricule.trim().toUpperCase(),
+      matricule: mId,
       nom: formNom.trim(),
       prenom: formPrenom.trim(),
       photo: formPhoto,
@@ -221,7 +234,8 @@ export function AdminMecaniciens() {
       dateEmbauche: formDateEmbauche,
       documents: formDocuments,
       stats: formStats,
-      active: formActive,
+      active: formStatut === "Actif",
+      statut: formStatut,
       source: "ADMIN_CREATION"
     };
 
@@ -431,7 +445,16 @@ export function AdminMecaniciens() {
                               )}
                             </div>
                             <div>
-                              <p className="font-bold text-slate-900">{meca.prenom} {meca.nom}</p>
+                              <div className="flex items-center gap-1.5">
+                                <p className="font-bold text-slate-900">{meca.prenom} {meca.nom}</p>
+                                <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase ${
+                                  (meca.statut || (meca.active !== false ? "Actif" : "Inactif")) === "Actif" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
+                                  (meca.statut || (meca.active !== false ? "Actif" : "Inactif")) === "En congé" ? "bg-amber-50 text-amber-700 border border-amber-100" :
+                                  "bg-rose-50 text-rose-700 border border-rose-100"
+                                }`}>
+                                  {meca.statut || (meca.active !== false ? "Actif" : "Inactif")}
+                                </span>
+                              </div>
                               <div className="flex items-center gap-1.5 mt-0.5 text-slate-400 text-[10px]">
                                 <Phone className="w-3 h-3" />
                                 <span>{meca.telephone || "Aucun contact"}</span>
@@ -643,11 +666,15 @@ export function AdminMecaniciens() {
                     </div>
                     <div className="flex justify-between items-center text-slate-500 font-medium">
                       <span>MTTR Moyen :</span>
-                      <span className="font-bold text-slate-800">{formStats.mttrMoyen}h</span>
+                      <span className="font-bold text-slate-800">
+                        {formStats.mttrMoyen !== null && formStats.mttrMoyen !== undefined ? `${formStats.mttrMoyen}h` : "N/A"}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center text-slate-500 font-medium">
                       <span>Score Qualité :</span>
-                      <span className="font-bold text-slate-800">{formStats.scoreMensuel}%</span>
+                      <span className="font-bold text-slate-800">
+                        {formStats.scoreMensuel !== null && formStats.scoreMensuel !== undefined ? `${formStats.scoreMensuel}%` : "N/A"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -790,7 +817,7 @@ export function AdminMecaniciens() {
             {/* TAB 2: SKILLS & ASSIGNMENT */}
             {activeFormTab === "skills" && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold text-slate-700">Site d'affectation *</Label>
                     <select
@@ -830,6 +857,19 @@ export function AdminMecaniciens() {
                       <option value="B">Shift B</option>
                       <option value="C">Shift C</option>
                       <option value="D">Shift D</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">Statut d'activité *</Label>
+                    <select
+                      value={formStatut}
+                      onChange={(e) => setFormStatut(e.target.value)}
+                      className="w-full text-xs border border-slate-200 rounded-lg h-9 px-2 bg-white text-slate-800"
+                    >
+                      <option value="Actif">Actif</option>
+                      <option value="En congé">En congé</option>
+                      <option value="Inactif">Inactif</option>
                     </select>
                   </div>
                 </div>

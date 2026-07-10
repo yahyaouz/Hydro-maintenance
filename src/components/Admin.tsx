@@ -20,7 +20,11 @@ import {
   Gauge,
   Clock,
   Car,
-  Tag
+  Tag,
+  Stethoscope,
+  Activity,
+  ShieldAlert,
+  Copy
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PageBanner } from "@/components/ui/PageBanner";
@@ -86,7 +90,17 @@ export function Admin() {
   const { user } = useAuthStore();
 
   // RECONSTRUIT : États de navigation des onglets
-  const [activeTab, setActiveTab] = React.useState<"engins" | "mecaniciens" | "chantiers" | "intervalles" | "comptes">("engins");
+  const [activeTab, setActiveTab] = React.useState<"engins" | "mecaniciens" | "chantiers" | "intervalles" | "comptes" | "sante_donnees">("engins");
+
+  // États de diagnostic "Santé des Données"
+  const [diagnosticLoading, setDiagnosticLoading] = React.useState(false);
+  const [diagnosticRun, setDiagnosticRun] = React.useState(false);
+  const [diagnosticResults, setDiagnosticResults] = React.useState<{
+    wrongEngins: any[];
+    wrongMecs: any[];
+    invalidSites: any[];
+    missingSites: any[];
+  } | null>(null);
 
   // RECONSTRUIT : Données stockées localement
   const [unapprovedUsers, setUnapprovedUsers] = React.useState<any[]>([]);
@@ -148,7 +162,15 @@ export function Admin() {
       qMecaniciens = query(collection(db, 'mecaniciens'), where('deleted', '!=', true), where('siteId', '==', user?.siteId || 'SMI'));
     }
     const unsubMecaniciens = onSnapshot(qMecaniciens, (snap) => {
-      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Mecanicien[];
+      const data = snap.docs.map(doc => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          ...d,
+          nomComplet: d.nomComplet || `${d.prenom || ""} ${d.nom || ""}`.trim() || doc.id,
+          statut: d.statut || (d.active !== false ? "Actif" : "Inactif")
+        };
+      }) as Mecanicien[];
       data.sort((a: any, b: any) => {
         const tA = getMs(a.updatedAt);
         const tB = getMs(b.updatedAt);
@@ -261,7 +283,7 @@ export function Admin() {
         await updateDoc(docRef, payload);
         toast.success(`Engin ${editingItem.id} mis à jour avec succès !`);
       } else {
-        if (engins.some(e => e.id.toLowerCase() === data.id?.toLowerCase())) {
+        if (engins.some(e => (e.id || "").toLowerCase() === (data.id || "").toLowerCase())) {
           toast.error(`Le N° de Parc ${data.id} existe déjà.`);
           return;
         }
@@ -332,7 +354,7 @@ export function Admin() {
         await updateDoc(docRef, payload);
         toast.success(`Mécanicien ${data.nomComplet} mis à jour !`);
       } else {
-        if (mecaniciens.some(m => m.id.toLowerCase() === data.id?.toLowerCase())) {
+        if (mecaniciens.some(m => (m.id || "").toLowerCase() === (data.id || "").toLowerCase())) {
           toast.error(`Le matricule ${data.id} existe déjà.`);
           return;
         }
@@ -547,7 +569,7 @@ export function Admin() {
 
     if (activeTab === "engins") {
       return engins.filter(e => {
-        const matchesQuery = e.id.toLowerCase().includes(q) || e.modele.toLowerCase().includes(q) || e.conducteurAssigne.toLowerCase().includes(q);
+        const matchesQuery = (e.id || "").toLowerCase().includes(q) || (e.modele || "").toLowerCase().includes(q) || (e.conducteurAssigne || "").toLowerCase().includes(q);
         const matchesChantier = filterOption1 === "Tous" || e.siteId === filterOption1;
         const currentEtat = e.statut !== undefined 
           ? (e.statut === "actif" ? "Opérationnel" : e.statut === "maintenance" ? "En maintenance" : "Hors service")
@@ -559,7 +581,7 @@ export function Admin() {
 
     if (activeTab === "mecaniciens") {
       return mecaniciens.filter(m => {
-        const matchesQuery = m.nomComplet.toLowerCase().includes(q) || m.id.toLowerCase().includes(q) || m.specialite.toLowerCase().includes(q);
+        const matchesQuery = (m.nomComplet || "").toLowerCase().includes(q) || (m.id || "").toLowerCase().includes(q) || (m.specialite || "").toLowerCase().includes(q);
         const matchesPoste = filterOption1 === "Tous" || m.poste === filterOption1;
         const matchesStatut = filterOption2 === "Tous" || m.statut === filterOption2;
         return matchesQuery && matchesPoste && matchesStatut;
@@ -568,7 +590,7 @@ export function Admin() {
 
     if (activeTab === "chantiers") {
       return chantiers.filter(c => {
-        const matchesQuery = c.nomComplet.toLowerCase().includes(q) || c.id.toLowerCase().includes(q) || c.localisation.toLowerCase().includes(q);
+        const matchesQuery = (c.nomComplet || "").toLowerCase().includes(q) || (c.id || "").toLowerCase().includes(q) || (c.localisation || "").toLowerCase().includes(q);
         const matchesType = filterOption1 === "Tous" || c.type === filterOption1;
         const matchesStatut = filterOption2 === "Tous" || c.statut === filterOption2;
         return matchesQuery && matchesType && matchesStatut;
@@ -577,7 +599,7 @@ export function Admin() {
 
     // Intervalles
     return intervalles.filter(i => {
-      const matchesQuery = i.operation.toLowerCase().includes(q) || i.produitHuile.toLowerCase().includes(q);
+      const matchesQuery = (i.operation || "").toLowerCase().includes(q) || (i.produitHuile || "").toLowerCase().includes(q);
       const matchesType = filterOption1 === "Tous" || i.typeEngin === filterOption1;
       const matchesPriorite = filterOption2 === "Tous" || i.priorite === filterOption2;
       return matchesQuery && matchesType && matchesPriorite;
@@ -940,6 +962,397 @@ export function Admin() {
     );
   };
 
+  const handleRunDiagnostic = async () => {
+    setDiagnosticLoading(true);
+    try {
+      // Lecture ponctuelle de maintenanceTasks et pannes
+      const tasksSnap = await getDocs(collection(db, "maintenanceTasks"));
+      const pannesSnap = await getDocs(collection(db, "pannes"));
+      
+      const tasks = tasksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const pannes = pannesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      const validSites = ["SMI", "OUMEJRANE", "KOUDIA", "OUANSIMI", "BOU-AZZER"];
+      
+      // 1. Engins avec ID technique ≠ matricule
+      const wrongEngins = engins.filter((e: any) => e.id && e.matricule && e.id !== e.matricule);
+      
+      // 2. Mécaniciens avec ID technique ≠ matricule
+      const wrongMecs = mecaniciens.filter((m: any) => m.uid && m.matricule && m.uid !== m.matricule);
+      
+      // 3. Sites invalides
+      const invalidSites: any[] = [];
+      const checkSiteInvalid = (doc: any, collectionName: string) => {
+        const sId = doc.siteId !== undefined ? doc.siteId : doc.site;
+        if (sId !== undefined && sId !== null && String(sId).trim() !== "") {
+          if (!validSites.includes(String(sId).trim())) {
+            invalidSites.push({
+              collection: collectionName,
+              id: doc.id,
+              siteValue: String(sId),
+              docDesc: doc.matricule || doc.nomComplet || doc.nom || doc.description || doc.id
+            });
+          }
+        }
+      };
+      
+      // 4. Site manquant
+      const missingSites: any[] = [];
+      const checkSiteMissing = (doc: any, collectionName: string) => {
+        const sId = doc.siteId;
+        if (sId === undefined || sId === null || String(sId).trim() === "") {
+          missingSites.push({
+            collection: collectionName,
+            id: doc.id,
+            docDesc: doc.matricule || doc.nomComplet || doc.nom || doc.description || doc.id
+          });
+        }
+      };
+      
+      // Analyse des 4 collections
+      engins.forEach(e => {
+        checkSiteInvalid(e, "engins");
+        checkSiteMissing(e, "engins");
+      });
+      
+      mecaniciens.forEach(m => {
+        checkSiteInvalid(m, "mecaniciens");
+        checkSiteMissing(m, "mecaniciens");
+      });
+      
+      tasks.forEach(t => {
+        checkSiteInvalid(t, "maintenanceTasks");
+        checkSiteMissing(t, "maintenanceTasks");
+      });
+      
+      pannes.forEach(p => {
+        checkSiteInvalid(p, "pannes");
+        checkSiteMissing(p, "pannes");
+      });
+      
+      setDiagnosticResults({
+        wrongEngins,
+        wrongMecs,
+        invalidSites,
+        missingSites
+      });
+      setDiagnosticRun(true);
+      toast.success("Diagnostic de la base de données terminé !");
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Erreur durant le diagnostic : " + error.message);
+    } finally {
+      setDiagnosticLoading(false);
+    }
+  };
+
+  const handleCopySection = (title: string, list: any[], formatter: (item: any) => string) => {
+    if (list.length === 0) {
+      toast.info("La liste est vide, rien à copier.");
+      return;
+    }
+    const text = list.map(formatter).join("\n");
+    navigator.clipboard.writeText(`${title}:\n${text}`);
+    toast.success("Liste copiée avec succès !");
+  };
+
+  const renderSanteDonnees = () => {
+    const results = diagnosticResults;
+    const formatWrongEngin = (e: any) => `- N° Parc/Matricule: ${e.matricule || "N/A"}, ID Firestore: ${e.id || "N/A"}, Site: ${e.siteId || e.site || "N/A"}`;
+    const formatWrongMec = (m: any) => `- Nom: ${m.nomComplet || `${m.prenom || ""} ${m.nom || ""}`.trim() || "N/A"}, Matricule: ${m.matricule || "N/A"}, UID Firestore: ${m.uid || m.id || "N/A"}, Site: ${m.siteId || "N/A"}`;
+    const formatInvalidSite = (x: any) => `- Collection: ${x.collection}, ID: ${x.id}, Valeur site trouvée: "${x.siteValue}"`;
+    const formatMissingSite = (x: any) => `- Collection: ${x.collection}, ID: ${x.id}, Description/Matricule: ${x.docDesc || "N/A"}`;
+
+    return (
+      <div className="space-y-6">
+        <Card className="bg-white border-2 border-amber-500/20 shadow-md rounded-xl overflow-hidden animate-fade-in" id="card-sante-donnees">
+          <CardHeader className="bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent border-b border-slate-100 p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Stethoscope className="h-5 w-5 text-amber-500" />
+                  Diagnostic de Santé des Données Firestore
+                </CardTitle>
+                <p className="text-xs text-slate-500 mt-1">
+                  Examine la cohérence structurelle des identifiants (Matricule vs Firestore ID) et valide les codes sites.
+                </p>
+              </div>
+              <Button
+                onClick={handleRunDiagnostic}
+                disabled={diagnosticLoading}
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition-all whitespace-nowrap"
+                id="btn-run-diagnostic"
+              >
+                {diagnosticLoading ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950 border-t-transparent" />
+                    Diagnostic en cours...
+                  </>
+                ) : (
+                  <>
+                    <Activity className="h-4 w-4 animate-pulse" />
+                    Lancer le diagnostic
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            {!diagnosticRun ? (
+              <div className="py-16 text-center text-slate-500 flex flex-col items-center justify-center gap-3">
+                <ShieldAlert className="h-12 w-12 text-amber-500/40" />
+                <p className="text-sm font-semibold text-slate-700">Aucun diagnostic n'a encore été lancé.</p>
+                <p className="text-xs text-slate-400 max-w-md">
+                  Cliquez sur le bouton "Lancer le diagnostic" pour charger et analyser les collections d'engins, mécaniciens, tâches et pannes.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-8">
+                
+                {/* 1. Engins avec ID ≠ matricule */}
+                <Card className="border border-slate-200 rounded-xl overflow-hidden" id="section-wrong-engins">
+                  <div className="bg-slate-50 p-4 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900">1. Engins avec ID technique ≠ matricule</span>
+                      {results && results.wrongEngins.length > 0 ? (
+                        <Badge className="bg-red-100 text-red-800 border-red-200">
+                          {results.wrongEngins.length} anomalie{results.wrongEngins.length > 1 ? 's' : ''}
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                          Aucune anomalie
+                        </Badge>
+                      )}
+                    </div>
+                    {results && results.wrongEngins.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCopySection("Engins avec ID ≠ matricule", results.wrongEngins, formatWrongEngin)}
+                        className="h-8 text-xs flex items-center gap-1.5"
+                        id="btn-copy-wrong-engins"
+                      >
+                        <Copy className="h-3 w-3" /> Copier la liste
+                      </Button>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <p className="text-xs text-slate-500 mb-3">
+                      Ces engins ont été créés par un ancien formulaire avec un système d'ID différent (l'ID du document Firestore ne correspond pas au matricule saisi).
+                    </p>
+                    {results && results.wrongEngins.length > 0 ? (
+                      <div className="overflow-x-auto border border-slate-100 rounded-lg">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-slate-50 text-slate-600 uppercase font-mono font-bold">
+                            <tr>
+                              <th className="py-2.5 px-3">Matricule</th>
+                              <th className="py-2.5 px-3">ID Firestore Réel</th>
+                              <th className="py-2.5 px-3">Site</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 font-mono text-slate-700">
+                            {results.wrongEngins.map((e: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-slate-50/50">
+                                <td className="py-2 px-3 font-bold text-slate-950">{e.matricule || "N/A"}</td>
+                                <td className="py-2 px-3 text-red-600 font-bold">{e.id || "N/A"}</td>
+                                <td className="py-2 px-3">{e.siteId || e.site || "N/A"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-xs text-slate-400">Aucun engin concerné.</div>
+                    )}
+                  </div>
+                </Card>
+
+                {/* 2. Mécaniciens avec ID ≠ matricule */}
+                <Card className="border border-slate-200 rounded-xl overflow-hidden" id="section-wrong-mecs">
+                  <div className="bg-slate-50 p-4 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900">2. Mécaniciens avec ID technique ≠ matricule</span>
+                      {results && results.wrongMecs.length > 0 ? (
+                        <Badge className="bg-red-100 text-red-800 border-red-200">
+                          {results.wrongMecs.length} anomalie{results.wrongMecs.length > 1 ? 's' : ''}
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                          Aucune anomalie
+                        </Badge>
+                      )}
+                    </div>
+                    {results && results.wrongMecs.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCopySection("Mécaniciens avec ID ≠ matricule", results.wrongMecs, formatWrongMec)}
+                        className="h-8 text-xs flex items-center gap-1.5"
+                        id="btn-copy-wrong-mecs"
+                      >
+                        <Copy className="h-3 w-3" /> Copier la liste
+                      </Button>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <p className="text-xs text-slate-500 mb-3">
+                      Ces mécaniciens possèdent un UID différent de leur matricule dans la base, lié aux anciens systèmes d'ID générés aléatoirement.
+                    </p>
+                    {results && results.wrongMecs.length > 0 ? (
+                      <div className="overflow-x-auto border border-slate-100 rounded-lg">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-slate-50 text-slate-600 uppercase font-mono font-bold">
+                            <tr>
+                              <th className="py-2.5 px-3">Nom</th>
+                              <th className="py-2.5 px-3">Matricule</th>
+                              <th className="py-2.5 px-3">UID Firestore</th>
+                              <th className="py-2.5 px-3">Site</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 font-mono text-slate-700">
+                            {results.wrongMecs.map((m: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-slate-50/50">
+                                <td className="py-2 px-3 font-sans font-bold text-slate-900">
+                                  {m.nomComplet || `${m.prenom || ""} ${m.nom || ""}`.trim() || "N/A"}
+                                </td>
+                                <td className="py-2 px-3 font-bold">{m.matricule || "N/A"}</td>
+                                <td className="py-2 px-3 text-red-600 font-bold">{m.uid || m.id || "N/A"}</td>
+                                <td className="py-2 px-3">{m.siteId || "N/A"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-xs text-slate-400">Aucun mécanicien concerné.</div>
+                    )}
+                  </div>
+                </Card>
+
+                {/* 3. Sites invalides */}
+                <Card className="border border-slate-200 rounded-xl overflow-hidden" id="section-invalid-sites">
+                  <div className="bg-slate-50 p-4 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900">3. Documents avec Sites Invalides</span>
+                      {results && results.invalidSites.length > 0 ? (
+                        <Badge className="bg-red-100 text-red-800 border-red-200">
+                          {results.invalidSites.length} anomalie{results.invalidSites.length > 1 ? 's' : ''}
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                          Aucune anomalie
+                        </Badge>
+                      )}
+                    </div>
+                    {results && results.invalidSites.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCopySection("Documents avec Sites Invalides", results.invalidSites, formatInvalidSite)}
+                        className="h-8 text-xs flex items-center gap-1.5"
+                        id="btn-copy-invalid-sites"
+                      >
+                        <Copy className="h-3 w-3" /> Copier la liste
+                      </Button>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <p className="text-xs text-slate-500 mb-3">
+                      Documents (engins, mécaniciens, tâches ou pannes) dont le champ de site ne correspond à aucun des 5 sites standards autorisés : SMI, OUMEJRANE, KOUDIA, OUANSIMI, BOU-AZZER.
+                    </p>
+                    {results && results.invalidSites.length > 0 ? (
+                      <div className="overflow-x-auto border border-slate-100 rounded-lg">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-slate-50 text-slate-600 uppercase font-mono font-bold">
+                            <tr>
+                              <th className="py-2.5 px-3">Collection</th>
+                              <th className="py-2.5 px-3">ID Document</th>
+                              <th className="py-2.5 px-3">Valeur Site Trouvée</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 font-mono text-slate-700">
+                            {results.invalidSites.map((x: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-slate-50/50">
+                                <td className="py-2 px-3 font-sans font-bold text-slate-900 uppercase tracking-wider text-[10px]">{x.collection}</td>
+                                <td className="py-2 px-3 text-slate-500">{x.id}</td>
+                                <td className="py-2 px-3 text-red-600 font-bold">"{x.siteValue}"</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-xs text-slate-400">Aucun document avec site invalide.</div>
+                    )}
+                  </div>
+                </Card>
+
+                {/* 4. Site manquant */}
+                <Card className="border border-slate-200 rounded-xl overflow-hidden" id="section-missing-sites">
+                  <div className="bg-slate-50 p-4 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900">4. Documents avec Site Manquant</span>
+                      {results && results.missingSites.length > 0 ? (
+                        <Badge className="bg-red-100 text-red-800 border-red-200">
+                          {results.missingSites.length} anomalie{results.missingSites.length > 1 ? 's' : ''}
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                          Aucune anomalie
+                        </Badge>
+                      )}
+                    </div>
+                    {results && results.missingSites.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCopySection("Documents avec Site Manquant", results.missingSites, formatMissingSite)}
+                        className="h-8 text-xs flex items-center gap-1.5"
+                        id="btn-copy-missing-sites"
+                      >
+                        <Copy className="h-3 w-3" /> Copier la liste
+                      </Button>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <p className="text-xs text-slate-500 mb-3">
+                      Documents n'ayant pas de champ siteId défini, vide ou null dans Firestore.
+                    </p>
+                    {results && results.missingSites.length > 0 ? (
+                      <div className="overflow-x-auto border border-slate-100 rounded-lg">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-slate-50 text-slate-600 uppercase font-mono font-bold">
+                            <tr>
+                              <th className="py-2.5 px-3">Collection</th>
+                              <th className="py-2.5 px-3">ID Document</th>
+                              <th className="py-2.5 px-3">Description / Label</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 font-mono text-slate-700">
+                            {results.missingSites.map((x: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-slate-50/50">
+                                <td className="py-2 px-3 font-sans font-bold text-slate-900 uppercase tracking-wider text-[10px]">{x.collection}</td>
+                                <td className="py-2 px-3 text-slate-500">{x.id}</td>
+                                <td className="py-2 px-3 text-red-500 italic font-sans">"{x.docDesc || "Aucun label disponible"}"</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-xs text-slate-400">Aucun document avec site manquant.</div>
+                    )}
+                  </div>
+                </Card>
+
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 bg-white min-h-screen text-slate-800 font-sans p-6 rounded-2xl border border-slate-200 shadow-xl">
       {/* RECONSTRUIT : Banner avec style conservé, changement de titre exact */}
@@ -1007,12 +1420,26 @@ export function Admin() {
             </span>
           )}
         </button>
+        {user?.role === "ADMIN" && (
+          <button
+            onClick={() => setActiveTab("sante_donnees")}
+            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-xs transition-all ${
+              activeTab === "sante_donnees"
+                ? "bg-amber-500 text-slate-950 shadow-md"
+                : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+            }`}
+          >
+            <Stethoscope className="h-4.5 w-4.5" /> SANTÉ DES DONNÉES
+          </button>
+        )}
       </div>
 
       {activeTab === "mecaniciens" ? (
         <AdminMecaniciens />
       ) : activeTab === "comptes" ? (
         renderUserApprovals()
+      ) : activeTab === "sante_donnees" ? (
+        renderSanteDonnees()
       ) : (
         <>
           {/* RECONSTRUIT : Affichage des statistiques selon l'onglet actif */}

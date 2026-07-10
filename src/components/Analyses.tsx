@@ -51,7 +51,13 @@ export default function Analyses() {
   const engins = useMemo(() => filterBySite(rawEngins), [rawEngins, activeSite, user]);
   const tasks = useMemo(() => filterBySite(rawTasks), [rawTasks, activeSite, user]);
   const pannes = useMemo(() => filterBySite(rawPannes), [rawPannes, activeSite, user]);
-  const mecaniciens = useMemo(() => filterBySite(rawMecaniciens), [rawMecaniciens, activeSite, user]);
+  const mecaniciens = useMemo(() => {
+    const baseMecas = filterBySite(rawMecaniciens);
+    return baseMecas.map((m: any) => ({
+      ...m,
+      nomComplet: m.nomComplet || `${m.prenom || ""} ${m.nom || ""}`.trim() || m.id || ""
+    }));
+  }, [rawMecaniciens, activeSite, user]);
   const interventions = useMemo(() => filterBySite(rawInterventions), [rawInterventions, activeSite, user]);
 
   const isLoading = enginsLoading || tasksLoading || pannesLoading || mecaniciensLoading || interventionsLoading || !rawEngins || !rawTasks || !rawPannes || !rawMecaniciens || !rawInterventions;
@@ -202,7 +208,7 @@ export default function Analyses() {
     });
 
     // Alert 3: Mechanic inactivity safety check (Meca assigned > 3 daily tasks but completed 0)
-    const mecasActifs = mecaniciens.filter(m => m.statut === 'Actif');
+    const mecasActifs = mecaniciens.filter(m => m.statut === 'Actif' || (m.statut === undefined && m.active !== false));
     mecasActifs.forEach(m => {
       const tasksMecaAujourdhui = tasks.filter(t => t.mecanicienId === m.id && t.datePlanifiee === todayStr);
       const faites = tasksMecaAujourdhui.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
@@ -254,7 +260,7 @@ export default function Analyses() {
     const mois = new Date().toISOString().substring(0, 7);
 
     return mecaniciens
-      .filter(m => m.statut === 'Actif')
+      .filter(m => m.statut === 'Actif' || (m.statut === undefined && m.active !== false))
       .map(m => {
         const tasksMeca = tasks.filter(t =>
           t.mecanicienId === m.id &&
