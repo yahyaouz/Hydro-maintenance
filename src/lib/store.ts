@@ -51,6 +51,7 @@ interface AuthState {
   density: 'compact' | 'standard' | 'large';
   textDensity: 'LARGE' | 'COMPACT';
   isRestrictedModalOpen: boolean;
+  pendingRcaPrefill: { enginId: string; categorie: string; pannesIds: string[] } | null;
   setUser: (user: User | null) => void;
   setActiveSite: (siteId: SiteID) => void;
   setTheme: (theme: 'light' | 'dark') => void;
@@ -59,6 +60,8 @@ interface AuthState {
   openRestrictedModal: () => void;
   closeRestrictedModal: () => void;
   logout: () => void;
+  setPendingRcaPrefill: (prefill: { enginId: string; categorie: string; pannesIds: string[] } | null) => void;
+  clearPendingRcaPrefill: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -69,6 +72,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   density: initialDensity,
   textDensity: initialTextDensity,
   isRestrictedModalOpen: false,
+  pendingRcaPrefill: null,
   setUser: (user) => {
     if (user) {
       try {
@@ -122,4 +126,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem('sg_current_user');
     set({ user: null, isAuthenticated: false, activeSite: 'TOUS', isRestrictedModalOpen: false });
   },
+  setPendingRcaPrefill: (prefill) => set({ pendingRcaPrefill: prefill }),
+  clearPendingRcaPrefill: () => set({ pendingRcaPrefill: null }),
 }));

@@ -20,7 +20,9 @@ import {
   CheckSquare,
   DollarSign,
   UserCheck,
-  BarChart2
+  BarChart2,
+  RefreshCw,
+  X
 } from "lucide-react";
 import { 
   Card, 
@@ -44,44 +46,16 @@ interface CentreCommandementProps {
 }
 
 export default function CentreCommandement({ setActiveTab }: CentreCommandementProps) {
-  const { user, theme } = useAuthStore();
+  const { user, theme, setPendingRcaPrefill } = useAuthStore();
   const isDark = theme === "dark";
 
   // State for site expansion
   const [expandedSite, setExpandedSite] = React.useState<string | null>(null);
 
-  // Firestore real collections subscriptions
-  const { data: enginsLive, loading: enginsLoading } = useCollection<any>('engins');
-  const { data: workOrdersLive, loading: tasksLoading } = useCollection<any>('maintenanceTasks');
-  const { data: pannesLive, loading: pannesLoading } = useCollection<any>('pannes');
-  const { data: interventions, loading: interventionsLoading } = useCollection<any>('interventions');
-  
-  // Use useMecaniciens for pre-computed rich stats
-  const { mecaniciens, loading: mecsLoading } = useMecaniciens();
-
-  const isLoading = enginsLoading || tasksLoading || pannesLoading || interventionsLoading || mecsLoading;
-
-  // Normalizer status
-  const getNormalizedStatus = React.useCallback((e: any) => {
-    if (e.statut !== undefined || e.dispo !== undefined) {
-      if (e.dispo === 0 || e.statut === "panne") return "EN_PANNE";
-      if (e.statut === "maintenance" || (typeof e.dispo === "number" && e.dispo > 0 && e.dispo < 100)) return "EN_MAINTENANCE";
-      return "DISPONIBLE";
-    }
-    if (e.status) {
-      const s = e.status.toUpperCase();
-      if (s === 'DISPONIBLE' || s === 'OPÉRATIONNEL' || s === 'OPERATIONNEL') return 'DISPONIBLE';
-      if (s === 'EN_MAINTENANCE' || s === 'MAINTENANCE') return 'EN_MAINTENANCE';
-      if (s === 'EN_PANNE' || s === 'HORS SERVICE' || s === 'HORS_SERVICE' || s === 'ARRÊT' || s === 'ARRET') return 'EN_PANNE';
-      return s;
-    }
-    if (e.etat) {
-      if (e.etat === "Opérationnel") return "DISPONIBLE";
-      if (e.etat === "En maintenance") return "EN_MAINTENANCE";
-      if (e.etat === "Hors service" || e.etat === "En panne") return "EN_PANNE";
-    }
-    return "DISPONIBLE";
-  }, []);
+  // States for drill-down modals
+  const [selectedAnomalySite, setSelectedAnomalySite] = React.useState<string | null>(null);
+  const [selectedPieceName, setSelectedPieceName] = React.useState<string | null>(null);
+  const [selectedModelName, setSelectedModelName] = React.useState<string | null>(null);
 
   const getPanneDateString = (p: any) => {
     if (p.createdAt) {
@@ -113,6 +87,141 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       return String(t.date).substring(0, 7);
     }
     return "";
+  }, []);
+
+  // Firestore real collections subscriptions
+  const { data: enginsLive, loading: enginsLoading } = useCollection<any>('engins');
+  const { data: workOrdersLive, loading: tasksLoading } = useCollection<any>('maintenanceTasks');
+  const { data: pannesLive, loading: pannesLoading } = useCollection<any>('pannes');
+  const { data: interventions, loading: interventionsLoading } = useCollection<any>('interventions');
+  
+  // Use useMecaniciens for pre-computed rich stats
+  const { mecaniciens, loading: mecsLoading } = useMecaniciens();
+
+  const isLoading = enginsLoading || tasksLoading || pannesLoading || interventionsLoading || mecsLoading;
+
+  const [lastRefreshTime, setLastRefreshTime] = React.useState<Date>(() => new Date());
+
+  const prevIsLoadingRef = React.useRef(isLoading);
+  React.useEffect(() => {
+    if (prevIsLoadingRef.current && !isLoading) {
+      setLastRefreshTime(new Date());
+    }
+    prevIsLoadingRef.current = isLoading;
+  }, [isLoading]);
+
+  const currentMonthStr = React.useMemo(() => new Date().toISOString().substring(0, 7), []);
+
+  const sitePannesForMonth = React.useMemo(() => {
+    if (!selectedAnomalySite || !pannesLive) return [];
+    return pannesLive.filter(p => 
+      !p.deleted && 
+      (p.siteId === selectedAnomalySite || p.site === selectedAnomalySite) && 
+      getPanneMonth(p) === currentMonthStr
+    );
+  }, [selectedAnomalySite, pannesLive, getPanneMonth, currentMonthStr]);
+
+  const groupingSentence = React.useMemo(() => {
+    if (sitePannesForMonth.length < 3) return null;
+    const total = sitePannesForMonth.length;
+    const counts: Record<string, { count: number; cat: string; engType: string }> = {};
+    
+    sitePannesForMonth.forEach(p => {
+      const cat = p.categorie || "Inconnue";
+      const engin = (enginsLive || []).find(e => e.id === p.enginId);
+      const engType = (engin?.type || engin?.modele || "Inconnu").trim();
+      const key = `${cat}::${engType}`;
+      if (!counts[key]) {
+        counts[key] = { count: 0, cat, engType };
+      }
+      counts[key].count++;
+    });
+
+    const sorted = Object.values(counts).sort((a, b) => b.count - a.count);
+    if (sorted.length === 0) return null;
+
+    const first = sorted[0];
+    if (first.count < 2 || first.count / total < 0.3) {
+      return null;
+    }
+
+    const second = sorted[1];
+    if (second && second.count >= 2 && (second.count / total >= 0.25)) {
+      return `${first.count} des ${total} pannes sont de catégorie "${first.cat}" sur des engins de type "${first.engType}", et ${second.count} de catégorie "${second.cat}" sur des engins de type "${second.engType}".`;
+    }
+
+    return `${first.count} des ${total} pannes sont de catégorie "${first.cat}" sur des engins de type "${first.engType}".`;
+  }, [sitePannesForMonth, enginsLive]);
+
+  const interventionsForPiece = React.useMemo(() => {
+    if (!selectedPieceName || !interventions) return [];
+    return interventions.filter(i => {
+      if (i.deleted) return false;
+      const pieces = i.piecesUtilisees || [];
+      const matchesPiece = pieces.some((p: string) => p && p.trim().toLowerCase() === selectedPieceName.toLowerCase());
+      return matchesPiece && getTaskMonth(i) === currentMonthStr;
+    });
+  }, [selectedPieceName, interventions, getTaskMonth, currentMonthStr]);
+
+  const enginsOfSelectedModel = React.useMemo(() => {
+    if (!selectedModelName || !enginsLive || !pannesLive) return [];
+    const limit90 = Date.now() - (90 * 24 * 60 * 60 * 1000);
+    const closedPannes90 = pannesLive.filter(p => 
+      p.statut === 'CLOS' && 
+      !p.deleted &&
+      p.dateDeclaration && 
+      new Date(p.dateDeclaration).getTime() >= limit90
+    );
+
+    const modelEngins = enginsLive.filter(e => 
+      !e.deleted && 
+      (e.type || e.modele || 'Inconnu').trim() === selectedModelName
+    );
+
+    return modelEngins.map(e => {
+      const pannesCount = closedPannes90.filter(p => p.enginId === e.id).length;
+      return {
+        id: e.id,
+        matricule: e.matricule || e.nom || "Inconnu",
+        site: e.siteId || e.site || "Inconnu",
+        pannesCount
+      };
+    }).sort((a, b) => b.pannesCount - a.pannesCount);
+  }, [selectedModelName, enginsLive, pannesLive]);
+
+  const handleInvestigateRCA = React.useCallback((p: any) => {
+    if (setPendingRcaPrefill) {
+      setPendingRcaPrefill({
+        enginId: p.enginId || "",
+        categorie: p.categorie || "Panne",
+        pannesIds: [p.id]
+      });
+      if (setActiveTab) {
+        setActiveTab("rca");
+      }
+    }
+  }, [setPendingRcaPrefill, setActiveTab]);
+
+  // Normalizer status
+  const getNormalizedStatus = React.useCallback((e: any) => {
+    if (e.statut !== undefined || e.dispo !== undefined) {
+      if (e.dispo === 0 || e.statut === "panne") return "EN_PANNE";
+      if (e.statut === "maintenance" || (typeof e.dispo === "number" && e.dispo > 0 && e.dispo < 100)) return "EN_MAINTENANCE";
+      return "DISPONIBLE";
+    }
+    if (e.status) {
+      const s = e.status.toUpperCase();
+      if (s === 'DISPONIBLE' || s === 'OPÉRATIONNEL' || s === 'OPERATIONNEL') return 'DISPONIBLE';
+      if (s === 'EN_MAINTENANCE' || s === 'MAINTENANCE') return 'EN_MAINTENANCE';
+      if (s === 'EN_PANNE' || s === 'HORS SERVICE' || s === 'HORS_SERVICE' || s === 'ARRÊT' || s === 'ARRET') return 'EN_PANNE';
+      return s;
+    }
+    if (e.etat) {
+      if (e.etat === "Opérationnel") return "DISPONIBLE";
+      if (e.etat === "En maintenance") return "EN_MAINTENANCE";
+      if (e.etat === "Hors service" || e.etat === "En panne") return "EN_PANNE";
+    }
+    return "DISPONIBLE";
   }, []);
 
   const getPanneCloseMonth = React.useCallback((p: any) => {
@@ -433,33 +542,57 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
 
   // MTTR calculation per site
   const calculateSiteMttr = React.useCallback((site: string) => {
-    const siteWOs = workOrdersLive 
-      ? workOrdersLive.filter(b => (b.siteId === site || b.site === site) && b.deleted !== true && (b.statut === 'FAIT' || b.statut === 'VALIDE'))
-      : [];
-    if (siteWOs.length === 0) return null;
+    if (!pannesLive) return null;
     
-    let totalDuration = 0;
-    let count = 0;
-    
-    const getMs = (val: any) => {
-      if (!val) return null;
-      if (typeof val.toMillis === 'function') return val.toMillis();
-      if (typeof val.seconds === 'number') return val.seconds * 1000;
-      const d = new Date(val).getTime();
-      return isNaN(d) ? null : d;
+    const sitePannes = pannesLive.filter(p => 
+      (p.siteId === site || p.site === site) && 
+      p.deleted !== true && 
+      p.statut === 'CLOS' && 
+      p.datePriseEnCharge && 
+      p.dateResolution
+    );
+
+    if (sitePannes.length === 0) return null;
+
+    const parseToDate = (field: any): Date | null => {
+      if (!field) return null;
+      if (typeof field.toMillis === 'function') {
+        return new Date(field.toMillis());
+      }
+      if (field.seconds) {
+        return new Date(field.seconds * 1000);
+      }
+      const d = new Date(field);
+      return isNaN(d.getTime()) ? null : d;
     };
 
-    siteWOs.forEach(wo => {
-      const start = getMs(wo.createdAt);
-      const end = getMs(wo.updatedAt);
-      if (start && end && end > start) {
-        totalDuration += (end - start) / (1000 * 60 * 60);
+    let totalWaitingMs = 0;
+    let totalRepairMs = 0;
+    let count = 0;
+
+    sitePannes.forEach(p => {
+      const dateDecl = parseToDate(p.dateDeclaration);
+      const datePrise = parseToDate(p.datePriseEnCharge);
+      const dateRes = parseToDate(p.dateResolution);
+
+      if (dateDecl && datePrise && dateRes) {
+        const waitingMs = Math.max(0, datePrise.getTime() - dateDecl.getTime());
+        const repairMs = Math.max(0, dateRes.getTime() - datePrise.getTime());
+
+        totalWaitingMs += waitingMs;
+        totalRepairMs += repairMs;
         count++;
       }
     });
-    
-    return count > 0 ? parseFloat((totalDuration / count).toFixed(1)) : null;
-  }, [workOrdersLive]);
+
+    if (count === 0) return null;
+
+    const avgWaitingHours = parseFloat((totalWaitingMs / (1000 * 60 * 60) / count).toFixed(1));
+    const avgRepairHours = parseFloat((totalRepairMs / (1000 * 60 * 60) / count).toFixed(1));
+    const totalMttrHours = parseFloat((avgWaitingHours + avgRepairHours).toFixed(1));
+
+    return totalMttrHours;
+  }, [pannesLive]);
 
   // Inter-sites side-by-side comparison matrix data
   const compareInterSites = React.useMemo(() => {
@@ -669,9 +802,9 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       });
     });
 
-    if (workOrdersLive) {
-      workOrdersLive.filter(t => !t.deleted && getTaskMonth(t) === currentMonthStr).forEach(t => {
-        const pList = t.piecesUtilisees || t.pieces || [];
+    if (interventions) {
+      interventions.filter(i => !i.deleted && i.typeIntervention === "CORRECTIF" && getTaskMonth(i) === currentMonthStr).forEach(i => {
+        const pList = i.piecesUtilisees || [];
         pList.forEach((pName: string) => {
           if (!pName) return;
           const trimmed = pName.trim();
@@ -692,7 +825,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     return Object.values(counts)
       .sort((a, b) => b.count - a.count)
       .slice(0, 3);
-  }, [pannesLive, workOrdersLive, getPanneMonth, getTaskMonth]);
+  }, [pannesLive, interventions, getPanneMonth, getTaskMonth]);
 
   // Positive mecanicien recognition (factual leaderboard)
   const felicitationsMecaniciens = React.useMemo(() => {
@@ -868,17 +1001,43 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       </div>
 
       {/* SYNTHESIS PHRASE ALERT BANNER */}
-      <div className="relative overflow-hidden bg-slate-900 text-white rounded-2xl p-4 md:p-5 border-2 border-amber-500/30 flex items-center gap-4 shadow-lg">
-        <div className="h-10 w-10 shrink-0 bg-amber-500/10 border border-amber-500/25 rounded-xl flex items-center justify-center text-amber-400">
-          <Activity className="h-5 w-5 animate-pulse" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-widest">
-            SYNTHÈSE DE LA SITUATION
+      <div className="relative overflow-hidden bg-slate-900 text-white rounded-2xl p-4 md:p-5 border-2 border-amber-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
+        <div className="flex items-center gap-4 min-w-0 flex-1">
+          <div className="h-10 w-10 shrink-0 bg-amber-500/10 border border-amber-500/25 rounded-xl flex items-center justify-center text-amber-400">
+            <Activity className="h-5 w-5 animate-pulse" />
           </div>
-          <p className="text-sm font-black font-mono tracking-tight text-white mt-0.5 uppercase leading-relaxed">
-            {situationBanner}
-          </p>
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-widest">
+              SYNTHÈSE DE LA SITUATION
+            </div>
+            <p className="text-sm font-black font-mono tracking-tight text-white mt-0.5 uppercase leading-relaxed">
+              {situationBanner}
+            </p>
+          </div>
+        </div>
+
+        {/* Refresh indicator and action button */}
+        <div className="shrink-0 flex flex-col items-start md:items-end gap-1 self-stretch md:self-auto border-t md:border-t-0 border-slate-800 pt-3 md:pt-0">
+          <div className="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/50 rounded-xl px-3 py-1.5 transition-colors">
+            <Clock className="h-3.5 w-3.5 text-amber-400 animate-pulse shrink-0" />
+            <span className="text-[10px] font-mono font-bold text-slate-300 tracking-tight">
+              Données actualisées à {(() => {
+                const hrs = String(lastRefreshTime.getHours()).padStart(2, "0");
+                const mins = String(lastRefreshTime.getMinutes()).padStart(2, "0");
+                return `${hrs}:${mins}`;
+              })()}
+            </span>
+            <button
+              onClick={() => setLastRefreshTime(new Date())}
+              className="ml-1 p-1 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-amber-400 hover:text-white transition-all cursor-pointer"
+              title="Confirmer la fraîcheur (les données Firestore sont en temps réel)"
+            >
+              <RefreshCw className="h-3 w-3" />
+            </button>
+          </div>
+          <span className="text-[8px] font-mono text-slate-500 text-left md:text-right max-w-[240px] leading-tight">
+            Données synchronisées en temps réel via Firestore.
+          </span>
         </div>
       </div>
 
@@ -1367,7 +1526,11 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
                 <div className="space-y-3">
                   <span className="text-[9px] font-black uppercase text-red-500 tracking-wider block">Décrochages détectés ce mois-ci :</span>
                   {anomaliesDetection.list.map((anom) => (
-                    <div key={anom.site} className="p-3 bg-red-50 border border-red-150 rounded-xl space-y-1">
+                    <div 
+                      key={anom.site} 
+                      onClick={() => setSelectedAnomalySite(anom.site)}
+                      className="p-3 bg-red-50 hover:bg-red-100/70 border border-red-150 rounded-xl space-y-1 cursor-pointer transition-all hover:translate-x-0.5 active:translate-x-0"
+                    >
                       <div className="flex justify-between items-center font-black">
                         <span className="uppercase text-red-800 font-mono text-xs">{anom.site}</span>
                         <span className="text-red-700 font-mono text-xs">+{anom.variation}%</span>
@@ -1415,7 +1578,11 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
             ) : (
               <div className="space-y-3 font-mono text-xs">
                 {modelsReliability.map((item, index) => (
-                  <div key={item.model} className="flex justify-between items-center p-2.5 bg-slate-50 border border-slate-100 rounded-lg">
+                  <div 
+                    key={item.model} 
+                    onClick={() => setSelectedModelName(item.model)}
+                    className="flex justify-between items-center p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg cursor-pointer transition-all hover:translate-x-0.5 active:translate-x-0"
+                  >
                     <div className="space-y-0.5">
                       <span className="font-bold text-slate-950 uppercase">{item.model}</span>
                       <p className="text-[10px] text-slate-500 font-medium">Effectif : {item.numEngins} machine(s)</p>
@@ -1458,7 +1625,11 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
             ) : (
               <div className="space-y-3 font-mono text-xs">
                 {topPiecesStats.map((item, index) => (
-                  <div key={item.name} className="flex justify-between items-center p-2.5 bg-slate-50 border border-slate-100 rounded-lg">
+                  <div 
+                    key={item.name} 
+                    onClick={() => setSelectedPieceName(item.name)}
+                    className="flex justify-between items-center p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-lg cursor-pointer transition-all hover:translate-x-0.5 active:translate-x-0"
+                  >
                     <div className="flex items-center gap-2">
                       <span className="flex items-center justify-center h-5 w-5 bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[10px] rounded">
                         #{index + 1}
@@ -1560,7 +1731,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
                           <span className="font-bold text-slate-950 uppercase block">
                             {mecanicien.prenom} {mecanicien.nom || mecanicien.nomComplet}
                           </span>
-                          <span className="text-[9px] text-slate-400 uppercase">
+                          <span className="text-[9px] text-slate-400 uppercase block">
                             Matricule : {mecanicien.matricule} — {mecanicien.siteId || "Site Inconnu"}
                           </span>
                         </div>
@@ -1581,6 +1752,250 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
           </div>
         </CardContent>
       </Card>
+
+      {/* MODALS POUR DRILL-THROUGH */}
+      <AnimatePresence>
+        {/* Modal 1: Anomalies par site */}
+        {selectedAnomalySite && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+            <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+              <div className="flex justify-between items-center px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wider font-mono">
+                    Anomalies & Pannes - Site : {selectedAnomalySite}
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setSelectedAnomalySite(null)} 
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto space-y-4">
+                {groupingSentence && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-mono font-bold leading-relaxed flex items-start gap-2.5">
+                    <Sparkles className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                    <span>{groupingSentence}</span>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                    Pannes individuelles du mois en cours
+                  </span>
+                  {sitePannesForMonth.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 text-xs font-mono">
+                      Aucune panne enregistrée ce mois-ci sur ce site.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                      {sitePannesForMonth.map((p) => {
+                        const eng = (enginsLive || []).find(e => e.id === p.enginId);
+                        const engName = eng ? `${eng.matricule || eng.nom} (${(eng.modele || eng.type || "").toUpperCase()})` : p.enginId || "Engin Inconnu";
+                        const gravityColor = p.gravite === "CRITIQUE" ? "bg-red-100 text-red-800 border-red-200" :
+                                             p.gravite === "MOYENNE" ? "bg-amber-100 text-amber-800 border-amber-200" :
+                                             "bg-slate-100 text-slate-800 border-slate-200";
+
+                        return (
+                          <div key={p.id} className="p-4 bg-white flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs font-mono">
+                            <div className="space-y-1.5 flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-slate-900 text-[11px] uppercase tracking-tight bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                  {engName}
+                                </span>
+                                <span className={`text-[10px] px-2 py-0.5 rounded border font-bold ${gravityColor}`}>
+                                  {p.gravite || "GRAVITÉ INCONNUE"}
+                                </span>
+                                <span className="text-slate-400 text-[10px]">
+                                  {p.dateDeclaration ? new Date(p.dateDeclaration).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' }) : "Date inconnue"}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-700 font-medium">
+                                <strong className="text-slate-900">[{p.categorie || "Panne"}]</strong> {p.description || p.resume || "Pas de description."}
+                              </p>
+                            </div>
+                            <div className="shrink-0 flex items-center">
+                              <button
+                                onClick={() => {
+                                  handleInvestigateRCA(p);
+                                  setSelectedAnomalySite(null);
+                                }}
+                                className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-400 hover:text-white rounded-lg font-bold text-[10.5px] transition-all cursor-pointer"
+                              >
+                                <Sparkles className="h-3 w-3" />
+                                Investiguer (RCA)
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button
+                  onClick={() => setSelectedAnomalySite(null)}
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal 2: Top Pièces */}
+        {selectedPieceName && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+            <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+              <div className="flex justify-between items-center px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <div className="flex items-center gap-2">
+                  <Wrench className="h-4 w-4 text-amber-500" />
+                  <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wider font-mono">
+                    Traçabilité Pièce : {selectedPieceName}
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setSelectedPieceName(null)} 
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto space-y-4">
+                <div className="space-y-3">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                    Interventions correctives ayant sollicité cette pièce ce mois-ci
+                  </span>
+                  {interventionsForPiece.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 text-xs font-mono">
+                      Aucune intervention enregistrée ce mois-ci mentionnant cette pièce.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                      {interventionsForPiece.map((i) => {
+                        const eng = (enginsLive || []).find(e => e.id === i.enginId);
+                        const engName = eng ? `${eng.matricule || eng.nom} (${(eng.modele || eng.type || "").toUpperCase()})` : i.enginId || "Engin Inconnu";
+                        
+                        return (
+                          <div key={i.id} className="p-4 bg-white space-y-1.5 text-xs font-mono">
+                            <div className="flex justify-between items-center flex-wrap gap-2">
+                              <span className="font-bold text-slate-900 text-[11px] uppercase tracking-tight bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                {engName}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="uppercase text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border">
+                                  Site: {i.siteId || i.site || "TOUS"}
+                                </span>
+                                <span className="text-slate-400 text-[10px]">
+                                  {i.date ? new Date(i.date).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' }) : "Date inconnue"}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-[11px] text-slate-700 font-medium">
+                              <strong className="text-slate-900">[{i.nom || i.typeIntervention || "Correction"}]</strong> {i.description || i.rapport || "Aucun rapport saisi."}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button
+                  onClick={() => setSelectedPieceName(null)}
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal 3: Fiabilité Modèle */}
+        {selectedModelName && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+              <div className="flex justify-between items-center px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4 text-amber-500" />
+                  <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wider font-mono">
+                    Fiabilité par Machine : Modèle {selectedModelName}
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setSelectedModelName(null)} 
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto space-y-4">
+                <div className="space-y-3">
+                  <div className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                    Visualisation individuelle des engins du modèle pour détecter si le taux de panne moyen est influencé par une machine spécifique particulièrement problématique (MTBF bas) ou s'il s'agit d'une défaillance répartie uniformément.
+                  </div>
+                  
+                  {enginsOfSelectedModel.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 text-xs font-mono">
+                      Aucun engin répertorié pour ce modèle.
+                    </div>
+                  ) : (
+                    <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 divide-y divide-slate-150">
+                      {enginsOfSelectedModel.map((item) => {
+                        const isProblematic = item.pannesCount >= 3;
+                        return (
+                          <div key={item.id} className="p-3.5 bg-white flex items-center justify-between gap-4 font-mono text-xs">
+                            <div className="space-y-1">
+                              <span className="font-black text-slate-900 text-xs uppercase bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                {item.matricule}
+                              </span>
+                              <span className="text-[10px] text-slate-400 block uppercase">
+                                Site : {item.site}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-bold ${
+                                isProblematic 
+                                  ? "bg-red-50 text-red-700 border-red-200" 
+                                  : item.pannesCount > 0 
+                                  ? "bg-amber-50 text-amber-700 border-amber-200" 
+                                  : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              }`}>
+                                {item.pannesCount} pannes {isProblematic ? "⚠️ (Anomalie cible)" : ""}
+                              </span>
+                              <p className="text-[9px] text-slate-400 uppercase mt-0.5">Clôturées (90j)</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button
+                  onClick={() => setSelectedModelName(null)}
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

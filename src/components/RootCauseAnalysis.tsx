@@ -32,7 +32,7 @@ import { RootCauseAnalysis as RCAType } from "@/components/types_gmao";
 import { toast } from "sonner";
 
 export function RootCauseAnalysis() {
-  const { user, activeSite } = useAuthStore();
+  const { user, activeSite, pendingRcaPrefill, clearPendingRcaPrefill } = useAuthStore();
   const { rcas, loading, saveRCA, deleteRCA } = useRCA();
 
   // Load existing workorders & engines to link
@@ -53,6 +53,30 @@ export function RootCauseAnalysis() {
   const [fiveWhys, setFiveWhys] = React.useState<string[]>(["", "", "", "", ""]);
   const [rootCause, setRootCause] = React.useState("");
   const [preventiveActionsInput, setPreventiveActionsInput] = React.useState("");
+
+  // Handle pending prefill from command center
+  React.useEffect(() => {
+    if (pendingRcaPrefill) {
+      const matchingEngin = (engins || []).find(e => e.id === pendingRcaPrefill.enginId);
+      const resolvedMatricule = matchingEngin?.matricule || matchingEngin?.nom || pendingRcaPrefill.enginId;
+      setMachineCode(resolvedMatricule);
+      setTitle(`Analyse RCA - Défaillance ${resolvedMatricule} (${pendingRcaPrefill.categorie || "Panne"})`);
+      
+      // Pre-fill site ID if engine has it
+      if (matchingEngin?.siteId) {
+        setFormSiteId(matchingEngin.siteId);
+      } else if (matchingEngin?.site) {
+        setFormSiteId(matchingEngin.site);
+      } else if (activeSite && activeSite !== "TOUS") {
+        setFormSiteId(activeSite);
+      }
+
+      setProblemDescription(`Investéguée suite aux anomalies détectées.\nPannes liées: ${pendingRcaPrefill.pannesIds.join(", ")}`);
+      
+      setIsCreateOpen(true);
+      clearPendingRcaPrefill();
+    }
+  }, [pendingRcaPrefill, engins, activeSite, clearPendingRcaPrefill]);
 
   const selectedRca = React.useMemo(() => {
     return rcas.find(r => r.id === selectedRcaId) || null;
