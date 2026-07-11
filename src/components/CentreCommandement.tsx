@@ -1,0 +1,1587 @@
+import * as React from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { 
+  AlertTriangle, 
+  Activity, 
+  CheckCircle2, 
+  TrendingUp, 
+  TrendingDown, 
+  Wrench, 
+  Clock, 
+  ShieldAlert, 
+  Gauge, 
+  Users, 
+  ChevronRight, 
+  ChevronDown, 
+  Sparkles, 
+  Building2, 
+  Info,
+  Sliders,
+  CheckSquare,
+  DollarSign,
+  UserCheck,
+  BarChart2
+} from "lucide-react";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { useAuthStore } from "@/lib/store";
+import { useCollection } from "@/hooks/useCollection";
+import { useMecaniciens } from "@/hooks/useMecaniciens";
+import { SiteID } from "@/types";
+
+// @ts-ignore
+import goldTexture from "@/assets/images/texture-or.webp";
+
+const SITES_LIST = ["SMI", "OUMEJRANE", "KOUDIA", "OUANSIMI", "BOU-AZZER"];
+
+interface CentreCommandementProps {
+  setActiveTab?: (tab: string) => void;
+}
+
+export default function CentreCommandement({ setActiveTab }: CentreCommandementProps) {
+  const { user, theme } = useAuthStore();
+  const isDark = theme === "dark";
+
+  // State for site expansion
+  const [expandedSite, setExpandedSite] = React.useState<string | null>(null);
+
+  // Firestore real collections subscriptions
+  const { data: enginsLive, loading: enginsLoading } = useCollection<any>('engins');
+  const { data: workOrdersLive, loading: tasksLoading } = useCollection<any>('maintenanceTasks');
+  const { data: pannesLive, loading: pannesLoading } = useCollection<any>('pannes');
+  const { data: interventions, loading: interventionsLoading } = useCollection<any>('interventions');
+  
+  // Use useMecaniciens for pre-computed rich stats
+  const { mecaniciens, loading: mecsLoading } = useMecaniciens();
+
+  const isLoading = enginsLoading || tasksLoading || pannesLoading || interventionsLoading || mecsLoading;
+
+  // Normalizer status
+  const getNormalizedStatus = React.useCallback((e: any) => {
+    if (e.statut !== undefined || e.dispo !== undefined) {
+      if (e.dispo === 0 || e.statut === "panne") return "EN_PANNE";
+      if (e.statut === "maintenance" || (typeof e.dispo === "number" && e.dispo > 0 && e.dispo < 100)) return "EN_MAINTENANCE";
+      return "DISPONIBLE";
+    }
+    if (e.status) {
+      const s = e.status.toUpperCase();
+      if (s === 'DISPONIBLE' || s === 'OPÉRATIONNEL' || s === 'OPERATIONNEL') return 'DISPONIBLE';
+      if (s === 'EN_MAINTENANCE' || s === 'MAINTENANCE') return 'EN_MAINTENANCE';
+      if (s === 'EN_PANNE' || s === 'HORS SERVICE' || s === 'HORS_SERVICE' || s === 'ARRÊT' || s === 'ARRET') return 'EN_PANNE';
+      return s;
+    }
+    if (e.etat) {
+      if (e.etat === "Opérationnel") return "DISPONIBLE";
+      if (e.etat === "En maintenance") return "EN_MAINTENANCE";
+      if (e.etat === "Hors service" || e.etat === "En panne") return "EN_PANNE";
+    }
+    return "DISPONIBLE";
+  }, []);
+
+  const getPanneDateString = (p: any) => {
+    if (p.createdAt) {
+      if (typeof p.createdAt.toMillis === 'function') {
+        return new Date(p.createdAt.toMillis()).toISOString();
+      }
+      if (typeof p.createdAt === 'string') return p.createdAt;
+      if (p.createdAt.seconds) return new Date(p.createdAt.seconds * 1000).toISOString();
+    }
+    return p.dateDeclaration || p.date || "";
+  };
+
+  const getPanneMonth = React.useCallback((p: any) => {
+    const dateStr = getPanneDateString(p);
+    if (!dateStr) return "";
+    return dateStr.substring(0, 7); // "YYYY-MM"
+  }, []);
+
+  const getTaskMonth = React.useCallback((t: any) => {
+    if (t.datePlanifiee) return t.datePlanifiee.substring(0, 7);
+    if (t.createdAt) {
+      if (typeof t.createdAt.toMillis === 'function') {
+        return new Date(t.createdAt.toMillis()).toISOString().substring(0, 7);
+      }
+      if (typeof t.createdAt === 'string') return t.createdAt.substring(0, 7);
+      if (t.createdAt.seconds) return new Date(t.createdAt.seconds * 1000).toISOString().substring(0, 7);
+    }
+    if (t.date) {
+      return String(t.date).substring(0, 7);
+    }
+    return "";
+  }, []);
+
+  const getPanneCloseMonth = React.useCallback((p: any) => {
+    const getMs = (val: any) => {
+      if (!val) return null;
+      if (typeof val.toMillis === 'function') return val.toMillis();
+      if (typeof val.seconds === 'number') return val.seconds * 1000;
+      const d = new Date(val).getTime();
+      return isNaN(d) ? null : d;
+    };
+    const closedMs = getMs(p.updatedAt || p.dateResolution || p.dateCloture || p.dateClotureEcheance);
+    if (!closedMs) return "";
+    return new Date(closedMs).toISOString().substring(0, 7);
+  }, []);
+
+  // 1. Classement des sites (Exactly like Dashboard.tsx)
+  const classementSites = React.useMemo(() => {
+    const currentMonthStr = new Date().toISOString().substring(0, 7);
+
+    const list = SITES_LIST.map(site => {
+      // dispoSite
+      const siteEngins = enginsLive ? enginsLive.filter(e => e.siteId === site || e.site === site) : [];
+      const dispoEnginsCount = siteEngins.filter(e => getNormalizedStatus(e) === "DISPONIBLE").length;
+      const dispoSite = siteEngins.length > 0 ? (dispoEnginsCount / siteEngins.length) * 100 : null;
+
+      // pannesOuvertesSite
+      const sitePannes = pannesLive ? pannesLive.filter(p => p.siteId === site || p.site === site) : [];
+      const pannesOuvertesSite = sitePannes.filter(p => p.statut !== "CLOS" && !p.deleted).length;
+      const notePannes = Math.max(0, 100 - (pannesOuvertesSite * (100 / 8)));
+
+      // complianceSite
+      const siteWOs = workOrdersLive ? workOrdersLive.filter(b => (b.siteId === site || b.site === site) && b.deleted !== true) : [];
+      const preventifMoisTasks = siteWOs.filter(t => t.type === 'PREVENTIF' && t.datePlanifiee && t.datePlanifiee.startsWith(currentMonthStr));
+      const complianceSite = preventifMoisTasks.length > 0
+        ? (preventifMoisTasks.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length / preventifMoisTasks.length) * 100
+        : null;
+
+      // chargeMoyenneSite
+      const activeTasksSite = siteWOs.filter(t => t.statut === 'NON_FAIT' || t.statut === 'EN_COURS').length;
+      const siteMecas = mecaniciens
+        ? mecaniciens.filter(m => m.siteId === site && m.active !== false)
+        : [];
+      const chargeMoyenneSite = siteMecas.length > 0 ? activeTasksSite / siteMecas.length : null;
+      const noteCharge = chargeMoyenneSite !== null ? Math.max(0, 100 - (chargeMoyenneSite * (100 / 10))) : null;
+
+      // Weighted global score (0 to 100)
+      let totalScore = 0;
+      let sumOfWeights = 0;
+
+      if (dispoSite !== null) {
+        totalScore += dispoSite * 40;
+        sumOfWeights += 40;
+      }
+      if (complianceSite !== null) {
+        totalScore += complianceSite * 30;
+        sumOfWeights += 30;
+      }
+      if (notePannes !== null) {
+        totalScore += notePannes * 20;
+        sumOfWeights += 20;
+      }
+      if (noteCharge !== null) {
+        totalScore += noteCharge * 10;
+        sumOfWeights += 10;
+      }
+
+      const scoreGlobal = sumOfWeights > 0 ? totalScore / sumOfWeights : null;
+
+      // Reliability indicators
+      const sitePannesCeMois = pannesLive ? pannesLive.filter(p => (p.siteId === site || p.site === site) && !p.deleted && getPanneMonth(p) === currentMonthStr) : [];
+      const siteWOsCeMois = workOrdersLive ? workOrdersLive.filter(b => (b.siteId === site || b.site === site) && !b.deleted && getTaskMonth(b) === currentMonthStr) : [];
+      const totalSamples = sitePannesCeMois.length + siteWOsCeMois.length;
+      const isEchantillonFaible = totalSamples < 5;
+
+      return {
+        site,
+        dispoSite,
+        pannesOuvertesSite,
+        complianceSite,
+        chargeMoyenneSite,
+        scoreGlobal,
+        isEchantillonFaible,
+        siteEnginsCount: siteEngins.length,
+        siteMecasCount: siteMecas.length
+      };
+    });
+
+    // Sort list by scoreGlobal lowest to highest (Critical ones first)
+    return list.sort((a, b) => {
+      const scoreA = a.scoreGlobal !== null ? a.scoreGlobal : 999;
+      const scoreB = b.scoreGlobal !== null ? b.scoreGlobal : 999;
+      return scoreA - scoreB;
+    });
+  }, [enginsLive, workOrdersLive, pannesLive, mecaniciens, getNormalizedStatus, getPanneMonth, getTaskMonth]);
+
+  // 2. Situation banner computed text
+  const situationBanner = React.useMemo(() => {
+    if (isLoading || classementSites.length === 0) return "Chargement des indicateurs clés...";
+
+    const stableCount = classementSites.filter(s => s.scoreGlobal !== null && s.scoreGlobal >= 80).length;
+    const vigilanceCount = classementSites.filter(s => s.scoreGlobal !== null && s.scoreGlobal >= 60 && s.scoreGlobal < 80).length;
+    const critiqueCount = classementSites.filter(s => s.scoreGlobal !== null && s.scoreGlobal < 60).length;
+
+    // Most in difficulty site (lowest score)
+    const worstSite = classementSites[0];
+    const hasUnstableSites = vigilanceCount > 0 || critiqueCount > 0;
+
+    // Monthly panne counts
+    const now = new Date();
+    const currentMonthStr = now.toISOString().substring(0, 7);
+    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthStr = prevMonth.toISOString().substring(0, 7);
+
+    const currentMonthPannesCount = pannesLive ? pannesLive.filter(p => !p.deleted && getPanneMonth(p) === currentMonthStr).length : 0;
+    const prevMonthPannesCount = pannesLive ? pannesLive.filter(p => !p.deleted && getPanneMonth(p) === prevMonthStr).length : 0;
+
+    let variationSegment = "";
+    if (prevMonthPannesCount > 0) {
+      const diff = currentMonthPannesCount - prevMonthPannesCount;
+      const pct = Math.round((diff / prevMonthPannesCount) * 100);
+      if (pct > 0) {
+        variationSegment = ` — pannes en hausse de ${pct}% vs le mois dernier.`;
+      } else if (pct < 0) {
+        variationSegment = ` — pannes en baisse de ${Math.abs(pct)}% vs le mois dernier.`;
+      } else {
+        variationSegment = ` — volume de pannes stable vs le mois dernier.`;
+      }
+    }
+
+    if (hasUnstableSites && worstSite) {
+      const siteNoun = worstSite.site;
+      const totalProblems = critiqueCount + vigilanceCount;
+      return `${stableCount} sites stables, ${siteNoun} nécessite une attention immédiate (${totalProblems} site(s) sous surveillance)${variationSegment}`;
+    } else {
+      return `Tous les sites sont actuellement stables et opérationnels (${stableCount} sites au vert)${variationSegment}. Excellent niveau global d'exploitation.`;
+    }
+  }, [classementSites, pannesLive, getPanneMonth, isLoading]);
+
+  // 3. 7-day open pannes history checker helper
+  const getPannesOpen7DaysAgoCount = React.useCallback((siteId: string) => {
+    if (!pannesLive) return 0;
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgoMs = sevenDaysAgo.getTime();
+
+    const getMs = (val: any) => {
+      if (!val) return 0;
+      if (typeof val.toMillis === 'function') return val.toMillis();
+      if (typeof val.seconds === 'number') return val.seconds * 1000;
+      const d = new Date(val).getTime();
+      return isNaN(d) ? 0 : d;
+    };
+
+    const sitePannes = pannesLive.filter(p => p.siteId === siteId || p.site === siteId);
+    
+    const open7DaysAgo = sitePannes.filter(p => {
+      const createdMs = getMs(p.createdAt || p.dateDeclaration || p.date);
+      if (!createdMs || createdMs > sevenDaysAgoMs) return false;
+
+      const isClosed = p.statut === "CLOS";
+      if (!isClosed) return true;
+
+      const closedMs = getMs(p.updatedAt || p.dateResolution || p.dateCloture || p.dateClotureEcheance);
+      return closedMs > sevenDaysAgoMs;
+    });
+
+    return open7DaysAgo.length;
+  }, [pannesLive]);
+
+  // 4. Immobilises list (sorted oldest to youngest)
+  const immobilisesList = React.useMemo(() => {
+    if (!enginsLive) return [];
+    
+    const immob = enginsLive.filter(e => {
+      if (e.statut !== undefined || e.dispo !== undefined) {
+        return e.statut === "panne" || e.statut === "maintenance" || (typeof e.dispo === "number" && e.dispo < 100);
+      }
+      const norm = getNormalizedStatus(e);
+      return norm === "EN_PANNE" || norm === "EN_MAINTENANCE";
+    });
+
+    const getMs = (val: any) => {
+      if (!val) return Date.now();
+      if (typeof val.toMillis === 'function') return val.toMillis();
+      if (typeof val.seconds === 'number') return val.seconds * 1000;
+      const d = new Date(val).getTime();
+      return isNaN(d) ? Date.now() : d;
+    };
+
+    // Sort by oldest updatedAt first
+    return [...immob].sort((a, b) => getMs(a.updatedAt) - getMs(b.updatedAt));
+  }, [enginsLive, getNormalizedStatus]);
+
+  // --- COMPILATION & CALCULATIONS FOR COMPLETED MONTHS ---
+
+  const getMonthlyStats = React.useCallback((monthStr: string) => {
+    const getMs = (val: any) => {
+      if (!val) return null;
+      if (typeof val.toMillis === 'function') return val.toMillis();
+      if (typeof val.seconds === 'number') return val.seconds * 1000;
+      const d = new Date(val).getTime();
+      return isNaN(d) ? null : d;
+    };
+
+    const getHoursFromDuree = (duree: string): number => {
+      if (!duree) return 0;
+      const clean = duree.toLowerCase().trim();
+      if (clean === '15min') return 0.25;
+      if (clean === '30min') return 0.5;
+      if (clean === '1h') return 1;
+      if (clean === '2h') return 2;
+      if (clean === '4h') return 4;
+      if (clean === '6h') return 6;
+      if (clean === '1j') return 8;
+      
+      const num = parseFloat(clean);
+      if (!isNaN(num)) return num;
+      return 0;
+    };
+
+    const getTaskCost = (task: any) => {
+      if (typeof task.cout === "number") return task.cout;
+      if (typeof task.cost === "number") return task.cost;
+      if (typeof task.coutTotal === "number") return task.coutTotal;
+      
+      const hours = getHoursFromDuree(task.dureeEstimee || task.duree || "");
+      const laborCost = hours * 250; 
+      const partsCount = (task.piecesUtilisees || task.pieces || []).length;
+      const partsCost = partsCount * 450; 
+      return laborCost + partsCost;
+    };
+
+    const getPanneCost = (p: any) => {
+      if (typeof p.cout === "number") return p.cout;
+      if (typeof p.cost === "number") return p.cost;
+      
+      let laborHours = 0;
+      const dPrise = p.datePriseEnCharge ? getMs(p.datePriseEnCharge) : null;
+      const dRes = p.dateResolution ? getMs(p.dateResolution) : null;
+      if (dPrise && dRes && dRes > dPrise) {
+        laborHours = (dRes - dPrise) / (1000 * 60 * 60);
+      } else {
+        laborHours = 2; 
+      }
+      const laborCost = laborHours * 250;
+      const partsCount = (p.pieces || p.piecesConcernees || []).length;
+      const partsCost = partsCount * 450;
+      return laborCost + partsCost;
+    };
+
+    // 1. Total pannes
+    const pannesMonth = pannesLive 
+      ? pannesLive.filter(p => !p.deleted && getPanneMonth(p) === monthStr)
+      : [];
+    const totalPannes = pannesMonth.length;
+
+    // 2. Interventions préventives réalisées
+    const preventives = workOrdersLive
+      ? workOrdersLive.filter(t => !t.deleted && t.type === 'PREVENTIF' && (t.statut === 'FAIT' || t.statut === 'VALIDE') && getTaskMonth(t) === monthStr)
+      : [];
+    const totalPreventives = preventives.length;
+
+    // 3. Interventions correctives réalisées
+    const correctives = workOrdersLive
+      ? workOrdersLive.filter(t => !t.deleted && (t.type === 'CORRECTIF' || t.type === 'CURATIF') && (t.statut === 'FAIT' || t.statut === 'VALIDE') && getTaskMonth(t) === monthStr)
+      : [];
+    const closedPannes = pannesLive
+      ? pannesLive.filter(p => !p.deleted && p.statut === 'CLOS' && getPanneCloseMonth(p) === monthStr)
+      : [];
+    const interventionsMonth = interventions 
+      ? interventions.filter(i => !i.deleted && (i.type === 'CORRECTIF' || i.type === 'CURATIF') && getTaskMonth(i) === monthStr)
+      : [];
+    const totalCorrectives = correctives.length + closedPannes.length + interventionsMonth.length;
+
+    // 4. Coût total
+    let totalCost = 0;
+    preventives.forEach(t => { totalCost += getTaskCost(t); });
+    correctives.forEach(t => { totalCost += getTaskCost(t); });
+    closedPannes.forEach(p => { totalCost += getPanneCost(p); });
+    interventionsMonth.forEach(i => { totalCost += getTaskCost(i); });
+
+    return {
+      totalPannes,
+      totalPreventives,
+      totalCorrectives,
+      totalCost,
+      totalEvents: totalPannes + totalPreventives + totalCorrectives
+    };
+  }, [pannesLive, workOrdersLive, interventions, getPanneMonth, getTaskMonth, getPanneCloseMonth]);
+
+  const comparisonData = React.useMemo(() => {
+    const now = new Date();
+    const currentMonthStr = now.toISOString().substring(0, 7);
+    
+    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthStr = prevMonth.toISOString().substring(0, 7);
+
+    const m0 = getMonthlyStats(currentMonthStr);
+    const m1 = getMonthlyStats(prevMonthStr);
+
+    const hasHistory = m1.totalEvents > 0;
+
+    const calculateVariation = (v0: number, v1: number) => {
+      if (!hasHistory || v1 === 0) return null;
+      return Math.round(((v0 - v1) / v1) * 100);
+    };
+
+    return {
+      hasHistory,
+      current: m0,
+      previous: m1,
+      pannesVar: calculateVariation(m0.totalPannes, m1.totalPannes),
+      preventivesVar: calculateVariation(m0.totalPreventives, m1.totalPreventives),
+      correctivesVar: calculateVariation(m0.totalCorrectives, m1.totalCorrectives),
+      costVar: calculateVariation(m0.totalCost, m1.totalCost),
+    };
+  }, [getMonthlyStats]);
+
+  // MTTR calculation per site
+  const calculateSiteMttr = React.useCallback((site: string) => {
+    const siteWOs = workOrdersLive 
+      ? workOrdersLive.filter(b => (b.siteId === site || b.site === site) && b.deleted !== true && (b.statut === 'FAIT' || b.statut === 'VALIDE'))
+      : [];
+    if (siteWOs.length === 0) return null;
+    
+    let totalDuration = 0;
+    let count = 0;
+    
+    const getMs = (val: any) => {
+      if (!val) return null;
+      if (typeof val.toMillis === 'function') return val.toMillis();
+      if (typeof val.seconds === 'number') return val.seconds * 1000;
+      const d = new Date(val).getTime();
+      return isNaN(d) ? null : d;
+    };
+
+    siteWOs.forEach(wo => {
+      const start = getMs(wo.createdAt);
+      const end = getMs(wo.updatedAt);
+      if (start && end && end > start) {
+        totalDuration += (end - start) / (1000 * 60 * 60);
+        count++;
+      }
+    });
+    
+    return count > 0 ? parseFloat((totalDuration / count).toFixed(1)) : null;
+  }, [workOrdersLive]);
+
+  // Inter-sites side-by-side comparison matrix data
+  const compareInterSites = React.useMemo(() => {
+    const sitesData = SITES_LIST.map(site => {
+      const match = classementSites.find(s => s.site === site);
+      const dispo = match ? match.dispoSite : null;
+      const mttrVal = calculateSiteMttr(site);
+      const pannesOuvertes = match ? match.pannesOuvertesSite : 0;
+      const compliance = match ? match.complianceSite : null;
+      const charge = match ? match.chargeMoyenneSite : null;
+
+      return {
+        site,
+        dispo,
+        mttr: mttrVal,
+        pannesOuvertes,
+        compliance,
+        charge
+      };
+    });
+
+    const getExtreme = (metric: 'dispo' | 'mttr' | 'pannesOuvertes' | 'compliance' | 'charge', type: 'best' | 'worst') => {
+      const validValues = sitesData
+        .map(s => s[metric])
+        .filter((v): v is number => v !== null && v !== undefined);
+
+      if (validValues.length === 0) return null;
+
+      if (metric === 'dispo' || metric === 'compliance') {
+        const extremeVal = type === 'best' ? Math.max(...validValues) : Math.min(...validValues);
+        return extremeVal;
+      } else {
+        const extremeVal = type === 'best' ? Math.min(...validValues) : Math.max(...validValues);
+        return extremeVal;
+      }
+    };
+
+    const extremes = {
+      dispo: { best: getExtreme('dispo', 'best'), worst: getExtreme('dispo', 'worst') },
+      mttr: { best: getExtreme('mttr', 'best'), worst: getExtreme('mttr', 'worst') },
+      pannesOuvertes: { best: getExtreme('pannesOuvertes', 'best'), worst: getExtreme('pannesOuvertes', 'worst') },
+      compliance: { best: getExtreme('compliance', 'best'), worst: getExtreme('compliance', 'worst') },
+      charge: { best: getExtreme('charge', 'best'), worst: getExtreme('charge', 'worst') }
+    };
+
+    return {
+      sitesData,
+      extremes
+    };
+  }, [classementSites, calculateSiteMttr]);
+
+  // 3-month history existence checker
+  const hasEnoughHistory = React.useMemo(() => {
+    if (!pannesLive || pannesLive.length === 0) return false;
+    let oldestMs = Date.now();
+    const getMs = (val: any) => {
+      if (!val) return null;
+      if (typeof val.toMillis === 'function') return val.toMillis();
+      if (typeof val.seconds === 'number') return val.seconds * 1000;
+      const d = new Date(val).getTime();
+      return isNaN(d) ? null : d;
+    };
+    pannesLive.forEach(p => {
+      const ms = getMs(p.createdAt || p.dateDeclaration || p.date);
+      if (ms && ms < oldestMs) oldestMs = ms;
+    });
+    if (workOrdersLive) {
+      workOrdersLive.forEach(t => {
+        const ms = getMs(t.createdAt);
+        if (ms && ms < oldestMs) oldestMs = ms;
+      });
+    }
+    const ageDays = (Date.now() - oldestMs) / (1000 * 60 * 60 * 24);
+    return ageDays >= 90; 
+  }, [pannesLive, workOrdersLive]);
+
+  // Automatic anomaly detection (preceding 3 months vs current month)
+  const getPrecedingMonths = () => {
+    const now = new Date();
+    const months: string[] = [];
+    for (let i = 1; i <= 3; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(d.toISOString().substring(0, 7));
+    }
+    return months;
+  };
+
+  const anomaliesDetection = React.useMemo(() => {
+    if (!hasEnoughHistory) {
+      return {
+        status: "insufficient_history" as const,
+        list: []
+      };
+    }
+
+    const mMonths = getPrecedingMonths();
+    const currentMonthStr = new Date().toISOString().substring(0, 7);
+
+    const list = SITES_LIST.map(site => {
+      const countCurrent = pannesLive 
+        ? pannesLive.filter(p => !p.deleted && (p.siteId === site || p.site === site) && getPanneMonth(p) === currentMonthStr).length
+        : 0;
+
+      const countPrev1 = pannesLive 
+        ? pannesLive.filter(p => !p.deleted && (p.siteId === site || p.site === site) && getPanneMonth(p) === mMonths[0]).length
+        : 0;
+      const countPrev2 = pannesLive 
+        ? pannesLive.filter(p => !p.deleted && (p.siteId === site || p.site === site) && getPanneMonth(p) === mMonths[1]).length
+        : 0;
+      const countPrev3 = pannesLive 
+        ? pannesLive.filter(p => !p.deleted && (p.siteId === site || p.site === site) && getPanneMonth(p) === mMonths[2]).length
+        : 0;
+
+      const avgPrevious = (countPrev1 + countPrev2 + countPrev3) / 3;
+      
+      let variation = 0;
+      if (avgPrevious > 0) {
+        variation = Math.round(((countCurrent - avgPrevious) / avgPrevious) * 100);
+      } else if (countCurrent > 0) {
+        variation = 100;
+      }
+
+      const hasDrop = variation > 40;
+
+      return {
+        site,
+        countCurrent,
+        avgPrevious: parseFloat(avgPrevious.toFixed(1)),
+        variation,
+        hasDrop
+      };
+    }).filter(item => item.hasDrop)
+      .sort((a, b) => b.variation - a.variation);
+
+    return {
+      status: "success" as const,
+      list
+    };
+  }, [hasEnoughHistory, pannesLive, getPanneMonth]);
+
+  // Model-level reliability analysis (last 90 days) - Condensed top 3
+  const modelsReliability = React.useMemo(() => {
+    if (!enginsLive || !pannesLive) return [];
+    const limit90 = Date.now() - (90 * 24 * 60 * 60 * 1000);
+
+    const enginsByModel: Record<string, any[]> = {};
+    enginsLive.filter(e => !e.deleted).forEach(e => {
+      const model = (e.type || e.modele || 'Inconnu').trim();
+      if (!enginsByModel[model]) {
+        enginsByModel[model] = [];
+      }
+      enginsByModel[model].push(e);
+    });
+
+    const closedPannes90 = pannesLive.filter(p => 
+      p.statut === 'CLOS' && 
+      !p.deleted &&
+      p.dateDeclaration && 
+      new Date(p.dateDeclaration).getTime() >= limit90
+    );
+
+    const result = Object.entries(enginsByModel).map(([model, modelEngins]) => {
+      const enginIdsOfModel = new Set(modelEngins.map(e => e.id));
+      const modelPannes = closedPannes90.filter(p => enginIdsOfModel.has(p.enginId));
+      
+      const numEngins = modelEngins.length;
+      const totalPannes = modelPannes.length;
+      const tauxPanneMoyen = numEngins > 0 ? (totalPannes / numEngins) : 0;
+      const mtbf = totalPannes > 0 ? Math.round((numEngins * 90 * 24) / totalPannes) : null;
+
+      return {
+        model,
+        numEngins,
+        totalPannes,
+        tauxPanneMoyen,
+        mtbf
+      };
+    });
+
+    return result
+      .sort((a, b) => b.tauxPanneMoyen - a.tauxPanneMoyen)
+      .slice(0, 3);
+  }, [enginsLive, pannesLive]);
+
+  // Top 3 parts/pieces in current month
+  const topPiecesStats = React.useMemo(() => {
+    if (!pannesLive) return [];
+    const currentMonthStr = new Date().toISOString().substring(0, 7);
+
+    const counts: Record<string, { name: string; count: number }> = {};
+    
+    pannesLive.filter(p => !p.deleted && getPanneMonth(p) === currentMonthStr).forEach(p => {
+      const pList = p.pieces || p.piecesConcernees || [];
+      pList.forEach((pName: string) => {
+        if (!pName) return;
+        const trimmed = pName.trim();
+        if (!trimmed) return;
+        const key = trimmed.toLowerCase();
+        if (counts[key]) {
+          counts[key].count += 1;
+        } else {
+          counts[key] = {
+            name: trimmed,
+            count: 1
+          };
+        }
+      });
+    });
+
+    if (workOrdersLive) {
+      workOrdersLive.filter(t => !t.deleted && getTaskMonth(t) === currentMonthStr).forEach(t => {
+        const pList = t.piecesUtilisees || t.pieces || [];
+        pList.forEach((pName: string) => {
+          if (!pName) return;
+          const trimmed = pName.trim();
+          if (!trimmed) return;
+          const key = trimmed.toLowerCase();
+          if (counts[key]) {
+            counts[key].count += 1;
+          } else {
+            counts[key] = {
+              name: trimmed,
+              count: 1
+            };
+          }
+        });
+      });
+    }
+
+    return Object.values(counts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+  }, [pannesLive, workOrdersLive, getPanneMonth, getTaskMonth]);
+
+  // Positive mecanicien recognition (factual leaderboard)
+  const felicitationsMecaniciens = React.useMemo(() => {
+    if (!mecaniciens) return [];
+    
+    const eligibleMecas = mecaniciens.filter(m => {
+      if (m.active === false) return false;
+      if ((m.stats?.interventionsCeMois || 0) < 1) return false; // Lowered constraint slightly to ensure showing if low data
+      return true;
+    });
+
+    const scored = eligibleMecas.map(m => {
+      const scoreTournees = m.stats.tauxTournéesCompletes !== null ? m.stats.tauxTournéesCompletes : 0;
+      const scoreMttr = m.stats.mttrMoyen !== null ? Math.max(0, 100 - (m.stats.mttrMoyen * 15)) : 50;
+      const scoreCombine = (scoreTournees + scoreMttr) / 2;
+
+      return {
+        mecanicien: m,
+        scoreTournees,
+        scoreMttr,
+        scoreCombine: Math.round(scoreCombine * 10) / 10
+      };
+    });
+
+    return scored.sort((a, b) => b.scoreCombine - a.scoreCombine).slice(0, 3);
+  }, [mecaniciens]);
+
+  // Helper to render variation badge
+  const renderVarBadge = (variation: number | null, lowerIsBetter: boolean) => {
+    if (variation === null) {
+      return (
+        <span className="text-[10px] text-slate-400 font-mono font-medium block mt-1">
+          Non comparable
+        </span>
+      );
+    }
+    
+    const isZero = variation === 0;
+    const isUp = variation > 0;
+    
+    let isImproving = false;
+    if (lowerIsBetter) {
+      isImproving = !isUp; 
+    } else {
+      isImproving = isUp; 
+    }
+
+    const colorClass = isZero 
+      ? "text-slate-500 bg-slate-100" 
+      : isImproving 
+        ? "text-emerald-700 bg-emerald-50 border-emerald-200" 
+        : "text-red-700 bg-red-50 border-red-200";
+
+    const arrow = isZero ? "→" : isUp ? "↑" : "↓";
+    const sign = isUp ? "+" : "";
+
+    return (
+      <div className="flex items-center gap-1.5 mt-1">
+        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-black border ${colorClass}`}>
+          {arrow} {sign}{variation}%
+        </span>
+        <span className="text-[9px] text-slate-400 font-mono uppercase">vs mois prèc.</span>
+      </div>
+    );
+  };
+
+  // Role restriction (only ADMIN, DIRECTION, RESPONSABLE_MAINTENANCE)
+  const hasAccess = React.useMemo(() => {
+    return user?.role && ['ADMIN', 'DIRECTION', 'RESPONSABLE_MAINTENANCE'].includes(user.role);
+  }, [user]);
+
+  if (!hasAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[80vh] p-8 text-center font-sans bg-white dark:bg-[#090e18]">
+        <ShieldAlert className="w-16 h-16 text-red-500 mb-4 animate-pulse" />
+        <h2 className="text-xl font-black uppercase text-slate-900 dark:text-white tracking-widest font-mono">Accès Restreint</h2>
+        <p className="text-sm text-slate-500 mt-2 max-w-md">
+          Cette page est réservée exclusivement aux membres de la direction et de la gestion de la maintenance globale.
+        </p>
+      </div>
+    );
+  }
+
+  // Row mapping for inter-site comparison matrix
+  const interSiteRows = [
+    {
+      label: "Disponibilité Flotte",
+      key: "dispo" as const,
+      format: (v: number | null) => v !== null ? `${Math.round(v)}%` : "N/A",
+      lowerIsBetter: false
+    },
+    {
+      label: "MTTR Moyen (heures)",
+      key: "mttr" as const,
+      format: (v: number | null) => v !== null ? `${v.toFixed(1)} h` : "N/A",
+      lowerIsBetter: true
+    },
+    {
+      label: "Pannes Ouvertes Actives",
+      key: "pannesOuvertes" as const,
+      format: (v: number) => `${v}`,
+      lowerIsBetter: true
+    },
+    {
+      label: "Conformité PM (Préventif)",
+      key: "compliance" as const,
+      format: (v: number | null) => v !== null ? `${Math.round(v)}%` : "N/A",
+      lowerIsBetter: false
+    },
+    {
+      label: "Charge Moyenne / Mécanicien",
+      key: "charge" as const,
+      format: (v: number | null) => v !== null ? `${v.toFixed(1)} OT` : "0.0 OT",
+      lowerIsBetter: true
+    }
+  ];
+
+  return (
+    <div className={`flex-1 min-h-screen p-4 lg:p-6 space-y-6 overflow-y-auto transition-colors duration-500 bg-white dark:bg-[#090e18] text-slate-800 dark:text-[#F4EAD4]`}>
+      
+      {/* EXECUTIVE TOP HEADER BANNER */}
+      <div 
+        className="relative overflow-hidden border-2 border-[#D4AF37] p-6 md:p-8 rounded-3xl transition-all duration-500 flex flex-col md:flex-row md:items-center md:justify-between gap-6 shadow-[0_8px_30px_rgba(212,175,55,0.06)] bg-white"
+        style={{
+          backgroundImage: `linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(253, 251, 247, 0.98) 100%), url(${goldTexture})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      >
+        <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-sky-500 via-purple-600 to-red-600 rounded-t-3xl z-10 animate-pulse" />
+        
+        {/* Golden corner brackets */}
+        <div className="absolute top-2 left-2 w-2 h-2 border-t border-l border-[#D4AF37]/50 pointer-events-none" />
+        <div className="absolute top-2 right-2 w-2 h-2 border-t border-r border-[#D4AF37]/50 pointer-events-none" />
+        <div className="absolute bottom-2 left-2 w-2 h-2 border-b border-l border-[#D4AF37]/50 pointer-events-none" />
+        <div className="absolute bottom-2 right-2 w-2 h-2 border-b border-r border-[#D4AF37]/50 pointer-events-none" />
+
+        <div className="space-y-2">
+          <span className="inline-flex items-center gap-1 px-3 py-1 text-[9.5px] font-mono font-black uppercase tracking-widest text-[#D4AF37] bg-slate-900 rounded-full">
+            <Sparkles className="w-3.5 h-3.5 animate-bounce" />
+            Centre de Commandement Décisionnel
+          </span>
+          <h1 className="text-xl md:text-3xl font-black uppercase tracking-tight text-amber-950 font-mono">
+            Rapport Exécutif
+          </h1>
+          <p className="text-xs text-slate-600 font-medium max-w-xl">
+            Vue consolidée multi-site synthétisée à l'intention de la Direction pour une évaluation des alertes, de la conformité et de l'efficience opérationnelle en un coup d'œil.
+          </p>
+        </div>
+
+        <div className="shrink-0 bg-slate-900 border-2 border-[#D4AF37] p-4 rounded-2xl flex flex-col items-center justify-center min-w-[150px] shadow-md">
+          <span className="text-[9px] font-mono text-amber-400 font-bold uppercase tracking-wider">État Général</span>
+          <span className="text-xl font-black text-white mt-1 uppercase font-mono tracking-tight flex items-center gap-1.5">
+            {classementSites.filter(s => s.scoreGlobal !== null && s.scoreGlobal < 60).length > 0 ? (
+              <>
+                <span className="h-2 w-2 rounded-full bg-red-500 animate-ping shrink-0" />
+                Alerte
+              </>
+            ) : classementSites.filter(s => s.scoreGlobal !== null && s.scoreGlobal < 80).length > 0 ? (
+              <>
+                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                Vigilance
+              </>
+            ) : (
+              <>
+                <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                Optimal
+              </>
+            )}
+          </span>
+          <span className="text-[8.5px] font-mono text-slate-400 mt-1 uppercase">Mise à jour : Temps Réel</span>
+        </div>
+      </div>
+
+      {/* SYNTHESIS PHRASE ALERT BANNER */}
+      <div className="relative overflow-hidden bg-slate-900 text-white rounded-2xl p-4 md:p-5 border-2 border-amber-500/30 flex items-center gap-4 shadow-lg">
+        <div className="h-10 w-10 shrink-0 bg-amber-500/10 border border-amber-500/25 rounded-xl flex items-center justify-center text-amber-400">
+          <Activity className="h-5 w-5 animate-pulse" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-widest">
+            SYNTHÈSE DE LA SITUATION
+          </div>
+          <p className="text-sm font-black font-mono tracking-tight text-white mt-0.5 uppercase leading-relaxed">
+            {situationBanner}
+          </p>
+        </div>
+      </div>
+
+      {/* --- SECTION 1 : COMPARAISON MENSUELLE (CE MOIS VS MOIS PRÉCÉDENT) --- */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <BarChart2 className="h-5 w-5 text-[#D4AF37]" />
+          <h2 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white font-mono">
+            Comparaison Performance Mensuelle (Ce mois vs Mois précédent)
+          </h2>
+        </div>
+        
+        {isLoading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(n => (
+              <div key={n} className="h-24 bg-slate-100 dark:bg-slate-900 animate-pulse rounded-xl" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            {/* Card 1: Pannes */}
+            <Card className="border border-slate-200/80 bg-white relative overflow-hidden rounded-xl">
+              <CardContent className="p-4 flex flex-col justify-between h-full">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Pannes Déclarées</span>
+                    <h3 className="text-2xl font-black text-slate-900 font-mono mt-1">
+                      {comparisonData.current.totalPannes}
+                    </h3>
+                  </div>
+                  <div className="p-2 bg-red-50 text-red-600 rounded-lg">
+                    <AlertTriangle className="h-4 w-4" />
+                  </div>
+                </div>
+                {renderVarBadge(comparisonData.pannesVar, true)}
+              </CardContent>
+            </Card>
+
+            {/* Card 2: Préventif réalisé */}
+            <Card className="border border-slate-200/80 bg-white relative overflow-hidden rounded-xl">
+              <CardContent className="p-4 flex flex-col justify-between h-full">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Préventifs Réalisés</span>
+                    <h3 className="text-2xl font-black text-slate-900 font-mono mt-1">
+                      {comparisonData.current.totalPreventives}
+                    </h3>
+                  </div>
+                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                    <CheckCircle2 className="h-4 w-4" />
+                  </div>
+                </div>
+                {renderVarBadge(comparisonData.preventivesVar, false)}
+              </CardContent>
+            </Card>
+
+            {/* Card 3: Correctif réalisé */}
+            <Card className="border border-slate-200/80 bg-white relative overflow-hidden rounded-xl">
+              <CardContent className="p-4 flex flex-col justify-between h-full">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Correctifs Réalisés</span>
+                    <h3 className="text-2xl font-black text-slate-900 font-mono mt-1">
+                      {comparisonData.current.totalCorrectives}
+                    </h3>
+                  </div>
+                  <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+                    <Wrench className="h-4 w-4" />
+                  </div>
+                </div>
+                {renderVarBadge(comparisonData.correctivesVar, true)}
+              </CardContent>
+            </Card>
+
+            {/* Card 4: Coût total de maintenance */}
+            <Card className="border border-slate-200/80 bg-white relative overflow-hidden rounded-xl">
+              <CardContent className="p-4 flex flex-col justify-between h-full">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Coûts de Maintenance (Est.)</span>
+                    <h3 className="text-2xl font-black text-slate-900 font-mono mt-1">
+                      {comparisonData.current.totalCost.toLocaleString()} <span className="text-xs">DH</span>
+                    </h3>
+                  </div>
+                  <div className="p-2 bg-sky-50 text-sky-600 rounded-lg">
+                    <DollarSign className="h-4 w-4" />
+                  </div>
+                </div>
+                {renderVarBadge(comparisonData.costVar, true)}
+              </CardContent>
+            </Card>
+
+          </div>
+        )}
+      </div>
+
+      {/* TWO COLUMN GRID : SITES CLASSIFICATION AND IMMOBILIZED VEHICLES */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        {/* LEFT COLUMN (7 COLS): SITES CLASSIFICATION TABLE */}
+        <div className="lg:col-span-8 space-y-6">
+          <Card className="bg-white border-2 border-[#D4AF37]/40 shadow-[0_8px_30px_rgba(212,175,55,0.06)] rounded-2xl overflow-hidden relative">
+            
+            {/* Corner L-brackets */}
+            <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D4AF37]/50 pointer-events-none" />
+            <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D4AF37]/50 pointer-events-none" />
+            <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D4AF37]/50 pointer-events-none" />
+            <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D4AF37]/50 pointer-events-none" />
+
+            <CardHeader className="bg-slate-50 border-b border-slate-200/50 p-5">
+              <div className="flex items-center gap-2.5">
+                <Building2 className="h-5 w-5 text-amber-600" />
+                <div>
+                  <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-900 font-mono">
+                    Classement Décisionnel des Sites
+                  </CardTitle>
+                  <CardDescription className="text-[11px] text-slate-500 font-medium">
+                    Calculé sur la disponibilité de la flotte, conformité préventive, pannes ouvertes et charge d'équipe. Cliquez sur une ligne pour voir le détail.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 font-mono text-xs text-slate-400">
+                  <Activity className="h-8 w-8 text-amber-500 animate-spin" />
+                  Génération du classement en cours...
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs font-mono">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                        <th className="py-3 px-4">Site</th>
+                        <th className="py-3 px-4 text-center">Score Global</th>
+                        <th className="py-3 px-4 text-right">Disponibilité</th>
+                        <th className="py-3 px-4 text-center">Pannes Actives</th>
+                        <th className="py-3 px-4 text-right">Taux Préventif</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-bold">
+                      {classementSites.map((item) => {
+                        const score = item.scoreGlobal;
+                        const isExpanded = expandedSite === item.site;
+
+                        let scoreColor = "text-red-600";
+                        let scoreBg = "bg-red-50 text-red-700 border-red-200/50";
+                        let statusDot = "bg-red-500";
+
+                        if (score !== null) {
+                          if (score >= 80) {
+                            scoreColor = "text-emerald-600";
+                            scoreBg = "bg-emerald-50 text-emerald-700 border-emerald-200/50";
+                            statusDot = "bg-emerald-500";
+                          } else if (score >= 60) {
+                            scoreColor = "text-amber-600";
+                            scoreBg = "bg-amber-50 text-amber-700 border-amber-200/50";
+                            statusDot = "bg-amber-500";
+                          }
+                        }
+
+                        return (
+                          <React.Fragment key={item.site}>
+                            <tr 
+                              onClick={() => setExpandedSite(isExpanded ? null : item.site)}
+                              className={`hover:bg-amber-50/40 transition-colors cursor-pointer ${isExpanded ? "bg-amber-50/20" : ""}`}
+                            >
+                              <td className="py-3 px-4 font-black uppercase tracking-wider flex items-center gap-2 text-slate-900">
+                                <span className={`inline-block h-2 w-2 rounded-full ${statusDot} shrink-0`} />
+                                {item.site}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <span className={`px-2.5 py-0.5 rounded border font-extrabold text-[11px] ${scoreBg}`}>
+                                    {score !== null ? `${Math.round(score)}%` : "N/A"}
+                                  </span>
+                                  {item.isEchantillonFaible && (
+                                    <span 
+                                      className="px-1.5 py-0.5 rounded text-[8px] bg-slate-100 text-slate-500 border border-slate-200 font-bold uppercase tracking-wider"
+                                      title="Fiabilité limitée en raison d'un nombre restreint de pannes ou d'OT ce mois"
+                                    >
+                                      échantillon faible
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-right font-extrabold text-slate-700">
+                                {item.dispoSite !== null ? `${Math.round(item.dispoSite)}%` : "N/A"}
+                              </td>
+                              <td className="py-3 px-4 text-center font-extrabold text-slate-700">
+                                <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] ${item.pannesOuvertesSite > 0 ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-500"}`}>
+                                  {item.pannesOuvertesSite}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-right font-extrabold text-slate-700">
+                                {item.complianceSite !== null ? `${Math.round(item.complianceSite)}%` : "N/A"}
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <button className="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-colors">
+                                  {isExpanded ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                  )}
+                                </button>
+                              </td>
+                            </tr>
+
+                            {/* COLLAPSIBLE DETAILS FOR THE SITE */}
+                            {isExpanded && (
+                              <tr>
+                                <td colSpan={6} className="p-4 bg-slate-50/70 border-t border-b border-slate-100">
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                                    
+                                    <div className="space-y-1">
+                                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                                        <Gauge className="h-3.5 w-3.5 text-slate-400" />
+                                        FLOTTE ENGINS
+                                      </span>
+                                      <p className="text-sm font-black text-slate-900 font-mono">
+                                        {item.siteEnginsCount} machine(s)
+                                      </p>
+                                      <p className="text-[10px] text-slate-500 font-medium">
+                                        Disponibilité globale : {item.dispoSite !== null ? `${Math.round(item.dispoSite)}%` : "N/A"}
+                                      </p>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                                        SITUATION PANNES
+                                      </span>
+                                      <p className="text-sm font-black text-slate-900 font-mono">
+                                        {item.pannesOuvertesSite} panne(s) actives
+                                      </p>
+                                      <p className="text-[10px] text-slate-500 font-medium">
+                                        Impact production élevé
+                                      </p>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                                        <Users className="h-3.5 w-3.5 text-sky-500" />
+                                        CHARGE DE TRAVAIL
+                                      </span>
+                                      <p className="text-sm font-black text-slate-900 font-mono">
+                                        {item.chargeMoyenneSite !== null ? `${item.chargeMoyenneSite.toFixed(1)} OT / méca` : "0.0 OT / méca"}
+                                      </p>
+                                      <p className="text-[10px] text-slate-500 font-medium">
+                                        Effectif actif : {item.siteMecasCount} mécanicien(s)
+                                      </p>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                                        <CheckSquare className="h-3.5 w-3.5 text-emerald-500" />
+                                        CONFORMITÉ PM
+                                      </span>
+                                      <p className="text-sm font-black text-slate-900 font-mono">
+                                        {item.complianceSite !== null ? `${Math.round(item.complianceSite)}%` : "0%"}
+                                      </p>
+                                      <p className="text-[10px] text-slate-500 font-medium">
+                                        Respect du plan préventif
+                                      </p>
+                                    </div>
+
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* --- SECTION 2 : COMPARAISON INTER-SITES CÔTE À CÔTE --- */}
+          <Card className="bg-white border-2 border-[#D4AF37]/40 shadow-[0_8px_30px_rgba(212,175,55,0.06)] rounded-2xl overflow-hidden relative">
+            <CardHeader className="bg-slate-50 border-b border-slate-200/50 p-5">
+              <div className="flex items-center gap-2.5">
+                <Sliders className="h-5 w-5 text-amber-600" />
+                <div>
+                  <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-900 font-mono">
+                    Comparatif Inter-Sites Côte à Côte
+                  </CardTitle>
+                  <CardDescription className="text-[11px] text-slate-500 font-medium">
+                    Analyse matricielle des 5 sites d'exploitation. La meilleure performance est teintée en <span className="text-emerald-700 font-bold">Vert</span>, et la moins bonne en <span className="text-red-700 font-bold">Rouge</span>.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="text-center py-10 font-mono text-xs text-slate-400">
+                  Génération de la matrice comparative...
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs font-mono">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                        <th className="py-3 px-4">Indicateurs clés</th>
+                        {SITES_LIST.map(site => (
+                          <th key={site} className="py-3 px-4 text-center font-black">{site}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-bold text-slate-700">
+                      {interSiteRows.map((row) => {
+                        const extremes = compareInterSites.extremes;
+                        return (
+                          <tr key={row.key} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="py-3 px-4 font-black text-slate-900">{row.label}</td>
+                            {compareInterSites.sitesData.map(sData => {
+                              const val = sData[row.key];
+                              
+                              const bestVal = extremes[row.key].best;
+                              const worstVal = extremes[row.key].worst;
+
+                              const isBest = val !== null && val !== undefined && val === bestVal && bestVal !== worstVal;
+                              const isWorst = val !== null && val !== undefined && val === worstVal && bestVal !== worstVal;
+
+                              let cellClass = "text-center";
+                              if (isBest) {
+                                cellClass = "text-center bg-emerald-50 text-emerald-800 border-x border-emerald-100/50 dark:bg-emerald-950/20 dark:text-emerald-400";
+                              } else if (isWorst) {
+                                cellClass = "text-center bg-red-50 text-red-800 border-x border-red-100/50 dark:bg-red-950/20 dark:text-red-400";
+                              }
+
+                              return (
+                                <td key={sData.site} className={`py-3 px-4 font-mono font-extrabold ${cellClass}`}>
+                                  {row.format(val as any)}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* RIGHT COLUMN (4 COLS): ENGINS IMMOBILISES & TRENDS */}
+        <div className="lg:col-span-4 space-y-6">
+          <Card className="bg-white border-2 border-red-500/20 shadow-[0_8px_30px_rgba(239,68,68,0.04)] rounded-2xl overflow-hidden relative">
+            
+            {/* L-brackets */}
+            <div className="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-red-500/30 pointer-events-none" />
+            <div className="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-red-500/30 pointer-events-none" />
+            <div className="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-red-500/30 pointer-events-none" />
+            <div className="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-red-500/30 pointer-events-none" />
+
+            <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-red-600 z-10" />
+
+            <CardHeader className="bg-slate-50 border-b border-slate-200/50 p-5">
+              <div className="flex items-center gap-2.5">
+                <ShieldAlert className="h-5 w-5 text-red-600 animate-pulse" />
+                <div>
+                  <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-900 font-mono">
+                    Engins Immobilisés
+                  </CardTitle>
+                  <CardDescription className="text-[11px] text-slate-500 font-medium">
+                    Machines en panne ou maintenance, triées par durée d'arrêt cumulée (du plus ancien au plus récent).
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-5 font-mono text-xs">
+              {isLoading ? (
+                <div className="text-center py-10 font-medium text-slate-400">
+                  Calcul des temps d'arrêt...
+                </div>
+              ) : immobilisesList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center bg-emerald-50 border border-dashed border-emerald-200 rounded-xl">
+                  <CheckCircle2 className="h-6 w-6 text-emerald-500 mb-2" />
+                  <span className="font-black text-emerald-700 text-[10px] uppercase tracking-wider">
+                    Opérationnel optimal
+                  </span>
+                  <p className="text-[10px] text-emerald-600 mt-1">
+                    Aucun engin n'est immobilisé aujourd'hui sur l'ensemble des sites.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {immobilisesList.slice(0, 4).map((e: any) => {
+                    const normStatus = getNormalizedStatus(e);
+                    const isPanne = normStatus === "EN_PANNE" || e.statut === "panne";
+                    
+                    const badgeColor = isPanne 
+                      ? "bg-red-50 text-red-700 border-red-200" 
+                      : "bg-amber-50 text-amber-700 border-amber-200";
+
+                    const siteId = e.siteId || e.site;
+                    const openToday = pannesLive ? pannesLive.filter((p: any) => (p.siteId === siteId || p.site === siteId) && p.statut !== "CLOS" && !p.deleted).length : 0;
+                    const open7DaysAgo = getPannesOpen7DaysAgoCount(siteId);
+                    const trendDiff = openToday - open7DaysAgo;
+
+                    return (
+                      <div 
+                        key={e.uid || e.id} 
+                        className="p-3 bg-slate-50 border border-slate-150 rounded-xl space-y-2.5 hover:border-slate-300 transition-all"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-slate-900 text-xs uppercase tracking-tight">
+                            {e.matricule || e.id}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${badgeColor}`}>
+                            {isPanne ? "Panne" : "Maintenance"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                          <span>Site : <strong className="text-slate-800 uppercase">{siteId}</strong></span>
+                          <span>Marque : <strong className="text-slate-800">{e.marque || "N/A"}</strong></span>
+                        </div>
+
+                        {/* TREND PILL WITH COMPASS */}
+                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide">Tendance du Site :</span>
+                          <div className="flex items-center gap-1 font-bold text-[9.5px]">
+                            {trendDiff > 0 ? (
+                              <span className="flex items-center gap-0.5 text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
+                                <TrendingUp className="h-3 w-3" />
+                                {openToday} pannes (+{trendDiff} en 7j)
+                              </span>
+                            ) : trendDiff < 0 ? (
+                              <span className="flex items-center gap-0.5 text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                                <TrendingDown className="h-3 w-3" />
+                                {openToday} pannes ({trendDiff} en 7j)
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-0.5 text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                <Clock className="h-3 w-3" />
+                                {openToday} pannes (stable)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* --- SECTION 3 : DÉTECTION D'ANOMALIE AUTOMATIQUE --- */}
+          <Card className="bg-white border-2 border-[#D4AF37]/30 shadow-[0_8px_30px_rgba(212,175,55,0.04)] rounded-2xl overflow-hidden relative">
+            <CardHeader className="bg-slate-50 border-b border-slate-200/50 p-5">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="h-5 w-5 text-[#D4AF37] animate-bounce" />
+                <div>
+                  <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-900 font-mono">
+                    Détection d'Anomalie Auto.
+                  </CardTitle>
+                  <CardDescription className="text-[11px] text-slate-500 font-medium">
+                    Décrochages significatifs comparés à la propre moyenne historique de chaque site (seuil d'alerte à +40%).
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-5 font-mono text-xs">
+              {isLoading ? (
+                <div className="text-center py-6 text-slate-400 font-medium">
+                  Analyse des variations historiques...
+                </div>
+              ) : anomaliesDetection.status === "insufficient_history" ? (
+                <div className="p-4 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center text-slate-500 text-[10.5px]">
+                  Historique insuffisant pour détecter des anomalies (&lt; 3 mois de données).
+                </div>
+              ) : anomaliesDetection.list.length === 0 ? (
+                <div className="p-4 bg-emerald-50 text-emerald-800 border border-emerald-150 rounded-xl text-center font-bold text-[10.5px]">
+                  Aucun décrochage critique détecté ce mois-ci sur les sites. Tout est stable.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <span className="text-[9px] font-black uppercase text-red-500 tracking-wider block">Décrochages détectés ce mois-ci :</span>
+                  {anomaliesDetection.list.map((anom) => (
+                    <div key={anom.site} className="p-3 bg-red-50 border border-red-150 rounded-xl space-y-1">
+                      <div className="flex justify-between items-center font-black">
+                        <span className="uppercase text-red-800 font-mono text-xs">{anom.site}</span>
+                        <span className="text-red-700 font-mono text-xs">+{anom.variation}%</span>
+                      </div>
+                      <p className="text-[10px] text-red-700 font-medium leading-relaxed font-mono">
+                        {anom.countCurrent} pannes ce mois vs une moyenne de {anom.avgPrevious} sur les 3 mois précédents.
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+        </div>
+      </div>
+
+      {/* --- SECTION 4 : FIABILITÉ PAR MODÈLE ET TOP PANNES/PIÈCES --- */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* Sub-card 1: Fiabilité par modèle */}
+        <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden relative">
+          <CardHeader className="bg-slate-50 border-b border-slate-200/50 p-4 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-amber-600" />
+              <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-900 font-mono">
+                Fiabilité par Modèle d'Engin (Derniers 90 jours)
+              </CardTitle>
+            </div>
+            {setActiveTab && (
+              <button 
+                onClick={() => setActiveTab("analyses")}
+                className="text-[10px] font-black uppercase text-amber-600 hover:text-amber-800 transition-colors font-mono tracking-tight flex items-center gap-0.5"
+              >
+                voir l'analyse complète
+                <ChevronRight className="h-3 w-3" />
+              </button>
+            )}
+          </CardHeader>
+          <CardContent className="p-4">
+            {isLoading ? (
+              <div className="text-center py-6 text-slate-400 text-xs">Analyse de la flotte...</div>
+            ) : modelsReliability.length === 0 ? (
+              <div className="text-center py-6 text-slate-400 text-xs">Aucune panne clôturée sur les 90 derniers jours.</div>
+            ) : (
+              <div className="space-y-3 font-mono text-xs">
+                {modelsReliability.map((item, index) => (
+                  <div key={item.model} className="flex justify-between items-center p-2.5 bg-slate-50 border border-slate-100 rounded-lg">
+                    <div className="space-y-0.5">
+                      <span className="font-bold text-slate-950 uppercase">{item.model}</span>
+                      <p className="text-[10px] text-slate-500 font-medium">Effectif : {item.numEngins} machine(s)</p>
+                    </div>
+                    <div className="text-right space-y-0.5 font-bold">
+                      <span className="text-red-600">{item.tauxPanneMoyen.toFixed(1)} panne/engin</span>
+                      <p className="text-[10px] text-slate-500 font-medium">MTBF : {item.mtbf ? `${item.mtbf}h` : "N/A"}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Sub-card 2: Top Pieces */}
+        <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden relative">
+          <CardHeader className="bg-slate-50 border-b border-slate-200/50 p-4 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-amber-600" />
+              <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-900 font-mono">
+                Top Pièces les Plus Concernées (Ce mois)
+              </CardTitle>
+            </div>
+            {setActiveTab && (
+              <button 
+                onClick={() => setActiveTab("analyses")}
+                className="text-[10px] font-black uppercase text-amber-600 hover:text-amber-800 transition-colors font-mono tracking-tight flex items-center gap-0.5"
+              >
+                voir l'analyse complète
+                <ChevronRight className="h-3 w-3" />
+              </button>
+            )}
+          </CardHeader>
+          <CardContent className="p-4">
+            {isLoading ? (
+              <div className="text-center py-6 text-slate-400 text-xs">Calcul des pièces consommées...</div>
+            ) : topPiecesStats.length === 0 ? (
+              <div className="text-center py-6 text-slate-400 text-xs">Aucune consommation de pièce répertoriée ce mois-ci.</div>
+            ) : (
+              <div className="space-y-3 font-mono text-xs">
+                {topPiecesStats.map((item, index) => (
+                  <div key={item.name} className="flex justify-between items-center p-2.5 bg-slate-50 border border-slate-100 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center justify-center h-5 w-5 bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[10px] rounded">
+                        #{index + 1}
+                      </span>
+                      <span className="font-bold text-slate-950 uppercase">{item.name}</span>
+                    </div>
+                    <span className="font-bold text-slate-800 px-2 py-0.5 bg-slate-100 border border-slate-200 rounded">
+                      {item.count} fois sollicitée
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+      </div>
+
+      {/* --- SECTION 5 : VOLET HUMAIN (BAS DE PAGE) --- */}
+      <Card className="bg-white border-2 border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.03)] rounded-2xl overflow-hidden relative">
+        <CardHeader className="bg-slate-50 border-b border-slate-200/50 p-5">
+          <div className="flex items-center gap-2.5">
+            <Users className="h-5 w-5 text-amber-600" />
+            <div>
+              <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-900 font-mono">
+                Volet Humain & Management d'Équipe
+              </CardTitle>
+              <CardDescription className="text-[11px] text-slate-500 font-medium">
+                Indicateurs factuels sur la répartition de la charge opérationnelle de maintenance et valorisation positive de l'efficience des mécaniciens.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-5 space-y-6 font-mono text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Left human column: Workload by site */}
+            <div className="space-y-3">
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Répartition de la Charge de Travail</span>
+              
+              {isLoading ? (
+                <div className="text-slate-400 text-xs">Analyse de la répartition...</div>
+              ) : (
+                <div className="space-y-3.5">
+                  {compareInterSites.sitesData.map(sData => {
+                    const charge = sData.charge || 0;
+                    
+                    // Color code charge
+                    let chargeColor = "bg-emerald-500";
+                    let textAlert = "Charge Équilibrée";
+                    if (charge > 4) {
+                      chargeColor = "bg-red-500";
+                      textAlert = "Surcharge critique";
+                    } else if (charge > 2.5) {
+                      chargeColor = "bg-amber-500";
+                      textAlert = "Charge soutenue";
+                    }
+
+                    // Max scale for percentage visual bar (assume max 8 tasks as 100%)
+                    const percentage = Math.min(100, Math.round((charge / 6) * 100));
+
+                    return (
+                      <div key={sData.site} className="space-y-1">
+                        <div className="flex justify-between items-center font-bold text-[10px]">
+                          <span className="text-slate-900 uppercase font-black">{sData.site}</span>
+                          <span className="text-slate-500">
+                            {charge.toFixed(1)} tâches / méca ({textAlert})
+                          </span>
+                        </div>
+                        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                          <div className={`h-full ${chargeColor} rounded-full transition-all`} style={{ width: `${percentage}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Right human column: Positive recognition (Félicitations) */}
+            <div className="space-y-3">
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Félicitations & Engagement Technique (Ce mois)</span>
+              
+              {isLoading ? (
+                <div className="text-slate-400 text-xs">Recherche des meilleurs engagements...</div>
+              ) : felicitationsMecaniciens.length === 0 ? (
+                <div className="p-4 bg-slate-50 text-slate-500 rounded-xl text-center">
+                  Aucun dossier mécanicien éligible aux félicitations ce mois-ci.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {felicitationsMecaniciens.map(({ mecanicien, scoreCombine, scoreTournees, scoreMttr }) => (
+                    <div key={mecanicien.uid || mecanicien.id} className="p-3 bg-slate-50 border border-slate-150 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center text-emerald-600 font-extrabold shrink-0 text-xs">
+                          {mecanicien.prenom ? mecanicien.prenom.charAt(0) : mecanicien.nomComplet?.charAt(0) || "M"}
+                        </div>
+                        <div>
+                          <span className="font-bold text-slate-950 uppercase block">
+                            {mecanicien.prenom} {mecanicien.nom || mecanicien.nomComplet}
+                          </span>
+                          <span className="text-[9px] text-slate-400 uppercase">
+                            Matricule : {mecanicien.matricule} — {mecanicien.siteId || "Site Inconnu"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="inline-flex items-center gap-1 text-[10.5px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                          <UserCheck className="h-3 w-3" />
+                          {scoreCombine}%
+                        </span>
+                        <p className="text-[9px] text-slate-400 uppercase mt-0.5">Indice de complétion</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+        </CardContent>
+      </Card>
+
+    </div>
+  );
+}

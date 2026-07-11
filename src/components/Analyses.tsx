@@ -18,6 +18,8 @@ import { PageBanner } from '@/components/ui/PageBanner';
 import { useCollection } from '@/hooks/useCollection';
 import { useAuthStore } from '@/lib/store';
 import { toast } from 'sonner';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import RapportMensuelPDF from './reports/RapportMensuelPDF';
 
 export default function Analyses() {
   const [activeTab, setActiveTab] = useState<"directeur" | "performances" | "fiabilite" | "export" | "pannes">("directeur");
@@ -373,6 +375,154 @@ export default function Analyses() {
     }).sort((a, b) => a.dispoPct - b.dispoPct); // Least available first
   }, [engins, pannes]);
 
+  // Model-level reliability analysis (last 90 days)
+  const fiabiliteParModele = useMemo(() => {
+    const limit90 = Date.now() - (90 * 24 * 60 * 60 * 1000);
+    
+    // Group active/non-deleted engins by type
+    const enginsByModel: Record<string, any[]> = {};
+    engins.forEach(e => {
+      const model = (e.type || 'Inconnu').trim();
+      if (!enginsByModel[model]) {
+        enginsByModel[model] = [];
+      }
+      enginsByModel[model].push(e);
+    });
+
+    // Total closed breakdowns in the last 90 days across the entire fleet
+    const closedPannes90 = pannes.filter(p => 
+      p.statut === 'CLOS' && 
+      p.dateDeclaration && 
+      new Date(p.dateDeclaration).getTime() >= limit90
+    );
+    const totalPannesFlotte = closedPannes90.length;
+    const moyenneFlotte = engins.length > 0 ? (totalPannesFlotte / engins.length) : 0;
+
+    const result = Object.entries(enginsByModel).map(([model, modelEngins]) => {
+      const enginIdsOfModel = new Set(modelEngins.map(e => e.id));
+      const modelPannes = closedPannes90.filter(p => enginIdsOfModel.has(p.enginId));
+      
+      const numEngins = modelEngins.length;
+      const totalPannes = modelPannes.length;
+      const tauxPanneMoyen = numEngins > 0 ? (totalPannes / numEngins) : 0;
+      const mtbf = totalPannes > 0 ? Math.round((numEngins * 90 * 24) / totalPannes) : null;
+
+      // Find dominant category
+      const catCounts: Record<string, number> = {};
+      modelPannes.forEach(p => {
+        const cat = p.categorie || 'Non catégorisé';
+        catCounts[cat] = (catCounts[cat] || 0) + 1;
+      });
+      let maxCount = 0;
+      let dominantCat = 'Aucune';
+      Object.entries(catCounts).forEach(([cat, count]) => {
+        if (count > maxCount) {
+          maxCount = count;
+          dominantCat = cat;
+        }
+      });
+
+      const depasseSeuil = moyenneFlotte > 0 && tauxPanneMoyen > (moyenneFlotte * 1.5);
+
+      return {
+        model,
+        numEngins,
+        totalPannes,
+        tauxPanneMoyen,
+        mtbf,
+        dominantCat,
+        depasseSeuil
+      };
+    });
+
+    // Sort from least reliable (highest breakdown rate) to most reliable (lowest breakdown rate)
+    return result.sort((a, b) => b.tauxPanneMoyen - a.tauxPanneMoyen);
+  }, [engins, pannes]);
+
+  // Inter-site asset balancing recommendations (Only for Admin, Direction, Responsable Maintenance when activeSite === "TOUS")
+  const disponibiliteInterSites = useMemo(() => {
+    const isPrivileged = user?.role && ['ADMIN', 'DIRECTION', 'RESPONSABLE_MAINTENANCE'].includes(user.role);
+    if (!isPrivileged || activeSite !== 'TOUS') return [];
+
+    // Group active/non-deleted engins by model/type and site
+    const models: Record<string, Record<string, { engins: any[]; totalHeures: number }>> = {};
+    
+    const enginsLive = (rawEngins || []).filter(e => !e.deleted);
+    const pannesLive = (rawPannes || []).filter(p => !p.deleted);
+
+    enginsLive.forEach(e => {
+      const model = (e.type || e.modele || 'Inconnu').trim();
+      const site = (e.siteId || e.site || 'SMI').trim().toUpperCase();
+      
+      if (!models[model]) {
+        models[model] = {};
+      }
+      if (!models[model][site]) {
+        models[model][site] = { engins: [], totalHeures: 0 };
+      }
+      models[model][site].engins.push(e);
+      models[model][site].totalHeures += (e.heuresMarche || 0);
+    });
+
+    const recommendations: any[] = [];
+
+    Object.entries(models).forEach(([model, sitesData]) => {
+      const sitesList = Object.keys(sitesData);
+      if (sitesList.length < 2) return; // Only models present on multiple sites
+
+      // Compute stats for each site for this model
+      const siteStats = sitesList.map(site => {
+        const { engins: siteEngins, totalHeures } = sitesData[site];
+        const count = siteEngins.length;
+        const avgHeures = count > 0 ? (totalHeures / count) : 0;
+        
+        // Count open pannes for this model on this site
+        const enginIds = new Set(siteEngins.map(e => e.id));
+        const openPannesModel = pannesLive.filter(p => 
+          p.statut !== 'CLOS' && 
+          enginIds.has(p.enginId)
+        ).length;
+
+        return {
+          site,
+          count,
+          avgHeures,
+          openPannes: openPannesModel,
+        };
+      });
+
+      // Find pairs of sites with significant imbalances
+      for (let i = 0; i < siteStats.length; i++) {
+        for (let j = 0; j < siteStats.length; j++) {
+          if (i === j) continue;
+          const siteA = siteStats[i]; // potential under-utilized
+          const siteB = siteStats[j]; // potential over-utilized / in tension
+
+          const ratio = siteB.avgHeures > 0 ? (siteA.avgHeures / siteB.avgHeures) : 1;
+          const isUnderUtilized = ratio < 0.75; // siteA has at least 25% less average hours of usage
+          const isInTension = siteB.openPannes > 0; // Site B has open breakdowns of this model, so it needs machines
+
+          if (isUnderUtilized && (isInTension || siteB.avgHeures > siteA.avgHeures + 500)) {
+            recommendations.push({
+              model,
+              underUtilizedSite: siteA.site,
+              underUtilizedAvgHours: Math.round(siteA.avgHeures),
+              underUtilizedCount: siteA.count,
+              inTensionSite: siteB.site,
+              inTensionAvgHours: Math.round(siteB.avgHeures),
+              inTensionCount: siteB.count,
+              inTensionPannes: siteB.openPannes,
+              severity: isInTension ? 'CRITICAL' : 'WARNING',
+              recommendationText: `${model} sous-utilisé à ${siteA.site} (${Math.round(siteA.avgHeures)} h cumulées en moyenne) pendant que ${siteB.site} a ${siteB.openPannes} panne(s) ouverte(s) sur ce modèle — transfert à évaluer.`
+            });
+          }
+        }
+      }
+    });
+
+    return recommendations;
+  }, [rawEngins, rawPannes, user, activeSite]);
+
   // Breakdowns count per category
   const pannesParCategorie = useMemo(() => {
     const categories: Record<string, number> = {};
@@ -410,6 +560,135 @@ export default function Analyses() {
     const pannesMois = pannes.filter(p => (p.dateDeclaration || '').startsWith(mois));
     const pannesResolues = pannesMois.filter(p => p.statut === 'CLOS').length;
 
+    // Site rankings computation (duplicated logic from Dashboard.tsx)
+    const SITES_LIST = ["SMI", "OUMEJRANE", "KOUDIA", "OUANSIMI", "BOU-AZZER"];
+    const enginsLive = (rawEngins || []).filter(e => !e.deleted);
+    const workOrdersLive = (rawTasks || []).filter(t => !t.deleted);
+    const pannesLive = (rawPannes || []).filter(p => !p.deleted);
+    const mecaniciensLive = (rawMecaniciens || []).filter(m => !m.deleted && m.active !== false && m.statut !== 'Inactif');
+
+    const getNormalizedStatus = (e: any) => {
+      if (e.statut !== undefined || e.dispo !== undefined) {
+        if (e.dispo === 0 || e.statut === "panne") return "EN_PANNE";
+        if (e.statut === "maintenance" || (typeof e.dispo === "number" && e.dispo > 0 && e.dispo < 100)) return "EN_MAINTENANCE";
+        return "DISPONIBLE";
+      }
+      if (e.status) {
+        const s = e.status.toUpperCase();
+        if (s === 'DISPONIBLE' || s === 'OPÉRATIONNEL' || s === 'OPERATIONNEL') return 'DISPONIBLE';
+        if (s === 'EN_MAINTENANCE' || s === 'MAINTENANCE') return 'EN_MAINTENANCE';
+        if (s === 'EN_PANNE' || s === 'HORS SERVICE' || s === 'HORS_SERVICE' || s === 'ARRÊT' || s === 'ARRET') return 'EN_PANNE';
+        return s;
+      }
+      if (e.etat) {
+        if (e.etat === "Opérationnel") return "DISPONIBLE";
+        if (e.etat === "En maintenance") return "EN_MAINTENANCE";
+        if (e.etat === "Hors service" || e.etat === "En panne") return "EN_PANNE";
+      }
+      return "DISPONIBLE";
+    };
+
+    const computedClassementSites = SITES_LIST.map(site => {
+      const siteEngins = enginsLive.filter(e => e.siteId === site || e.site === site);
+      const dispoEnginsCount = siteEngins.filter(e => getNormalizedStatus(e) === "DISPONIBLE").length;
+      const dispoSite = siteEngins.length > 0 ? (dispoEnginsCount / siteEngins.length) * 100 : null;
+
+      const sitePannes = pannesLive.filter(p => p.siteId === site || p.site === site);
+      const pannesOuvertesSite = sitePannes.filter(p => p.statut !== "CLOS").length;
+      const notePannes = Math.max(0, 100 - (pannesOuvertesSite * (100 / 8)));
+
+      const preventifMoisTasks = workOrdersLive.filter(t => (t.siteId === site || t.site === site) && t.type === 'PREVENTIF' && t.datePlanifiee && t.datePlanifiee.startsWith(mois));
+      const complianceSite = preventifMoisTasks.length > 0
+        ? (preventifMoisTasks.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length / preventifMoisTasks.length) * 100
+        : null;
+
+      const activeTasksSite = workOrdersLive.filter(t => (t.siteId === site || t.site === site) && (t.statut === 'NON_FAIT' || t.statut === 'EN_COURS')).length;
+      const siteMecas = mecaniciensLive.filter(m => m.siteId === site);
+      const chargeMoyenneSite = siteMecas.length > 0 ? activeTasksSite / siteMecas.length : null;
+      const noteCharge = chargeMoyenneSite !== null ? Math.max(0, 100 - (chargeMoyenneSite * (100 / 10))) : null;
+
+      let totalScore = 0;
+      let sumOfWeights = 0;
+
+      if (dispoSite !== null) {
+        totalScore += dispoSite * 40;
+        sumOfWeights += 40;
+      }
+      if (complianceSite !== null) {
+        totalScore += complianceSite * 30;
+        sumOfWeights += 30;
+      }
+      if (notePannes !== null) {
+        totalScore += notePannes * 20;
+        sumOfWeights += 20;
+      }
+      if (noteCharge !== null) {
+        totalScore += noteCharge * 10;
+        sumOfWeights += 10;
+      }
+
+      const scoreGlobal = sumOfWeights > 0 ? totalScore / sumOfWeights : null;
+
+      return {
+        site,
+        scoreGlobal
+      };
+    }).sort((a, b) => {
+      const scoreA = a.scoreGlobal !== null ? a.scoreGlobal : -1;
+      const scoreB = b.scoreGlobal !== null ? b.scoreGlobal : -1;
+      return scoreB - scoreA;
+    });
+
+    // Top 3 categories of breakdowns this month
+    const catCounts: Record<string, number> = {};
+    pannesMois.forEach(p => {
+      const cat = p.categorie || "Non spécifié";
+      catCounts[cat] = (catCounts[cat] || 0) + 1;
+    });
+    const topCategories = Object.entries(catCounts)
+      .map(([categorie, count]) => ({ categorie, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+
+    // Top 3 pieces concerned this month
+    const piecesCounts: Record<string, { originalName: string; count: number }> = {};
+    pannesMois.forEach(p => {
+      const pList = p.piecesConcernees || [];
+      pList.forEach((piece: string) => {
+        if (!piece) return;
+        const trimmed = piece.trim();
+        const key = trimmed.toLowerCase();
+        if (key) {
+          if (piecesCounts[key]) {
+            piecesCounts[key].count += 1;
+          } else {
+            piecesCounts[key] = { originalName: trimmed, count: 1 };
+          }
+        }
+      });
+    });
+
+    const interventionsMois = interventions.filter(i => (i.date || '').startsWith(mois));
+    interventionsMois.forEach(i => {
+      const pList = i.piecesUtilisees || [];
+      pList.forEach((piece: string) => {
+        if (!piece) return;
+        const trimmed = piece.trim();
+        const key = trimmed.toLowerCase();
+        if (key) {
+          if (piecesCounts[key]) {
+            piecesCounts[key].count += 1;
+          } else {
+            piecesCounts[key] = { originalName: trimmed, count: 1 };
+          }
+        }
+      });
+    });
+
+    const topPieces = Object.values(piecesCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+
     const rapportData = {
       moisLabel,
       compliance,
@@ -422,6 +701,9 @@ export default function Analyses() {
       topMecanicien: leaderboardMecaniciens[0] || null,
       enginLePlusArr: fiabiliteParEngin[0] || null,
       alertesActives: alertesProactives.filter(a => a.priorite === 'CRITIQUE').length,
+      classementSites: computedClassementSites,
+      topCategories,
+      topPieces,
     };
 
     setRapportGenere(rapportData);
@@ -465,6 +747,19 @@ export default function Analyses() {
   // PANNES ANALYSIS DATA PROCESSING (FUSIONNÉ : PANNES + INTERVENTIONS CORRECTIVES)
   // ----------------------------------------------------
   const evenementsMaintenance = useMemo(() => {
+    const getPeriodeJournee = (dateStr: string) => {
+      if (!dateStr) return "JOUR";
+      if (!dateStr.includes(':')) return "JOUR";
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return "JOUR";
+        const hour = d.getHours();
+        return (hour >= 6 && hour < 22) ? "JOUR" : "NUIT";
+      } catch {
+        return "JOUR";
+      }
+    };
+
     // 1. Filtered and closed pannes
     const pannesEvents = pannes
       .filter(p => p.statut === "CLOS")
@@ -476,7 +771,9 @@ export default function Analyses() {
         date: p.dateDeclaration,
         statut: p.statut,
         source: "panne" as const,
-        dureeHeures: p.dureePanneHeures || p.dureeInterventionHeures || 0
+        dureeHeures: p.dureePanneHeures || p.dureeInterventionHeures || 0,
+        pieces: p.piecesConcernees || [],
+        periodeJournee: getPeriodeJournee(p.dateDeclaration || "")
       }));
 
     // 2. Filtered correctif interventions
@@ -490,7 +787,9 @@ export default function Analyses() {
         date: i.date,
         statut: "CLOS", // they are already executed/closed interventions
         source: "intervention_importee" as const,
-        dureeHeures: i.dureeHeures || 0
+        dureeHeures: i.dureeHeures || 0,
+        pieces: i.piecesUtilisees || [],
+        periodeJournee: getPeriodeJournee(i.date || "")
       }));
 
     return [...pannesEvents, ...interventionsEvents];
@@ -548,6 +847,62 @@ export default function Analyses() {
   const top3Tendances = useMemo(() => {
     return categoryStats.slice(0, 3).filter(s => s.activeCount > 0);
   }, [categoryStats]);
+
+  const piecesStats = useMemo(() => {
+    const activeEvents = pannesByPeriodAndSite.active;
+    const counts: Record<string, { originalName: string; count: number }> = {};
+    
+    activeEvents.forEach(e => {
+      const pList = e.pieces || [];
+      pList.forEach((pName: string) => {
+        if (!pName) return;
+        const trimmed = pName.trim();
+        if (!trimmed) return;
+        const key = trimmed.toLowerCase();
+        if (counts[key]) {
+          counts[key].count += 1;
+        } else {
+          counts[key] = {
+            originalName: trimmed,
+            count: 1
+          };
+        }
+      });
+    });
+
+    const list = Object.values(counts).sort((a, b) => b.count - a.count);
+    return list;
+  }, [pannesByPeriodAndSite]);
+
+  const jourNuitStats = useMemo(() => {
+    const activeEvents = pannesByPeriodAndSite.active;
+    
+    const jourEvents = activeEvents.filter(e => (e as any).periodeJournee === "JOUR");
+    const nuitEvents = activeEvents.filter(e => (e as any).periodeJournee === "NUIT");
+    
+    const jourCount = jourEvents.length;
+    const nuitCount = nuitEvents.length;
+    const totalCount = jourCount + nuitCount;
+    
+    const pctJour = totalCount > 0 ? Math.round((jourCount / totalCount) * 100) : 0;
+    const pctNuit = totalCount > 0 ? Math.round((nuitCount / totalCount) * 100) : 0;
+    
+    const totalDureeJour = jourEvents.reduce((sum, e) => sum + (e.dureeHeures || 0), 0);
+    const avgMttrJour = jourCount > 0 ? Math.round((totalDureeJour / jourCount) * 10) / 10 : 0;
+    
+    const totalDureeNuit = nuitEvents.reduce((sum, e) => sum + (e.dureeHeures || 0), 0);
+    const avgMttrNuit = nuitCount > 0 ? Math.round((totalDureeNuit / nuitCount) * 10) / 10 : 0;
+    
+    return {
+      jourCount,
+      nuitCount,
+      pctJour,
+      pctNuit,
+      avgMttrJour,
+      avgMttrNuit,
+      totalCount
+    };
+  }, [pannesByPeriodAndSite]);
 
   const matrixData = useMemo(() => {
     const isAdminOrDirection = user?.role === 'ADMIN' || user?.role === 'DIRECTION';
@@ -1445,6 +1800,148 @@ export default function Analyses() {
               </CardContent>
             </Card>
 
+            {/* Reliability per Model */}
+            <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-amber-500 to-[#D4A017]" />
+              <CardHeader className="p-0 pb-4 border-b border-slate-100 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-xs font-mono font-black uppercase text-slate-800 tracking-wide">
+                    FIABILITÉ COMPARATIVE PAR MODÈLE D'ENGIN (90 JOURS)
+                  </CardTitle>
+                  <p className="text-[10px] text-slate-500 mt-0.5 leading-none">
+                    Analyse globale de fiabilité par type de modèle pour toute la flotte d'équipements
+                  </p>
+                </div>
+                <Badge className="bg-slate-100 text-slate-700 border-slate-200 text-[8.5px] font-mono">STATISTIQUE</Badge>
+              </CardHeader>
+              <CardContent className="p-0 pt-4 overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs font-mono">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-black">
+                      <th className="py-2.5">MODÈLE ENGIN</th>
+                      <th className="py-2.5">FLOTTE</th>
+                      <th className="py-2.5">PANNES (90J)</th>
+                      <th className="py-2.5">TAUX MOYEN DE PANNE</th>
+                      <th className="py-2.5 text-center">MTBF ESTIMÉ</th>
+                      <th className="py-2.5 text-right">CATÉGORIE DOMINANTE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fiabiliteParModele.map(item => (
+                      <tr key={item.model} className="border-b border-slate-50 hover:bg-slate-50/45">
+                        <td className="py-3 font-extrabold text-slate-800">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm font-black">{item.model}</span>
+                            {item.numEngins < 2 && (
+                              <span className="text-[9px] font-semibold text-amber-600 leading-tight">
+                                ⚠️ échantillon trop petit pour être significatif
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 text-slate-600 font-bold">{item.numEngins} engin(s)</td>
+                        <td className="py-3 text-slate-600">{item.totalPannes} panne(s) Clôt.</td>
+                        <td className="py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-700">
+                              {parseFloat(item.tauxPanneMoyen.toFixed(2))} panne/engin
+                            </span>
+                            {item.depasseSeuil && (
+                              <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[9px] font-black tracking-tight shrink-0">
+                                ⚠️ SEUIL DÉPASSÉ (+50%)
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 text-center">
+                          {item.totalPannes > 0 && item.mtbf !== null ? (
+                            <span className="font-bold text-slate-700">{item.mtbf} h</span>
+                          ) : (
+                            <span className="text-[9.5px] text-slate-400 italic">Aucune panne</span>
+                          )}
+                        </td>
+                        <td className="py-3 text-right">
+                          <span className="px-2 py-1 bg-slate-50 text-slate-700 font-bold rounded-md border border-slate-100 text-[10px]">
+                            {item.dominantCat}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+
+            {/* Inter-site Asset Balancing Recommendations */}
+            {activeSite === "TOUS" && user?.role && ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE"].includes(user.role) && (
+              <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm">
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#D4A017] via-[#D4AF37] to-amber-600" />
+                <CardHeader className="p-0 pb-4 border-b border-slate-100 flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xs font-mono font-black uppercase text-slate-800 tracking-wide flex items-center gap-1.5">
+                      <TrendingDown className="h-4 w-4 text-amber-500" /> RECOMMANDATIONS D'ARBITRAGE ET DISPONIBILITÉ INTER-SITES
+                    </CardTitle>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-none">
+                      Identification des déséquilibres de charge et d'utilisation pour transfert d'équipements entre chantiers
+                    </p>
+                  </div>
+                  <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[8.5px] font-mono font-black">INTER-SITES</Badge>
+                </CardHeader>
+                <CardContent className="p-0 pt-4 space-y-4">
+                  <div className="space-y-2">
+                    {disponibiliteInterSites.length > 0 ? (
+                      <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
+                        {disponibiliteInterSites.map((item, idx) => (
+                          <div 
+                            key={idx} 
+                            className={`p-3.5 rounded-xl border flex flex-col justify-between gap-2.5 font-mono text-xs transition-all ${
+                              item.severity === 'CRITICAL' 
+                                ? 'bg-rose-50/40 border-rose-150' 
+                                : 'bg-slate-50/50 border-slate-100'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-extrabold text-slate-800 flex items-center gap-1.5">
+                                <span className={`h-2 w-2 rounded-full ${item.severity === 'CRITICAL' ? 'bg-rose-500 animate-pulse' : 'bg-amber-500'}`} />
+                                Équilibrage : {item.model}
+                              </span>
+                              <Badge className={`${
+                                item.severity === 'CRITICAL' 
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              } text-[8.5px] font-black`}>
+                                {item.severity === 'CRITICAL' ? 'CRITIQUE / TENSION' : 'OPPORTUNITÉ'}
+                              </Badge>
+                            </div>
+                            
+                            <p className="text-slate-700 leading-relaxed font-bold text-[11px] pr-2">
+                              {item.recommendationText}
+                            </p>
+
+                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[9.5px] text-slate-500">
+                              <span>Sous-utilisé : {item.underUtilizedSite} ({item.underUtilizedAvgHours} h avg)</span>
+                              <span>•</span>
+                              <span>Tension : {item.inTensionSite} ({item.inTensionPannes} panne(s) ouv.)</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-6 px-4 bg-slate-50/40 border border-dashed border-slate-200 rounded-xl">
+                        <CheckCircle2 className="h-6 w-6 text-emerald-500 mb-1.5" />
+                        <p className="text-xs font-bold text-slate-600">Aucun déséquilibre notable détecté ce mois-ci</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">La répartition des modèles d'engins et leur utilisation sont homogènes sur tous les sites miniers actifs.</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-150 text-[9.5px] text-slate-500 font-medium leading-relaxed">
+                    💡 <span className="font-bold text-slate-600">Note méthodologique :</span> N'ayant pas d'historique des relevés d'heures glissants sur 30 jours, l'analyse utilise le compteur cumulé d'heures de marche réelles comme indicateur proxy d'usure et d'utilisation générale.
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Breakdowns by category & Recent Breakdowns */}
             <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
               
@@ -1566,7 +2063,8 @@ export default function Analyses() {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                  <div className="space-y-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Left: Horizontal Bar Chart */}
                     <div className="lg:col-span-7 space-y-4">
                       <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 font-mono">
@@ -1665,9 +2163,112 @@ export default function Analyses() {
                           );
                         })}
                       </div>
+
+                      {/* Sub-section: Pièces les plus concernées */}
+                      <div className="pt-4 border-t border-slate-100">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 font-mono mb-3">
+                          Pièces les plus concernées
+                        </h4>
+                        {piecesStats.length < 3 ? (
+                          <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center">
+                            <p className="text-xs font-black uppercase text-slate-500 font-mono">Données insuffisantes</p>
+                            <p className="text-[10px] text-slate-400 font-medium mt-1">
+                              Moins de 3 pièces distinctes ont été renseignées sur cette période.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {piecesStats.slice(0, 5).map((item, index) => (
+                              <div key={index} className="flex items-center justify-between p-2.5 bg-slate-50/50 rounded-lg border border-slate-150 font-mono text-xs">
+                                <span className="flex items-center gap-2">
+                                  <span className="font-black text-[#D4A017]">#{index + 1}</span>
+                                  <span className="font-bold text-slate-700 uppercase">{item.originalName}</span>
+                                </span>
+                                <Badge className="bg-slate-100 text-slate-700 border-slate-200 text-[10px] font-bold">
+                                  {item.count} {item.count > 1 ? 'incidents' : 'incident'}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                )}
+
+                  {/* Section: Analyse Heures de Production vs Heures Creuses (JOUR / NUIT) */}
+                  <div className="pt-6 border-t border-slate-100 space-y-4">
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 font-mono flex items-center gap-2">
+                        ⏱️ IMPACT DE L'HORAIRE DE PANNE (JOUR VS NUIT)
+                      </h4>
+                      <p className="text-[11px] text-slate-500 font-medium mt-1">
+                        Analyse de la répartition des incidents et du temps moyen de résolution (MTTR) selon la période de la journée.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
+                      {/* Card 1: Répartition */}
+                      <div className="p-4 bg-slate-50 rounded-xl border border-slate-150 flex flex-col justify-between gap-3">
+                        <div>
+                          <span className="font-bold text-slate-500 text-[10px] uppercase">RÉPARTITION DES SIGNALEMENTS</span>
+                          <div className="flex items-baseline gap-2 mt-1.5">
+                            <span className="text-2xl font-black text-slate-900">{jourNuitStats.totalCount}</span>
+                            <span className="text-[10px] text-slate-400 font-medium">pannes au total</span>
+                          </div>
+                        </div>
+                        
+                        {/* Progress bar */}
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[10px]">
+                            <span className="font-bold text-amber-600">JOUR (6h-22h) : {jourNuitStats.pctJour}%</span>
+                            <span className="font-bold text-indigo-600">NUIT (22h-6h) : {jourNuitStats.pctNuit}%</span>
+                          </div>
+                          <div className="h-2.5 rounded-full bg-slate-200 overflow-hidden flex">
+                            <div className="bg-amber-400 h-full transition-all" style={{ width: `${jourNuitStats.pctJour}%` }} />
+                            <div className="bg-indigo-500 h-full transition-all" style={{ width: `${jourNuitStats.pctNuit}%` }} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card 2: MTTR JOUR */}
+                      <div className="p-4 bg-amber-50/40 rounded-xl border border-amber-150 flex flex-col justify-between gap-3">
+                        <div>
+                          <span className="font-bold text-amber-700 text-[10px] uppercase flex items-center gap-1">
+                            ☀️ MTTR MOYEN — HEURES DE JOUR
+                          </span>
+                          <div className="flex items-baseline gap-1 mt-1.5">
+                            <span className="text-2xl font-black text-amber-850">{jourNuitStats.avgMttrJour}</span>
+                            <span className="text-xs font-bold text-amber-700">heures / panne</span>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
+                          {jourNuitStats.jourCount} panne(s) déclarée(s) durant les heures de production normales (6h-22h).
+                        </p>
+                      </div>
+
+                      {/* Card 3: MTTR NUIT */}
+                      <div className="p-4 bg-indigo-50/40 rounded-xl border border-indigo-150 flex flex-col justify-between gap-3">
+                        <div>
+                          <span className="font-bold text-indigo-700 text-[10px] uppercase flex items-center gap-1">
+                            🌙 MTTR MOYEN — HEURES DE NUIT
+                          </span>
+                          <div className="flex items-baseline gap-1 mt-1.5">
+                            <span className="text-2xl font-black text-indigo-800">{jourNuitStats.avgMttrNuit}</span>
+                            <span className="text-xs font-bold text-indigo-700">heures / panne</span>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
+                          {jourNuitStats.nuitCount} panne(s) déclarée(s) en horaires de nuit/heures creuses (22h-6h).
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-150 text-[10px] text-slate-500 font-medium leading-relaxed">
+                      💡 <span className="font-bold text-slate-600">Note sur la plage d'exploitation :</span> Les horaires d'équipe de production diurne sont configurés par défaut entre 06:00 et 22:00. <span className="font-semibold text-amber-600">N'hésitez pas à nous préciser vos horaires d'équipe réels</span> afin d'ajuster précisément cette segmentation et refléter au mieux l'organisation de vos équipes de maintenance.
+                    </div>
+                  </div>
+                </div>
+              )}
               </CardContent>
             </Card>
 
@@ -2070,12 +2671,38 @@ export default function Analyses() {
                     </div>
                   </div>
                 </div>
-                <Button
-                  onClick={generateMonthlyReport}
-                  className="w-full bg-[#D4A017] hover:bg-[#B8860B] text-white border-none font-bold uppercase tracking-wider text-xs h-9 shadow-sm mt-6"
-                >
-                  <Printer className="h-4 w-4 mr-1.5" /> Générer le Rapport
-                </Button>
+                <div className="grid grid-cols-2 gap-3 mt-6">
+                  <Button
+                    onClick={generateMonthlyReport}
+                    className="bg-[#D4A017] hover:bg-[#B8860B] text-white border-none font-bold uppercase tracking-wider text-xs h-9 shadow-sm"
+                  >
+                    <Printer className="h-4 w-4 mr-1.5" /> Aperçu Rapport
+                  </Button>
+                  <PDFDownloadLink
+                    document={
+                      <RapportMensuelPDF
+                        engins={rawEngins || []}
+                        tasks={rawTasks || []}
+                        pannes={rawPannes || []}
+                        mecaniciens={rawMecaniciens || []}
+                        interventions={rawInterventions || []}
+                        monthKey={new Date().toISOString().substring(0, 7)}
+                        moisLabel={new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                      />
+                    }
+                    fileName={`rapport-maintenance-hydromines-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}.pdf`}
+                  >
+                    {({ blob, url, loading, error }) => (
+                      <Button
+                        disabled={loading}
+                        className="w-full bg-slate-800 hover:bg-slate-900 text-white border-none font-bold uppercase tracking-wider text-xs h-9 shadow-sm"
+                      >
+                        <Download className="h-4 w-4 mr-1.5" /> 
+                        {loading ? "Génération..." : "Télécharger PDF"}
+                      </Button>
+                    )}
+                  </PDFDownloadLink>
+                </div>
               </Card>
 
               {/* CSV exports */}
@@ -2134,13 +2761,31 @@ export default function Analyses() {
                 <Printer className="h-3.5 w-3.5 text-[#D4A017]" /> APERÇU AVANT IMPRESSION
               </span>
               <div className="flex gap-2">
-                <Button 
-                  size="xs" 
-                  onClick={handlePrint} 
-                  className="bg-[#D4A017] hover:bg-[#B8860B] text-white uppercase text-[10px] font-black h-7 px-3"
+                <PDFDownloadLink
+                  document={
+                    <RapportMensuelPDF
+                      engins={rawEngins || []}
+                      tasks={rawTasks || []}
+                      pannes={rawPannes || []}
+                      mecaniciens={rawMecaniciens || []}
+                      interventions={rawInterventions || []}
+                      monthKey={new Date().toISOString().substring(0, 7)}
+                      moisLabel={new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                    />
+                  }
+                  fileName={`rapport-maintenance-hydromines-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}.pdf`}
                 >
-                  <Printer className="h-3 w-3 mr-1" /> Imprimer
-                </Button>
+                  {({ blob, url, loading, error }) => (
+                    <Button 
+                      size="xs" 
+                      disabled={loading}
+                      className="bg-[#D4A017] hover:bg-[#B8860B] text-white uppercase text-[10px] font-black h-7 px-3 flex items-center gap-1"
+                    >
+                      <Download className="h-3 w-3" />
+                      {loading ? "Génération..." : "Télécharger le rapport PDF"}
+                    </Button>
+                  )}
+                </PDFDownloadLink>
                 <Button 
                   size="xs" 
                   variant="outline" 
@@ -2213,9 +2858,81 @@ export default function Analyses() {
                 </div>
               </div>
 
+              {/* Site Rankings Table */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-black uppercase text-slate-800 tracking-wider font-mono">2. CLASSEMENT DES SITES D'EXPLOITATION</h3>
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-left border-collapse text-[11px] font-mono">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-[9.5px] text-slate-400 font-black">
+                        <th className="py-2 px-3">RANG</th>
+                        <th className="py-2 px-3">SITE</th>
+                        <th className="py-2 px-3 text-right">SCORE GLOBAL MENSUEL</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rapportGenere.classementSites?.map((item: any, idx: number) => (
+                        <tr key={item.site} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/40">
+                          <td className="py-2 px-3 font-extrabold text-[#D4A017]">#{idx + 1}</td>
+                          <td className="py-2 px-3 font-bold text-slate-800 uppercase">{item.site}</td>
+                          <td className="py-2 px-3 text-right font-black text-slate-900">
+                            {item.scoreGlobal !== null ? `${Math.round(item.scoreGlobal)}/100` : "N/A"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Category and Parts Top 3 Section */}
+              <div className={rapportGenere.topPieces && rapportGenere.topPieces.length >= 3 ? "grid grid-cols-2 gap-4" : "w-full"}>
+                {/* Top Categories */}
+                <div className="space-y-2">
+                  <h3 className="text-xs font-black uppercase text-slate-800 tracking-wider font-mono">
+                    {rapportGenere.topPieces && rapportGenere.topPieces.length >= 3 ? "3. TOP CATÉGORIES DE PANNES" : "3. TOP CATÉGORIES DE PANNES DU MOIS"}
+                  </h3>
+                  <div className="border border-slate-200 rounded-xl p-3 space-y-2 font-mono text-xs">
+                    {rapportGenere.topCategories && rapportGenere.topCategories.length > 0 ? (
+                      rapportGenere.topCategories.map((item: any, idx: number) => (
+                        <div key={idx} className="flex justify-between items-center py-1 border-b border-slate-100 last:border-0 last:pb-0">
+                          <span className="text-slate-600 truncate font-bold">
+                            <span className="font-extrabold text-[#D4A017] mr-1.5">#{idx + 1}</span>
+                            {item.categorie}
+                          </span>
+                          <span className="font-black text-slate-800 shrink-0">{item.count} incident(s)</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-slate-400 italic">Aucune panne ce mois</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Top Pieces (Conditionally rendered) */}
+                {rapportGenere.topPieces && rapportGenere.topPieces.length >= 3 && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-black uppercase text-slate-800 tracking-wider font-mono">4. TOP PIÈCES CONCERNÉES</h3>
+                    <div className="border border-slate-200 rounded-xl p-3 space-y-2 font-mono text-xs">
+                      {rapportGenere.topPieces.map((item: any, idx: number) => (
+                        <div key={idx} className="flex justify-between items-center py-1 border-b border-slate-100 last:border-0 last:pb-0">
+                          <span className="text-slate-600 truncate font-bold">
+                            <span className="font-extrabold text-[#D4A017] mr-1.5">#{idx + 1}</span>
+                            {item.originalName}
+                          </span>
+                          <span className="font-black text-slate-800 shrink-0">{item.count} util.</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Alerts summary */}
               <div className="space-y-2">
-                <h3 className="text-xs font-black uppercase text-slate-800 tracking-wider font-mono">2. ALERTES CRITIQUES EN ATTENTE</h3>
+                <h3 className="text-xs font-black uppercase text-slate-800 tracking-wider font-mono">
+                  {rapportGenere.topPieces && rapportGenere.topPieces.length >= 3 ? "5. ALERTES CRITIQUES EN ATTENTE" : "5. ALERTES CRITIQUES EN ATTENTE"}
+                </h3>
                 <div className="border border-slate-150 rounded-xl p-3 font-mono text-[10.5px] leading-relaxed text-slate-600">
                   {rapportGenere.alertesActives > 0 ? (
                     <p className="text-red-600 font-black">

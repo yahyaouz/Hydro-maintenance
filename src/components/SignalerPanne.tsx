@@ -23,11 +23,39 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill, descriptionPref
 
   const [enginId, setEnginId] = React.useState('');
   const [categorie, setCategorie] = React.useState<"Mécanique" | "Hydraulique" | "Électrique" | "Pneumatique" | "Transmission" | "Freinage" | "Autre">('Mécanique');
+  const [piecesConcernees, setPiecesConcernees] = React.useState<string[]>([]);
+  const [newPiece, setNewPiece] = React.useState('');
   const [gravite, setGravite] = React.useState<"Critique" | "Élevée" | "Moyenne" | "Faible">('Moyenne');
   const [arretMachine, setArretMachine] = React.useState(false);
   const [description, setDescription] = React.useState('');
   const [photo, setPhoto] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const handleAddPiece = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (newPiece.trim()) {
+      if (!piecesConcernees.includes(newPiece.trim())) {
+        setPiecesConcernees([...piecesConcernees, newPiece.trim()]);
+      }
+      setNewPiece('');
+    }
+  };
+
+  const handleRemovePiece = (indexToRemove: number) => {
+    setPiecesConcernees(piecesConcernees.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handlePieceKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (newPiece.trim()) {
+        if (!piecesConcernees.includes(newPiece.trim())) {
+          setPiecesConcernees([...piecesConcernees, newPiece.trim()]);
+        }
+        setNewPiece('');
+      }
+    }
+  };
 
   // Set prefilled values
   React.useEffect(() => {
@@ -43,6 +71,8 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill, descriptionPref
       setArretMachine(false);
       setGravite(gravitePrefill || 'Moyenne');
       setCategorie('Mécanique');
+      setPiecesConcernees([]);
+      setNewPiece('');
     }
   }, [isOpen, enginIdPrefill, descriptionPrefill, gravitePrefill]);
 
@@ -133,6 +163,7 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill, descriptionPref
         enginModele: selectedEngin?.modele || selectedEngin?.marque || '',
         siteId: selectedEngin?.siteId || user.siteId,
         categorie,
+        piecesConcernees,
         gravite,
         statut: 'DECLAREE',
         description,
@@ -355,6 +386,49 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill, descriptionPref
                     {description.length} caractères
                   </span>
                 </div>
+              </div>
+
+              {/* Pièces Concernées */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#b8860b]">
+                  Pièces concernées (optionnel, une par une)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newPiece}
+                    onChange={(e) => setNewPiece(e.target.value)}
+                    onKeyDown={handlePieceKeyDown}
+                    placeholder="Saisissez une pièce (Ex: Joint, Vérin, Démarreur...)"
+                    className="flex-1 h-11 px-3 border border-slate-200 rounded-lg text-xs font-medium focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddPiece}
+                    className="h-11 bg-slate-800 hover:bg-slate-900 text-white font-bold uppercase tracking-wider text-xs px-4 rounded-lg shrink-0"
+                  >
+                    Ajouter
+                  </Button>
+                </div>
+                {piecesConcernees.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1.5">
+                    {piecesConcernees.map((piece, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-800 text-[11px] font-bold rounded-lg border border-slate-200"
+                      >
+                        {piece}
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePiece(idx)}
+                          className="p-0.5 hover:bg-slate-200 rounded-full text-slate-500 hover:text-slate-800 transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 6. Photo */}

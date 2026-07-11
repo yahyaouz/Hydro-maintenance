@@ -25,7 +25,7 @@ export const DEFAULT_STATS: MecanicienStats = {
   totalInterventions: 0,
   interventionsCeMois: 0,
   derniereIntervention: "",
-  scoreMensuel: 100,
+  scoreMensuel: null,
   mttrMoyen: null,
   tauxResolutionPremiereFois: null,
   tauxTournéesCompletes: null,

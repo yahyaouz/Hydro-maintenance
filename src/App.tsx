@@ -18,6 +18,7 @@ import { Mecaniciens } from "@/components/Mecaniciens";
 import { Pneumatiques } from "@/components/Pneumatiques";
 import { CarnetSante } from "@/components/CarnetSante";
 import { RootCauseAnalysis } from "@/components/RootCauseAnalysis";
+import CentreCommandement from "@/components/CentreCommandement";
 
 function IndustrialSkeleton() {
   return (
@@ -166,11 +167,35 @@ function AwaitingApprovalScreen() {
 import { useNotificationStore } from "@/services/notificationStore";
 import { OfflineQueueManager } from "@/services/offlineQueueManager";
 import { dbService } from "@/services/firestoreService";
-import { Bell, Activity, CheckSquare, CheckCheck, Trash2, Moon, Sun, Menu } from "lucide-react";
+import { Bell, Activity, CheckSquare, CheckCheck, Trash2, Moon, Sun, Menu, ArrowLeft } from "lucide-react";
+
+const KNOWN_TABS = [
+  "centre_commandement",
+  "dashboard",
+  "alertes",
+  "carnet_sante",
+  "systematique",
+  "taches_planning",
+  "checklists",
+  "engins",
+  "mecaniciens",
+  "pneumatiques",
+  "rca",
+  "analyses",
+  "referentiel",
+  "import_config",
+  "admin"
+];
+
+const getInitialTab = () => {
+  if (typeof window === "undefined") return "dashboard";
+  const path = window.location.pathname.replace(/^\//, "");
+  return KNOWN_TABS.includes(path) ? path : "dashboard";
+};
 
 export default function App() {
-  const [activeTab, setActiveTab] = React.useState("dashboard");
-  const { isAuthenticated, user, setUser, theme, setTheme, activeSite, setActiveSite, logout } = useAuthStore();
+  const [activeTab, setActiveTab] = React.useState(getInitialTab);
+  const { isAuthenticated, user, setUser, theme, setTheme, activeSite, setActiveSite, logout, textDensity, setTextDensity } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [authInitialized, setAuthInitialized] = React.useState(false);
 
@@ -248,6 +273,40 @@ export default function App() {
       document.documentElement.classList.remove("dark");
     }
   }, [theme]);
+
+  React.useEffect(() => {
+    // Synchronize HTML text density class
+    if (textDensity === "COMPACT") {
+      document.documentElement.classList.add("density-compact");
+    } else {
+      document.documentElement.classList.remove("density-compact");
+    }
+  }, [textDensity]);
+
+  const navigateToTab = React.useCallback((tabId: string) => {
+    setActiveTab(tabId);
+    if (window.location.pathname !== `/${tabId}`) {
+      window.history.pushState({ tabId }, '', `/${tabId}`);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const path = window.location.pathname.replace(/^\//, "");
+      const matchedTab = KNOWN_TABS.includes(path) ? path : "dashboard";
+      setActiveTab(matchedTab);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    
+    const initialPath = window.location.pathname.replace(/^\//, "");
+    const initialTab = KNOWN_TABS.includes(initialPath) ? initialPath : "dashboard";
+    window.history.replaceState({ tabId: initialTab }, '', `/${initialTab}`);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
 
   // Network heartbeat and offline queue monitoring
   React.useEffect(() => {
@@ -384,7 +443,7 @@ export default function App() {
     <div className="flex h-screen bg-white text-slate-900 overflow-hidden font-sans relative">
       <Sidebar
         currentPage={activeTab}
-        onNavigate={setActiveTab}
+        onNavigate={navigateToTab}
         currentSite={activeSite}
         setSite={setActiveSite}
         user={user}
@@ -395,6 +454,8 @@ export default function App() {
         onSignOut={handleLogout}
         isDarkMode={theme === 'dark'}
         onToggleDarkMode={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+        textDensity={textDensity}
+        setTextDensity={setTextDensity}
       />
       
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-white">
@@ -408,6 +469,18 @@ export default function App() {
             >
               <Menu className="h-4.5 w-4.5" />
             </button>
+
+            {activeTab !== "dashboard" && (
+              <button
+                onClick={() => window.history.back()}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-sky-50/50 transition-all cursor-pointer shadow-xs shrink-0"
+                aria-label="Retour"
+                title="Retour"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+            )}
+
             <h1 className="text-xs font-black uppercase tracking-widest text-[#0F172A] font-sans">
               {getTabTitle()}
             </h1>
@@ -480,6 +553,7 @@ export default function App() {
           <div className="relative z-10 w-full h-full p-6">
             <React.Suspense fallback={<IndustrialSkeleton />}>
               {activeTab === "dashboard" && <Dashboard />}
+              {activeTab === "centre_commandement" && <CentreCommandement setActiveTab={navigateToTab} />}
               {activeTab === "alertes" && <Alertes />}
               {activeTab === "engins" && <EnginList />}
               {activeTab === "import_config" && <ImportConfig />}
@@ -494,7 +568,7 @@ export default function App() {
               {activeTab === "carnet_sante" && <CarnetSante />}
               {activeTab === "rca" && <RootCauseAnalysis />}
               
-              {!["dashboard", "alertes", "engins", "referentiel", "admin", "checklists", "taches_planning", "analyses", "systematique", "import_config", "mecaniciens", "pneumatiques", "carnet_sante", "rca"].includes(activeTab) && (
+              {!["dashboard", "centre_commandement", "alertes", "engins", "referentiel", "admin", "checklists", "taches_planning", "analyses", "systematique", "import_config", "mecaniciens", "pneumatiques", "carnet_sante", "rca"].includes(activeTab) && (
                 <div className="flex items-center justify-center h-full text-muted-foreground bg-white dark:bg-slate-900">
                   Module {activeTab} en cours d'implémentation...
                 </div>

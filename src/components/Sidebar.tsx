@@ -17,7 +17,9 @@ import {
   X,
   ChevronDown,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Radar,
+  Type
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +36,8 @@ interface SidebarProps {
   onSignOut: () => void;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
+  textDensity: 'LARGE' | 'COMPACT';
+  setTextDensity: (density: 'LARGE' | 'COMPACT') => void;
 }
 
 const SITES_LIST = [
@@ -68,6 +72,8 @@ export function Sidebar({
   onSignOut,
   isDarkMode,
   onToggleDarkMode,
+  textDensity,
+  setTextDensity,
 }: SidebarProps) {
   const [isSiteDropdownOpen, setIsSiteDropdownOpen] = React.useState(false);
   const [isCollapsed, setIsCollapsed] = React.useState(() => {
@@ -101,6 +107,7 @@ export function Sidebar({
   }, [notifications]);
 
   const MENU_VISIBILITY: Record<string, string[]> = {
+    centre_commandement: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE"],
     dashboard: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"],
     alertes: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"],
     carnet_sante: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER"],
@@ -119,6 +126,12 @@ export function Sidebar({
 
   // Original categories and page names/labels
   const menuCategories: MenuCategory[] = [
+    {
+      title: "DIRECTION",
+      items: [
+        { id: "centre_commandement", label: "Centre de Commandement", icon: Radar }
+      ]
+    },
     {
       title: "VUE D'ENSEMBLE",
       items: [
@@ -374,6 +387,21 @@ export function Sidebar({
             ) : (
               <Moon className="h-4 w-4 text-slate-500" />
             )}
+          </button>
+
+          {/* Text Density toggle */}
+          <button
+            onClick={() => setTextDensity(textDensity === 'LARGE' ? 'COMPACT' : 'LARGE')}
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-lg border transition-colors cursor-pointer shrink-0",
+              textDensity === 'COMPACT'
+                ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]"
+                : "border-slate-200 bg-white text-slate-500 hover:bg-sky-50/50 hover:text-sky-600"
+            )}
+            aria-label="Changer la densité du texte"
+            title={textDensity === 'COMPACT' ? "Format compact activé" : "Format large"}
+          >
+            <Type className="h-4 w-4" />
           </button>
 
           {/* Logout Button */}

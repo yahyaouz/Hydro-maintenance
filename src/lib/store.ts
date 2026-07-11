@@ -29,9 +29,19 @@ const getInitialDensity = (): 'compact' | 'standard' | 'large' => {
   }
 };
 
+const getInitialTextDensity = (): 'LARGE' | 'COMPACT' => {
+  try {
+    const raw = localStorage.getItem('hydromines-text-density');
+    return (raw === 'COMPACT' ? 'COMPACT' : 'LARGE');
+  } catch {
+    return 'LARGE';
+  }
+};
+
 const initialUser = getInitialUser();
 const initialTheme = getInitialTheme();
 const initialDensity = getInitialDensity();
+const initialTextDensity = getInitialTextDensity();
 
 interface AuthState {
   user: User | null;
@@ -39,11 +49,13 @@ interface AuthState {
   activeSite: SiteID;
   theme: 'light' | 'dark';
   density: 'compact' | 'standard' | 'large';
+  textDensity: 'LARGE' | 'COMPACT';
   isRestrictedModalOpen: boolean;
   setUser: (user: User | null) => void;
   setActiveSite: (siteId: SiteID) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   setDensity: (density: 'compact' | 'standard' | 'large') => void;
+  setTextDensity: (density: 'LARGE' | 'COMPACT') => void;
   openRestrictedModal: () => void;
   closeRestrictedModal: () => void;
   logout: () => void;
@@ -55,6 +67,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   activeSite: initialUser?.role === 'ADMIN' || initialUser?.role === 'DIRECTION' ? 'TOUS' : (initialUser?.siteId || 'SMI'),
   theme: initialTheme,
   density: initialDensity,
+  textDensity: initialTextDensity,
   isRestrictedModalOpen: false,
   setUser: (user) => {
     if (user) {
@@ -94,6 +107,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       console.error(e);
     }
     set({ density });
+  },
+  setTextDensity: (density) => {
+    try {
+      localStorage.setItem('hydromines-text-density', density);
+    } catch (e) {
+      console.error(e);
+    }
+    set({ textDensity: density });
   },
   openRestrictedModal: () => set({ isRestrictedModalOpen: true }),
   closeRestrictedModal: () => set({ isRestrictedModalOpen: false }),

@@ -124,6 +124,39 @@ export function Mecaniciens() {
     });
   }, [filteredMecaniciens]);
 
+  // Best performing mechanics of the month (congratulations table)
+  const felicitationsMecaniciens = useMemo(() => {
+    if (!mecaniciens) return [];
+    
+    const eligibleMecas = mecaniciens.filter(m => {
+      if (m.active === false) return false;
+      // Filter out those with less than 3 completed tasks this month
+      if ((m.stats?.interventionsCeMois || 0) < 3) return false;
+      
+      // Limit to user's site if activeSite !== "TOUS"
+      if (activeSite !== "TOUS" && m.siteId !== activeSite) {
+        return false;
+      }
+      return true;
+    });
+
+    const scored = eligibleMecas.map(m => {
+      const scoreTournees = m.stats.tauxTournéesCompletes !== null ? m.stats.tauxTournéesCompletes : 0;
+      const scoreMttr = m.stats.mttrMoyen !== null ? Math.max(0, 100 - (m.stats.mttrMoyen * 15)) : 50;
+      const scoreCombine = (scoreTournees + scoreMttr) / 2;
+
+      return {
+        mecanicien: m,
+        scoreTournees,
+        scoreMttr,
+        scoreCombine: Math.round(scoreCombine * 10) / 10
+      };
+    });
+
+    // Sort by scoreCombine descending
+    return scored.sort((a, b) => b.scoreCombine - a.scoreCombine).slice(0, 3);
+  }, [mecaniciens, activeSite, user?.siteId]);
+
   // Prepare radar data for selected mechanic details
   const radarData = useMemo(() => {
     if (!selectedMeca) return [];
@@ -530,6 +563,97 @@ export function Mecaniciens() {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
           >
+            {/* Section: Mécaniciens à féliciter ce mois-ci */}
+            <div className="relative overflow-hidden bg-white dark:bg-slate-950 p-6 rounded-2xl border border-amber-500/40 shadow-sm">
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-400 via-[#D4AF37] to-yellow-600 animate-pulse" />
+              
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+                <div>
+                  <h3 className="text-sm font-black tracking-tight text-slate-900 dark:text-white uppercase flex items-center gap-2 font-mono">
+                    <Sparkles className="w-4 h-4 text-amber-500 animate-bounce" />
+                    Mécaniciens à féliciter ce mois-ci
+                  </h3>
+                  <p className="text-[10px] text-slate-500 font-mono mt-1">
+                    Sélection des meilleurs profils combinant assiduité (taux de tournées complètes) et rapidité (MTTR moyen) avec au moins 3 tâches clôturées ce mois.
+                  </p>
+                </div>
+                {activeSite !== "TOUS" && (
+                  <span className="text-[9.5px] font-mono font-black uppercase px-2.5 py-0.5 rounded-full border bg-slate-50 text-slate-600 dark:bg-slate-900 dark:text-slate-400">
+                    Limité au site : {activeSite || "SMI"}
+                  </span>
+                )}
+              </div>
+
+              {felicitationsMecaniciens.length >= 3 ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {felicitationsMecaniciens.map((item, idx) => {
+                    const m = item.mecanicien;
+                    return (
+                      <div 
+                        key={m.uid}
+                        className="relative bg-gradient-to-br from-amber-500/5 to-yellow-600/5 dark:from-amber-950/10 dark:to-yellow-950/5 p-4 rounded-xl border border-amber-500/20 flex items-center gap-3.5 group hover:border-amber-500/45 transition-all cursor-pointer"
+                        onClick={() => setSelectedMeca(m)}
+                      >
+                        {/* Rank Badge */}
+                        <div className="absolute -top-2.5 -right-2 w-7 h-7 rounded-full bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center font-black text-xs shadow-md border border-white dark:border-slate-950">
+                          #{idx + 1}
+                        </div>
+
+                        {/* Photo */}
+                        <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-white dark:bg-slate-900 border border-amber-500/20 shadow-sm">
+                          <img 
+                            src={m.photo || "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150"} 
+                            alt="" 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+
+                        {/* Text details */}
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase truncate">
+                            {m.prenom} {m.nom}
+                          </h4>
+                          
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className={`text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded border ${getSiteColor(m.siteId)}`}>
+                              {m.siteId}
+                            </span>
+                            <span className="text-[9px] text-slate-400 font-mono truncate">{m.matricule}</span>
+                          </div>
+
+                          <div className="mt-2 pt-2 border-t border-slate-200/50 dark:border-slate-800/50 flex flex-col gap-0.5 text-[9px] font-mono text-slate-500">
+                            <div className="flex justify-between">
+                              <span>Tournées :</span>
+                              <span className="font-extrabold text-amber-600">{item.scoreTournees}%</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Rapidité (MTTR) :</span>
+                              <span className="font-extrabold text-amber-600">{m.stats.mttrMoyen !== null ? `${m.stats.mttrMoyen}h` : "N/A"}</span>
+                            </div>
+                            <div className="flex justify-between pt-1 font-black text-slate-700 dark:text-slate-300">
+                              <span>Score global :</span>
+                              <span className="text-amber-500">{item.scoreCombine}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6 bg-slate-50/50 dark:bg-slate-900/40 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-center">
+                  <Award className="h-6 w-6 text-slate-400 mb-2" />
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                    Données insuffisantes pour établir un classement fiable ce mois-ci
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-1 max-w-sm">
+                    Au moins 3 mécaniciens avec un minimum de 3 interventions closes ce mois sont requis pour générer ce tableau d'honneur.
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Top 3 Podium (Desktop only, responsive fall back) */}
             <div className="hidden md:grid grid-cols-3 gap-6 items-end max-w-3xl mx-auto pt-6">
               {/* 2nd place */}
