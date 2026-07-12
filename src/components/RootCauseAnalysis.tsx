@@ -71,7 +71,7 @@ export function RootCauseAnalysis() {
         setFormSiteId(activeSite);
       }
 
-      setProblemDescription(`Investéguée suite aux anomalies détectées.\nPannes liées: ${pendingRcaPrefill.pannesIds.join(", ")}`);
+      setProblemDescription(`Investiguée suite aux anomalies détectées.\nPannes liées: ${pendingRcaPrefill.pannesIds.join(", ")}`);
       
       setIsCreateOpen(true);
       clearPendingRcaPrefill();

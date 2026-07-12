@@ -12,6 +12,7 @@ import {
   Gauge, 
   Users, 
   ChevronRight, 
+  ChevronLeft, 
   ChevronDown, 
   Sparkles, 
   Building2, 
@@ -112,7 +113,41 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     prevIsLoadingRef.current = isLoading;
   }, [isLoading]);
 
-  const currentMonthStr = React.useMemo(() => new Date().toISOString().substring(0, 7), []);
+  const [moisReference, setMoisReference] = React.useState<string>(() => new Date().toISOString().substring(0, 7));
+
+  const currentMonthStr = moisReference;
+
+  const prevMonthStr = React.useMemo(() => {
+    const [year, month] = currentMonthStr.split('-').map(Number);
+    const p = new Date(year, month - 2, 1);
+    return p.toISOString().substring(0, 7);
+  }, [currentMonthStr]);
+
+  const isMoisCourantReel = React.useMemo(() => {
+    return moisReference === new Date().toISOString().substring(0, 7);
+  }, [moisReference]);
+
+  const formatMoisLettres = React.useCallback((mStr: string) => {
+    const [year, month] = mStr.split('-').map(Number);
+    const d = new Date(year, month - 1, 1);
+    return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  }, []);
+
+  const handlePrevMonth = React.useCallback(() => {
+    const [year, month] = moisReference.split('-').map(Number);
+    const p = new Date(year, month - 2, 1);
+    setMoisReference(p.toISOString().substring(0, 7));
+  }, [moisReference]);
+
+  const handleNextMonth = React.useCallback(() => {
+    const [year, month] = moisReference.split('-').map(Number);
+    const n = new Date(year, month, 1);
+    const nStr = n.toISOString().substring(0, 7);
+    const currentRealStr = new Date().toISOString().substring(0, 7);
+    if (nStr <= currentRealStr) {
+      setMoisReference(nStr);
+    }
+  }, [moisReference]);
 
   // Site metrics calculation for a specific month
   const getSiteDispo = React.useCallback((siteId: string, monthStr: string) => {
@@ -341,8 +376,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
   const prolongedAlertSites = React.useMemo(() => {
     if (!objectifsSitesRaw || !enginsLive || !workOrdersLive || !pannesLive) return [];
 
-    const now = new Date();
-    const m0 = now.toISOString().substring(0, 7);
+    const m0 = currentMonthStr;
     
     const getPrevMonth = (mStr: string) => {
       const [y, m] = mStr.split('-').map(Number);
@@ -387,7 +421,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       m1: string;
       m2: string;
     }>;
-  }, [objectifsSitesRaw, enginsLive, workOrdersLive, pannesLive, getSiteDispo]);
+  }, [objectifsSitesRaw, enginsLive, workOrdersLive, pannesLive, getSiteDispo, currentMonthStr]);
 
   const sitePannesForMonth = React.useMemo(() => {
     if (!selectedAnomalySite || !pannesLive) return [];
@@ -516,7 +550,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
 
   // 1. Classement des sites (Exactly like Dashboard.tsx)
   const classementSites = React.useMemo(() => {
-    const currentMonthStr = new Date().toISOString().substring(0, 7);
+    const currentMonthStr = moisReference;
 
     const list = SITES_LIST.map(site => {
       // dispoSite
@@ -592,7 +626,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       const scoreB = b.scoreGlobal !== null ? b.scoreGlobal : 999;
       return scoreA - scoreB;
     });
-  }, [enginsLive, workOrdersLive, pannesLive, mecaniciens, getNormalizedStatus, getPanneMonth, getTaskMonth]);
+  }, [enginsLive, workOrdersLive, pannesLive, mecaniciens, getNormalizedStatus, getPanneMonth, getTaskMonth, moisReference]);
 
   // 2. Situation banner computed text
   const situationBanner = React.useMemo(() => {
@@ -607,10 +641,12 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     const hasUnstableSites = vigilanceCount > 0 || critiqueCount > 0;
 
     // Monthly panne counts
-    const now = new Date();
-    const currentMonthStr = now.toISOString().substring(0, 7);
-    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const prevMonthStr = prevMonth.toISOString().substring(0, 7);
+    const currentMonthStr = moisReference;
+    const prevMonthStr = (() => {
+      const [year, month] = currentMonthStr.split('-').map(Number);
+      const p = new Date(year, month - 2, 1);
+      return p.toISOString().substring(0, 7);
+    })();
 
     const currentMonthPannesCount = pannesLive ? pannesLive.filter(p => !p.deleted && getPanneMonth(p) === currentMonthStr).length : 0;
     const prevMonthPannesCount = pannesLive ? pannesLive.filter(p => !p.deleted && getPanneMonth(p) === prevMonthStr).length : 0;
@@ -635,7 +671,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     } else {
       return `Tous les sites sont actuellement stables et opérationnels (${stableCount} sites au vert)${variationSegment}. Excellent niveau global d'exploitation.`;
     }
-  }, [classementSites, pannesLive, getPanneMonth, isLoading]);
+  }, [classementSites, pannesLive, getPanneMonth, isLoading, moisReference]);
 
   // 3. 7-day open pannes history checker helper
   const getPannesOpen7DaysAgoCount = React.useCallback((siteId: string) => {
@@ -790,11 +826,13 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
   }, [pannesLive, workOrdersLive, interventions, getPanneMonth, getTaskMonth, getPanneCloseMonth]);
 
   const comparisonData = React.useMemo(() => {
-    const now = new Date();
-    const currentMonthStr = now.toISOString().substring(0, 7);
+    const currentMonthStr = moisReference;
     
-    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const prevMonthStr = prevMonth.toISOString().substring(0, 7);
+    const prevMonthStr = (() => {
+      const [year, month] = currentMonthStr.split('-').map(Number);
+      const p = new Date(year, month - 2, 1);
+      return p.toISOString().substring(0, 7);
+    })();
 
     const m0 = getMonthlyStats(currentMonthStr);
     const m1 = getMonthlyStats(prevMonthStr);
@@ -815,7 +853,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       correctivesVar: calculateVariation(m0.totalCorrectives, m1.totalCorrectives),
       costVar: calculateVariation(m0.totalCost, m1.totalCost),
     };
-  }, [getMonthlyStats]);
+  }, [getMonthlyStats, moisReference]);
 
   // MTTR calculation per site
   const calculateSiteMttr = React.useCallback((site: string) => {
@@ -950,11 +988,11 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
   }, [pannesLive, workOrdersLive]);
 
   // Automatic anomaly detection (preceding 3 months vs current month)
-  const getPrecedingMonths = () => {
-    const now = new Date();
+  const getPrecedingMonths = (baseMonthStr: string) => {
+    const [year, month] = baseMonthStr.split('-').map(Number);
     const months: string[] = [];
     for (let i = 1; i <= 3; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const d = new Date(year, month - 1 - i, 1);
       months.push(d.toISOString().substring(0, 7));
     }
     return months;
@@ -968,8 +1006,8 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       };
     }
 
-    const mMonths = getPrecedingMonths();
-    const currentMonthStr = new Date().toISOString().substring(0, 7);
+    const mMonths = getPrecedingMonths(moisReference);
+    const currentMonthStr = moisReference;
 
     const list = SITES_LIST.map(site => {
       const countCurrent = pannesLive 
@@ -1011,7 +1049,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       status: "success" as const,
       list
     };
-  }, [hasEnoughHistory, pannesLive, getPanneMonth]);
+  }, [hasEnoughHistory, pannesLive, getPanneMonth, moisReference]);
 
   // Model-level reliability analysis (last 90 days) - Condensed top 3
   const modelsReliability = React.useMemo(() => {
@@ -1060,7 +1098,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
   // Top 3 parts/pieces in current month
   const topPiecesStats = React.useMemo(() => {
     if (!pannesLive) return [];
-    const currentMonthStr = new Date().toISOString().substring(0, 7);
+    const currentMonthStr = moisReference;
 
     const counts: Record<string, { name: string; count: number }> = {};
     
@@ -1105,7 +1143,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     return Object.values(counts)
       .sort((a, b) => b.count - a.count)
       .slice(0, 3);
-  }, [pannesLive, interventions, getPanneMonth, getTaskMonth]);
+  }, [pannesLive, interventions, getPanneMonth, getTaskMonth, moisReference]);
 
   // Positive mecanicien recognition (factual leaderboard)
   const felicitationsMecaniciens = React.useMemo(() => {
@@ -1198,11 +1236,6 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       lowerIsBetter: false,
       render: (val: any, siteId: string) => {
         const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === siteId);
-        const prevMonthStr = (() => {
-          const now = new Date();
-          const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          return p.toISOString().substring(0, 7);
-        })();
         const prevVal = getSiteDispo(siteId, prevMonthStr);
         return renderMetricWithTarget(val, prevVal, tgt?.dispoTarget, false, "%");
       }
@@ -1214,11 +1247,6 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       lowerIsBetter: true,
       render: (val: any, siteId: string) => {
         const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === siteId);
-        const prevMonthStr = (() => {
-          const now = new Date();
-          const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          return p.toISOString().substring(0, 7);
-        })();
         const prevVal = getSiteMttr(siteId, prevMonthStr);
         return renderMetricWithTarget(val, prevVal, tgt?.mttrTarget, true, "h");
       }
@@ -1236,11 +1264,6 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       lowerIsBetter: false,
       render: (val: any, siteId: string) => {
         const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === siteId);
-        const prevMonthStr = (() => {
-          const now = new Date();
-          const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          return p.toISOString().substring(0, 7);
-        })();
         const prevVal = getSiteCompliance(siteId, prevMonthStr);
         return renderMetricWithTarget(val, prevVal, tgt?.complianceTarget, false, "%");
       }
@@ -1258,11 +1281,6 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       lowerIsBetter: true,
       render: (val: any, siteId: string) => {
         const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === siteId);
-        const prevMonthStr = (() => {
-          const now = new Date();
-          const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          return p.toISOString().substring(0, 7);
-        })();
         const prevVal = getSiteCout(siteId, prevMonthStr);
         return renderMetricWithTarget(val, prevVal, tgt?.coutTarget, true, " DH/h");
       }
@@ -1342,30 +1360,66 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
           </div>
         </div>
 
-        {/* Refresh indicator and action button */}
-        <div className="shrink-0 flex flex-col items-start md:items-end gap-1 self-stretch md:self-auto border-t md:border-t-0 border-slate-800 pt-3 md:pt-0">
-          <div className="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/50 rounded-xl px-3 py-1.5 transition-colors">
-            <Clock className="h-3.5 w-3.5 text-amber-400 animate-pulse shrink-0" />
-            <span className="text-[10px] font-mono font-bold text-slate-300 tracking-tight">
-              Données actualisées à {(() => {
-                const hrs = String(lastRefreshTime.getHours()).padStart(2, "0");
-                const mins = String(lastRefreshTime.getMinutes()).padStart(2, "0");
-                return `${hrs}:${mins}`;
-              })()}
-            </span>
-            <button
-              onClick={() => setLastRefreshTime(new Date())}
-              className="ml-1 p-1 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-amber-400 hover:text-white transition-all cursor-pointer"
-              title="Confirmer la fraîcheur (les données Firestore sont en temps réel)"
-            >
-              <RefreshCw className="h-3 w-3" />
-            </button>
+        {/* Month Selector and Refresh indicator */}
+        <div className="shrink-0 flex flex-col items-start md:items-end gap-2 self-stretch md:self-auto border-t md:border-t-0 border-slate-800 pt-3 md:pt-0">
+          <div className="flex flex-wrap items-center gap-2">
+            
+            {/* MONTH SELECTOR */}
+            <div className="flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/50 rounded-xl px-2 py-1 transition-colors">
+              <button 
+                onClick={handlePrevMonth}
+                className="p-1 rounded hover:bg-slate-700 text-amber-400 transition-colors cursor-pointer"
+                title="Mois précédent"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              <span className="text-[10px] font-mono font-black text-white tracking-wider uppercase min-w-[90px] text-center">
+                {formatMoisLettres(moisReference)}
+              </span>
+              <button 
+                onClick={handleNextMonth}
+                disabled={isMoisCourantReel}
+                className="p-1 rounded hover:bg-slate-700 text-amber-400 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                title="Mois suivant"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/50 rounded-xl px-3 py-1.5 transition-colors">
+              <Clock className="h-3.5 w-3.5 text-amber-400 animate-pulse shrink-0" />
+              <span className="text-[10px] font-mono font-bold text-slate-300 tracking-tight">
+                Données à {(() => {
+                  const hrs = String(lastRefreshTime.getHours()).padStart(2, "0");
+                  const mins = String(lastRefreshTime.getMinutes()).padStart(2, "0");
+                  return `${hrs}:${mins}`;
+                })()}
+              </span>
+              <button
+                onClick={() => setLastRefreshTime(new Date())}
+                className="ml-1 p-1 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-amber-400 hover:text-white transition-all cursor-pointer"
+                title="Confirmer la fraîcheur"
+              >
+                <RefreshCw className="h-3 w-3" />
+              </button>
+            </div>
           </div>
           <span className="text-[8px] font-mono text-slate-500 text-left md:text-right max-w-[240px] leading-tight">
             Données synchronisées en temps réel via Firestore.
           </span>
         </div>
       </div>
+
+      {/* HISTORICAL CONSULTING WARNING BANNER */}
+      {!isMoisCourantReel && (
+        <div className="relative overflow-hidden bg-amber-50 border-2 border-amber-500/30 text-amber-900 rounded-2xl p-4 shadow-md flex items-center gap-3 font-mono text-xs uppercase font-bold">
+          <Info className="h-5 w-5 text-amber-600 shrink-0" />
+          <div className="flex-1">
+            <span className="text-amber-700 font-black">Consultation Historique : </span>
+            Vous consultez les archives de <span className="underline">{formatMoisLettres(moisReference)}</span>. Les indicateurs "temps réel" ou les actions d'écriture ne concernent pas cette période passée.
+          </div>
+        </div>
+      )}
 
       {/* ALERTE DE DÉPASSEMENT PROLONGÉ (3 MOIS SOUS CIBLE) */}
       {prolongedAlertSites.length > 0 && (
@@ -1601,11 +1655,6 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
                               <td className="py-3 px-4 text-center font-extrabold text-slate-700">
                                 {(() => {
                                   const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === item.site);
-                                  const prevMonthStr = (() => {
-                                    const now = new Date();
-                                    const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                                    return p.toISOString().substring(0, 7);
-                                  })();
                                   const dispoPrev = getSiteDispo(item.site, prevMonthStr);
                                   return renderMetricWithTarget(item.dispoSite, dispoPrev, tgt?.dispoTarget, false, "%");
                                 })()}
@@ -1618,11 +1667,6 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
                               <td className="py-3 px-4 text-center font-extrabold text-slate-700">
                                 {(() => {
                                   const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === item.site);
-                                  const prevMonthStr = (() => {
-                                    const now = new Date();
-                                    const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                                    return p.toISOString().substring(0, 7);
-                                  })();
                                   const compliancePrev = getSiteCompliance(item.site, prevMonthStr);
                                   return renderMetricWithTarget(item.complianceSite, compliancePrev, tgt?.complianceTarget, false, "%");
                                 })()}
@@ -1806,7 +1850,17 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
               </div>
             </CardHeader>
             <CardContent className="p-5 font-mono text-xs">
-              {isLoading ? (
+              {!isMoisCourantReel ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center bg-slate-50 border border-dashed border-slate-200 rounded-xl">
+                  <Clock className="h-6 w-6 text-slate-400 mb-2" />
+                  <span className="font-black text-slate-700 text-[10px] uppercase tracking-wider">
+                    Non disponible pour les mois passés
+                  </span>
+                  <p className="text-[10px] text-slate-500 mt-1 max-w-[200px] leading-relaxed">
+                    Cette section affiche l'état de la flotte en temps réel actuel et n'est pas disponible en mode archive historique.
+                  </p>
+                </div>
+              ) : isLoading ? (
                 <div className="text-center py-10 font-medium text-slate-400">
                   Calcul des temps d'arrêt...
                 </div>
