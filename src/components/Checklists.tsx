@@ -33,6 +33,7 @@ import { collection, addDoc, doc, updateDoc, Timestamp } from 'firebase/firestor
 import { db, auth } from '@/lib/firebase';
 import { useCollection } from '@/hooks/useCollection';
 import { useAuthStore } from '@/lib/store';
+import { getLocalDateString } from '@/lib/utils';
 
 // Types
 interface Engin {
@@ -138,7 +139,7 @@ export default function Checklists() {
   const [selectedPoste, setSelectedPoste] = React.useState("Poste 1");
   const [selectedDate, setSelectedDate] = React.useState(() => {
     const d = new Date();
-    return d.toISOString().split("T")[0];
+    return getLocalDateString(d);
   });
   const [selectedHeure, setSelectedHeure] = React.useState(() => {
     const d = new Date();
@@ -218,7 +219,7 @@ export default function Checklists() {
   // Réinitialiser les champs de saisie d'en-tête
   const resetHeader = () => {
     const d = new Date();
-    setSelectedDate(d.toISOString().split("T")[0]);
+    setSelectedDate(getLocalDateString(d));
     setSelectedHeure(d.toTimeString().split(" ")[0].slice(0, 5));
     if (engins.length > 0) setSelectedEngin(engins[0].id);
     if (mecaniciens.length > 0) setSelectedSignataire(mecaniciens[0].nomComplet);
@@ -556,7 +557,7 @@ export default function Checklists() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `GMAO_Checklists_${activeSite}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `GMAO_Checklists_${activeSite}_${getLocalDateString()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Export CSV téléchargé !");

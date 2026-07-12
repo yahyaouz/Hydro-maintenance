@@ -114,6 +114,7 @@ export class ErrorMonitoringService {
     if (navigator.onLine && (params.level === 'CRITICAL' || params.level === 'FATAL')) {
       addDoc(collection(db, 'systemLogs'), {
         ...newError,
+        createdAt: Timestamp.now(),
         dbTimestamp: Timestamp.now()
       }).catch((err) => {
         console.warn('Silent fallback: failure logging telemetry error to cloud Firestore', err);
@@ -144,20 +145,5 @@ export class ErrorMonitoringService {
       message: 'Registre de diagnostics techniques réinitialisé manuellement par l\'opérateur.',
       source: 'DIAGNOSTICS_CLEANER'
     });
-  }
-
-  /**
-   * Diagnostic simulation for testing the health score of tablet CPUs.
-   */
-  static evaluateHardwareResourceLimits(): { ramUsage: string; cpuTemperature: string; isLowEndTablet: boolean; activeMemoryFootprintMB: number } {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    // Simulate diagnostic telemetry for low-spec subterranean tablet nodes
-    return {
-      ramUsage: isMobile ? '78% (Disponible: 1.2 GB / 4.0 GB)' : '32% (Disponible: 10.8 GB / 16.0 GB)',
-      cpuTemperature: isMobile ? '41°C' : '34°C',
-      isLowEndTablet: isMobile,
-      activeMemoryFootprintMB: Math.round(45 + Math.random() * 15) // JS heap simulation
-    };
   }
 }

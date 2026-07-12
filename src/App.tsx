@@ -34,7 +34,7 @@ function IndustrialSkeleton() {
 }
 
 import { Admin } from "@/components/Admin";
-import { getDoc, doc } from "firebase/firestore";
+import { getDoc, doc, collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { ShieldAlert, LogOut, RefreshCw } from "lucide-react";
@@ -392,6 +392,62 @@ export default function App() {
       });
     }
   }, [isAuthenticated]);
+
+  // Real-time Firestore notifications shared feed listener
+  React.useEffect(() => {
+    if (!isAuthenticated || !user) return;
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const q = query(
+      collection(db, "notifications"),
+      where("createdAt", ">=", thirtyDaysAgo),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const createdAtDate = data.createdAt ? (data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date();
+        
+        // Compute "read" status for current user based on whether current user uid is in lueParUid
+        const isRead = data.lueParUid?.includes(user.uid) || data.lue || false;
+
+        list.push({
+          id: doc.id,
+          type: data.type || 'INFORMATION',
+          title: data.title || '',
+          message: data.message || '',
+          timestamp: createdAtDate.toISOString(),
+          read: isRead,
+          triggerSource: data.triggerSource || '',
+          siteId: data.siteId || null,
+          lineageId: data.lineageId || null,
+          enginId: data.enginId || null,
+          lueParUid: data.lueParUid || []
+        });
+      });
+
+      // Filter based on user's siteId or activeSite
+      const userRole = user.role;
+      const isUserAdminOrDirection = userRole === 'ADMIN' || userRole === 'DIRECTION';
+
+      const filtered = list.filter(notif => {
+        if (isUserAdminOrDirection && activeSite === 'TOUS') {
+          return true;
+        }
+        return notif.siteId === activeSite || !notif.siteId || notif.siteId === 'TOUS';
+      });
+
+      useNotificationStore.getState().setNotifications(filtered);
+    }, (err) => {
+      console.error("Error listening to shared notifications:", err);
+    });
+
+    return () => unsubscribe();
+  }, [isAuthenticated, user?.uid, user?.role, activeSite]);
 
   const unreadCount = React.useMemo(() => {
     return notifications.filter(n => !n.read).length;

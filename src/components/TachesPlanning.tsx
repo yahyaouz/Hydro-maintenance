@@ -10,6 +10,7 @@ import { db } from '@/lib/firebase';
 import { useAuthStore } from '@/lib/store';
 import { useCollection } from '@/hooks/useCollection';
 import { toast } from 'sonner';
+import { getLocalDateString } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { PageBanner } from '@/components/ui/PageBanner';
@@ -214,7 +215,7 @@ export default function TachesPlanning() {
       const runAutoGeneration = async () => {
         setGenerationRunning(true);
         try {
-          const todayStr = new Date().toISOString().split('T')[0];
+          const todayStr = getLocalDateString();
 
           // 1. Tâches Quotidiennes
           for (const engin of filteredEngins) {
@@ -519,7 +520,7 @@ export default function TachesPlanning() {
 
   // Get filtered list for UI
   const getVisibleTasks = () => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalDateString();
     
     return filteredTasks.filter(t => {
       // Date Filter
@@ -650,7 +651,7 @@ export default function TachesPlanning() {
       const faites = tasksMeca.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
       const retard = tasksMeca.filter(t => 
         t.statut === 'NON_FAIT' && 
-        (t.datePlanifiee || '') < new Date().toISOString().split('T')[0]
+        (t.datePlanifiee || '') < getLocalDateString()
       ).length;
       const rate = total > 0 ? Math.round((faites / total) * 100) : null;
 
@@ -1160,7 +1161,7 @@ export default function TachesPlanning() {
                           <span className="block text-caption font-sans font-bold text-slate-400 mt-0.5">{meca.specialite || "Moteur"}</span>
                         </td>
                         {getWeekDays().map((day, idx) => {
-                          const dayStr = day.toISOString().split('T')[0];
+                          const dayStr = getLocalDateString(day);
                           const dayTasks = filteredTasks.filter(
                             t => t.mecanicienId === meca.id && t.datePlanifiee === dayStr && !t.deleted
                           );
@@ -1689,7 +1690,7 @@ export default function TachesPlanning() {
                                 onClick={async () => {
                                   setIsCreatingBt(true);
                                   try {
-                                    const formattedDate = new Date().toISOString().split('T')[0];
+                                    const formattedDate = getLocalDateString();
                                     await addDoc(collection(db, 'maintenanceTasks'), {
                                       label: `CORRECTIF • ${selectedPanne.numero} — ${selectedPanne.description}`,
                                       enginId: selectedPanne.enginId,

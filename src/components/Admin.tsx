@@ -37,10 +37,11 @@ import { useCollection } from "@/hooks/useCollection";
 import { 
   collection, doc, setDoc, addDoc, updateDoc, 
   onSnapshot, query, where, orderBy,
-  writeBatch, Timestamp, getDocs
+  writeBatch, Timestamp, getDocs, limit
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuthStore } from '@/lib/store';
+import { getLocalDateString } from '@/lib/utils';
 import { AdminMecaniciens } from "./admin/AdminMecaniciens";
 
 // RECONSTRUIT : Interfaces TypeScript pour typer proprement les collections stockées
@@ -92,7 +93,11 @@ export function Admin() {
   const { user } = useAuthStore();
 
   // RECONSTRUIT : États de navigation des onglets
-  const [activeTab, setActiveTab] = React.useState<"engins" | "mecaniciens" | "chantiers" | "intervalles" | "comptes" | "sante_donnees" | "objectifs">("engins");
+  const [activeTab, setActiveTab] = React.useState<"engins" | "mecaniciens" | "chantiers" | "intervalles" | "comptes" | "sante_donnees" | "objectifs" | "logs_erreurs">("engins");
+
+  const [systemLogs, setSystemLogs] = React.useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = React.useState(false);
+  const [logLevelFilter, setLogLevelFilter] = React.useState<string>("ALL");
 
   const SITES_LIST = ['SMI', 'OUMEJRANE', 'KOUDIA', 'OUANSIMI', 'BOU-AZZER'];
   const { data: objectifsSitesRaw, loading: objectifsLoading } = useCollection<any>('objectifsSites');
@@ -119,6 +124,83 @@ export function Admin() {
       setEditedTargets(initial);
     }
   }, [objectifsSitesRaw]);
+
+  React.useEffect(() => {
+    if (activeTab !== "logs_erreurs") return;
+
+    setLogsLoading(true);
+    const logsRef = collection(db, "systemLogs");
+    const q = query(logsRef, orderBy("createdAt", "desc"), limit(100));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedLogs: any[] = [];
+      snapshot.forEach((doc) => {
+        fetchedLogs.push({ id: doc.id, ...doc.data() });
+      });
+
+      if (fetchedLogs.length === 0) {
+        // Try query with dbTimestamp
+        const qFallback = query(logsRef, orderBy("dbTimestamp", "desc"), limit(100));
+        getDocs(qFallback).then((fallbackSnapshot) => {
+          const fbLogs: any[] = [];
+          fallbackSnapshot.forEach((doc) => {
+            fbLogs.push({ id: doc.id, ...doc.data() });
+          });
+          if (fbLogs.length === 0) {
+            // Try query with timestamp
+            const qFallbackTime = query(logsRef, orderBy("timestamp", "desc"), limit(100));
+            getDocs(qFallbackTime).then((timeSnapshot) => {
+              const timeLogs: any[] = [];
+              timeSnapshot.forEach((doc) => {
+                timeLogs.push({ id: doc.id, ...doc.data() });
+              });
+              setSystemLogs(timeLogs);
+              setLogsLoading(false);
+            }).catch(() => {
+              setSystemLogs([]);
+              setLogsLoading(false);
+            });
+          } else {
+            setSystemLogs(fbLogs);
+            setLogsLoading(false);
+          }
+        }).catch(() => {
+          setSystemLogs([]);
+          setLogsLoading(false);
+        });
+      } else {
+        setSystemLogs(fetchedLogs);
+        setLogsLoading(false);
+      }
+    }, (err) => {
+      console.warn("Error loading systemLogs with createdAt, falling back:", err);
+      const qFallback = query(logsRef, orderBy("dbTimestamp", "desc"), limit(100));
+      getDocs(qFallback).then((fallbackSnapshot) => {
+        const fbLogs: any[] = [];
+        fallbackSnapshot.forEach((doc) => {
+          fbLogs.push({ id: doc.id, ...doc.data() });
+        });
+        setSystemLogs(fbLogs);
+        setLogsLoading(false);
+      }).catch((err2) => {
+        console.error("Fallback query failed:", err2);
+        const qFallbackTime = query(logsRef, orderBy("timestamp", "desc"), limit(100));
+        getDocs(qFallbackTime).then((timeSnapshot) => {
+          const timeLogs: any[] = [];
+          timeSnapshot.forEach((doc) => {
+            timeLogs.push({ id: doc.id, ...doc.data() });
+          });
+          setSystemLogs(timeLogs);
+          setLogsLoading(false);
+        }).catch(() => {
+          setSystemLogs([]);
+          setLogsLoading(false);
+        });
+      });
+    });
+
+    return () => unsubscribe();
+  }, [activeTab]);
 
   const handleSaveObjectif = async (siteId: string) => {
     const vals = editedTargets[siteId];
@@ -346,7 +428,7 @@ export function Admin() {
           type: data.type || "Scooptram",
           siteId: data.siteId || "SMI",
           heuresMarche: Number(data.heuresMarche) || 0,
-          dateEntreeService: data.dateEntreeService || new Date().toISOString().split('T')[0],
+          dateEntreeService: data.dateEntreeService || getLocalDateString(),
           etat: selectedEtat,
           statut: resolvedStatut,
           dispo: resolvedDispo,
@@ -368,7 +450,7 @@ export function Admin() {
           type: data.type || "Scooptram",
           siteId: data.siteId || "SMI",
           heuresMarche: Number(data.heuresMarche) || 0,
-          dateEntreeService: data.dateEntreeService || new Date().toISOString().split('T')[0],
+          dateEntreeService: data.dateEntreeService || getLocalDateString(),
           etat: selectedEtat,
           statut: resolvedStatut,
           dispo: resolvedDispo,
@@ -419,7 +501,7 @@ export function Admin() {
           poste: data.poste || "Poste 1",
           specialite: data.specialite || "Généraliste",
           telephone: data.telephone || "",
-          dateEmbauche: data.dateEmbauche || new Date().toISOString().split('T')[0],
+          dateEmbauche: data.dateEmbauche || getLocalDateString(),
           statut: data.statut || "Actif",
           siteId: data.siteId || "SMI",
           updatedAt: Timestamp.now()
@@ -438,7 +520,7 @@ export function Admin() {
           poste: data.poste || "Poste 1",
           specialite: data.specialite || "Généraliste",
           telephone: data.telephone || "",
-          dateEmbauche: data.dateEmbauche || new Date().toISOString().split('T')[0],
+          dateEmbauche: data.dateEmbauche || getLocalDateString(),
           statut: data.statut || "Actif",
           siteId: data.siteId || "SMI",
           deleted: false,
@@ -1426,6 +1508,147 @@ export function Admin() {
     );
   };
 
+  const renderLogsErreurs = () => {
+    // Filter the logs in memory
+    const filteredLogs = systemLogs.filter((log) => {
+      if (logLevelFilter === "ALL") return true;
+      return (log.level || "").toUpperCase() === logLevelFilter.toUpperCase();
+    });
+
+    const handleCopyLog = (log: any) => {
+      const dateStr = log.createdAt ? (log.createdAt.toDate ? log.createdAt.toDate().toLocaleString() : new Date(log.createdAt).toLocaleString()) : (log.timestamp ? new Date(log.timestamp).toLocaleString() : "Date inconnue");
+      const textToCopy = `[${log.level || 'ERROR'}] [${dateStr}] [Source: ${log.source || 'N/A'}]\nMessage: ${log.message || 'N/A'}\nStack: ${log.stack || 'Pas de trace'}\nSite: ${log.siteId || 'N/A'}\nUser: ${log.userId || 'N/A'}\nDevice: ${log.deviceInfo || 'N/A'}`;
+      navigator.clipboard.writeText(textToCopy);
+      toast.success("Détails du log copiés dans le presse-papiers !");
+    };
+
+    return (
+      <div className="space-y-6">
+        <Card className="bg-white border-2 border-red-500/20 shadow-md rounded-xl overflow-hidden animate-fade-in" id="card-logs-erreurs">
+          <CardHeader className="bg-gradient-to-r from-red-500/10 via-amber-500/5 to-transparent border-b border-slate-100 p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5 text-red-600 animate-pulse" />
+                  Logs d'Erreurs Applicatives (systemLogs)
+                </CardTitle>
+                <p className="text-xs text-slate-500 mt-1">
+                  Consultez les 100 dernières anomalies et avertissements capturés automatiquement sur tous les postes clients.
+                </p>
+              </div>
+              
+              {/* Filtre par niveau */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1">
+                  <Filter className="h-3.5 w-3.5" /> Filtrer :
+                </span>
+                <select
+                  value={logLevelFilter}
+                  onChange={(e) => setLogLevelFilter(e.target.value)}
+                  className="bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-700"
+                >
+                  <option value="ALL">Tous les niveaux</option>
+                  <option value="FATAL">FATAL</option>
+                  <option value="CRITICAL">CRITICAL</option>
+                  <option value="ERROR">ERROR</option>
+                  <option value="WARNING">WARNING</option>
+                  <option value="INFO">INFO</option>
+                </select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            {logsLoading ? (
+              <div className="py-16 text-center text-slate-500 flex flex-col items-center justify-center gap-3">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
+                <p className="text-sm font-semibold text-slate-700">Chargement des logs depuis Firestore...</p>
+              </div>
+            ) : filteredLogs.length === 0 ? (
+              <div className="py-16 text-center text-slate-500 flex flex-col items-center justify-center gap-3">
+                <CheckCircle className="h-12 w-12 text-emerald-500/40" />
+                <p className="text-sm font-semibold text-slate-700">Aucun log d'erreur trouvé.</p>
+                <p className="text-xs text-slate-400 max-w-md">
+                  Aucun événement correspondant au niveau sélectionné n'a été enregistré récemment.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-wider">
+                      <th className="py-3 px-4">Date & Heure</th>
+                      <th className="py-3 px-4">Niveau</th>
+                      <th className="py-3 px-4">Source</th>
+                      <th className="py-3 px-4 w-1/2">Message d'Erreur</th>
+                      <th className="py-3 px-4 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700 text-xs">
+                    {filteredLogs.map((log) => {
+                      const dateStr = log.createdAt 
+                        ? (log.createdAt.toDate ? log.createdAt.toDate().toLocaleString() : new Date(log.createdAt).toLocaleString()) 
+                        : (log.dbTimestamp?.toDate ? log.dbTimestamp.toDate().toLocaleString() : (log.timestamp ? new Date(log.timestamp).toLocaleString() : "Date inconnue"));
+                      
+                      const levelUpper = (log.level || 'ERROR').toUpperCase();
+                      let badgeColor = "bg-slate-100 text-slate-700 border-slate-200";
+                      if (levelUpper === 'FATAL' || levelUpper === 'CRITICAL') {
+                        badgeColor = "bg-red-50 text-red-700 border-red-200 font-bold";
+                      } else if (levelUpper === 'ERROR') {
+                        badgeColor = "bg-orange-50 text-orange-700 border-orange-200";
+                      } else if (levelUpper === 'WARNING') {
+                        badgeColor = "bg-amber-50 text-amber-700 border-amber-200";
+                      } else if (levelUpper === 'INFO') {
+                        badgeColor = "bg-sky-50 text-sky-700 border-sky-200";
+                      }
+
+                      return (
+                        <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-3.5 px-4 font-mono text-[11px] whitespace-nowrap text-slate-500">
+                            {dateStr}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <Badge className={`${badgeColor} uppercase tracking-wider text-[9px] border px-2 py-0.5 rounded`}>
+                              {log.level || 'ERROR'}
+                            </Badge>
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-slate-600">
+                            <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] font-mono">{log.source || 'N/A'}</span>
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-800 break-words font-mono text-[11px]">
+                            <p className="font-semibold">{log.message}</p>
+                            {log.stack && (
+                              <p className="text-[10px] text-slate-400 mt-1 max-h-16 overflow-y-auto whitespace-pre-wrap leading-tight bg-slate-50 p-1 rounded border border-slate-100">
+                                {log.stack}
+                              </p>
+                            )}
+                            {(log.siteId || log.userId) && (
+                              <p className="text-[10px] text-slate-500 mt-1 flex gap-2">
+                                {log.siteId && <span>📍 Site: {log.siteId}</span>}
+                                {log.userId && <span>👤 User: {log.userId}</span>}
+                              </p>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <Button
+                              onClick={() => handleCopyLog(log)}
+                              className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-bold uppercase tracking-wider text-[10px] py-1 px-3.5 h-8 rounded-lg flex items-center gap-1 mx-auto transition-all"
+                            >
+                              <Copy className="h-3 w-3" /> Copier
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   const renderObjectifs = () => {
     return (
       <div className="space-y-6">
@@ -1642,6 +1865,18 @@ export function Admin() {
             <Stethoscope className="h-4.5 w-4.5" /> SANTÉ DES DONNÉES
           </button>
         )}
+        {user?.role === "ADMIN" && (
+          <button
+            onClick={() => setActiveTab("logs_erreurs")}
+            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-xs transition-all ${
+              activeTab === "logs_erreurs"
+                ? "bg-amber-500 text-slate-950 shadow-md"
+                : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+            }`}
+          >
+            <ShieldAlert className="h-4.5 w-4.5" /> LOGS D'ERREURS
+          </button>
+        )}
         <button
           onClick={() => setActiveTab("objectifs")}
           className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-xs transition-all ${
@@ -1660,6 +1895,8 @@ export function Admin() {
         renderUserApprovals()
       ) : activeTab === "sante_donnees" ? (
         renderSanteDonnees()
+      ) : activeTab === "logs_erreurs" ? (
+        renderLogsErreurs()
       ) : activeTab === "objectifs" ? (
         renderObjectifs()
       ) : (
@@ -2273,7 +2510,7 @@ export function Admin() {
                     <input
                       type="date"
                       name="dateEntreeService"
-                      defaultValue={editingItem?.dateEntreeService || new Date().toISOString().split('T')[0]}
+                      defaultValue={editingItem?.dateEntreeService || getLocalDateString()}
                       className="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#4FC3F7]"
                     />
                   </div>
@@ -2391,7 +2628,7 @@ export function Admin() {
                     <input
                       type="date"
                       name="dateEmbauche"
-                      defaultValue={editingItem?.dateEmbauche || new Date().toISOString().split('T')[0]}
+                      defaultValue={editingItem?.dateEmbauche || getLocalDateString()}
                       className="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#4FC3F7]"
                     />
                   </div>

@@ -19,6 +19,7 @@ import { PageBanner } from '@/components/ui/PageBanner';
 import { useCollection } from '@/hooks/useCollection';
 import { useAuthStore } from '@/lib/store';
 import { toast } from 'sonner';
+import { getLocalDateString } from '@/lib/utils';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import RapportMensuelPDF from './reports/RapportMensuelPDF';
 import { collection, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
@@ -69,6 +70,7 @@ export default function Analyses() {
   const [newAnnotationType, setNewAnnotationType] = useState<"GREVE" | "PANNE_ELECTRIQUE_GENERALE" | "CHANGEMENT_EQUIPE" | "AUTRE">("AUTRE");
   const [newAnnotationText, setNewAnnotationText] = useState("");
   const [newAnnotationSiteId, setNewAnnotationSiteId] = useState("SMI");
+  const [isSubmittingAnnotation, setIsSubmittingAnnotation] = useState<boolean>(false);
 
   // 5 Firestore collections read in real-time
   const { data: rawEngins, loading: enginsLoading } = useCollection<any>('engins');
@@ -442,7 +444,7 @@ export default function Analyses() {
   // Proactive real-time alerts derived from current collections state
   const alertesProactives = useMemo(() => {
     const alertes: { id: string; type: string; message: string; priorite: 'CRITIQUE' | 'HAUTE' | 'NORMALE'; siteId: string }[] = [];
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalDateString();
     const now = Date.now();
 
     // Alert 1: Overdue critical PM
@@ -533,7 +535,7 @@ export default function Analyses() {
         const total = tasksMeca.length;
         const retard = tasksMeca.filter(t =>
           t.statut === 'NON_FAIT' &&
-          (t.datePlanifiee || '') < new Date().toISOString().split('T')[0]
+          (t.datePlanifiee || '') < getLocalDateString()
         ).length;
         const correctifs = tasksMeca.filter(t => t.type === 'CORRECTIF' && (t.statut === 'FAIT' || t.statut === 'VALIDE')).length;
         const tauxRealisation = total > 0 ? Math.round((faites / total) * 100) : null;
@@ -577,7 +579,7 @@ export default function Analyses() {
     for (let i = 29; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dayStr = d.toISOString().split('T')[0];
+      const dayStr = getLocalDateString(d);
       const label = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 
       const tasksJour = tasks.filter(t => t.datePlanifiee === dayStr && t.type !== 'QUOTIDIEN');
@@ -982,7 +984,7 @@ export default function Analyses() {
           `"${t.id}";"${t.type || 'N/A'}";"${(t.label || '').replace(/"/g, '""')}";"${t.enginId || 'N/A'}";"${t.datePlanifiee || 'N/A'}";"${t.statut || 'N/A'}";"${t.priorite || 'N/A'}";"${t.siteId || 'N/A'}"`
         )
       ];
-      filename = `taches_gmao_${activeSite}_${new Date().toISOString().split('T')[0]}.csv`;
+      filename = `taches_gmao_${activeSite}_${getLocalDateString()}.csv`;
     } else {
       rows = [
         'ID;EnginID;Categorie;Gravite;Statut;DateDeclaration;DureeImmobilisation;Site',
@@ -990,7 +992,7 @@ export default function Analyses() {
           `"${p.id}";"${p.enginId || 'N/A'}";"${p.categorie || 'N/A'}";"${p.gravite || 'N/A'}";"${p.statut || 'N/A'}";"${p.dateDeclaration || 'N/A'}";"${p.dureeImmobilisation ?? ''}";"${p.siteId || 'N/A'}"`
         )
       ];
-      filename = `pannes_gmao_${activeSite}_${new Date().toISOString().split('T')[0]}.csv`;
+      filename = `pannes_gmao_${activeSite}_${getLocalDateString()}.csv`;
     }
 
     const csvContent = '\uFEFF' + rows.join('\n');
@@ -1627,11 +1629,14 @@ export default function Analyses() {
 
   const handleSubmitAnnotation = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingAnnotation) return;
+
     if (!selectedMonthKey || !newAnnotationText.trim()) {
       toast.error("Veuillez saisir un texte d'annotation.");
       return;
     }
 
+    setIsSubmittingAnnotation(true);
     try {
       const docData = {
         siteId: newAnnotationSiteId,
@@ -1649,6 +1654,8 @@ export default function Analyses() {
       setIsAnnotationModalOpen(false);
     } catch (err) {
       handleFirestoreError(err, 'CREATE', 'annotationsEvenements');
+    } finally {
+      setIsSubmittingAnnotation(false);
     }
   };
 
@@ -3617,9 +3624,10 @@ export default function Analyses() {
                 <div className="flex justify-end pt-1">
                   <Button
                     type="submit"
-                    className="bg-[#D4A017] hover:bg-[#B8860B] text-white font-bold uppercase tracking-wider text-[10px] py-1 h-8 rounded-lg"
+                    disabled={isSubmittingAnnotation}
+                    className="bg-[#D4A017] hover:bg-[#B8860B] text-white font-bold uppercase tracking-wider text-[10px] py-1 h-8 rounded-lg disabled:opacity-50"
                   >
-                    Enregistrer l'annotation
+                    {isSubmittingAnnotation ? "Enregistrement..." : "Enregistrer l'annotation"}
                   </Button>
                 </div>
               </form>

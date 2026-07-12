@@ -1,6 +1,7 @@
 // Hook useMecaniciens.ts - Phase 2 Refactoring with Dynamic Real-time Stats
 import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
+import { getLocalDateString } from "@/lib/utils";
 import { 
   collection, 
   onSnapshot, 
@@ -226,7 +227,7 @@ export function useMecaniciens() {
         email: data.email || "",
         adresse: data.adresse || "",
         dateNaissance: data.dateNaissance || "",
-        dateEmbauche: data.dateEmbauche || new Date().toISOString().split('T')[0],
+        dateEmbauche: data.dateEmbauche || getLocalDateString(),
         documents: data.documents || DEFAULT_DOCUMENTS,
         stats: processedStats,
         active: data.active !== false,

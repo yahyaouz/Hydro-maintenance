@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { cn } from "@/lib/utils";
+import { cn, getLocalDateString } from "@/lib/utils";
 
 export interface AlertDocument {
   id: string;
@@ -419,7 +419,7 @@ export function Alertes() {
             mecanicienNom: 'À attribuer',
             poste: 'Poste 1',
             siteId: alert.siteId,
-            datePlanifiee: new Date().toISOString().split('T')[0],
+            datePlanifiee: getLocalDateString(),
             dureeEstimee: '2h',
             priorite: alert.code === 'PM_CRITICAL' ? 'CRITIQUE' : 'HAUTE',
             statut: 'NON_FAIT',

@@ -349,6 +349,17 @@ export function useImports() {
         }
       });
 
+      // Fetch existing mecaniciens to prevent duplicates
+      const mecaniciensSnap = await getDocs(collection(db, "mecaniciens"));
+      const mecaniciensMap = new Map<string, any>(); // key: matricule
+      mecaniciensSnap.forEach(d => {
+        const m = d.data();
+        const matricule = (m.matricule || d.id || "").toUpperCase().trim();
+        if (matricule) {
+          mecaniciensMap.set(matricule, { id: d.id, ...m });
+        }
+      });
+
       const rows = csvToObjects(fileContent);
       if (rows.length === 0) {
         throw new Error("Le fichier CSV est vide ou n'a pas pu être parsé.");
@@ -431,6 +442,62 @@ export function useImports() {
             });
             // Update local map to handle same mechanic listed multiple times in the same file
             usersMap.set(matriculeMec, { id: newUserId, displayName: nomMec });
+
+            // ALSO create corresponding mecanicien profile in "mecaniciens" collection if it doesn't already exist
+            if (!mecaniciensMap.has(matriculeMec)) {
+              let finalNom = nomMec || "";
+              let finalPrenom = "";
+              const parts = String(nomMec || "").trim().split(/\s+/);
+              if (parts.length > 1) {
+                finalPrenom = parts[0] || "";
+                finalNom = parts.slice(1).join(" ") || "";
+              }
+
+              const mecaDocRef = doc(db, "mecaniciens", matriculeMec);
+              writeBatch(db).set(mecaDocRef, {
+                id: matriculeMec,
+                uid: newUserId,
+                matricule: matriculeMec,
+                nom: finalNom,
+                prenom: finalPrenom,
+                nomComplet: nomMec,
+                photo: "",
+                siteId: site,
+                poste: "Poste 1",
+                equipe: "A",
+                competences: [],
+                telephone: telMec,
+                telephoneUrgence: "",
+                email: emailMec || `${matriculeMec.toLowerCase()}@hydromines.ma`,
+                adresse: "",
+                dateNaissance: "",
+                dateEmbauche: new Date().toISOString().split('T')[0],
+                documents: {
+                  contrat: "",
+                  diplome: "",
+                  attestationFormation: "",
+                  caces: ""
+                },
+                stats: {
+                  totalInterventions: 0,
+                  interventionsCeMois: 0,
+                  derniereIntervention: "",
+                  scoreMensuel: null,
+                  mttrMoyen: null,
+                  tauxResolutionPremiereFois: null,
+                  tauxTournéesCompletes: null,
+                  heuresInterventionCeMois: 0
+                },
+                active: true,
+                statut: "Actif",
+                source: "IMPORT_PLANIFICATION",
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              });
+
+              // Add to memory map so we don't duplicate write in this batch
+              mecaniciensMap.set(matriculeMec, { id: matriculeMec });
+            }
           }
 
           // 2. Add maintenance task planning entry
