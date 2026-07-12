@@ -24,7 +24,8 @@ import {
   Stethoscope,
   Activity,
   ShieldAlert,
-  Copy
+  Copy,
+  Target
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PageBanner } from "@/components/ui/PageBanner";
@@ -32,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useCollection } from "@/hooks/useCollection";
 import { 
   collection, doc, setDoc, addDoc, updateDoc, 
   onSnapshot, query, where, orderBy,
@@ -90,7 +92,78 @@ export function Admin() {
   const { user } = useAuthStore();
 
   // RECONSTRUIT : États de navigation des onglets
-  const [activeTab, setActiveTab] = React.useState<"engins" | "mecaniciens" | "chantiers" | "intervalles" | "comptes" | "sante_donnees">("engins");
+  const [activeTab, setActiveTab] = React.useState<"engins" | "mecaniciens" | "chantiers" | "intervalles" | "comptes" | "sante_donnees" | "objectifs">("engins");
+
+  const SITES_LIST = ['SMI', 'OUMEJRANE', 'KOUDIA', 'OUANSIMI', 'BOU-AZZER'];
+  const { data: objectifsSitesRaw, loading: objectifsLoading } = useCollection<any>('objectifsSites');
+
+  const [editedTargets, setEditedTargets] = React.useState<Record<string, {
+    dispoTarget: string;
+    mttrTarget: string;
+    complianceTarget: string;
+    coutTarget: string;
+  }>>({});
+
+  React.useEffect(() => {
+    if (objectifsSitesRaw) {
+      const initial: Record<string, any> = {};
+      SITES_LIST.forEach(site => {
+        const found = objectifsSitesRaw.find(o => o.id === site);
+        initial[site] = {
+          dispoTarget: found?.dispoTarget !== undefined && found?.dispoTarget !== null ? String(found.dispoTarget) : "",
+          mttrTarget: found?.mttrTarget !== undefined && found?.mttrTarget !== null ? String(found.mttrTarget) : "",
+          complianceTarget: found?.complianceTarget !== undefined && found?.complianceTarget !== null ? String(found.complianceTarget) : "",
+          coutTarget: found?.coutTarget !== undefined && found?.coutTarget !== null ? String(found.coutTarget) : "",
+        };
+      });
+      setEditedTargets(initial);
+    }
+  }, [objectifsSitesRaw]);
+
+  const handleSaveObjectif = async (siteId: string) => {
+    const vals = editedTargets[siteId];
+    if (!vals) return;
+
+    try {
+      const dispoNum = vals.dispoTarget.trim() === "" ? null : Number(vals.dispoTarget);
+      const mttrNum = vals.mttrTarget.trim() === "" ? null : Number(vals.mttrTarget);
+      const complianceNum = vals.complianceTarget.trim() === "" ? null : Number(vals.complianceTarget);
+      const coutNum = vals.coutTarget.trim() === "" ? null : Number(vals.coutTarget);
+
+      // Validate numbers if they are not null
+      if (dispoNum !== null && (isNaN(dispoNum) || dispoNum < 0 || dispoNum > 100)) {
+        toast.error("La disponibilité doit être un nombre entre 0 et 100.");
+        return;
+      }
+      if (mttrNum !== null && (isNaN(mttrNum) || mttrNum < 0)) {
+        toast.error("Le MTTR doit être un nombre positif.");
+        return;
+      }
+      if (complianceNum !== null && (isNaN(complianceNum) || complianceNum < 0 || complianceNum > 100)) {
+        toast.error("La conformité PM doit être un nombre entre 0 et 100.");
+        return;
+      }
+      if (coutNum !== null && (isNaN(coutNum) || coutNum < 0)) {
+        toast.error("Le coût horaire doit être un nombre positif.");
+        return;
+      }
+
+      const docData = {
+        dispoTarget: dispoNum,
+        mttrTarget: mttrNum,
+        complianceTarget: complianceNum,
+        coutTarget: coutNum,
+        updatedAt: Timestamp.now(),
+        updatedBy: user?.displayName || user?.email || "Responsable Maintenance"
+      };
+
+      await setDoc(doc(db, "objectifsSites", siteId), docData);
+      toast.success(`Objectifs pour le site ${siteId} enregistrés avec succès !`);
+    } catch (err: any) {
+      console.error("Error saving site objectives: ", err);
+      toast.error(`Erreur d'enregistrement : ${err.message}`);
+    }
+  };
 
   // États de diagnostic "Santé des Données"
   const [diagnosticLoading, setDiagnosticLoading] = React.useState(false);
@@ -1353,6 +1426,143 @@ export function Admin() {
     );
   };
 
+  const renderObjectifs = () => {
+    return (
+      <div className="space-y-6">
+        <Card className="bg-white border-2 border-amber-500/20 shadow-md rounded-xl overflow-hidden animate-fade-in" id="card-objectifs-performance">
+          <CardHeader className="bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent border-b border-slate-100 p-5">
+            <div>
+              <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Target className="h-5 w-5 text-amber-500" />
+                Objectifs de Performance par Site
+              </CardTitle>
+              <p className="text-xs text-slate-500 mt-1">
+                Définissez les cibles de performance pour chaque site minier. Les champs laissés vides signifient que l'objectif n'est pas encore défini.
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-400 text-[10px] font-black uppercase font-mono tracking-wider">
+                    <th className="py-3 px-4">Site Minier</th>
+                    <th className="py-3 px-4">Disponibilité Cible (%)</th>
+                    <th className="py-3 px-4">MTTR Cible (heures)</th>
+                    <th className="py-3 px-4">Conformité PM Cible (%)</th>
+                    <th className="py-3 px-4">Coût Cible (DH/h)</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {SITES_LIST.map((siteId) => {
+                    const vals = editedTargets[siteId] || {
+                      dispoTarget: "",
+                      mttrTarget: "",
+                      complianceTarget: "",
+                      coutTarget: "",
+                    };
+
+                    const isAuthorized = user?.role === "ADMIN" || user?.role === "DIRECTION";
+
+                    return (
+                      <tr key={siteId} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 px-4 font-black text-slate-900 font-mono tracking-wider">
+                          {siteId}
+                        </td>
+                        <td className="py-4 px-4">
+                          <Input
+                            type="text"
+                            value={vals.dispoTarget}
+                            disabled={!isAuthorized}
+                            onChange={(e) => {
+                              setEditedTargets(prev => ({
+                                ...prev,
+                                [siteId]: {
+                                  ...prev[siteId],
+                                  dispoTarget: e.target.value
+                                }
+                              }));
+                            }}
+                            placeholder="Non défini"
+                            className="h-9 w-36 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg text-center focus:ring-1 focus:ring-[#D4A017]"
+                          />
+                        </td>
+                        <td className="py-4 px-4">
+                          <Input
+                            type="text"
+                            value={vals.mttrTarget}
+                            disabled={!isAuthorized}
+                            onChange={(e) => {
+                              setEditedTargets(prev => ({
+                                ...prev,
+                                [siteId]: {
+                                  ...prev[siteId],
+                                  mttrTarget: e.target.value
+                                }
+                              }));
+                            }}
+                            placeholder="Non défini"
+                            className="h-9 w-36 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg text-center focus:ring-1 focus:ring-[#D4A017]"
+                          />
+                        </td>
+                        <td className="py-4 px-4">
+                          <Input
+                            type="text"
+                            value={vals.complianceTarget}
+                            disabled={!isAuthorized}
+                            onChange={(e) => {
+                              setEditedTargets(prev => ({
+                                ...prev,
+                                [siteId]: {
+                                  ...prev[siteId],
+                                  complianceTarget: e.target.value
+                                }
+                              }));
+                            }}
+                            placeholder="Non défini"
+                            className="h-9 w-36 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg text-center focus:ring-1 focus:ring-[#D4A017]"
+                          />
+                        </td>
+                        <td className="py-4 px-4">
+                          <Input
+                            type="text"
+                            value={vals.coutTarget}
+                            disabled={!isAuthorized}
+                            onChange={(e) => {
+                              setEditedTargets(prev => ({
+                                ...prev,
+                                [siteId]: {
+                                  ...prev[siteId],
+                                  coutTarget: e.target.value
+                                }
+                              }));
+                            }}
+                            placeholder="Non défini"
+                            className="h-9 w-36 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg text-center focus:ring-1 focus:ring-[#D4A017]"
+                          />
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <Button
+                            onClick={() => handleSaveObjectif(siteId)}
+                            disabled={!isAuthorized}
+                            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold uppercase tracking-wider text-[10px] py-1.5 px-4 h-9 rounded-lg transition-all"
+                          >
+                            Enregistrer
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 bg-white min-h-screen text-slate-800 font-sans p-6 rounded-2xl border border-slate-200 shadow-xl">
       {/* RECONSTRUIT : Banner avec style conservé, changement de titre exact */}
@@ -1432,6 +1642,16 @@ export function Admin() {
             <Stethoscope className="h-4.5 w-4.5" /> SANTÉ DES DONNÉES
           </button>
         )}
+        <button
+          onClick={() => setActiveTab("objectifs")}
+          className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-xs transition-all ${
+            activeTab === "objectifs"
+              ? "bg-amber-500 text-slate-950 shadow-md"
+              : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+          }`}
+        >
+          🎯 OBJECTIFS PAR SITE
+        </button>
       </div>
 
       {activeTab === "mecaniciens" ? (
@@ -1440,6 +1660,8 @@ export function Admin() {
         renderUserApprovals()
       ) : activeTab === "sante_donnees" ? (
         renderSanteDonnees()
+      ) : activeTab === "objectifs" ? (
+        renderObjectifs()
       ) : (
         <>
           {/* RECONSTRUIT : Affichage des statistiques selon l'onglet actif */}

@@ -253,6 +253,19 @@ service cloud.firestore {
       }
     }
 
+    match /annotationsEvenements/{annotationId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.auteurId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (
+        resource.data.auteurId == request.auth.uid || isRole('ADMIN')
+      );
+    }
+
+    match /objectifsSites/{siteId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (isRole('ADMIN') || isRole('DIRECTION'));
+    }
+
     match /systemLogs/{logId} {
       allow read: if isSignedIn() && isRole('ADMIN');
       allow create: if isSignedIn();

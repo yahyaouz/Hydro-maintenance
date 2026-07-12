@@ -22,7 +22,8 @@ import {
   UserCheck,
   BarChart2,
   RefreshCw,
-  X
+  X,
+  Award
 } from "lucide-react";
 import { 
   Card, 
@@ -94,11 +95,12 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
   const { data: workOrdersLive, loading: tasksLoading } = useCollection<any>('maintenanceTasks');
   const { data: pannesLive, loading: pannesLoading } = useCollection<any>('pannes');
   const { data: interventions, loading: interventionsLoading } = useCollection<any>('interventions');
+  const { data: objectifsSitesRaw, loading: objectifsLoading } = useCollection<any>('objectifsSites');
   
   // Use useMecaniciens for pre-computed rich stats
   const { mecaniciens, loading: mecsLoading } = useMecaniciens();
 
-  const isLoading = enginsLoading || tasksLoading || pannesLoading || interventionsLoading || mecsLoading;
+  const isLoading = enginsLoading || tasksLoading || pannesLoading || interventionsLoading || mecsLoading || objectifsLoading;
 
   const [lastRefreshTime, setLastRefreshTime] = React.useState<Date>(() => new Date());
 
@@ -111,6 +113,281 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
   }, [isLoading]);
 
   const currentMonthStr = React.useMemo(() => new Date().toISOString().substring(0, 7), []);
+
+  // Site metrics calculation for a specific month
+  const getSiteDispo = React.useCallback((siteId: string, monthStr: string) => {
+    const siteEngins = (enginsLive || []).filter(e => !e.deleted && (e.siteId === siteId || e.site === siteId));
+    if (siteEngins.length === 0) return null;
+
+    const siteTasksMonth = (workOrdersLive || []).filter(t => !t.deleted && (t.siteId === siteId || t.site === siteId) && t.datePlanifiee && t.datePlanifiee.startsWith(monthStr));
+    const sitePannesMonth = (pannesLive || []).filter(p => !p.deleted && (p.siteId === siteId || p.site === siteId) && p.dateDeclaration && p.dateDeclaration.startsWith(monthStr));
+
+    let totalDispo = 0;
+    siteEngins.forEach(e => {
+      const enginePannes = sitePannesMonth.filter(p => p.enginId === e.id);
+      const engineTasks = siteTasksMonth.filter(t => t.enginId === e.id);
+      if (enginePannes.length === 0 && engineTasks.length === 0) {
+        totalDispo += 100;
+      } else {
+        const hasOpenPannes = enginePannes.some(p => p.statut !== 'CLOS');
+        const hasOpenTasks = engineTasks.some(t => t.statut === 'NON_FAIT' || t.statut === 'EN_COURS');
+        if (hasOpenPannes || hasOpenTasks) {
+          totalDispo += 0;
+        } else {
+          totalDispo += 50;
+        }
+      }
+    });
+    return parseFloat((totalDispo / siteEngins.length).toFixed(1));
+  }, [enginsLive, workOrdersLive, pannesLive]);
+
+  const getSiteMttr = React.useCallback((siteId: string, monthStr: string) => {
+    const sitePannesMonth = (pannesLive || []).filter(p => 
+      !p.deleted && 
+      (p.siteId === siteId || p.site === siteId) && 
+      p.statut === 'CLOS' && 
+      p.dateDeclaration && 
+      p.dateDeclaration.startsWith(monthStr) &&
+      p.datePriseEnCharge && 
+      p.dateResolution
+    );
+    if (sitePannesMonth.length === 0) return null;
+
+    const parseToDate = (field: any): Date | null => {
+      if (!field) return null;
+      if (typeof field.toMillis === 'function') return new Date(field.toMillis());
+      if (field.seconds) return new Date(field.seconds * 1000);
+      const d = new Date(field);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    let totalWaitingMs = 0;
+    let totalRepairMs = 0;
+    let count = 0;
+
+    sitePannesMonth.forEach(p => {
+      const dateDecl = parseToDate(p.dateDeclaration);
+      const datePrise = parseToDate(p.datePriseEnCharge);
+      const dateRes = parseToDate(p.dateResolution);
+
+      if (dateDecl && datePrise && dateRes) {
+        const waitingMs = Math.max(0, datePrise.getTime() - dateDecl.getTime());
+        const repairMs = Math.max(0, dateRes.getTime() - datePrise.getTime());
+
+        totalWaitingMs += waitingMs;
+        totalRepairMs += repairMs;
+        count++;
+      }
+    });
+
+    if (count === 0) return null;
+
+    const avgWaitingHours = parseFloat((totalWaitingMs / (1000 * 60 * 60) / count).toFixed(1));
+    const avgRepairHours = parseFloat((totalRepairMs / (1000 * 60 * 60) / count).toFixed(1));
+    return parseFloat((avgWaitingHours + avgRepairHours).toFixed(1));
+  }, [pannesLive]);
+
+  const getSiteCompliance = React.useCallback((siteId: string, monthStr: string) => {
+    const siteWOs = (workOrdersLive || []).filter(b => !b.deleted && (b.siteId === siteId || b.site === siteId));
+    const preventifMoisTasks = siteWOs.filter(t => t.type === 'PREVENTIF' && t.datePlanifiee && t.datePlanifiee.startsWith(monthStr));
+    if (preventifMoisTasks.length === 0) return null;
+
+    const faites = preventifMoisTasks.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
+    return Math.round((faites / preventifMoisTasks.length) * 100);
+  }, [workOrdersLive]);
+
+  const getSiteCout = React.useCallback((siteId: string, monthStr: string) => {
+    const siteEngins = (enginsLive || []).filter(e => !e.deleted && (e.siteId === siteId || e.site === siteId));
+    if (siteEngins.length === 0) return null;
+
+    const getHoursFromDuree = (duree: string) => {
+      if (!duree) return 0;
+      const clean = duree.toLowerCase().trim();
+      if (clean === '15min') return 0.25;
+      if (clean === '30min') return 0.5;
+      if (clean === '1h') return 1;
+      if (clean === '2h') return 2;
+      if (clean === '4h') return 4;
+      if (clean === '6h') return 6;
+      if (clean === '1j') return 8;
+      const num = parseFloat(clean);
+      return isNaN(num) ? 0 : num;
+    };
+
+    const getTaskCost = (task: any) => {
+      if (typeof task.cout === "number") return task.cout;
+      if (typeof task.cost === "number") return task.cost;
+      if (typeof task.coutTotal === "number") return task.coutTotal;
+      
+      const hours = getHoursFromDuree(task.dureeEstimee || task.duree || "");
+      const laborCost = hours * 250; 
+      const partsCount = (task.piecesUtilisees || task.pieces || []).length;
+      const partsCost = partsCount * 450; 
+      return laborCost + partsCost;
+    };
+
+    const getPanneCost = (p: any) => {
+      if (typeof p.cout === "number") return p.cout;
+      if (typeof p.cost === "number") return p.cost;
+      
+      const parseToDate = (field: any): Date | null => {
+        if (!field) return null;
+        if (typeof field.toMillis === 'function') return new Date(field.toMillis());
+        if (field.seconds) return new Date(field.seconds * 1000);
+        const d = new Date(field);
+        return isNaN(d.getTime()) ? null : d;
+      };
+
+      let laborHours = 0;
+      const dPrise = parseToDate(p.datePriseEnCharge);
+      const dRes = parseToDate(p.dateResolution);
+      if (dPrise && dRes && dRes > dPrise) {
+        laborHours = (dRes.getTime() - dPrise.getTime()) / (1000 * 60 * 60);
+      } else {
+        laborHours = 2; 
+      }
+      const laborCost = laborHours * 250;
+      const partsCount = (p.pieces || p.piecesConcernees || []).length;
+      const partsCost = partsCount * 450;
+      return laborCost + partsCost;
+    };
+
+    const preventives = (workOrdersLive || []).filter(t => !t.deleted && (t.siteId === siteId || t.site === siteId) && t.type === 'PREVENTIF' && (t.statut === 'FAIT' || t.statut === 'VALIDE') && t.datePlanifiee && t.datePlanifiee.startsWith(monthStr));
+    const correctives = (workOrdersLive || []).filter(t => !t.deleted && (t.siteId === siteId || t.site === siteId) && (t.type === 'CORRECTIF' || t.type === 'CURATIF') && (t.statut === 'FAIT' || t.statut === 'VALIDE') && t.datePlanifiee && t.datePlanifiee.startsWith(monthStr));
+    const closedPannes = (pannesLive || []).filter(p => !p.deleted && (p.siteId === siteId || p.site === siteId) && p.statut === 'CLOS' && p.dateResolution && p.dateResolution.startsWith(monthStr));
+    const interventionsMois = (interventions || []).filter(i => !i.deleted && (i.siteId === siteId || i.site === siteId) && (i.typeIntervention === 'CORRECTIF' || i.type === 'CORRECTIF' || i.type === 'CURATIF') && i.date && i.date.startsWith(monthStr));
+
+    let totalCost = 0;
+    preventives.forEach(t => { totalCost += getTaskCost(t); });
+    correctives.forEach(t => { totalCost += getTaskCost(t); });
+    closedPannes.forEach(p => { totalCost += getPanneCost(p); });
+    interventionsMois.forEach(i => { totalCost += getTaskCost(i); });
+
+    const totalHours = siteEngins.length * 160;
+    if (totalHours === 0) return null;
+    return parseFloat((totalCost / totalHours).toFixed(1));
+  }, [enginsLive, workOrdersLive, pannesLive, interventions]);
+
+  const renderMetricWithTarget = React.useCallback((
+    val: number | null,
+    valPrev: number | null,
+    target: number | null,
+    lowerIsBetter: boolean,
+    unit: string = ""
+  ) => {
+    if (target === null || target === undefined) {
+      return (
+        <div className="text-[10px] text-slate-400 font-mono italic">
+          Objectif non défini
+        </div>
+      );
+    }
+
+    if (val === null || val === undefined) {
+      return (
+        <div className="text-[10px] text-slate-400 font-mono italic">
+          Sans données (Cible: {target}{unit})
+        </div>
+      );
+    }
+
+    const gap = lowerIsBetter ? (target - val) : (val - target);
+    const isSuccess = gap >= 0;
+
+    let trendIcon = null;
+    let trendColor = "text-slate-400";
+
+    if (valPrev !== null && valPrev !== undefined) {
+      const gapPrev = lowerIsBetter ? (target - valPrev) : (valPrev - target);
+      const isReducing = gap > gapPrev;
+      const isTrendPositive = isSuccess || isReducing;
+
+      if (isTrendPositive) {
+        trendIcon = <TrendingUp className="inline-block h-3 w-3" />;
+        trendColor = "text-emerald-500";
+      } else {
+        trendIcon = <TrendingDown className="inline-block h-3 w-3" />;
+        trendColor = "text-red-500";
+      }
+    } else {
+      if (isSuccess) {
+        trendIcon = <TrendingUp className="inline-block h-3 w-3" />;
+        trendColor = "text-emerald-500";
+      } else {
+        trendIcon = <TrendingDown className="inline-block h-3 w-3" />;
+        trendColor = "text-red-500";
+      }
+    }
+
+    return (
+      <div className="flex flex-col items-center justify-center space-y-0.5">
+        <div className="font-mono text-xs font-black text-slate-800">
+          {val.toFixed(1)}{unit}
+        </div>
+        <div className="flex items-center gap-1 text-[9px] font-mono font-medium text-slate-500">
+          <span>Cible: {target}{unit}</span>
+          <span className={`font-bold ${isSuccess ? 'text-emerald-600' : 'text-red-600'}`}>
+            ({isSuccess ? '+' : ''}{gap.toFixed(1)}{unit})
+          </span>
+          <span className={trendColor} title={valPrev !== null ? `Précédent: ${valPrev.toFixed(1)}${unit}` : ""}>
+            {trendIcon}
+          </span>
+        </div>
+      </div>
+    );
+  }, []);
+
+  // Prolonged target drop alert memo
+  const prolongedAlertSites = React.useMemo(() => {
+    if (!objectifsSitesRaw || !enginsLive || !workOrdersLive || !pannesLive) return [];
+
+    const now = new Date();
+    const m0 = now.toISOString().substring(0, 7);
+    
+    const getPrevMonth = (mStr: string) => {
+      const [y, m] = mStr.split('-').map(Number);
+      const d = new Date(y, m - 2, 1);
+      return d.toISOString().substring(0, 7);
+    };
+    const m1 = getPrevMonth(m0);
+    const m2 = getPrevMonth(m1);
+
+    return SITES_LIST.map(siteId => {
+      const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === siteId);
+      if (!tgt || tgt.dispoTarget === null || tgt.dispoTarget === undefined) return null;
+
+      const dispo0 = getSiteDispo(siteId, m0);
+      const dispo1 = getSiteDispo(siteId, m1);
+      const dispo2 = getSiteDispo(siteId, m2);
+
+      const isUnder0 = dispo0 !== null && dispo0 < tgt.dispoTarget;
+      const isUnder1 = dispo1 !== null && dispo1 < tgt.dispoTarget;
+      const isUnder2 = dispo2 !== null && dispo2 < tgt.dispoTarget;
+
+      if (isUnder0 && isUnder1 && isUnder2) {
+        return {
+          siteId,
+          dispoTarget: tgt.dispoTarget,
+          dispo0,
+          dispo1,
+          dispo2,
+          m0,
+          m1,
+          m2
+        };
+      }
+      return null;
+    }).filter(Boolean) as Array<{
+      siteId: string;
+      dispoTarget: number;
+      dispo0: number;
+      dispo1: number;
+      dispo2: number;
+      m0: string;
+      m1: string;
+      m2: string;
+    }>;
+  }, [objectifsSitesRaw, enginsLive, workOrdersLive, pannesLive, getSiteDispo]);
 
   const sitePannesForMonth = React.useMemo(() => {
     if (!selectedAnomalySite || !pannesLive) return [];
@@ -603,6 +880,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       const pannesOuvertes = match ? match.pannesOuvertesSite : 0;
       const compliance = match ? match.complianceSite : null;
       const charge = match ? match.chargeMoyenneSite : null;
+      const coutVal = getSiteCout(site, currentMonthStr);
 
       return {
         site,
@@ -610,11 +888,12 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
         mttr: mttrVal,
         pannesOuvertes,
         compliance,
-        charge
+        charge,
+        cout: coutVal
       };
     });
 
-    const getExtreme = (metric: 'dispo' | 'mttr' | 'pannesOuvertes' | 'compliance' | 'charge', type: 'best' | 'worst') => {
+    const getExtreme = (metric: 'dispo' | 'mttr' | 'pannesOuvertes' | 'compliance' | 'charge' | 'cout', type: 'best' | 'worst') => {
       const validValues = sitesData
         .map(s => s[metric])
         .filter((v): v is number => v !== null && v !== undefined);
@@ -635,14 +914,15 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       mttr: { best: getExtreme('mttr', 'best'), worst: getExtreme('mttr', 'worst') },
       pannesOuvertes: { best: getExtreme('pannesOuvertes', 'best'), worst: getExtreme('pannesOuvertes', 'worst') },
       compliance: { best: getExtreme('compliance', 'best'), worst: getExtreme('compliance', 'worst') },
-      charge: { best: getExtreme('charge', 'best'), worst: getExtreme('charge', 'worst') }
+      charge: { best: getExtreme('charge', 'best'), worst: getExtreme('charge', 'worst') },
+      cout: { best: getExtreme('cout', 'best'), worst: getExtreme('cout', 'worst') }
     };
 
     return {
       sitesData,
       extremes
     };
-  }, [classementSites, calculateSiteMttr]);
+  }, [classementSites, calculateSiteMttr, getSiteCout, currentMonthStr]);
 
   // 3-month history existence checker
   const hasEnoughHistory = React.useMemo(() => {
@@ -915,13 +1195,33 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       label: "Disponibilité Flotte",
       key: "dispo" as const,
       format: (v: number | null) => v !== null ? `${Math.round(v)}%` : "N/A",
-      lowerIsBetter: false
+      lowerIsBetter: false,
+      render: (val: any, siteId: string) => {
+        const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === siteId);
+        const prevMonthStr = (() => {
+          const now = new Date();
+          const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          return p.toISOString().substring(0, 7);
+        })();
+        const prevVal = getSiteDispo(siteId, prevMonthStr);
+        return renderMetricWithTarget(val, prevVal, tgt?.dispoTarget, false, "%");
+      }
     },
     {
       label: "MTTR Moyen (heures)",
       key: "mttr" as const,
       format: (v: number | null) => v !== null ? `${v.toFixed(1)} h` : "N/A",
-      lowerIsBetter: true
+      lowerIsBetter: true,
+      render: (val: any, siteId: string) => {
+        const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === siteId);
+        const prevMonthStr = (() => {
+          const now = new Date();
+          const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          return p.toISOString().substring(0, 7);
+        })();
+        const prevVal = getSiteMttr(siteId, prevMonthStr);
+        return renderMetricWithTarget(val, prevVal, tgt?.mttrTarget, true, "h");
+      }
     },
     {
       label: "Pannes Ouvertes Actives",
@@ -933,13 +1233,39 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       label: "Conformité PM (Préventif)",
       key: "compliance" as const,
       format: (v: number | null) => v !== null ? `${Math.round(v)}%` : "N/A",
-      lowerIsBetter: false
+      lowerIsBetter: false,
+      render: (val: any, siteId: string) => {
+        const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === siteId);
+        const prevMonthStr = (() => {
+          const now = new Date();
+          const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          return p.toISOString().substring(0, 7);
+        })();
+        const prevVal = getSiteCompliance(siteId, prevMonthStr);
+        return renderMetricWithTarget(val, prevVal, tgt?.complianceTarget, false, "%");
+      }
     },
     {
       label: "Charge Moyenne / Mécanicien",
       key: "charge" as const,
       format: (v: number | null) => v !== null ? `${v.toFixed(1)} OT` : "0.0 OT",
       lowerIsBetter: true
+    },
+    {
+      label: "Coût Horaire Global",
+      key: "cout" as const,
+      format: (v: number | null) => v !== null ? `${v.toFixed(1)} DH/h` : "N/A",
+      lowerIsBetter: true,
+      render: (val: any, siteId: string) => {
+        const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === siteId);
+        const prevMonthStr = (() => {
+          const now = new Date();
+          const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          return p.toISOString().substring(0, 7);
+        })();
+        const prevVal = getSiteCout(siteId, prevMonthStr);
+        return renderMetricWithTarget(val, prevVal, tgt?.coutTarget, true, " DH/h");
+      }
     }
   ];
 
@@ -1040,6 +1366,52 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
           </span>
         </div>
       </div>
+
+      {/* ALERTE DE DÉPASSEMENT PROLONGÉ (3 MOIS SOUS CIBLE) */}
+      {prolongedAlertSites.length > 0 && (
+        <div className="relative overflow-hidden bg-gradient-to-r from-red-950 to-red-900 border-2 border-red-500/50 text-white rounded-2xl p-5 shadow-xl flex flex-col gap-4 animate-pulse">
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-red-600" />
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 shrink-0 bg-red-500/20 border border-red-500/40 rounded-xl flex items-center justify-center text-red-400">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-xs font-mono font-black tracking-wider text-red-400 uppercase">
+                ALERTE SÉVÈRE : DÉPASSEMENT PROLONGÉ DE LA CIBLE DE DISPONIBILITÉ
+              </h4>
+              <p className="text-xs font-medium text-slate-300 mt-1 leading-relaxed font-mono uppercase">
+                Les sites suivants sont restés sous leur objectif de disponibilité (<span className="text-red-400 font-bold">dispoTarget</span>) pendant <span className="text-red-400 font-black">3 mois consécutifs</span>. Une intervention immédiate de la direction est requise.
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-1">
+            {prolongedAlertSites.map((alert) => (
+              <div key={alert.siteId} className="bg-black/40 border border-red-500/20 rounded-xl p-3 font-mono text-[11px] space-y-2">
+                <div className="flex justify-between items-center border-b border-red-500/10 pb-1.5">
+                  <span className="font-black text-red-400 uppercase text-xs">{alert.siteId}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 font-bold text-[10px]">
+                    Objectif: {alert.dispoTarget}%
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">{alert.m2} (M-2) :</span>
+                    <span className="text-red-400 font-bold">{alert.dispo2.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">{alert.m1} (M-1) :</span>
+                    <span className="text-red-400 font-bold">{alert.dispo1.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between font-black">
+                    <span className="text-slate-300">Mois en cours :</span>
+                    <span className="text-red-500">{alert.dispo0.toFixed(1)}%</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* --- SECTION 1 : COMPARAISON MENSUELLE (CE MOIS VS MOIS PRÉCÉDENT) --- */}
       <div className="space-y-3">
@@ -1174,9 +1546,9 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
                       <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500">
                         <th className="py-3 px-4">Site</th>
                         <th className="py-3 px-4 text-center">Score Global</th>
-                        <th className="py-3 px-4 text-right">Disponibilité</th>
+                        <th className="py-3 px-4 text-center">Disponibilité</th>
                         <th className="py-3 px-4 text-center">Pannes Actives</th>
-                        <th className="py-3 px-4 text-right">Taux Préventif</th>
+                        <th className="py-3 px-4 text-center">Taux Préventif</th>
                         <th className="py-3 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -1226,16 +1598,34 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
                                   )}
                                 </div>
                               </td>
-                              <td className="py-3 px-4 text-right font-extrabold text-slate-700">
-                                {item.dispoSite !== null ? `${Math.round(item.dispoSite)}%` : "N/A"}
+                              <td className="py-3 px-4 text-center font-extrabold text-slate-700">
+                                {(() => {
+                                  const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === item.site);
+                                  const prevMonthStr = (() => {
+                                    const now = new Date();
+                                    const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                    return p.toISOString().substring(0, 7);
+                                  })();
+                                  const dispoPrev = getSiteDispo(item.site, prevMonthStr);
+                                  return renderMetricWithTarget(item.dispoSite, dispoPrev, tgt?.dispoTarget, false, "%");
+                                })()}
                               </td>
                               <td className="py-3 px-4 text-center font-extrabold text-slate-700">
                                 <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] ${item.pannesOuvertesSite > 0 ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-500"}`}>
                                   {item.pannesOuvertesSite}
                                 </span>
                               </td>
-                              <td className="py-3 px-4 text-right font-extrabold text-slate-700">
-                                {item.complianceSite !== null ? `${Math.round(item.complianceSite)}%` : "N/A"}
+                              <td className="py-3 px-4 text-center font-extrabold text-slate-700">
+                                {(() => {
+                                  const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === item.site);
+                                  const prevMonthStr = (() => {
+                                    const now = new Date();
+                                    const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                    return p.toISOString().substring(0, 7);
+                                  })();
+                                  const compliancePrev = getSiteCompliance(item.site, prevMonthStr);
+                                  return renderMetricWithTarget(item.complianceSite, compliancePrev, tgt?.complianceTarget, false, "%");
+                                })()}
                               </td>
                               <td className="py-3 px-4 text-right">
                                 <button className="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-colors">
@@ -1375,7 +1765,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
 
                               return (
                                 <td key={sData.site} className={`py-3 px-4 font-mono font-extrabold ${cellClass}`}>
-                                  {row.format(val as any)}
+                                  {row.render ? row.render(val, sData.site) : row.format(val as any)}
                                 </td>
                               );
                             })}

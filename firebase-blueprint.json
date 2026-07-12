@@ -437,9 +437,48 @@
         "importedAt": { "type": "string" }
       },
       "required": ["id", "mecanicienMatricule", "date", "enginMatricule", "dureeHeures"]
+    },
+    "annotationEvenement": {
+      "title": "AnnotationEvenement",
+      "description": "Annotation d'événement de maintenance pour expliquer un pic ou une chute sur la courbe",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "siteId": { "type": "string" },
+        "moisConcerne": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}$" },
+        "type": { "enum": ["GREVE", "PANNE_ELECTRIQUE_GENERALE", "CHANGEMENT_EQUIPE", "AUTRE"] },
+        "texte": { "type": "string" },
+        "auteurId": { "type": "string" },
+        "auteurNom": { "type": "string" },
+        "createdAt": { "type": "object" }
+      },
+      "required": ["siteId", "moisConcerne", "type", "texte", "auteurId", "auteurNom"]
+    },
+    "objectifSite": {
+      "title": "ObjectifSite",
+      "description": "Objectifs de performance définis pour un site",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "dispoTarget": { "type": "number" },
+        "mttrTarget": { "type": "number" },
+        "complianceTarget": { "type": "number" },
+        "coutTarget": { "type": "number" },
+        "updatedAt": { "type": "object" },
+        "updatedBy": { "type": "string" }
+      },
+      "required": ["updatedAt", "updatedBy"]
     }
   },
   "firestore": {
+    "objectifsSites": {
+      "schema": "objectifSite",
+      "description": "Collection des objectifs de performance par site"
+    },
+    "annotationsEvenements": {
+      "schema": "annotationEvenement",
+      "description": "Collection d'annotations d'événements de maintenance"
+    },
     "mecaniciens": {
       "schema": "mecanicien",
       "description": "Collection des mécaniciens et statistiques"

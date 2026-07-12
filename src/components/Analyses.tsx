@@ -8,7 +8,8 @@ import {
 import { 
   TrendingUp, TrendingDown, Award, AlertTriangle, CheckCircle2,
   Activity, Download, Printer, BarChart3, Users, Wrench,
-  Shield, Clock, AlertCircle, ChevronRight, Trophy
+  Shield, Clock, AlertCircle, ChevronRight, Trophy,
+  Zap, HelpCircle, UserCheck, Plus, Trash2, Calendar, MessageSquare, X
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -20,6 +21,8 @@ import { useAuthStore } from '@/lib/store';
 import { toast } from 'sonner';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import RapportMensuelPDF from './reports/RapportMensuelPDF';
+import { collection, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function Analyses() {
   const [activeTab, setActiveTab] = useState<"directeur" | "performances" | "fiabilite" | "export" | "pannes">("directeur");
@@ -33,12 +36,47 @@ export default function Analyses() {
 
   const { user, activeSite } = useAuthStore();
 
+  // Load annotations in real-time
+  const { data: rawAnnotations, loading: annotationsLoading } = useCollection<any>('annotationsEvenements');
+
+  // Filter annotations by activeSite
+  const annotations = useMemo(() => {
+    if (!rawAnnotations) return [];
+    if (user?.role === 'ADMIN' || user?.role === 'DIRECTION') {
+      return activeSite === 'TOUS' ? rawAnnotations : rawAnnotations.filter(a => a.siteId === activeSite);
+    }
+    return rawAnnotations.filter(a => a.siteId === user?.siteId);
+  }, [rawAnnotations, activeSite, user]);
+
+  // Local helper for handling firestore errors
+  const handleFirestoreError = (error: unknown, operationType: string, path: string) => {
+    const errInfo = {
+      error: error instanceof Error ? error.message : String(error),
+      operationType,
+      path,
+      authInfo: {
+        userId: user?.uid || '',
+        email: user?.email || '',
+      }
+    };
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+    throw new Error(JSON.stringify(errInfo));
+  };
+
+  // State for annotation modal
+  const [isAnnotationModalOpen, setIsAnnotationModalOpen] = useState(false);
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(null);
+  const [newAnnotationType, setNewAnnotationType] = useState<"GREVE" | "PANNE_ELECTRIQUE_GENERALE" | "CHANGEMENT_EQUIPE" | "AUTRE">("AUTRE");
+  const [newAnnotationText, setNewAnnotationText] = useState("");
+  const [newAnnotationSiteId, setNewAnnotationSiteId] = useState("SMI");
+
   // 5 Firestore collections read in real-time
   const { data: rawEngins, loading: enginsLoading } = useCollection<any>('engins');
   const { data: rawTasks, loading: tasksLoading } = useCollection<any>('maintenanceTasks');
   const { data: rawPannes, loading: pannesLoading } = useCollection<any>('pannes');
   const { data: rawMecaniciens, loading: mecaniciensLoading } = useCollection<any>('mecaniciens');
   const { data: rawInterventions, loading: interventionsLoading } = useCollection<any>('interventions');
+  const { data: objectifsSitesRaw, loading: objectifsLoading } = useCollection<any>('objectifsSites');
 
   // Filter helper based on role and activeSite
   const filterBySite = <T extends { siteId?: string; deleted?: boolean }>(data: T[] | null) => {
@@ -62,7 +100,230 @@ export default function Analyses() {
   }, [rawMecaniciens, activeSite, user]);
   const interventions = useMemo(() => filterBySite(rawInterventions), [rawInterventions, activeSite, user]);
 
-  const isLoading = enginsLoading || tasksLoading || pannesLoading || mecaniciensLoading || interventionsLoading || !rawEngins || !rawTasks || !rawPannes || !rawMecaniciens || !rawInterventions;
+  const isLoading = enginsLoading || tasksLoading || pannesLoading || mecaniciensLoading || interventionsLoading || annotationsLoading || objectifsLoading || !rawEngins || !rawTasks || !rawPannes || !rawMecaniciens || !rawInterventions || !rawAnnotations;
+
+  // Site metrics calculation for a specific month
+  const getSiteDispo = (siteId: string, monthStr: string) => {
+    const siteEngins = (rawEngins || []).filter(e => !e.deleted && e.siteId === siteId);
+    if (siteEngins.length === 0) return null;
+
+    const siteTasksMonth = (rawTasks || []).filter(t => !t.deleted && (t.siteId === siteId || t.site === siteId) && t.datePlanifiee && t.datePlanifiee.startsWith(monthStr));
+    const sitePannesMonth = (rawPannes || []).filter(p => !p.deleted && (p.siteId === siteId || p.site === siteId) && p.dateDeclaration && p.dateDeclaration.startsWith(monthStr));
+
+    let totalDispo = 0;
+    siteEngins.forEach(e => {
+      const enginePannes = sitePannesMonth.filter(p => p.enginId === e.id);
+      const engineTasks = siteTasksMonth.filter(t => t.enginId === e.id);
+      if (enginePannes.length === 0 && engineTasks.length === 0) {
+        totalDispo += 100;
+      } else {
+        const hasOpenPannes = enginePannes.some(p => p.statut !== 'CLOS');
+        const hasOpenTasks = engineTasks.some(t => t.statut === 'NON_FAIT' || t.statut === 'EN_COURS');
+        if (hasOpenPannes || hasOpenTasks) {
+          totalDispo += 0;
+        } else {
+          totalDispo += 50;
+        }
+      }
+    });
+    return parseFloat((totalDispo / siteEngins.length).toFixed(1));
+  };
+
+  const getSiteMttr = (siteId: string, monthStr: string) => {
+    const sitePannesMonth = (rawPannes || []).filter(p => 
+      !p.deleted && 
+      (p.siteId === siteId || p.site === siteId) && 
+      p.statut === 'CLOS' && 
+      p.dateDeclaration && 
+      p.dateDeclaration.startsWith(monthStr) &&
+      p.datePriseEnCharge && 
+      p.dateResolution
+    );
+    if (sitePannesMonth.length === 0) return null;
+
+    const parseToDate = (field: any): Date | null => {
+      if (!field) return null;
+      if (typeof field.toMillis === 'function') return new Date(field.toMillis());
+      if (field.seconds) return new Date(field.seconds * 1000);
+      const d = new Date(field);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    let totalWaitingMs = 0;
+    let totalRepairMs = 0;
+    let count = 0;
+
+    sitePannesMonth.forEach(p => {
+      const dateDecl = parseToDate(p.dateDeclaration);
+      const datePrise = parseToDate(p.datePriseEnCharge);
+      const dateRes = parseToDate(p.dateResolution);
+
+      if (dateDecl && datePrise && dateRes) {
+        const waitingMs = Math.max(0, datePrise.getTime() - dateDecl.getTime());
+        const repairMs = Math.max(0, dateRes.getTime() - datePrise.getTime());
+
+        totalWaitingMs += waitingMs;
+        totalRepairMs += repairMs;
+        count++;
+      }
+    });
+
+    if (count === 0) return null;
+
+    const avgWaitingHours = parseFloat((totalWaitingMs / (1000 * 60 * 60) / count).toFixed(1));
+    const avgRepairHours = parseFloat((totalRepairMs / (1000 * 60 * 60) / count).toFixed(1));
+    return parseFloat((avgWaitingHours + avgRepairHours).toFixed(1));
+  };
+
+  const getSiteCompliance = (siteId: string, monthStr: string) => {
+    const siteWOs = (rawTasks || []).filter(b => !b.deleted && (b.siteId === siteId || b.site === siteId));
+    const preventifMoisTasks = siteWOs.filter(t => t.type === 'PREVENTIF' && t.datePlanifiee && t.datePlanifiee.startsWith(monthStr));
+    if (preventifMoisTasks.length === 0) return null;
+
+    const faites = preventifMoisTasks.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
+    return Math.round((faites / preventifMoisTasks.length) * 100);
+  };
+
+  const getSiteCout = (siteId: string, monthStr: string) => {
+    const siteEngins = (rawEngins || []).filter(e => !e.deleted && e.siteId === siteId);
+    if (siteEngins.length === 0) return null;
+
+    const getHoursFromDuree = (duree: string) => {
+      if (!duree) return 0;
+      const clean = duree.toLowerCase().trim();
+      if (clean === '15min') return 0.25;
+      if (clean === '30min') return 0.5;
+      if (clean === '1h') return 1;
+      if (clean === '2h') return 2;
+      if (clean === '4h') return 4;
+      if (clean === '6h') return 6;
+      if (clean === '1j') return 8;
+      const num = parseFloat(clean);
+      return isNaN(num) ? 0 : num;
+    };
+
+    const getTaskCost = (task: any) => {
+      if (typeof task.cout === "number") return task.cout;
+      if (typeof task.cost === "number") return task.cost;
+      if (typeof task.coutTotal === "number") return task.coutTotal;
+      
+      const hours = getHoursFromDuree(task.dureeEstimee || task.duree || "");
+      const laborCost = hours * 250; 
+      const partsCount = (task.piecesUtilisees || task.pieces || []).length;
+      const partsCost = partsCount * 450; 
+      return laborCost + partsCost;
+    };
+
+    const getPanneCost = (p: any) => {
+      if (typeof p.cout === "number") return p.cout;
+      if (typeof p.cost === "number") return p.cost;
+      
+      const parseToDate = (field: any): Date | null => {
+        if (!field) return null;
+        if (typeof field.toMillis === 'function') return new Date(field.toMillis());
+        if (field.seconds) return new Date(field.seconds * 1000);
+        const d = new Date(field);
+        return isNaN(d.getTime()) ? null : d;
+      };
+
+      let laborHours = 0;
+      const dPrise = parseToDate(p.datePriseEnCharge);
+      const dRes = parseToDate(p.dateResolution);
+      if (dPrise && dRes && dRes > dPrise) {
+        laborHours = (dRes.getTime() - dPrise.getTime()) / (1000 * 60 * 60);
+      } else {
+        laborHours = 2; 
+      }
+      const laborCost = laborHours * 250;
+      const partsCount = (p.pieces || p.piecesConcernees || []).length;
+      const partsCost = partsCount * 450;
+      return laborCost + partsCost;
+    };
+
+    const preventives = (rawTasks || []).filter(t => !t.deleted && (t.siteId === siteId || t.site === siteId) && t.type === 'PREVENTIF' && (t.statut === 'FAIT' || t.statut === 'VALIDE') && t.datePlanifiee && t.datePlanifiee.startsWith(monthStr));
+    const correctives = (rawTasks || []).filter(t => !t.deleted && (t.siteId === siteId || t.site === siteId) && (t.type === 'CORRECTIF' || t.type === 'CURATIF') && (t.statut === 'FAIT' || t.statut === 'VALIDE') && t.datePlanifiee && t.datePlanifiee.startsWith(monthStr));
+    const closedPannes = (rawPannes || []).filter(p => !p.deleted && (p.siteId === siteId || p.site === siteId) && p.statut === 'CLOS' && p.dateResolution && p.dateResolution.startsWith(monthStr));
+    const interventionsMois = (rawInterventions || []).filter(i => !i.deleted && (i.siteId === siteId || i.site === siteId) && (i.typeIntervention === 'CORRECTIF' || i.type === 'CORRECTIF' || i.type === 'CURATIF') && i.date && i.date.startsWith(monthStr));
+
+    let totalCost = 0;
+    preventives.forEach(t => { totalCost += getTaskCost(t); });
+    correctives.forEach(t => { totalCost += getTaskCost(t); });
+    closedPannes.forEach(p => { totalCost += getPanneCost(p); });
+    interventionsMois.forEach(i => { totalCost += getTaskCost(i); });
+
+    const totalHours = siteEngins.length * 160;
+    if (totalHours === 0) return null;
+    return parseFloat((totalCost / totalHours).toFixed(1));
+  };
+
+  const renderMetricWithTarget = (
+    val: number | null,
+    valPrev: number | null,
+    target: number | null,
+    lowerIsBetter: boolean,
+    unit: string = ""
+  ) => {
+    if (target === null || target === undefined) {
+      return (
+        <div className="text-[11px] text-slate-400 font-mono italic">
+          Objectif non défini
+        </div>
+      );
+    }
+
+    if (val === null || val === undefined) {
+      return (
+        <div className="text-[11px] text-slate-400 font-mono italic">
+          Sans données (Cible: {target}{unit})
+        </div>
+      );
+    }
+
+    const gap = lowerIsBetter ? (target - val) : (val - target);
+    const isSuccess = gap >= 0;
+
+    let trendIcon = null;
+    let trendColor = "text-slate-400";
+
+    if (valPrev !== null && valPrev !== undefined) {
+      const gapPrev = lowerIsBetter ? (target - valPrev) : (valPrev - target);
+      const isReducing = gap > gapPrev;
+      const isTrendPositive = isSuccess || isReducing;
+
+      if (isTrendPositive) {
+        trendIcon = <TrendingUp className="h-3.5 w-3.5" />;
+        trendColor = "text-emerald-500";
+      } else {
+        trendIcon = <TrendingDown className="h-3.5 w-3.5" />;
+        trendColor = "text-red-500";
+      }
+    } else {
+      if (isSuccess) {
+        trendIcon = <TrendingUp className="h-3.5 w-3.5" />;
+        trendColor = "text-emerald-500";
+      } else {
+        trendIcon = <TrendingDown className="h-3.5 w-3.5" />;
+        trendColor = "text-red-500";
+      }
+    }
+
+    return (
+      <div className="flex flex-col items-center justify-center space-y-0.5">
+        <div className="font-mono text-xs font-black text-slate-800">
+          {val.toFixed(1)}{unit}
+        </div>
+        <div className="flex items-center gap-1 text-[10px] font-mono font-medium text-slate-500">
+          <span>Cible: {target}{unit}</span>
+          <span className={`font-bold ${isSuccess ? 'text-emerald-600' : 'text-red-600'}`}>
+            ({isSuccess ? '+' : ''}{gap.toFixed(1)}{unit})
+          </span>
+          <span className={trendColor} title={valPrev !== null ? `Précédent: ${valPrev.toFixed(1)}${unit}` : ""}>
+            {trendIcon}
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   // Relative time helper
   const getRelativeTime = (dateStr: string) => {
@@ -1019,6 +1280,7 @@ export default function Analyses() {
       if (currentMonth < earliestMonth) {
         return {
           month: m.label,
+          monthKey: monthKey,
           pannesCount: null,
           dispoRate: null,
           mtbf: null,
@@ -1052,6 +1314,7 @@ export default function Analyses() {
 
       return {
         month: m.label,
+        monthKey: monthKey,
         pannesCount: pannesCount,
         dispoRate: dispoValue,
         mtbf: mtbfValue
@@ -1083,6 +1346,7 @@ export default function Analyses() {
     return monthsList.map((m, idx) => {
       return {
         month: m.label,
+        monthKey: m.key,
         siteA: siteAData[idx]?.value,
         siteB: siteBData[idx]?.value,
       };
@@ -1176,10 +1440,87 @@ export default function Analyses() {
     return null;
   };
 
+  const getAnnotationsForMonth = (monthKey: string | null) => {
+    if (!monthKey) return [];
+    return annotations.filter(a => a.moisConcerne === monthKey);
+  };
+
+  const handleDotClick = (monthKey: string) => {
+    setSelectedMonthKey(monthKey);
+    setNewAnnotationSiteId(activeSite === "TOUS" ? "SMI" : activeSite);
+    setNewAnnotationText("");
+    setNewAnnotationType("AUTRE");
+    setIsAnnotationModalOpen(true);
+  };
+
+  const renderCustomDot = (chartType: "daily" | "monthly") => (props: any) => {
+    const { cx, cy, payload } = props;
+    if (!cx || !cy || !payload) return null;
+
+    let monthKey = "";
+    if (chartType === "daily") {
+      if (payload.date) {
+        monthKey = payload.date.substring(0, 7);
+      }
+    } else {
+      monthKey = payload.monthKey || "";
+    }
+
+    if (!monthKey) return <circle cx={cx} cy={cy} r={3} fill="#D4A017" stroke="#fff" strokeWidth={1} />;
+
+    const monthAnns = annotations.filter(a => a.moisConcerne === monthKey);
+    if (monthAnns.length === 0) {
+      return (
+        <g key={`${monthKey}-${cx}-${cy}`}>
+          <circle cx={cx} cy={cy} r={8} fill="transparent" className="cursor-pointer" onClick={() => handleDotClick(monthKey)} />
+          <circle cx={cx} cy={cy} r={3} fill="#D4A017" stroke="#fff" strokeWidth={1} className="pointer-events-none" />
+        </g>
+      );
+    }
+
+    const hasMultiple = monthAnns.length > 1;
+    const firstType = monthAnns[0].type;
+    
+    let color = "#D4A017";
+    let symbol = "★";
+    if (hasMultiple) {
+      color = "#8B5CF6";
+      symbol = "✦";
+    } else {
+      if (firstType === "GREVE") {
+        color = "#EF4444";
+        symbol = "G";
+      } else if (firstType === "PANNE_ELECTRIQUE_GENERALE") {
+        color = "#F59E0B";
+        symbol = "⚡";
+      } else if (firstType === "CHANGEMENT_EQUIPE") {
+        color = "#3B82F6";
+        symbol = "E";
+      } else {
+        color = "#10B981";
+        symbol = "?";
+      }
+    }
+
+    return (
+      <g key={`${monthKey}-${cx}-${cy}`} className="cursor-pointer" onClick={() => handleDotClick(monthKey)}>
+        <circle cx={cx} cy={cy} r={12} fill="transparent" />
+        <circle cx={cx} cy={cy} r={7.5} fill={color} stroke="#fff" strokeWidth={1.5} className="transition-transform duration-150 hover:scale-125" />
+        <text x={cx} y={cy + 2.5} textAnchor="middle" fontSize="8.5px" fill="#fff" fontWeight="black" fontFamily="sans-serif" className="pointer-events-none">
+          {symbol}
+        </text>
+      </g>
+    );
+  };
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const dataObj = payload[0]?.payload;
+      const monthKey = dataObj?.monthKey || (dataObj?.date ? dataObj.date.substring(0, 7) : null);
+      const monthAnns = getAnnotationsForMonth(monthKey);
+
       return (
-        <div className="bg-slate-900 text-white border border-slate-800 p-3 rounded-xl shadow-lg font-mono text-xs space-y-1.5">
+        <div className="bg-slate-900 text-white border border-slate-800 p-3 rounded-xl shadow-lg font-mono text-xs space-y-1.5 select-none">
           <p className="font-extrabold text-slate-300 border-b border-slate-800 pb-1 mb-1">{label}</p>
           {payload.map((p: any) => {
             if (p.value === null || p.value === undefined) return null;
@@ -1194,6 +1535,32 @@ export default function Analyses() {
               </p>
             );
           })}
+
+          {monthAnns && monthAnns.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-slate-800 space-y-1.5 max-w-xs text-left">
+              <p className="text-[10px] font-black uppercase text-[#D4A017] flex items-center gap-1">
+                <MessageSquare className="h-3 w-3" /> ÉVÉNEMENTS DU MOIS ({monthAnns.length}) :
+              </p>
+              {monthAnns.map((ann: any) => {
+                let iconStr = "✦";
+                if (ann.type === "GREVE") iconStr = "G";
+                else if (ann.type === "PANNE_ELECTRIQUE_GENERALE") iconStr = "⚡";
+                else if (ann.type === "CHANGEMENT_EQUIPE") iconStr = "E";
+                return (
+                  <div key={ann.id} className="text-[10.5px] bg-slate-850 p-1.5 rounded-lg border border-slate-800/80">
+                    <div className="flex items-center justify-between font-extrabold text-[#D4A017] mb-0.5">
+                      <span>[{iconStr}] {ann.type}</span>
+                      <span className="text-[9px] text-slate-400 font-normal">{ann.auteurNom}</span>
+                    </div>
+                    <p className="text-slate-200 font-medium leading-relaxed font-sans">{ann.texte}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <p className="text-[9px] text-slate-400 font-medium italic mt-1.5 text-center border-t border-slate-800/60 pt-1 pointer-events-none">
+            💡 Cliquer sur le point pour annoter
+          </p>
         </div>
       );
     }
@@ -1202,6 +1569,10 @@ export default function Analyses() {
 
   const ComparativeTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const dataObj = payload[0]?.payload;
+      const monthKey = dataObj?.monthKey;
+      const monthAnns = getAnnotationsForMonth(monthKey);
+
       return (
         <div className="bg-slate-900 text-white border border-slate-800 p-3 rounded-xl shadow-lg font-mono text-xs space-y-1.5">
           <p className="font-extrabold text-slate-300 border-b border-slate-800 pb-1 mb-1">{label}</p>
@@ -1218,6 +1589,32 @@ export default function Analyses() {
               </p>
             );
           })}
+
+          {monthAnns && monthAnns.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-slate-800 space-y-1.5 max-w-xs text-left">
+              <p className="text-[10px] font-black uppercase text-[#D4A017] flex items-center gap-1">
+                <MessageSquare className="h-3 w-3" /> ÉVÉNEMENTS DU MOIS ({monthAnns.length}) :
+              </p>
+              {monthAnns.map((ann: any) => {
+                let iconStr = "✦";
+                if (ann.type === "GREVE") iconStr = "G";
+                else if (ann.type === "PANNE_ELECTRIQUE_GENERALE") iconStr = "⚡";
+                else if (ann.type === "CHANGEMENT_EQUIPE") iconStr = "E";
+                return (
+                  <div key={ann.id} className="text-[10.5px] bg-slate-850 p-1.5 rounded-lg border border-slate-800/80">
+                    <div className="flex items-center justify-between font-extrabold text-[#D4A017] mb-0.5">
+                      <span>[{iconStr}] {ann.type}</span>
+                      <span className="text-[9px] text-slate-400 font-normal">{ann.auteurNom}</span>
+                    </div>
+                    <p className="text-slate-200 font-medium leading-relaxed font-sans">{ann.texte}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <p className="text-[9px] text-slate-400 font-medium italic mt-1.5 text-center border-t border-slate-800/60 pt-1 pointer-events-none">
+            💡 Cliquer sur le point pour annoter
+          </p>
         </div>
       );
     }
@@ -1226,6 +1623,43 @@ export default function Analyses() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleSubmitAnnotation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMonthKey || !newAnnotationText.trim()) {
+      toast.error("Veuillez saisir un texte d'annotation.");
+      return;
+    }
+
+    try {
+      const docData = {
+        siteId: newAnnotationSiteId,
+        moisConcerne: selectedMonthKey,
+        type: newAnnotationType,
+        texte: newAnnotationText.trim(),
+        auteurId: user?.uid || "unknown",
+        auteurNom: user?.displayName || user?.email || "Responsable Maintenance",
+        createdAt: Timestamp.now()
+      };
+
+      await addDoc(collection(db, "annotationsEvenements"), docData);
+      toast.success("Événement annoté avec succès !");
+      setNewAnnotationText("");
+      setIsAnnotationModalOpen(false);
+    } catch (err) {
+      handleFirestoreError(err, 'CREATE', 'annotationsEvenements');
+    }
+  };
+
+  const handleRemoveAnnotation = async (id: string) => {
+    if (!window.confirm("Voulez-vous vraiment supprimer cette annotation ?")) return;
+    try {
+      await deleteDoc(doc(db, "annotationsEvenements", id));
+      toast.success("Annotation supprimée !");
+    } catch (err) {
+      handleFirestoreError(err, 'DELETE', `annotationsEvenements/${id}`);
+    }
   };
 
   // ----------------------------------------------------
@@ -1559,6 +1993,84 @@ export default function Analyses() {
 
             </div>
 
+            {/* Suivi des Objectifs par Site Card */}
+            <Card className="mt-6 relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl p-6 shadow-sm">
+              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#D4AF37] to-amber-500" />
+              <CardHeader className="p-0 pb-4 border-b border-slate-100 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-mono font-black uppercase text-slate-800 tracking-wide flex items-center gap-2">
+                    <Award className="h-5 w-5 text-[#D4AF37]" />
+                    Suivi des Objectifs de Performance par Site
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Comparaison en temps réel avec les cibles définies par la direction (Mois en cours : {new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })})
+                  </p>
+                </div>
+                <Badge className="bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 text-[9px] font-mono font-bold uppercase tracking-wider">
+                  Cibles Direction
+                </Badge>
+              </CardHeader>
+
+              <div className="mt-6 overflow-x-auto">
+                <table className="w-full text-center border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50 text-[10px] font-mono font-black uppercase tracking-wider text-slate-500">
+                      <th className="py-3 px-4 text-left">Chantier / Site</th>
+                      <th className="py-3 px-4">Disponibilité Flotte</th>
+                      <th className="py-3 px-4">MTTR Moyen (pannes)</th>
+                      <th className="py-3 px-4">Conformité Préventif (PM)</th>
+                      <th className="py-3 px-4">Coût Horaire Global</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-mono text-xs">
+                    {['SMI', 'OUMEJRANE', 'KOUDIA', 'OUANSIMI', 'BOU-AZZER'].map((siteId) => {
+                      const curMonth = new Date().toISOString().substring(0, 7);
+                      const prevMonth = (() => {
+                        const now = new Date();
+                        const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                        return p.toISOString().substring(0, 7);
+                      })();
+
+                      // Fetch targets
+                      const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === siteId);
+                      
+                      // Calculate current values
+                      const valDispo = getSiteDispo(siteId, curMonth);
+                      const valMttr = getSiteMttr(siteId, curMonth);
+                      const valComp = getSiteCompliance(siteId, curMonth);
+                      const valCout = getSiteCout(siteId, curMonth);
+
+                      // Calculate previous values for trend
+                      const valDispoPrev = getSiteDispo(siteId, prevMonth);
+                      const valMttrPrev = getSiteMttr(siteId, prevMonth);
+                      const valCompPrev = getSiteCompliance(siteId, prevMonth);
+                      const valCoutPrev = getSiteCout(siteId, prevMonth);
+
+                      return (
+                        <tr key={siteId} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-4 px-4 text-left font-black text-slate-800 border-r border-slate-100/50">
+                            {siteId}
+                          </td>
+                          <td className="py-4 px-4">
+                            {renderMetricWithTarget(valDispo, valDispoPrev, tgt?.dispoTarget, false, "%")}
+                          </td>
+                          <td className="py-4 px-4">
+                            {renderMetricWithTarget(valMttr, valMttrPrev, tgt?.mttrTarget, true, "h")}
+                          </td>
+                          <td className="py-4 px-4">
+                            {renderMetricWithTarget(valComp, valCompPrev, tgt?.complianceTarget, false, "%")}
+                          </td>
+                          <td className="py-4 px-4">
+                            {renderMetricWithTarget(valCout, valCoutPrev, tgt?.coutTarget, true, " DH/h")}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
           </TabsContent>
 
           {/* TAB 2: PERFORMANCES */}
@@ -1713,7 +2225,7 @@ export default function Analyses() {
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" vertical={false} />
                         <XAxis dataKey="label" fontSize={10} stroke="#64748b" tickLine={false} axisLine={false} />
                         <YAxis domain={[0, 100]} fontSize={10} stroke="#64748b" tickLine={false} axisLine={false} />
-                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155' }} labelStyle={{ color: '#fff' }} />
+                        <Tooltip content={<CustomTooltip />} />
                         <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', fontFamily: 'monospace' }} />
                         <Line
                           type="monotone"
@@ -1722,7 +2234,7 @@ export default function Analyses() {
                           strokeWidth={2.5}
                           name="Compliance %"
                           connectNulls={false}
-                          dot={{ r: 2 }}
+                          dot={renderCustomDot("daily")}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -2411,6 +2923,7 @@ export default function Analyses() {
                         strokeWidth={3}
                         activeDot={{ r: 6 }}
                         connectNulls={false}
+                        dot={renderCustomDot("monthly")}
                       />
                       
                       {/* Nombre de pannes */}
@@ -2423,6 +2936,7 @@ export default function Analyses() {
                         strokeWidth={3}
                         activeDot={{ r: 6 }}
                         connectNulls={false}
+                        dot={renderCustomDot("monthly")}
                       />
                       
                       {/* MTBF Moyen (h) */}
@@ -2435,6 +2949,7 @@ export default function Analyses() {
                         strokeWidth={3}
                         activeDot={{ r: 6 }}
                         connectNulls={false}
+                        dot={renderCustomDot("monthly")}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -2531,6 +3046,7 @@ export default function Analyses() {
                           strokeWidth={3}
                           activeDot={{ r: 6 }}
                           connectNulls={false}
+                          dot={renderCustomDot("monthly")}
                         />
 
                         {/* Curve for Site B */}
@@ -2542,6 +3058,7 @@ export default function Analyses() {
                           strokeWidth={3}
                           activeDot={{ r: 6 }}
                           connectNulls={false}
+                          dot={renderCustomDot("monthly")}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -2961,6 +3478,153 @@ export default function Analyses() {
             </div>
 
           </Card>
+        </div>
+      )}
+
+      {/* MODAL POUR LES ANNOTATIONS D'ÉVÉNEMENTS */}
+      {isAnnotationModalOpen && selectedMonthKey && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none">
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200 border border-slate-100">
+            {/* Header */}
+            <div className="bg-slate-50 px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-black font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-[#D4A017]" /> Événements du mois : {selectedMonthKey}
+                </h3>
+                <p className="text-[10px] text-slate-500 font-medium">
+                  Consultez ou ajoutez des annotations explicatives pour ce mois.
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsAnnotationModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-all"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-5 space-y-4 max-h-[480px] overflow-y-auto">
+              {/* List of existing annotations */}
+              <div>
+                <h4 className="text-[10px] font-black font-mono uppercase text-slate-400 tracking-wider mb-2">
+                  Annotations enregistrées ({annotations.filter(a => a.moisConcerne === selectedMonthKey).length})
+                </h4>
+                {annotations.filter(a => a.moisConcerne === selectedMonthKey).length === 0 ? (
+                  <p className="text-xs text-slate-400 italic bg-slate-50 p-4 text-center rounded-xl border border-slate-100">
+                    Aucune annotation enregistrée pour ce mois.
+                  </p>
+                ) : (
+                  <div className="space-y-2.5 max-h-[160px] overflow-y-auto pr-1">
+                    {annotations
+                      .filter(a => a.moisConcerne === selectedMonthKey)
+                      .map((ann) => {
+                        const canDelete = user?.uid === ann.auteurId || user?.role === 'ADMIN';
+                        let typeLabel = "Autre";
+                        let typeColor = "bg-emerald-50 text-emerald-700 border-emerald-100";
+                        let TypeIcon = HelpCircle;
+
+                        if (ann.type === "GREVE") {
+                          typeLabel = "Grève";
+                          typeColor = "bg-red-50 text-red-700 border-red-100";
+                          TypeIcon = Users;
+                        } else if (ann.type === "PANNE_ELECTRIQUE_GENERALE") {
+                          typeLabel = "Panne Électrique Générale";
+                          typeColor = "bg-amber-50 text-amber-700 border-amber-100";
+                          TypeIcon = Zap;
+                        } else if (ann.type === "CHANGEMENT_EQUIPE") {
+                          typeLabel = "Changement d'équipe";
+                          typeColor = "bg-blue-50 text-blue-700 border-blue-100";
+                          TypeIcon = UserCheck;
+                        }
+
+                        return (
+                          <div key={ann.id} className="p-3 bg-slate-50 border border-slate-200/60 rounded-xl space-y-1.5 hover:bg-slate-100/50 transition-all">
+                            <div className="flex items-center justify-between">
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border flex items-center gap-1 ${typeColor}`}>
+                                <TypeIcon className="h-3 w-3" /> {typeLabel}
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-slate-500 font-bold">{ann.auteurNom}</span>
+                                {canDelete && (
+                                  <button
+                                    onClick={() => handleRemoveAnnotation(ann.id)}
+                                    className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                                    title="Supprimer l'annotation"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-xs text-slate-700 font-medium leading-relaxed font-sans">{ann.texte}</p>
+                            <div className="text-[9px] text-slate-400 font-mono text-right">
+                              Site: <span className="font-extrabold text-[#D4A017] uppercase">{ann.siteId}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+
+              {/* Form to add annotation */}
+              <form onSubmit={handleSubmitAnnotation} className="pt-4 border-t border-slate-100 space-y-3">
+                <h4 className="text-[10px] font-black font-mono uppercase text-slate-400 tracking-wider">
+                  + Ajouter une annotation
+                </h4>
+                
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black font-mono text-slate-400 uppercase">Type d'événement</label>
+                    <select
+                      value={newAnnotationType}
+                      onChange={(e: any) => setNewAnnotationType(e.target.value)}
+                      className="w-full bg-white border border-slate-200 text-slate-800 text-xs rounded-lg px-2 py-1.5 font-bold focus:outline-none focus:ring-1 focus:ring-[#D4A017]"
+                    >
+                      <option value="GREVE">Grève</option>
+                      <option value="PANNE_ELECTRIQUE_GENERALE">Panne Électrique</option>
+                      <option value="CHANGEMENT_EQUIPE">Changement Équipe</option>
+                      <option value="AUTRE">Autre événement</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black font-mono text-slate-400 uppercase">Site concerné</label>
+                    <select
+                      value={newAnnotationSiteId}
+                      onChange={(e: any) => setNewAnnotationSiteId(e.target.value)}
+                      className="w-full bg-white border border-slate-200 text-slate-800 text-xs rounded-lg px-2 py-1.5 font-bold focus:outline-none focus:ring-1 focus:ring-[#D4A017]"
+                    >
+                      {['SMI', 'OUMEJRANE', 'KOUDIA', 'OUANSIMI', 'BOU-AZZER'].map(site => (
+                        <option key={site} value={site}>{site}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black font-mono text-slate-400 uppercase">Description explicative</label>
+                  <textarea
+                    value={newAnnotationText}
+                    onChange={(e: any) => setNewAnnotationText(e.target.value)}
+                    placeholder="Saisissez l'explication (ex: Grève partielle des conducteurs, coupure réseau HT...)"
+                    className="w-full h-16 bg-white border border-slate-200 text-slate-800 text-xs rounded-lg px-2.5 py-1.5 font-medium placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#D4A017] resize-none"
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <Button
+                    type="submit"
+                    className="bg-[#D4A017] hover:bg-[#B8860B] text-white font-bold uppercase tracking-wider text-[10px] py-1 h-8 rounded-lg"
+                  >
+                    Enregistrer l'annotation
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
 
