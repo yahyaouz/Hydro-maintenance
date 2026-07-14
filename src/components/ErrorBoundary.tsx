@@ -39,7 +39,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   handleDisasterPurge = () => {
-    if (window.confirm("CRITIQUE : Voulez-vous purger complètement le cache SOU-GMAO ? Ceci effacera le cache local, mais réinitialisera l'application pour corriger les freezes d'anciennes tablettes. Les dossiers indispensables sont sauvegardés.")) {
+    if (window.confirm("CRITIQUE : Voulez-vous purger complètement le cache HYDROMINES - Espace Maintenance ? Ceci effacera le cache local, mais réinitialisera l'application pour corriger les freezes d'anciennes tablettes. Les dossiers indispensables sont sauvegardés.")) {
       try {
         // Clear common caches but preserve credential references
         const savedUser = localStorage.getItem('sg_current_user');
@@ -53,7 +53,7 @@ export class ErrorBoundary extends Component<Props, State> {
           localStorage.setItem('sg_offline_queue_all_backup', queueBackup);
         }
         
-        alert("Purger réussie. Redémarrage du cockpit GMAO...");
+        alert("Purger réussie. Redémarrage de HYDROMINES - Espace Maintenance...");
         window.location.reload();
       } catch (err) {
         alert("Erreur lors de la purge d'urgence.");
@@ -124,7 +124,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <div className="text-[9px] text-center text-slate-650 uppercase font-mono tracking-widest pt-2 border-t border-slate-900/40">
-              HYDROMINES SOU-GMAO PRO • LOCKDOWN ACTIVE
+              HYDROMINES - Espace Maintenance • LOCKDOWN ACTIVE
             </div>
           </div>
         </div>

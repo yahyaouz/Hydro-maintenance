@@ -294,12 +294,13 @@ export function Admin() {
     };
 
     // 1. ENGINS
-    let qEngins = query(collection(db, 'engins'), where('deleted', '!=', true));
+    let qEngins = query(collection(db, 'engins'));
     if (user?.role !== 'ADMIN' && user?.role !== 'DIRECTION') {
-      qEngins = query(collection(db, 'engins'), where('deleted', '!=', true), where('siteId', '==', user?.siteId || 'SMI'));
+      qEngins = query(collection(db, 'engins'), where('siteId', '==', user?.siteId || 'SMI'));
     }
     const unsubEngins = onSnapshot(qEngins, (snap) => {
-      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Engin[];
+      const allData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+      const data = allData.filter(e => !e.deleted) as Engin[];
       data.sort((a: any, b: any) => {
         const tA = getMs(a.updatedAt);
         const tB = getMs(b.updatedAt);
@@ -312,12 +313,12 @@ export function Admin() {
     });
 
     // 2. MECANICIENS
-    let qMecaniciens = query(collection(db, 'mecaniciens'), where('deleted', '!=', true));
+    let qMecaniciens = query(collection(db, 'mecaniciens'));
     if (user?.role !== 'ADMIN' && user?.role !== 'DIRECTION') {
-      qMecaniciens = query(collection(db, 'mecaniciens'), where('deleted', '!=', true), where('siteId', '==', user?.siteId || 'SMI'));
+      qMecaniciens = query(collection(db, 'mecaniciens'), where('siteId', '==', user?.siteId || 'SMI'));
     }
     const unsubMecaniciens = onSnapshot(qMecaniciens, (snap) => {
-      const data = snap.docs.map(doc => {
+      const allData = snap.docs.map(doc => {
         const d = doc.data();
         return {
           id: doc.id,
@@ -325,7 +326,8 @@ export function Admin() {
           nomComplet: d.nomComplet || `${d.prenom || ""} ${d.nom || ""}`.trim() || doc.id,
           statut: d.statut || (d.active !== false ? "Actif" : "Inactif")
         };
-      }) as Mecanicien[];
+      }) as any[];
+      const data = allData.filter(m => !m.deleted) as Mecanicien[];
       data.sort((a: any, b: any) => {
         const tA = getMs(a.updatedAt);
         const tB = getMs(b.updatedAt);
@@ -338,8 +340,9 @@ export function Admin() {
     });
 
     // 3. CHANTIERS
-    const unsubChantiers = onSnapshot(query(collection(db, 'chantiers'), where('deleted', '!=', true)), (snap) => {
-      let data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Chantier[];
+    const unsubChantiers = onSnapshot(query(collection(db, 'chantiers')), (snap) => {
+      let data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+      data = data.filter(c => !c.deleted) as Chantier[];
       if (user?.role !== 'ADMIN' && user?.role !== 'DIRECTION') {
         data = data.filter(c => c.id === (user?.siteId || 'SMI'));
       }
@@ -355,8 +358,9 @@ export function Admin() {
     });
 
     // 4. INTERVALLES
-    const unsubIntervalles = onSnapshot(query(collection(db, 'pmIntervalles'), where('deleted', '!=', true)), (snap) => {
-      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as IntervalleMaintenance[];
+    const unsubIntervalles = onSnapshot(query(collection(db, 'pmIntervalles')), (snap) => {
+      const allData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+      const data = allData.filter(i => !i.deleted) as IntervalleMaintenance[];
       data.sort((a: any, b: any) => {
         const tA = getMs(a.updatedAt);
         const tB = getMs(b.updatedAt);
@@ -409,15 +413,20 @@ export function Admin() {
       const selectedEtat = data.etat || "Opérationnel";
       let resolvedStatut = "actif";
       let resolvedDispo = 100;
+      let resolvedStatus = "DISPONIBLE";
+
       if (selectedEtat === "En maintenance") {
         resolvedStatut = "maintenance";
         resolvedDispo = 50;
+        resolvedStatus = "EN_MAINTENANCE";
       } else if (selectedEtat === "Hors service") {
         resolvedStatut = "panne";
         resolvedDispo = 0;
+        resolvedStatus = "EN_PANNE";
       } else if (selectedEtat === "Vendu") {
         resolvedStatut = "vendu";
         resolvedDispo = 0;
+        resolvedStatus = "RESTREINT";
       }
 
       if (editingItem) {
@@ -431,6 +440,7 @@ export function Admin() {
           dateEntreeService: data.dateEntreeService || getLocalDateString(),
           etat: selectedEtat,
           statut: resolvedStatut,
+          status: resolvedStatus,
           dispo: resolvedDispo,
           conducteurAssigne: data.conducteurAssigne || "Non assigné",
           updatedAt: Timestamp.now()
@@ -453,6 +463,7 @@ export function Admin() {
           dateEntreeService: data.dateEntreeService || getLocalDateString(),
           etat: selectedEtat,
           statut: resolvedStatut,
+          status: resolvedStatus,
           dispo: resolvedDispo,
           conducteurAssigne: data.conducteurAssigne || "Non assigné",
           deleted: false,
@@ -709,7 +720,7 @@ export function Admin() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `export_${activeTab}_sou_gmao.csv`);
+    link.setAttribute("download", `export_${activeTab}_hydromines_espace_maintenance.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1011,7 +1022,7 @@ export function Admin() {
               <span>🔑</span> Approbations des Comptes d'Agents
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Validation sécuritaire des habilitations et rôles des collaborateurs avant ouverture d'accès à la GMAO d'Hydromines.
+              Validation sécuritaire des habilitations et rôles des collaborateurs avant ouverture d'accès à HYDROMINES - Espace Maintenance.
             </p>
           </div>
           <Badge className="bg-amber-100 text-amber-900 font-mono text-[10px] uppercase font-bold border-amber-200">
@@ -1791,7 +1802,7 @@ export function Admin() {
       {/* RECONSTRUIT : Banner avec style conservé, changement de titre exact */}
       <PageBanner
         icon={Settings}
-        badgeLabel="Hydromines SOU-GMAO Platform"
+        badgeLabel="HYDROMINES - Espace Maintenance"
         title="CONFIGURATION SYSTÈME"
         subtitle="Gestion centralisée de votre parc, équipe et chantiers"
       />

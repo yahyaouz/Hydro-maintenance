@@ -34,12 +34,12 @@ export function useImports() {
   /**
    * Helper to write documents in chunks of 400 to avoid Firestore's 500 limits in a single batch
    */
-  const commitInChunks = async (operations: (() => void)[]) => {
+  const commitInChunks = async (operations: ((batch: any) => void)[]) => {
     let batch = writeBatch(db);
     let count = 0;
 
     for (let i = 0; i < operations.length; i++) {
-      operations[i]();
+      operations[i](batch);
       count++;
 
       if (count === 400) {
@@ -84,7 +84,7 @@ export function useImports() {
         throw new Error("Le fichier CSV est vide ou n'a pas pu être parsé.");
       }
 
-      const operations: (() => void)[] = [];
+      const operations: ((batch: any) => void)[] = [];
 
       for (const row of rows) {
         const lineNum = parseInt(row._lineNumber || "0", 10);
@@ -151,10 +151,10 @@ export function useImports() {
         // Prepare database actions
         const consoId = `conso_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         
-        operations.push(() => {
+        operations.push((batch) => {
           // 1. Add consumption entry
           const consoRef = doc(collection(db, "consommations"), consoId);
-          writeBatch(db).set(consoRef, {
+          batch.set(consoRef, {
             id: consoId,
             codePiece,
             designation: designation || matchedPiece.nom || "",
@@ -173,7 +173,7 @@ export function useImports() {
           // 2. Decrement piece stock
           const pieceRef = doc(db, "pieces", matchedPiece.id);
           const newStock = Math.max(0, (matchedPiece.stock || 0) - quantite);
-          writeBatch(db).update(pieceRef, { stock: newStock });
+          batch.update(pieceRef, { stock: newStock });
           // Update local map to reflect stock changes across multi-line imports of same piece
           matchedPiece.stock = newStock;
         });
@@ -228,7 +228,7 @@ export function useImports() {
         throw new Error("Le fichier CSV est vide ou n'a pas pu être parsé.");
       }
 
-      const operations: (() => void)[] = [];
+      const operations: ((batch: any) => void)[] = [];
 
       for (const row of rows) {
         const lineNum = parseInt(row._lineNumber || "0", 10);
@@ -278,10 +278,10 @@ export function useImports() {
 
         const carbId = `carb_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-        operations.push(() => {
+        operations.push((batch) => {
           // 1. Add history entry to carburants collection
           const carbRef = doc(collection(db, "carburants"), carbId);
-          writeBatch(db).set(carbRef, {
+          batch.set(carbRef, {
             id: carbId,
             matriculeEngin,
             typeEngin,
@@ -299,7 +299,7 @@ export function useImports() {
           const enginRef = doc(db, "engins", matchedEngin.id);
           // Only update if the imported counter is greater or equal to current to avoid reverting
           if (heuresMoteur >= (matchedEngin.heuresMarche || 0)) {
-            writeBatch(db).update(enginRef, { heuresMarche: heuresMoteur });
+            batch.update(enginRef, { heuresMarche: heuresMoteur });
             matchedEngin.heuresMarche = heuresMoteur;
           }
         });
@@ -365,7 +365,7 @@ export function useImports() {
         throw new Error("Le fichier CSV est vide ou n'a pas pu être parsé.");
       }
 
-      const operations: (() => void)[] = [];
+      const operations: ((batch: any) => void)[] = [];
 
       for (const row of rows) {
         const lineNum = parseInt(row._lineNumber || "0", 10);
@@ -408,7 +408,7 @@ export function useImports() {
           continue;
         }
 
-        operations.push(() => {
+        operations.push((batch) => {
           const matchedMec = usersMap.get(matriculeMec);
 
           // Correction 1 & 2: Update/create basic user profile in the "users" collection (Correction 1)
@@ -417,7 +417,7 @@ export function useImports() {
           // sera enrichi dans l'ÉTAPE 7 (Configuration Système — Analyse approfondie).
           if (matchedMec) {
             const mecRef = doc(db, "users", matchedMec.id);
-            writeBatch(db).update(mecRef, {
+            batch.update(mecRef, {
               displayName: nomMec,
               telephone: telMec || matchedMec.telephone || "",
               email: emailMec || matchedMec.email || "",
@@ -427,7 +427,7 @@ export function useImports() {
           } else {
             const newUserId = `mec_${matriculeMec}_${Math.random().toString(36).substring(2, 5)}`;
             const mecRef = doc(db, "users", newUserId);
-            writeBatch(db).set(mecRef, {
+            batch.set(mecRef, {
               uid: newUserId,
               matricule: matriculeMec,
               displayName: nomMec,
@@ -454,7 +454,7 @@ export function useImports() {
               }
 
               const mecaDocRef = doc(db, "mecaniciens", matriculeMec);
-              writeBatch(db).set(mecaDocRef, {
+              batch.set(mecaDocRef, {
                 id: matriculeMec,
                 uid: newUserId,
                 matricule: matriculeMec,
@@ -503,7 +503,7 @@ export function useImports() {
           // 2. Add maintenance task planning entry
           const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
           const taskRef = doc(collection(db, "maintenanceTasks"), taskId);
-          writeBatch(db).set(taskRef, {
+          batch.set(taskRef, {
             id: taskId,
             enginId: enginMatricule,
             machineCode: enginMatricule,
@@ -583,7 +583,7 @@ export function useImports() {
         throw new Error("Le fichier CSV est vide ou n'a pas pu être parsé.");
       }
 
-      const operations: (() => void)[] = [];
+      const operations: ((batch: any) => void)[] = [];
 
       for (const row of rows) {
         const lineNum = parseInt(row._lineNumber || "0", 10);
@@ -659,10 +659,10 @@ export function useImports() {
 
         const intervId = `interv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-        operations.push(() => {
+        operations.push((batch) => {
           // 1. Create intervention record in interventions collection
           const intervRef = doc(collection(db, "interventions"), intervId);
-          writeBatch(db).set(intervRef, {
+          batch.set(intervRef, {
             id: intervId,
             mecanicienMatricule: matriculeMec,
             mecanicienNom: matchedMec?.displayName || `Tech ${matriculeMec}`,
@@ -687,7 +687,7 @@ export function useImports() {
             const currentTotalInt = matchedMec.totalInterventions || 0;
             const currentTotalHours = matchedMec.totalHours || 0;
 
-            writeBatch(db).update(mecRef, {
+            batch.update(mecRef, {
               totalInterventions: currentTotalInt + 1,
               totalHours: currentTotalHours + dureeHeures,
               lastInterventionDate: dateStr,

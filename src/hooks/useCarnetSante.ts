@@ -80,7 +80,7 @@ export function useCarnetSante() {
     if (!engin) return 100;
 
     // Filter pannes and workorders relevant to this engine
-    const activePannes = (pannes || []).filter(p => p.enginId === engin.id && p.statut !== "RÉSOLU" && !p.deleted);
+    const activePannes = (pannes || []).filter(p => p.enginId === engin.id && p.statut !== "CLOS" && !p.deleted);
     const activeBT = (workorders || []).filter(w => (w.enginId === engin.id || w.enginId === engin.matricule) && (w.statut === "NON_FAIT" || w.statut === "EN_COURS") && !w.deleted);
 
     if (activePannes.length === 0 && activeBT.length === 0) {

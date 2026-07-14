@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
   collection, 
   onSnapshot, 
@@ -33,11 +33,39 @@ export function useCollection<T>(
   const [hasMore, setHasMore] = useState(false);
   
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
+  const filtersRef = useRef(filters);
   const limitCount = options.limitNum || 35;
   const orderByField = options.orderByField || 'updatedAt';
   const orderByDirection = options.orderByDirection || 'desc';
 
   const { user } = useAuthStore();
+
+  // Sync filters to ref
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+
+  // Safely serialize query filters for the dependency array to avoid JSON.stringify crashes or missing updates
+  const filterKey = useMemo(() => {
+    if (!filters || filters.length === 0) return '';
+    return filters.map((f: any, idx) => {
+      try {
+        const type = f.type || '';
+        const strValues: string[] = [];
+        for (const k in f) {
+          if (Object.prototype.hasOwnProperty.call(f, k)) {
+            const val = f[k];
+            if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+              strValues.push(`${k}:${val}`);
+            }
+          }
+        }
+        return `${type}[${idx}]:${strValues.join(',')}`;
+      } catch (e) {
+        return `constraint-${idx}`;
+      }
+    }).join(';');
+  }, [filters]);
 
   // Master load query that handles query constraints and soft delete filters
   useEffect(() => {
@@ -53,8 +81,11 @@ export function useCollection<T>(
     // Build base query constraints with limits as requested
     const qConstraints: any[] = [...activeFilters];
     
-    // Check if orberBy exists
-    qConstraints.push(orderBy(orderByField, orderByDirection));
+    // Check if an explicit orderBy already exists in filters
+    const hasExplicitOrderBy = activeFilters.some((f: any) => f.type === 'orderBy');
+    if (!hasExplicitOrderBy) {
+      qConstraints.push(orderBy(orderByField, orderByDirection));
+    }
     qConstraints.push(limit(limitCount));
 
     const q = query(collection(db, collectionName), ...qConstraints);
@@ -83,20 +114,21 @@ export function useCollection<T>(
     );
 
     return () => unsubscribe();
-  }, [collectionName, JSON.stringify(filters), limitCount, orderByField, orderByDirection, options.includeDeleted, user?.uid, user?.active]);
+  }, [collectionName, filterKey, limitCount, orderByField, orderByDirection, options.includeDeleted, user?.uid, user?.active]);
 
   // Cursor pagination dynamic load more for infinite history support
   const loadMore = useCallback(async () => {
     if (!hasMore || !lastDocRef.current || loading) return;
     
     try {
-      const activeFilters = [...filters];
-      const qConstraints: any[] = [
-        ...activeFilters,
-        orderBy(orderByField, orderByDirection),
-        startAfter(lastDocRef.current),
-        limit(limitCount)
-      ];
+      const activeFilters = [...filtersRef.current];
+      const qConstraints: any[] = [...activeFilters];
+      const hasExplicitOrderBy = activeFilters.some((f: any) => f.type === 'orderBy');
+      if (!hasExplicitOrderBy) {
+        qConstraints.push(orderBy(orderByField, orderByDirection));
+      }
+      qConstraints.push(startAfter(lastDocRef.current));
+      qConstraints.push(limit(limitCount));
 
       const q = query(collection(db, collectionName), ...qConstraints);
       const snapshot = await getDocs(q);
@@ -125,7 +157,7 @@ export function useCollection<T>(
     } catch (err: any) {
       console.error(`Failed loading next cursor page of ${collectionName}:`, err);
     }
-  }, [collectionName, filters, hasMore, lastDocRef.current, loading, limitCount, orderByField, orderByDirection, options.includeDeleted]);
+  }, [collectionName, filterKey, hasMore, lastDocRef, loading, limitCount, orderByField, orderByDirection, options.includeDeleted]);
 
   return { data, loading, error, hasMore, loadMore };
 }

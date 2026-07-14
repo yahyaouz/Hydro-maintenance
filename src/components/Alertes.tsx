@@ -669,7 +669,7 @@ export function Alertes() {
         {loading ? (
           <div className="flex flex-col items-center justify-center h-64 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-100">
             <RefreshCw className="h-8 w-8 animate-spin text-slate-450 mb-3" />
-            <p className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest">Calcul & Analyse des Règles GMAO...</p>
+            <p className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest">Calcul & Analyse des Règles — HYDROMINES - Espace Maintenance...</p>
           </div>
         ) : filteredAlerts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 bg-slate-50/30 rounded-2xl border-2 border-dashed border-slate-150 p-6 text-center">

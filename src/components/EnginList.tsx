@@ -35,7 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/lib/store";
-import { collection, addDoc, updateDoc, doc, deleteDoc, setDoc } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, deleteDoc, setDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { useCollection } from "@/hooks/useCollection";
@@ -206,14 +206,22 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
 
       const docRef = doc(db, "engins", editingEquip.id);
       
+      let mappedStatus = "DISPONIBLE";
+      if (editStatut === "panne" || editStatut === "hors service") {
+        mappedStatus = "EN_PANNE";
+      } else if (editStatut === "maintenance") {
+        mappedStatus = "EN_MAINTENANCE";
+      }
+
       let updatedData: any = {
         matricule: editMatricule.toUpperCase().trim(),
         site: editSite,
         siteId: editSite,
         statut: editStatut,
+        status: mappedStatus,
         dispo: editStatut === "actif" ? 100 : 0,
         type: editType,
-        updatedAt: new Date().toISOString()
+        updatedAt: Timestamp.now()
       };
 
       if (editingEquip.categorie === "LHD") {
@@ -321,17 +329,25 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
         resolvedEtat = "Hors service";
       }
 
+      let mappedStatus = "DISPONIBLE";
+      if (resolvedStatut === "panne") {
+        mappedStatus = "EN_PANNE";
+      } else if (resolvedStatut === "maintenance") {
+        mappedStatus = "EN_MAINTENANCE";
+      }
+
       let docData: any = {
         id: matriculeUpper,
         matricule: matriculeUpper,
         site: newSite,
         siteId: newSite,
         statut: resolvedStatut,
+        status: mappedStatus,
         dispo: resolvedDispo,
         etat: resolvedEtat,
         categorie: category,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
         deleted: false
       };
 
@@ -403,7 +419,12 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
   const handleDeclarePanne = async (id: string, matricule: string) => {
     try {
       const docRef = doc(db, "engins", id);
-      await updateDoc(docRef, { statut: "panne", dispo: 0 });
+      await updateDoc(docRef, { 
+        statut: "panne", 
+        status: "EN_PANNE",
+        dispo: 0,
+        updatedAt: Timestamp.now()
+      });
       toast.success(`Panne déclarée avec succès pour l'équipement ${matricule}.`);
     } catch (err) {
       console.error("Error declaring panne:", err);
@@ -544,9 +565,11 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
     const perfEqs = siteEqs.filter(e => e.categorie === "PERFORATEUR");
 
     const getAvgDispo = (list: any[]) => {
-      if (list.length === 0) return 100;
-      const sum = list.reduce((s, e) => s + (typeof e.dispo === "number" ? e.dispo : 100), 0);
-      return Math.round(sum / list.length);
+      if (list.length === 0) return null;
+      const withDispo = list.filter(e => typeof e.dispo === "number");
+      if (withDispo.length === 0) return null;
+      const sum = withDispo.reduce((s, e) => s + e.dispo, 0);
+      return Math.round(sum / withDispo.length);
     };
 
     const dtrLhd = getAvgDispo(lhdEqs);
@@ -899,7 +922,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                       <div className="space-y-1">
                         <div className="flex items-baseline gap-1">
                           <span className="text-3xl font-black text-slate-900 tracking-tight font-mono">
-                            {advancedMechanics.dtrLhd}%
+                            {advancedMechanics.dtrLhd !== null ? `${advancedMechanics.dtrLhd}%` : "—"}
                           </span>
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium">Disponibilité Technique Réelle</p>
@@ -907,9 +930,11 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                       <div className="bg-slate-100 h-2 w-full rounded-full overflow-hidden">
                         <div 
                           className={`h-full rounded-full ${
-                            advancedMechanics.dtrLhd >= 80 ? "bg-emerald-500" : advancedMechanics.dtrLhd >= 65 ? "bg-amber-500" : "bg-rose-500"
+                            advancedMechanics.dtrLhd === null
+                              ? "bg-slate-200"
+                              : advancedMechanics.dtrLhd >= 80 ? "bg-emerald-500" : advancedMechanics.dtrLhd >= 65 ? "bg-amber-500" : "bg-rose-500"
                           }`}
-                          style={{ width: `${advancedMechanics.dtrLhd}%` }}
+                          style={{ width: `${advancedMechanics.dtrLhd !== null ? advancedMechanics.dtrLhd : 0}%` }}
                         />
                       </div>
                     </div>
@@ -923,7 +948,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                       <div className="space-y-1">
                         <div className="flex items-baseline gap-1">
                           <span className="text-3xl font-black text-slate-900 tracking-tight font-mono">
-                            {advancedMechanics.dtrVl}%
+                            {advancedMechanics.dtrVl !== null ? `${advancedMechanics.dtrVl}%` : "—"}
                           </span>
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium">Disponibilité Technique Réelle</p>
@@ -931,9 +956,11 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                       <div className="bg-slate-100 h-2 w-full rounded-full overflow-hidden">
                         <div 
                           className={`h-full rounded-full ${
-                            advancedMechanics.dtrVl >= 80 ? "bg-emerald-500" : advancedMechanics.dtrVl >= 65 ? "bg-amber-500" : "bg-rose-500"
+                            advancedMechanics.dtrVl === null
+                              ? "bg-slate-200"
+                              : advancedMechanics.dtrVl >= 80 ? "bg-emerald-500" : advancedMechanics.dtrVl >= 65 ? "bg-amber-500" : "bg-rose-500"
                           }`}
-                          style={{ width: `${advancedMechanics.dtrVl}%` }}
+                          style={{ width: `${advancedMechanics.dtrVl !== null ? advancedMechanics.dtrVl : 0}%` }}
                         />
                       </div>
                     </div>
@@ -947,7 +974,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                       <div className="space-y-1">
                         <div className="flex items-baseline gap-1">
                           <span className="text-3xl font-black text-slate-900 tracking-tight font-mono">
-                            {advancedMechanics.dtrPerf}%
+                            {advancedMechanics.dtrPerf !== null ? `${advancedMechanics.dtrPerf}%` : "—"}
                           </span>
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium">Disponibilité Technique Réelle</p>
@@ -955,9 +982,11 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                       <div className="bg-slate-100 h-2 w-full rounded-full overflow-hidden">
                         <div 
                           className={`h-full rounded-full ${
-                            advancedMechanics.dtrPerf >= 80 ? "bg-emerald-500" : advancedMechanics.dtrPerf >= 65 ? "bg-amber-500" : "bg-rose-500"
+                            advancedMechanics.dtrPerf === null
+                              ? "bg-slate-200"
+                              : advancedMechanics.dtrPerf >= 80 ? "bg-emerald-500" : advancedMechanics.dtrPerf >= 65 ? "bg-amber-500" : "bg-rose-500"
                           }`}
-                          style={{ width: `${advancedMechanics.dtrPerf}%` }}
+                          style={{ width: `${advancedMechanics.dtrPerf !== null ? advancedMechanics.dtrPerf : 0}%` }}
                         />
                       </div>
                     </div>

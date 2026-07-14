@@ -696,7 +696,7 @@ export function AdminMecaniciens() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="userUid" className="text-xs font-bold text-slate-700">UID de Connexion SOU-GMAO</Label>
+                      <Label htmlFor="userUid" className="text-xs font-bold text-slate-700">UID de Connexion HYDROMINES - Espace Maintenance</Label>
                       <Input
                         id="userUid"
                         value={formUserUid || ""}

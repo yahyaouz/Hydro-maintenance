@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { db, auth } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, arrayUnion, writeBatch } from 'firebase/firestore';
 
 export interface IndustrialNotification {
   id: string;
@@ -69,15 +69,19 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       return !alreadyRead;
     });
 
-    for (const notif of unread) {
-      try {
+    if (unread.length === 0) return;
+
+    try {
+      const batch = writeBatch(db);
+      for (const notif of unread) {
         const docRef = doc(db, "notifications", notif.id);
-        await updateDoc(docRef, {
+        batch.update(docRef, {
           lueParUid: arrayUnion(currentUserId)
         });
-      } catch (err) {
-        console.error("Failed to mark notification as read:", err);
       }
+      await batch.commit();
+    } catch (err) {
+      console.error("Failed to batch mark notifications as read:", err);
     }
   },
   clearAll: async () => {
@@ -87,15 +91,19 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       return;
     }
     const allNotifs = get().notifications;
-    for (const notif of allNotifs) {
-      try {
+    if (allNotifs.length === 0) return;
+
+    try {
+      const batch = writeBatch(db);
+      for (const notif of allNotifs) {
         const docRef = doc(db, "notifications", notif.id);
-        await updateDoc(docRef, {
+        batch.update(docRef, {
           lueParUid: arrayUnion(currentUserId)
         });
-      } catch (err) {
-        console.error("Failed to mark notification as read during clear:", err);
       }
+      await batch.commit();
+    } catch (err) {
+      console.error("Failed to batch clear notifications:", err);
     }
     set({ notifications: [] });
   }

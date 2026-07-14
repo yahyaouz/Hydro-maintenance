@@ -1,4 +1,4 @@
-// CHECKLIST : Module de gestion des checklists SOU-GMAO pour Hydromines
+// CHECKLIST : Module de gestion des checklists — HYDROMINES - Espace Maintenance
 // Ce fichier gère trois types de listes d'inspection : Conducteur, Maintenance (mécanicien) et Sécurité mensuelle.
 // Les données sont persistées dans Firestore.
 
@@ -557,7 +557,7 @@ export default function Checklists() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `GMAO_Checklists_${activeSite}_${getLocalDateString()}.csv`;
+    a.download = `HydromineEspaceMaintenance_Checklists_${activeSite}_${getLocalDateString()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Export CSV téléchargé !");
@@ -585,7 +585,7 @@ export default function Checklists() {
           icon={CheckCircle2}
           badgeLabel="Module Inspection"
           title="FICHES ET CHECKLISTS D'INSPECTION"
-          subtitle="Saisie rapide terrain, rapports de conformité mécanique et sécurité SOU-GMAO."
+          subtitle="Saisie rapide terrain, rapports de conformité mécanique et sécurité HYDROMINES - Espace Maintenance."
         >
           <div className="flex gap-2">
             <Button
@@ -655,7 +655,7 @@ export default function Checklists() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
                 <span className="text-[#D4AF37] text-xs font-black uppercase tracking-widest block mb-1">
-                  SAISIE INSPECTION GMAO
+                  SAISIE INSPECTION — HYDROMINES ESPACE MAINTENANCE
                 </span>
                 <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-2 text-slate-900 dark:text-white">
                   {activeTab === "conducteur" && "🚗 FICHE CONDUITE AVANT DÉMARRAGE (< 2 Min)"}
@@ -883,7 +883,7 @@ export default function Checklists() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
                 <CardTitle className="text-base font-black uppercase tracking-wider text-slate-800">
-                  📋 HISTORIQUE DES INSPECTIONS SOU-GMAO
+                  📋 HISTORIQUE DES INSPECTIONS — HYDROMINES - ESPACE MAINTENANCE
                 </CardTitle>
                 <p className="text-slate-500 text-xs font-medium">
                   Liste ordonnée de toutes les fiches d'inspection complétées sur le terrain.
@@ -1052,7 +1052,7 @@ export default function Checklists() {
             
             {/* Filigrane discret d'authenticité Hydromines */}
             <div className="absolute right-8 top-32 text-[10px] font-mono text-slate-300 font-bold select-none uppercase tracking-widest text-right print:hidden">
-              DOCUMENT CONFORME SOU-GMAO<br />
+              DOCUMENT CONFORME — HYDROMINES - ESPACE MAINTENANCE<br />
               ID : {viewingSubmission.id}
             </div>
 
@@ -1087,7 +1087,7 @@ export default function Checklists() {
 
               <div className="text-left sm:text-right">
                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-500 text-slate-950 rounded-full text-xs font-black uppercase tracking-widest mb-1.5">
-                  FICHE INFORMATISÉE SOU-GMAO
+                  FICHE INFORMATISÉE — HYDROMINES - ESPACE MAINTENANCE
                 </span>
                 <p className="text-xs font-mono text-slate-500">ID Unique : {viewingSubmission.id}</p>
               </div>
@@ -1261,7 +1261,7 @@ export default function Checklists() {
 
             {/* Pied de page officiel */}
             <div className="mt-12 pt-4 border-t border-slate-200 text-center text-[9px] text-slate-450 uppercase tracking-widest font-bold">
-              HYDROMINES S.A. — SYSTEME DE CONTRÔLE DE SÉCURITÉ ET MAINTENANCE SOU-GMAO — CONFIDENTIEL INTERNE
+              HYDROMINES S.A. — SYSTEME DE CONTRÔLE DE SÉCURITÉ ET MAINTENANCE — HYDROMINES - ESPACE MAINTENANCE — CONFIDENTIEL INTERNE
             </div>
 
           </div>

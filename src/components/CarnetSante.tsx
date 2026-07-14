@@ -181,7 +181,7 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
                 const score = getEnginScore(engin);
                 const col = getScoreColor(score);
                 const isSelected = engin.id === selectedEnginId;
-                const activePannesCount = (pannes || []).filter(p => p.enginId === engin.id && p.statut !== "RÉSOLU" && !p.deleted).length;
+                const activePannesCount = (pannes || []).filter(p => p.enginId === engin.id && p.statut !== "CLOS" && !p.deleted).length;
                 const activeOrdersCount = (workorders || []).filter(w => (w.enginId === engin.id || w.enginId === engin.matricule) && (w.statut === "NON_FAIT" || w.statut === "EN_COURS") && !w.deleted).length;
 
                 return (
@@ -253,7 +253,7 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
               {(() => {
                 const score = getEnginScore(selectedEngin);
                 const col = getScoreColor(score);
-                const activePannes = (pannes || []).filter(p => p.enginId === selectedEngin.id && p.statut !== "RÉSOLU" && !p.deleted);
+                const activePannes = (pannes || []).filter(p => p.enginId === selectedEngin.id && p.statut !== "CLOS" && !p.deleted);
                 const activeOrders = (workorders || []).filter(w => (w.enginId === selectedEngin.id || w.enginId === selectedEngin.matricule) && (w.statut === "NON_FAIT" || w.statut === "EN_COURS") && !w.deleted);
 
                 return (
@@ -350,7 +350,7 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
               {/* Subsystems Diagnosis Grid */}
               {(() => {
                 const score = getEnginScore(selectedEngin);
-                const activePannes = (pannes || []).filter(p => p.enginId === selectedEngin.id && p.statut !== "RÉSOLU" && !p.deleted);
+                const activePannes = (pannes || []).filter(p => p.enginId === selectedEngin.id && p.statut !== "CLOS" && !p.deleted);
 
                 // Analyze subsystems health
                 const getSubsystemStatus = (name: string) => {
@@ -489,7 +489,7 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
                   </CardHeader>
                   <CardContent className="flex-1 overflow-y-auto max-h-[220px] p-4 space-y-3">
                     {(() => {
-                      const activePannes = (pannes || []).filter(p => p.enginId === selectedEngin.id && p.statut !== "RÉSOLU" && !p.deleted);
+                      const activePannes = (pannes || []).filter(p => p.enginId === selectedEngin.id && p.statut !== "CLOS" && !p.deleted);
                       const activeOrders = (workorders || []).filter(w => (w.enginId === selectedEngin.id || w.enginId === selectedEngin.matricule) && (w.statut === "NON_FAIT" || w.statut === "EN_COURS") && !w.deleted);
 
                       if (activePannes.length === 0 && activeOrders.length === 0) {

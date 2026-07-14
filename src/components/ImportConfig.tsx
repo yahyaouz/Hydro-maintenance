@@ -312,7 +312,7 @@ export function ImportConfig() {
                       1. Espace Magasinier — Consommations Pièces
                     </CardTitle>
                     <CardDescription className="text-xs text-slate-500 mt-1">
-                      Met à jour le stock dans la base SOU-GMAO et enregistre les consommations de pièces détachées.
+                      Met à jour le stock dans la base HYDROMINES - Espace Maintenance et enregistre les consommations de pièces détachées.
                     </CardDescription>
                   </div>
                 </div>
@@ -756,7 +756,7 @@ export function ImportConfig() {
                 <Clock className="w-8 h-8 mx-auto text-slate-300" />
                 <p className="text-xs font-bold text-slate-600">Aucun historique d'importation</p>
                 <p className="text-[10px] text-slate-400">
-                  Les rapports de synchronisation des fichiers d'importations GMAO s'afficheront ici.
+                  Les rapports de synchronisation des fichiers d'importations HYDROMINES - Espace Maintenance s'afficheront ici.
                 </p>
               </div>
             ) : (

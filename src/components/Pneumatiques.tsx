@@ -512,7 +512,7 @@ export function Pneumatiques() {
             <div className="relative overflow-hidden bg-amber-500/5 dark:bg-slate-900/40 p-6 rounded-2xl border border-[#D4AF37]/40 dark:border-slate-900/60 space-y-3">
               <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
               <h4 className="text-xs font-black text-amber-800 dark:text-amber-500 uppercase flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-amber-500" /> Module d'Analyse Prédictive & Durabilité SOU-GMAO
+                <TrendingUp className="w-4 h-4 text-amber-500" /> Module d'Analyse Prédictive & Durabilité — HYDROMINES - Espace Maintenance
               </h4>
               <p className="text-xs text-slate-650 dark:text-slate-400 leading-relaxed font-mono">
                 Sur la base des {kpis.totalCount} derniers remplacements de pneus géants OTR sur vos chantiers, 

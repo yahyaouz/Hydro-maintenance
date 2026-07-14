@@ -62,7 +62,7 @@ function AwaitingApprovalScreen() {
             displayName: data.displayName || user.displayName
           };
           setUser(updatedUser);
-          toast.success("Habilitation approuvée ! Accès accordé à SOU-GMAO.");
+          toast.success("Habilitation approuvée ! Accès accordé à HYDROMINES - Espace Maintenance.");
         } else {
           toast.info("Votre demande est toujours en attente d'approbation.");
         }
@@ -157,7 +157,7 @@ function AwaitingApprovalScreen() {
         </div>
 
         <div className="text-[10px] font-mono text-slate-400 dark:text-slate-600 uppercase tracking-widest">
-          SOU-GMAO FAILURE PREVENTION SYSTEM • 2026
+          HYDROMINES - ESPACE MAINTENANCE • 2026
         </div>
       </div>
     </div>
@@ -167,6 +167,7 @@ function AwaitingApprovalScreen() {
 import { useNotificationStore } from "@/services/notificationStore";
 import { OfflineQueueManager } from "@/services/offlineQueueManager";
 import { dbService } from "@/services/firestoreService";
+import { auditLogger } from "@/services/auditLogger";
 import { Bell, Activity, CheckSquare, CheckCheck, Trash2, Moon, Sun, Menu, ArrowLeft } from "lucide-react";
 
 const KNOWN_TABS = [
@@ -231,6 +232,14 @@ export default function App() {
   // Memoized offline queue synchronizer
   const syncOfflineQueue = React.useCallback(async () => {
     if (!navigator.onLine) return;
+
+    // Trigger offline audit logs synchronization
+    try {
+      await auditLogger.syncOfflineLogs();
+    } catch (auditErr) {
+      console.error("Erreur synchronisation offline audit logs:", auditErr);
+    }
+
     const pending = OfflineQueueManager.getPending();
     if (pending.length === 0) return;
 

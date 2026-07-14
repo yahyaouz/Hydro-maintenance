@@ -10,6 +10,7 @@ import { db } from '@/lib/firebase';
 import { useAuthStore } from '@/lib/store';
 import { useCollection } from '@/hooks/useCollection';
 import { toast } from 'sonner';
+import { dbService } from '@/services/firestoreService';
 import { getLocalDateString } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -342,7 +343,7 @@ export default function TachesPlanning() {
       };
       runAutoGeneration();
     }
-  }, [user, enginsLoaded, mecaniciensLoaded, intervallesLoaded, tasksLoaded, filteredEngins.length, filteredMecaniciens.length]);
+  }, [user, enginsLoaded, mecaniciensLoaded, intervallesLoaded, tasksLoaded, filteredEngins, filteredMecaniciens, pmIntervalles, tasks]);
 
   // CRUD Implementations
   const handleCreateTask = async (data: any) => {
@@ -354,7 +355,8 @@ export default function TachesPlanning() {
         return;
       }
 
-      await addDoc(collection(db, 'maintenanceTasks'), {
+      const idempotencyKey = `bt_man_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      await dbService.workOrders.create({
         ...data,
         enginModele: targetEngin.modele,
         mecanicienNom: targetMeca.nomComplet,
@@ -363,10 +365,8 @@ export default function TachesPlanning() {
         commentaire: '',
         heuresEnginAuMoment: targetEngin.heuresMarche || 0,
         generationType: 'MANUEL',
-        deleted: false,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
-      });
+      }, idempotencyKey);
+
       toast.success("Tâche planifiée avec succès !");
     } catch (err) {
       handleFirestoreError(err, 'Planifier');
@@ -459,6 +459,8 @@ export default function TachesPlanning() {
               const enginRef = doc(db, 'engins', taskData.enginId);
               transaction.update(enginRef, {
                 statut: 'actif',
+                status: 'DISPONIBLE',
+                etat: 'Opérationnel',
                 dispo: 100,
                 updatedAt: Timestamp.now()
               });
@@ -472,6 +474,8 @@ export default function TachesPlanning() {
             if (enginSnap.exists()) {
               transaction.update(enginRef, {
                 statut: 'actif',
+                status: 'DISPONIBLE',
+                etat: 'Opérationnel',
                 dispo: 100,
                 updatedAt: Timestamp.now()
               });
@@ -508,10 +512,7 @@ export default function TachesPlanning() {
 
     if (!window.confirm("Supprimer définitivement cette tâche ?")) return;
     try {
-      await updateDoc(doc(db, 'maintenanceTasks', taskId), {
-        deleted: true,
-        updatedAt: Timestamp.now()
-      });
+      await dbService.workOrders.delete(taskId);
       toast.success("Tâche supprimée.");
     } catch (err) {
       handleFirestoreError(err, 'Supprimer');
@@ -577,7 +578,7 @@ export default function TachesPlanning() {
     const faits = activeTasks.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
     const total = activeTasks.length;
     
-    let text = `*Hydromines GMAO — Rapport de Shift (${filterDate})*\n`;
+    let text = `*HYDROMINES - Espace Maintenance — Rapport de Shift (${filterDate})*\n`;
     text += `Statut global: ${faits}/${total} effectués (${total > 0 ? Math.round(faits/total*100) : 0}%)\n\n`;
     
     activeTasks.forEach((t, i) => {
@@ -695,7 +696,7 @@ export default function TachesPlanning() {
       <div className="flex items-center justify-center min-h-screen bg-slate-50 text-slate-900">
         <div className="flex flex-col items-center gap-4">
           <RefreshCw className="h-8 w-8 animate-spin text-slate-800" />
-          <span className="text-sm font-black uppercase tracking-wider">Chargement GMAO...</span>
+          <span className="text-sm font-black uppercase tracking-wider">Chargement HYDROMINES - Espace Maintenance...</span>
         </div>
       </div>
     );
@@ -712,7 +713,7 @@ export default function TachesPlanning() {
       {/* Banner */}
       <PageBanner
         icon={Calendar}
-        badgeLabel="Hydromines GMAO"
+        badgeLabel="HYDROMINES - Espace Maintenance"
         title="Tâches & Planning"
         subtitle="Rondes quotidiennes, interventions préventives calculées et correctifs de shift"
         siteLabel={activeSite}
@@ -1691,7 +1692,8 @@ export default function TachesPlanning() {
                                   setIsCreatingBt(true);
                                   try {
                                     const formattedDate = getLocalDateString();
-                                    await addDoc(collection(db, 'maintenanceTasks'), {
+                                    const idempotencyKey = `bt_corr_${selectedPanne.id}_${Date.now()}`;
+                                    await dbService.workOrders.create({
                                       label: `CORRECTIF • ${selectedPanne.numero} — ${selectedPanne.description}`,
                                       enginId: selectedPanne.enginId,
                                       enginModele: selectedPanne.enginModele || "ST2G",
@@ -1708,10 +1710,7 @@ export default function TachesPlanning() {
                                       commentaire: '',
                                       heuresEnginAuMoment: 0,
                                       generationType: 'MANUEL',
-                                      deleted: false,
-                                      createdAt: Timestamp.now(),
-                                      updatedAt: Timestamp.now()
-                                    });
+                                    }, idempotencyKey);
 
                                     await updateDoc(doc(db, 'pannes', selectedPanne.id), {
                                       statut: 'EN_REPARATION',
@@ -1801,6 +1800,7 @@ export default function TachesPlanning() {
                                     const enginRef = doc(db, 'engins', selectedPanne.enginId);
                                     await updateDoc(enginRef, {
                                       statut: 'actif',
+                                      status: 'DISPONIBLE',
                                       dispo: 100,
                                       etat: 'Opérationnel',
                                       updatedAt: Timestamp.now()

@@ -58,7 +58,12 @@ service cloud.firestore {
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
         (!isMachineLotoLocked(enginId) && (
           !exists(/databases/$(database)/documents/engins/$(enginId)) || 
-          request.resource.data.updatedAt >= resource.data.updatedAt
+          !('updatedAt' in resource.data) ||
+          !('updatedAt' in request.resource.data) ||
+          (request.resource.data.updatedAt is timestamp && resource.data.updatedAt is timestamp && request.resource.data.updatedAt >= resource.data.updatedAt) ||
+          (request.resource.data.updatedAt is string && resource.data.updatedAt is string && request.resource.data.updatedAt >= resource.data.updatedAt) ||
+          (request.resource.data.updatedAt is timestamp && resource.data.updatedAt is string) ||
+          (request.resource.data.updatedAt is string && resource.data.updatedAt is timestamp)
         )) || 
         isRole('ADMIN')
       );
@@ -84,7 +89,16 @@ service cloud.firestore {
     match /lotoLocks/{lockId} {
       allow read: if isSignedIn();
       // Authorized maintenance crews can engage, approve or release LOTO locks
-      allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
+      allow create: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
+        isRole('MECANICIEN') || isRole('ADMIN')
+      );
+      allow update: if isSignedIn() && (
+        matchesSite(resource.data.siteId || 'SMI') || 
+        matchesSite(request.resource.data.get('siteId', resource.data.siteId || 'SMI'))
+      ) && (
+        isRole('MECANICIEN') || isRole('ADMIN')
+      );
+      allow delete: if isSignedIn() && matchesSite(resource.data.siteId || 'SMI') && (
         isRole('MECANICIEN') || isRole('ADMIN')
       );
     }
@@ -98,7 +112,9 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
         isRole('CHEF_QUART') || 
-        getUserData().role == 'RESPONSABLE_MAINTENANCE'
+        getUserData().role == 'RESPONSABLE_MAINTENANCE' ||
+        getUserData().role == 'DIRECTION' ||
+        getUserData().role == 'SECRETAIRE'
       );
     }
 
@@ -113,7 +129,9 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && (
         getUserData().role == 'ADMIN' ||
-        getUserData().role == 'RESPONSABLE_MAINTENANCE'
+        getUserData().role == 'RESPONSABLE_MAINTENANCE' ||
+        getUserData().role == 'DIRECTION' ||
+        getUserData().role == 'SECRETAIRE'
       );
     }
 
@@ -167,7 +185,10 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
       allow update: if isSignedIn() && matchesSite(resource.data.siteId || 'SMI') && (
-        isRole('MECANICIEN') || isRole('RESPONSABLE_MAINTENANCE') || isRole('ADMIN')
+        (request.resource.data.get('deleted', false) == false || isRole('ADMIN')) && (
+          isRole('MECANICIEN') || isRole('RESPONSABLE_MAINTENANCE') || isRole('ADMIN') ||
+          getUserData().role == 'DIRECTION' || getUserData().role == 'SECRETAIRE'
+        )
       );
       allow delete: if isSignedIn() && isRole('ADMIN');
     }
@@ -176,8 +197,10 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
       allow update: if isSignedIn() && (
-        isRole('ADMIN') || isRole('RESPONSABLE_MAINTENANCE') ||
-        (resource.data.signataireId == request.auth.uid)
+        (request.resource.data.get('deleted', false) == false || isRole('ADMIN')) && (
+          isRole('ADMIN') || isRole('RESPONSABLE_MAINTENANCE') ||
+          (resource.data.signataireId == request.auth.uid)
+        )
       );
       allow delete: if isSignedIn() && isRole('ADMIN');
     }
@@ -216,7 +239,9 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.site || 'SMI') && (
         getUserData().role == 'ADMIN' ||
-        getUserData().role == 'RESPONSABLE_MAINTENANCE'
+        getUserData().role == 'RESPONSABLE_MAINTENANCE' ||
+        getUserData().role == 'DIRECTION' ||
+        getUserData().role == 'SECRETAIRE'
       );
     }
 
@@ -224,7 +249,9 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.site || 'SMI') && (
         getUserData().role == 'ADMIN' ||
-        getUserData().role == 'RESPONSABLE_MAINTENANCE'
+        getUserData().role == 'RESPONSABLE_MAINTENANCE' ||
+        getUserData().role == 'DIRECTION' ||
+        getUserData().role == 'SECRETAIRE'
       );
     }
 
@@ -232,7 +259,9 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
         getUserData().role == 'ADMIN' ||
-        getUserData().role == 'RESPONSABLE_MAINTENANCE'
+        getUserData().role == 'RESPONSABLE_MAINTENANCE' ||
+        getUserData().role == 'DIRECTION' ||
+        getUserData().role == 'SECRETAIRE'
       );
     }
 
@@ -240,14 +269,18 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && (
         getUserData().role == 'ADMIN' ||
-        getUserData().role == 'RESPONSABLE_MAINTENANCE'
+        getUserData().role == 'RESPONSABLE_MAINTENANCE' ||
+        getUserData().role == 'DIRECTION' ||
+        getUserData().role == 'SECRETAIRE'
       );
 
       match /history/{logId} {
         allow read: if isSignedIn();
         allow create: if isSignedIn() && (
           getUserData().role == 'ADMIN' ||
-          getUserData().role == 'RESPONSABLE_MAINTENANCE'
+          getUserData().role == 'RESPONSABLE_MAINTENANCE' ||
+          getUserData().role == 'DIRECTION' ||
+          getUserData().role == 'SECRETAIRE'
         );
         allow update, delete: if isSignedIn() && isRole('ADMIN');
       }

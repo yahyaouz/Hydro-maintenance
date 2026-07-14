@@ -94,10 +94,10 @@ export const BusinessRules = {
           message: 'Habilitation insuffisante : Seul le Responsable de la Maintenance ou l\'Administrateur peut CLÔTURER définitivement le BT.'
         };
       }
-      if (cur !== 'RÉSOLU') {
+      if (cur !== 'RÉSOLU' && cur !== 'RESOLU' && cur !== 'FAIT' && cur !== 'VALIDE') {
         return {
           isValid: false,
-          message: 'Interdit : Un Bon de Travail doit être déclaré techniquement RÉSOLU avant de pouvoir être clôturé.'
+          message: 'Interdit : Un Bon de Travail doit être déclaré techniquement RÉSOLU, FAIT ou VALIDÉ avant de pouvoir être clôturé.'
         };
       }
       if (!checklistComplete) {

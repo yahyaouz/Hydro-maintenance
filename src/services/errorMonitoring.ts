@@ -60,7 +60,7 @@ export class ErrorMonitoringService {
       });
     });
 
-    console.log('✅ Système d\'Alerteurs SOU-GMAO Error Monitoring armé et actif.');
+    console.log('✅ Système d\'Alerteurs HYDROMINES - Espace Maintenance Error Monitoring armé et actif.');
   }
 
   static captureError(params: {
@@ -122,7 +122,7 @@ export class ErrorMonitoringService {
     }
 
     // Print standard console tracking for debuggers
-    console.error(`[${params.level}] SOU-GMAO Core Interceptor (${params.source}): ${params.message}`);
+    console.error(`[${params.level}] HYDROMINES - Espace Maintenance Core Interceptor (${params.source}): ${params.message}`);
   }
 
   static getLogs(): AppError[] {

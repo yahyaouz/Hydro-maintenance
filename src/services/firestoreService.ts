@@ -146,11 +146,13 @@ export const dbService = {
       const collRef = collection(db, 'engins');
       try {
         const q = siteId === 'TOUS' 
-          ? query(collRef, where('deleted', '!=', true)) 
-          : query(collRef, where('siteId', '==', siteId), where('deleted', '!=', true));
+          ? query(collRef) 
+          : query(collRef, where('siteId', '==', siteId));
         
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => firestoreAdapters.normalizeEngin(doc.id, doc.data()));
+        return snapshot.docs
+          .map(doc => firestoreAdapters.normalizeEngin(doc.id, doc.data()))
+          .filter(e => !e.deleted);
       } catch (err) {
         handleFirestoreError(err, OperationType.LIST, 'engins');
         return [];
@@ -160,7 +162,7 @@ export const dbService = {
     async fetchPage(siteId: string, limitNum: number = 30, lastVisibleDoc?: DocumentSnapshot) {
       const collRef = collection(db, 'engins');
       try {
-        const constraints: any[] = [where('deleted', '!=', true)];
+        const constraints: any[] = [];
         if (siteId !== 'TOUS') {
           constraints.push(where('siteId', '==', siteId));
         }
@@ -172,7 +174,9 @@ export const dbService = {
 
         const q = query(collRef, ...constraints);
         const snapshot = await getDocs(q);
-        const items = snapshot.docs.map(doc => firestoreAdapters.normalizeEngin(doc.id, doc.data()));
+        const items = snapshot.docs
+          .map(doc => firestoreAdapters.normalizeEngin(doc.id, doc.data()))
+          .filter(item => !item.deleted);
         return {
           items,
           lastDoc: snapshot.docs[snapshot.docs.length - 1] || null
@@ -197,8 +201,22 @@ export const dbService = {
     async updateStatus(id: string, status: ENGIN_STATUS) {
       const ref = doc(db, 'engins', id);
       try {
+        let statutVal = 'actif';
+        let dispoVal = 100;
+        if (status === ENGIN_STATUS.EN_PANNE) {
+          statutVal = 'panne';
+          dispoVal = 0;
+        } else if (status === ENGIN_STATUS.EN_MAINTENANCE) {
+          statutVal = 'maintenance';
+          dispoVal = 0;
+        } else if (status === ENGIN_STATUS.RESTREINT) {
+          statutVal = 'actif';
+          dispoVal = 50;
+        }
         await updateDoc(ref, { 
           status: status,
+          statut: statutVal,
+          dispo: dispoVal,
           updatedAt: Timestamp.now()
         });
       } catch (err) {
@@ -223,24 +241,26 @@ export const dbService = {
   // WorkOrders / BT collection operations
   workOrders: {
     async fetchAll(siteId: string) {
-      const collRef = collection(db, 'workorders');
+      const collRef = collection(db, 'maintenanceTasks');
       try {
         const q = siteId === 'TOUS' 
-          ? query(collRef, where('deleted', '!=', true)) 
-          : query(collRef, where('siteId', '==', siteId), where('deleted', '!=', true));
+          ? query(collRef) 
+          : query(collRef, where('siteId', '==', siteId));
         
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => firestoreAdapters.normalizeWorkOrder(doc.id, doc.data()));
+        return snapshot.docs
+          .map(doc => firestoreAdapters.normalizeWorkOrder(doc.id, doc.data()))
+          .filter(wo => !wo.deleted);
       } catch (err) {
-        handleFirestoreError(err, OperationType.LIST, 'workorders');
+        handleFirestoreError(err, OperationType.LIST, 'maintenanceTasks');
         return [];
       }
     },
 
     async fetchPage(siteId: string, limitNum: number = 35, lastVisibleDoc?: DocumentSnapshot) {
-      const collRef = collection(db, 'workorders');
+      const collRef = collection(db, 'maintenanceTasks');
       try {
-        const constraints: any[] = [where('deleted', '!=', true)];
+        const constraints: any[] = [];
         if (siteId !== 'TOUS') {
           constraints.push(where('siteId', '==', siteId));
         }
@@ -252,13 +272,15 @@ export const dbService = {
 
         const q = query(collRef, ...constraints);
         const snapshot = await getDocs(q);
-        const items = snapshot.docs.map(doc => firestoreAdapters.normalizeWorkOrder(doc.id, doc.data()));
+        const items = snapshot.docs
+          .map(doc => firestoreAdapters.normalizeWorkOrder(doc.id, doc.data()))
+          .filter(item => !item.deleted);
         return {
           items,
           lastDoc: snapshot.docs[snapshot.docs.length - 1] || null
         };
       } catch (err) {
-        handleFirestoreError(err, OperationType.LIST, 'workorders_paginated');
+        handleFirestoreError(err, OperationType.LIST, 'maintenanceTasks_paginated');
         return { items: [], lastDoc: null };
       }
     },
@@ -266,7 +288,7 @@ export const dbService = {
     async create(workOrder: any, idempotencyKey: string) {
       try {
         if (idempotencyKey) {
-          const q = query(collection(db, 'workorders'), where('idempotencyKey', '==', idempotencyKey));
+          const q = query(collection(db, 'maintenanceTasks'), where('idempotencyKey', '==', idempotencyKey));
           const dupSnapshot = await getDocs(q);
           if (!dupSnapshot.empty) {
             console.warn("🔧 dbService.workOrders: Duplication détectée (idempotencyKey existe). Skip creation.");
@@ -274,7 +296,7 @@ export const dbService = {
           }
         }
 
-        const collRef = collection(db, 'workorders');
+        const collRef = collection(db, 'maintenanceTasks');
         const payload = {
           ...workOrder,
           deleted: false,
@@ -285,14 +307,14 @@ export const dbService = {
         const addedDoc = await addDoc(collRef, payload);
         return addedDoc.id;
       } catch (err) {
-        handleFirestoreError(err, OperationType.CREATE, 'workorders');
+        handleFirestoreError(err, OperationType.CREATE, 'maintenanceTasks');
         return '';
       }
     },
 
     async updateStatus(id: string, status: WORKORDER_STATUS, historyItem?: any) {
-      const ref = doc(db, 'workorders', id);
-      const pathForWrite = `workorders/${id}`;
+      const ref = doc(db, 'maintenanceTasks', id);
+      const pathForWrite = `maintenanceTasks/${id}`;
       try {
         const updatePayload: any = { 
           status: status,
@@ -311,8 +333,8 @@ export const dbService = {
 
     // Transactional flow which updates the workorder status and increments hours atomically
     async transitionStatusWithTransaction(orderId: string, status: WORKORDER_STATUS, changePayload: any, incrementHours?: { eId: string, hoursToAdd: number }) {
-      const orderRef = doc(db, 'workorders', orderId);
-      const path = `workorders/${orderId}`;
+      const orderRef = doc(db, 'maintenanceTasks', orderId);
+      const path = `maintenanceTasks/${orderId}`;
       try {
         await runTransaction(db, async (transaction) => {
           const orderSnap = await transaction.get(orderRef);
@@ -353,7 +375,7 @@ export const dbService = {
       const batchRef = writeBatch(db);
       try {
         for (const id of ids) {
-          const ref = doc(db, 'workorders', id);
+          const ref = doc(db, 'maintenanceTasks', id);
           batchRef.update(ref, {
             status,
             updatedAt: Timestamp.now()
@@ -361,13 +383,13 @@ export const dbService = {
         }
         await batchRef.commit();
       } catch (err) {
-        handleFirestoreError(err, OperationType.WRITE, 'workorders_batch');
+        handleFirestoreError(err, OperationType.WRITE, 'maintenanceTasks_batch');
       }
     },
 
     // Soft delete implementation for compliant audits
     async delete(id: string) {
-      const ref = doc(db, 'workorders', id);
+      const ref = doc(db, 'maintenanceTasks', id);
       try {
         await updateDoc(ref, {
           deleted: true,
@@ -375,7 +397,7 @@ export const dbService = {
           updatedAt: Timestamp.now()
         });
       } catch (err) {
-        handleFirestoreError(err, OperationType.DELETE, `workorders/${id}`);
+        handleFirestoreError(err, OperationType.DELETE, `maintenanceTasks/${id}`);
       }
     }
   },
@@ -613,6 +635,9 @@ export const dbService = {
           try {
             await updateDoc(ref, {
               status: ENGIN_STATUS.EN_PANNE,
+              statut: 'panne',
+              etat: 'En maintenance',
+              dispo: 0,
               lastStopReason: stop.reason || 'Saignement/Panne signalée hors-ligne',
               updatedAt: Timestamp.now()
             });
@@ -628,6 +653,9 @@ export const dbService = {
           try {
             await updateDoc(ref, {
               status: ENGIN_STATUS.DISPONIBLE,
+              statut: 'actif',
+              etat: 'Opérationnel',
+              dispo: 100,
               updatedAt: Timestamp.now()
             });
           } catch (err) {

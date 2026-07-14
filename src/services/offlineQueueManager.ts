@@ -225,7 +225,7 @@ export class OfflineQueueManager {
       }
     }
 
-    const txId = `TX-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+    const txId = `TX-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
     const newTx: OfflineTransaction = {
       ...transaction,
@@ -266,8 +266,13 @@ export class OfflineQueueManager {
    */
   static getPending(siteId: SiteID = 'TOUS'): OfflineTransaction[] {
     const q = this.getQueue().filter(t => t.status === 'PENDING');
-    if (siteId === 'TOUS') return q;
-    return q.filter(t => t.siteId === siteId);
+    const filtered = siteId === 'TOUS' ? q : q.filter(t => t.siteId === siteId);
+    return filtered.sort((a, b) => {
+      if (a.sequenceNumber !== undefined && b.sequenceNumber !== undefined) {
+        return a.sequenceNumber - b.sequenceNumber;
+      }
+      return a.timestamp.localeCompare(b.timestamp);
+    });
   }
 
   /**
@@ -348,6 +353,21 @@ export class OfflineQueueManager {
       d.conflictArbitratedCount += 1;
     });
 
+    // Helper to safely parse Date from string, timestamp object or timestamp numbers
+    const parseToMs = (field: any): number => {
+      if (!field) return 0;
+      if (typeof field === 'object') {
+        if (typeof field.toDate === 'function') {
+          return field.toDate().getTime();
+        }
+        if (field.seconds !== undefined) {
+          return field.seconds * 1000;
+        }
+      }
+      const t = new Date(field).getTime();
+      return isNaN(t) ? 0 : t;
+    };
+
     // 1. STALE WRITE REJECTION (Phase 2): Stale local writes older than 48h are automatically rejected
     const localTimeStr = localState?.updatedAt || localState?.date || '';
     const remoteTimeStr = remoteState?.updatedAt || remoteState?.date || '';
@@ -355,7 +375,7 @@ export class OfflineQueueManager {
     const fortyEightHoursMs = 48 * 60 * 60 * 1000;
 
     if (localTimeStr) {
-      const localAge = now - new Date(localTimeStr).getTime();
+      const localAge = now - parseToMs(localTimeStr);
       if (localAge > fortyEightHoursMs) {
         this.updateConfigDiagnostics(d => { d.actionsRejectedCount += 1; });
         return {
@@ -439,8 +459,8 @@ export class OfflineQueueManager {
     }
 
     // Default to progressive chronology - Last Writer Wins via ISO clock verification
-    const localTime = new Date(localTimeStr || 0).getTime();
-    const remoteTime = new Date(remoteTimeStr || 0).getTime();
+    const localTime = parseToMs(localTimeStr);
+    const remoteTime = parseToMs(remoteTimeStr);
     
     if (localTime >= remoteTime) {
       return {

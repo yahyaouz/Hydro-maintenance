@@ -32,7 +32,7 @@ export const auditLogger = {
     userRole?: UserRole;
   }): Promise<AuditLogDocument> {
     const rawUser = localStorage.getItem('sg_current_user');
-    let actUser = { uid: 'system', displayName: 'Automate SOU-GMAO', role: 'ADMIN' as UserRole };
+    let actUser = { uid: 'system', displayName: 'Automate HYDROMINES - Espace Maintenance', role: 'ADMIN' as UserRole };
     if (rawUser) {
       try {
         const u = JSON.parse(rawUser);
@@ -94,5 +94,28 @@ export const auditLogger = {
     } catch {
       return [];
     }
+  },
+
+  async syncOfflineLogs(): Promise<void> {
+    if (!navigator.onLine) return;
+    const localLogs = this.getLocalLogs();
+    const offlineLogs = localLogs.filter(log => log.source === 'OFFLINE');
+    if (offlineLogs.length === 0) return;
+
+    for (const log of offlineLogs) {
+      try {
+        await addDoc(collection(db, 'auditLogs'), {
+          ...log,
+          source: 'ONLINE',
+          dbTimestamp: Timestamp.now()
+        });
+        log.source = 'ONLINE';
+      } catch (err) {
+        console.warn('Failed to sync offline audit log:', err);
+      }
+    }
+
+    // Save back to local storage
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localLogs.slice(0, 500)));
   }
 };
