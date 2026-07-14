@@ -479,7 +479,7 @@ export function Dashboard() {
           riskFactors.push("Sous maintenance active");
         }
         
-        const hours = e.heures || e.heuresMarche || 0;
+        const hours = e.heuresMarche || e.heures || 0;
         if (hours > 6000) {
           riskScore += 30;
           riskFactors.push(`Seuil d'heures dépassé (${hours}h)`);
@@ -488,13 +488,15 @@ export function Dashboard() {
           riskFactors.push(`Heures de marche élevées (${hours}h)`);
         }
         
-        const dispo = e.dispo ?? 100;
-        if (dispo < 75) {
-          riskScore += 40;
-          riskFactors.push(`Faible disponibilité (${dispo}%)`);
-        } else if (dispo < 90) {
-          riskScore += 20;
-          riskFactors.push(`Disponibilité en baisse (${dispo}%)`);
+        if (e.dispo !== undefined && e.dispo !== null) {
+          const dispo = e.dispo;
+          if (dispo < 75) {
+            riskScore += 40;
+            riskFactors.push(`Faible disponibilité (${dispo}%)`);
+          } else if (dispo < 90) {
+            riskScore += 20;
+            riskFactors.push(`Disponibilité en baisse (${dispo}%)`);
+          }
         }
         
         if (riskScore === 0) {
