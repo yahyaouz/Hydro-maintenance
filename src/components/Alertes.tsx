@@ -487,8 +487,8 @@ export function Alertes() {
       <PageBanner
         icon={AlertTriangle}
         badgeLabel="Vigilance Opérationnelle"
-        title="Alertes & Vigilance Métier"
-        subtitle="Règles métier de sécurité, alertes d'inactivité et suivi de conformité des équipements de mine"
+        title="Alertes & Pannes"
+        subtitle="Suivi en temps réel des incidents et interventions"
         siteLabel={activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
       >
         <div className="flex gap-2">

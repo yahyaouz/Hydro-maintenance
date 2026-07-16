@@ -245,10 +245,13 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill, descriptionPref
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ type: 'spring', duration: 0.3 }}
-            className="relative w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 z-10 flex flex-col max-h-[90vh]"
+            className="relative w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-amber-500 z-10 flex flex-col max-h-[90vh]"
           >
+            {/* Ligne de haut style Hydromines (Mélange bleu ciel et rouge un peu foncé) */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400 z-20" />
+
             {/* Header */}
-            <div className="p-6 bg-gradient-to-r from-red-600 to-rose-700 text-white flex items-center justify-between shrink-0">
+            <div className="p-6 bg-gradient-to-r from-red-600 to-rose-700 text-white flex items-center justify-between shrink-0 relative mt-1">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/10 rounded-lg">
                   <AlertTriangle className="h-6 w-6 stroke-[2.2] text-white animate-pulse" />

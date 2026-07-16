@@ -24,11 +24,29 @@ import {
   BarChart2,
   RefreshCw,
   X,
-  Award
+  Award,
+  Crown
 } from "lucide-react";
 import { 
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell
+} from "recharts";
+import { 
   Card, 
-  CardContent, 
+  CardContent,  
   CardDescription, 
   CardHeader, 
   CardTitle 
@@ -37,6 +55,7 @@ import { useAuthStore } from "@/lib/store";
 import { useCollection } from "@/hooks/useCollection";
 import { useMecaniciens } from "@/hooks/useMecaniciens";
 import { SiteID } from "@/types";
+import { getLocalMonthString } from "@/lib/utils";
 
 // @ts-ignore
 import goldTexture from "@/assets/images/texture-or.webp";
@@ -50,6 +69,11 @@ interface CentreCommandementProps {
 export default function CentreCommandement({ setActiveTab }: CentreCommandementProps) {
   const { user, theme, setPendingRcaPrefill } = useAuthStore();
   const isDark = theme === "dark";
+
+  // States for tab navigation & Mr Mounir's AI assistant
+  const [activeSiteTab, setActiveSiteTab] = React.useState<string>("ensemble");
+  const [aiLoading, setAiLoading] = React.useState<boolean>(false);
+  const [aiResponse, setAiResponse] = React.useState<string | null>(null);
 
   // State for site expansion
   const [expandedSite, setExpandedSite] = React.useState<string | null>(null);
@@ -80,10 +104,10 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     if (t.datePlanifiee) return t.datePlanifiee.substring(0, 7);
     if (t.createdAt) {
       if (typeof t.createdAt.toMillis === 'function') {
-        return new Date(t.createdAt.toMillis()).toISOString().substring(0, 7);
+        return getLocalMonthString(new Date(t.createdAt.toMillis()));
       }
       if (typeof t.createdAt === 'string') return t.createdAt.substring(0, 7);
-      if (t.createdAt.seconds) return new Date(t.createdAt.seconds * 1000).toISOString().substring(0, 7);
+      if (t.createdAt.seconds) return getLocalMonthString(new Date(t.createdAt.seconds * 1000));
     }
     if (t.date) {
       return String(t.date).substring(0, 7);
@@ -113,18 +137,18 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     prevIsLoadingRef.current = isLoading;
   }, [isLoading]);
 
-  const [moisReference, setMoisReference] = React.useState<string>(() => new Date().toISOString().substring(0, 7));
+  const [moisReference, setMoisReference] = React.useState<string>(() => getLocalMonthString());
 
   const currentMonthStr = moisReference;
 
   const prevMonthStr = React.useMemo(() => {
     const [year, month] = currentMonthStr.split('-').map(Number);
     const p = new Date(year, month - 2, 1);
-    return p.toISOString().substring(0, 7);
+    return getLocalMonthString(p);
   }, [currentMonthStr]);
 
   const isMoisCourantReel = React.useMemo(() => {
-    return moisReference === new Date().toISOString().substring(0, 7);
+    return moisReference === getLocalMonthString();
   }, [moisReference]);
 
   const formatMoisLettres = React.useCallback((mStr: string) => {
@@ -136,14 +160,14 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
   const handlePrevMonth = React.useCallback(() => {
     const [year, month] = moisReference.split('-').map(Number);
     const p = new Date(year, month - 2, 1);
-    setMoisReference(p.toISOString().substring(0, 7));
+    setMoisReference(getLocalMonthString(p));
   }, [moisReference]);
 
   const handleNextMonth = React.useCallback(() => {
     const [year, month] = moisReference.split('-').map(Number);
     const n = new Date(year, month, 1);
-    const nStr = n.toISOString().substring(0, 7);
-    const currentRealStr = new Date().toISOString().substring(0, 7);
+    const nStr = getLocalMonthString(n);
+    const currentRealStr = getLocalMonthString();
     if (nStr <= currentRealStr) {
       setMoisReference(nStr);
     }
@@ -381,7 +405,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     const getPrevMonth = (mStr: string) => {
       const [y, m] = mStr.split('-').map(Number);
       const d = new Date(y, m - 2, 1);
-      return d.toISOString().substring(0, 7);
+      return getLocalMonthString(d);
     };
     const m1 = getPrevMonth(m0);
     const m2 = getPrevMonth(m1);
@@ -545,7 +569,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     };
     const closedMs = getMs(p.updatedAt || p.dateResolution || p.dateCloture || p.dateClotureEcheance);
     if (!closedMs) return "";
-    return new Date(closedMs).toISOString().substring(0, 7);
+    return getLocalMonthString(new Date(closedMs));
   }, []);
 
   // 1. Classement des sites (Exactly like Dashboard.tsx)
@@ -645,7 +669,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     const prevMonthStr = (() => {
       const [year, month] = currentMonthStr.split('-').map(Number);
       const p = new Date(year, month - 2, 1);
-      return p.toISOString().substring(0, 7);
+      return getLocalMonthString(p);
     })();
 
     const currentMonthPannesCount = pannesLive ? pannesLive.filter(p => !p.deleted && getPanneMonth(p) === currentMonthStr).length : 0;
@@ -831,7 +855,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     const prevMonthStr = (() => {
       const [year, month] = currentMonthStr.split('-').map(Number);
       const p = new Date(year, month - 2, 1);
-      return p.toISOString().substring(0, 7);
+      return getLocalMonthString(p);
     })();
 
     const m0 = getMonthlyStats(currentMonthStr);
@@ -993,7 +1017,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     const months: string[] = [];
     for (let i = 1; i <= 3; i++) {
       const d = new Date(year, month - 1 - i, 1);
-      months.push(d.toISOString().substring(0, 7));
+      months.push(getLocalMonthString(d));
     }
     return months;
   };
@@ -1210,6 +1234,149 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     );
   };
 
+  // --- RECHARTS DATA HELPERS & AI ASSISTANT FOR MR MOUNIR ---
+
+  const historicalMonthsData = React.useMemo(() => {
+    const months: string[] = [];
+    const [currYear, currMonth] = currentMonthStr.split('-').map(Number);
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date(currYear, currMonth - 1 - i, 1);
+      months.push(getLocalMonthString(d));
+    }
+    
+    return months.map(mStr => {
+      const stats = getMonthlyStats(mStr);
+      const ratioPreventif = stats.totalPreventives + stats.totalCorrectives > 0
+        ? Math.round((stats.totalPreventives / (stats.totalPreventives + stats.totalCorrectives)) * 100)
+        : 0;
+      return {
+        name: formatMoisLettres(mStr).split(" ")[0], // simple label e.g., "mai"
+        pannes: stats.totalPannes,
+        preventives: stats.totalPreventives,
+        correctives: stats.totalCorrectives,
+        ratio: ratioPreventif,
+        cout: stats.totalCost / 1000 // in kDH
+      };
+    });
+  }, [getMonthlyStats, currentMonthStr, formatMoisLettres]);
+
+  const sitesRealVsPlanned = React.useMemo(() => {
+    return SITES_LIST.map(site => {
+      const siteWOs = (workOrdersLive || []).filter(t => !t.deleted && (t.siteId === site || t.site === site));
+      const siteTasksMonth = siteWOs.filter(t => t.datePlanifiee && t.datePlanifiee.startsWith(currentMonthStr));
+      
+      const totalPlanned = siteTasksMonth.length;
+      const totalRealized = siteTasksMonth.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
+      
+      const correctivesCount = (workOrdersLive || []).filter(t => !t.deleted && (t.siteId === site || t.site === site) && (t.type === 'CORRECTIF' || t.type === 'CURATIF') && (t.statut === 'FAIT' || t.statut === 'VALIDE') && getTaskMonth(t) === currentMonthStr).length;
+      const sitePannes = (pannesLive || []).filter(p => !p.deleted && (p.siteId === site || p.site === site));
+      const pannesClosed = sitePannes.filter(p => p.statut === 'CLOS' && getPanneCloseMonth(p) === currentMonthStr).length;
+      
+      const totalCorrectiveRealized = correctivesCount + pannesClosed;
+
+      return {
+        name: site,
+        planifie: totalPlanned,
+        realise: totalRealized,
+        preventif: totalRealized,
+        correctif: totalCorrectiveRealized
+      };
+    });
+  }, [workOrdersLive, pannesLive, currentMonthStr, getTaskMonth, getPanneCloseMonth]);
+
+  const globalPreventiveRatio = React.useMemo(() => {
+    let totalPrev = 0;
+    let totalCorr = 0;
+    sitesRealVsPlanned.forEach(s => {
+      totalPrev += s.preventif;
+      totalCorr += s.correctif;
+    });
+    const total = totalPrev + totalCorr;
+    const ratio = total > 0 ? Math.round((totalPrev / total) * 100) : 0;
+    return {
+      ratio,
+      preventif: totalPrev,
+      correctif: totalCorr,
+      total
+    };
+  }, [sitesRealVsPlanned]);
+
+  const handleLaunchAIPanel = async () => {
+    setAiLoading(true);
+    setAiResponse(null);
+    try {
+      const response = await fetch("/api/ai/command-center-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          siteScores: classementSites,
+          metrics: comparisonData,
+          data: {
+            models: modelsReliability,
+            pieces: topPiecesStats,
+            ratio: globalPreventiveRatio
+          }
+        })
+      });
+      const resData = await response.json();
+      if (resData.analysis) {
+        setAiResponse(resData.analysis);
+      } else {
+        setAiResponse("Désolé, l'assistant décisionnel a rencontré un problème pour structurer les analyses.");
+      }
+    } catch (error) {
+      console.error("AI client error:", error);
+      setAiResponse("Échec de connexion avec le service décisionnel de l'intelligence artificielle.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const formatBoldText = (text: string) => {
+    const parts = text.split(/\*\*(.*?)\*\*/g);
+    return parts.map((part, i) => {
+      if (i % 2 === 1) {
+        return <strong key={i} className="font-extrabold text-amber-950 dark:text-[#E2C799]">{part}</strong>;
+      }
+      return part;
+    });
+  };
+
+  const renderMarkdownText = (text: string) => {
+    if (!text) return null;
+    const lines = text.split("\n");
+    return lines.map((line, idx) => {
+      let cleanLine = line.trim();
+      
+      if (cleanLine.startsWith("### ")) {
+        return <h4 key={idx} className="text-xs font-black text-[#D4AF37] mt-3 mb-1 uppercase font-mono tracking-wider">{cleanLine.substring(4)}</h4>;
+      }
+      if (cleanLine.startsWith("## ")) {
+        return <h3 key={idx} className="text-sm font-black text-amber-900 dark:text-amber-400 mt-4 mb-2 uppercase font-mono tracking-widest border-b border-[#D4AF37]/20 pb-1">{cleanLine.substring(3)}</h3>;
+      }
+      if (cleanLine.startsWith("# ")) {
+        return <h2 key={idx} className="text-base font-black text-amber-950 dark:text-[#F4EAD4] mt-5 mb-2.5 uppercase font-mono tracking-widest">{cleanLine.substring(2)}</h2>;
+      }
+      
+      if (cleanLine.startsWith("- ") || cleanLine.startsWith("* ")) {
+        const content = cleanLine.substring(2);
+        return (
+          <li key={idx} className="ml-4 list-disc text-xs text-slate-700 dark:text-[#F4EAD4]/80 leading-relaxed font-sans mb-1">
+            {formatBoldText(content)}
+          </li>
+        );
+      }
+      
+      if (cleanLine === "") return <div key={idx} className="h-1.5" />;
+      
+      return (
+        <p key={idx} className="text-xs text-slate-700 dark:text-[#F4EAD4]/80 leading-relaxed font-sans mb-1.5">
+          {formatBoldText(cleanLine)}
+        </p>
+      );
+    });
+  };
+
   // Role restriction (only ADMIN, DIRECTION, RESPONSABLE_MAINTENANCE)
   const hasAccess = React.useMemo(() => {
     return user?.role && ['ADMIN', 'DIRECTION', 'RESPONSABLE_MAINTENANCE'].includes(user.role);
@@ -1294,35 +1461,36 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       <div 
         className="relative overflow-hidden border-2 border-[#D4AF37] p-6 md:p-8 rounded-3xl transition-all duration-500 flex flex-col md:flex-row md:items-center md:justify-between gap-6 shadow-[0_8px_30px_rgba(212,175,55,0.06)] bg-white"
         style={{
-          backgroundImage: `linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(253, 251, 247, 0.98) 100%), url(${goldTexture})`,
+          backgroundImage: `linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(253, 251, 247, 0.99) 100%), url(${goldTexture})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center'
         }}
       >
-        <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-sky-500 via-purple-600 to-red-600 rounded-t-3xl z-10 animate-pulse" />
+        <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 rounded-t-3xl z-10" />
         
         {/* Golden corner brackets */}
-        <div className="absolute top-2 left-2 w-2 h-2 border-t border-l border-[#D4AF37]/50 pointer-events-none" />
-        <div className="absolute top-2 right-2 w-2 h-2 border-t border-r border-[#D4AF37]/50 pointer-events-none" />
-        <div className="absolute bottom-2 left-2 w-2 h-2 border-b border-l border-[#D4AF37]/50 pointer-events-none" />
-        <div className="absolute bottom-2 right-2 w-2 h-2 border-b border-r border-[#D4AF37]/50 pointer-events-none" />
+        <div className="absolute top-2 left-2 w-2.5 h-2.5 border-t-2 border-l-2 border-[#D4AF37] pointer-events-none" />
+        <div className="absolute top-2 right-2 w-2.5 h-2.5 border-t-2 border-r-2 border-[#D4AF37] pointer-events-none" />
+        <div className="absolute bottom-2 left-2 w-2.5 h-2.5 border-b-2 border-l-2 border-[#D4AF37] pointer-events-none" />
+        <div className="absolute bottom-2 right-2 w-2.5 h-2.5 border-b-2 border-r-2 border-[#D4AF37] pointer-events-none" />
 
-        <div className="space-y-2">
-          <span className="inline-flex items-center gap-1 px-3 py-1 text-[9.5px] font-mono font-black uppercase tracking-widest text-[#D4AF37] bg-slate-900 rounded-full">
-            <Sparkles className="w-3.5 h-3.5 animate-bounce" />
-            Centre de Commandement Décisionnel
+        <div className="space-y-1.5">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-mono font-black uppercase tracking-widest text-[#D4AF37] bg-slate-950 rounded-md shadow-sm">
+            <Crown className="w-3.5 h-3.5 text-[#D4AF37] animate-pulse" />
+            RESPONSABLE DE LA MAINTENANCE GLOBALE
           </span>
-          <h1 className="text-xl md:text-3xl font-black uppercase tracking-tight text-amber-950 font-mono">
-            Rapport Exécutif
+          <h1 className="text-xl md:text-2xl font-black uppercase tracking-tight text-slate-950 font-sans">
+            Centre de Commandement : <span className="text-amber-850">ESPACE RESPONSABLE DE LA MAINTENANCE</span>
           </h1>
-          <p className="text-xs text-slate-600 font-medium max-w-xl">
-            Vue consolidée multi-site synthétisée à l'intention de la Direction pour une évaluation des alertes, de la conformité et de l'efficience opérationnelle en un coup d'œil.
-          </p>
+          <h2 className="text-sm font-bold flex items-center gap-1">
+            <span className="text-[#D4AF37] font-black tracking-widest bg-slate-950 px-2 py-0.5 rounded text-[11px] uppercase">Mr</span> 
+            <span className="text-[#D4AF37] font-extrabold uppercase tracking-widest bg-slate-950 px-2.5 py-0.5 rounded text-[12px]">MOUNIR Outbrrit</span>
+          </h2>
         </div>
 
-        <div className="shrink-0 bg-slate-900 border-2 border-[#D4AF37] p-4 rounded-2xl flex flex-col items-center justify-center min-w-[150px] shadow-md">
-          <span className="text-[9px] font-mono text-amber-400 font-bold uppercase tracking-wider">État Général</span>
-          <span className="text-xl font-black text-white mt-1 uppercase font-mono tracking-tight flex items-center gap-1.5">
+        <div className="shrink-0 bg-white border-2 border-[#D4AF37] p-4 rounded-2xl flex flex-col items-center justify-center min-w-[150px] shadow-sm">
+          <span className="text-[9px] font-mono text-amber-600 font-bold uppercase tracking-wider">État Général</span>
+          <span className="text-lg font-black text-slate-900 mt-1 uppercase font-mono tracking-tight flex items-center gap-1.5">
             {classementSites.filter(s => s.scoreGlobal !== null && s.scoreGlobal < 60).length > 0 ? (
               <>
                 <span className="h-2 w-2 rounded-full bg-red-500 animate-ping shrink-0" />
@@ -1335,60 +1503,61 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
               </>
             ) : (
               <>
-                <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 Optimal
               </>
             )}
           </span>
-          <span className="text-[8.5px] font-mono text-slate-400 mt-1 uppercase">Mise à jour : Temps Réel</span>
+          <span className="text-[8.5px] font-mono text-slate-500 mt-1 uppercase">Mise à jour : Temps Réel</span>
         </div>
       </div>
 
-      {/* SYNTHESIS PHRASE ALERT BANNER */}
-      <div className="relative overflow-hidden bg-slate-900 text-white rounded-2xl p-4 md:p-5 border-2 border-amber-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
+      {/* SYNTHESIS PHRASE ALERT BANNER WITH WHITE BACKGROUND & GOLD STYLE */}
+      <div className="relative overflow-hidden bg-white text-slate-800 rounded-2xl p-4 md:p-5 border-2 border-[#D4AF37] flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
         <div className="flex items-center gap-4 min-w-0 flex-1">
-          <div className="h-10 w-10 shrink-0 bg-amber-500/10 border border-amber-500/25 rounded-xl flex items-center justify-center text-amber-400">
+          <div className="h-10 w-10 shrink-0 bg-amber-500/10 border border-[#D4AF37]/40 rounded-xl flex items-center justify-center text-amber-600">
             <Activity className="h-5 w-5 animate-pulse" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-widest">
-              SYNTHÈSE DE LA SITUATION
+            <div className="text-[10px] font-mono text-amber-600 font-bold uppercase tracking-widest">
+              SYNTHÈSE DE LA SITUATION — HYDROMINES
             </div>
-            <p className="text-sm font-black font-mono tracking-tight text-white mt-0.5 uppercase leading-relaxed">
+            <p className="text-xs sm:text-sm font-black font-sans tracking-tight text-slate-900 mt-0.5 uppercase leading-relaxed">
               {situationBanner}
             </p>
           </div>
         </div>
 
         {/* Month Selector and Refresh indicator */}
-        <div className="shrink-0 flex flex-col items-start md:items-end gap-2 self-stretch md:self-auto border-t md:border-t-0 border-slate-800 pt-3 md:pt-0">
+        <div className="shrink-0 flex flex-col items-start md:items-end gap-2 self-stretch md:self-auto border-t md:border-t-0 border-slate-100 pt-3 md:pt-0">
           <div className="flex flex-wrap items-center gap-2">
             
             {/* MONTH SELECTOR */}
-            <div className="flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/50 rounded-xl px-2 py-1 transition-colors">
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1 transition-colors shadow-xs">
               <button 
                 onClick={handlePrevMonth}
-                className="p-1 rounded hover:bg-slate-700 text-amber-400 transition-colors cursor-pointer"
+                className="p-1 rounded hover:bg-slate-100 text-amber-600 transition-colors cursor-pointer"
                 title="Mois précédent"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
               </button>
-              <span className="text-[10px] font-mono font-black text-white tracking-wider uppercase min-w-[90px] text-center">
+              <span className="text-[10px] font-mono font-black text-slate-800 tracking-wider uppercase min-w-[90px] text-center">
                 {formatMoisLettres(moisReference)}
               </span>
               <button 
                 onClick={handleNextMonth}
                 disabled={isMoisCourantReel}
-                className="p-1 rounded hover:bg-slate-700 text-amber-400 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                className="p-1 rounded hover:bg-slate-100 text-[#D4AF37] hover:text-amber-600 transition-colors disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
                 title="Mois suivant"
               >
                 <ChevronRight className="h-3.5 w-3.5" />
               </button>
             </div>
 
-            <div className="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/50 rounded-xl px-3 py-1.5 transition-colors">
-              <Clock className="h-3.5 w-3.5 text-amber-400 animate-pulse shrink-0" />
-              <span className="text-[10px] font-mono font-bold text-slate-300 tracking-tight">
+            {/* LIVE PULSE INDICATOR */}
+            <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 shadow-xs">
+              <Clock className="h-3.5 w-3.5 text-amber-500 animate-pulse shrink-0" />
+              <span className="text-[10px] font-mono font-bold text-slate-700 tracking-tight">
                 Données à {(() => {
                   const hrs = String(lastRefreshTime.getHours()).padStart(2, "0");
                   const mins = String(lastRefreshTime.getMinutes()).padStart(2, "0");
@@ -1397,17 +1566,52 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
               </span>
               <button
                 onClick={() => setLastRefreshTime(new Date())}
-                className="ml-1 p-1 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-amber-400 hover:text-white transition-all cursor-pointer"
+                className="ml-1 p-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-amber-600 transition-all cursor-pointer"
                 title="Confirmer la fraîcheur"
               >
                 <RefreshCw className="h-3 w-3" />
               </button>
             </div>
           </div>
-          <span className="text-[8px] font-mono text-slate-500 text-left md:text-right max-w-[240px] leading-tight">
+          <span className="text-[8px] font-mono text-slate-400 text-left md:text-right max-w-[240px] leading-tight">
             Données synchronisées en temps réel via Firestore.
           </span>
         </div>
+      </div>
+
+      {/* TABS NAVIGATION */}
+      <div className="border-b border-gray-200 dark:border-slate-800 pb-px">
+        <nav className="flex flex-wrap gap-2" aria-label="Tabs">
+          <button
+            onClick={() => {
+              setActiveSiteTab("ensemble");
+              setExpandedSite(null);
+            }}
+            className={`px-4 py-2 rounded-xl text-[10px] font-mono font-black uppercase tracking-wider border-2 transition-all cursor-pointer ${
+              activeSiteTab === "ensemble"
+                ? "bg-slate-900 border-[#D4AF37] text-[#D4AF37] shadow-md"
+                : "bg-white border-slate-200 text-slate-600 hover:border-[#D4AF37]/50 hover:text-slate-800"
+            }`}
+          >
+            Vue d'ensemble
+          </button>
+          {SITES_LIST.map((site) => (
+            <button
+              key={site}
+              onClick={() => {
+                setActiveSiteTab(site);
+                setExpandedSite(site); // auto-expand for drill-down compatibility
+              }}
+              className={`px-4 py-2 rounded-xl text-[10px] font-mono font-black uppercase tracking-wider border-2 transition-all cursor-pointer ${
+                activeSiteTab === site
+                  ? "bg-slate-900 border-[#D4AF37] text-[#D4AF37] shadow-md"
+                  : "bg-white border-slate-200 text-slate-600 hover:border-[#D4AF37]/50 hover:text-slate-800"
+              }`}
+            >
+              {site}
+            </button>
+          ))}
+        </nav>
       </div>
 
       {/* HISTORICAL CONSULTING WARNING BANNER */}
@@ -1422,7 +1626,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       )}
 
       {/* ALERTE DE DÉPASSEMENT PROLONGÉ (3 MOIS SOUS CIBLE) */}
-      {prolongedAlertSites.length > 0 && (
+      {activeSiteTab === "ensemble" && prolongedAlertSites.length > 0 && (
         <div className="relative overflow-hidden bg-gradient-to-r from-red-950 to-red-900 border-2 border-red-500/50 text-white rounded-2xl p-5 shadow-xl flex flex-col gap-4 animate-pulse">
           <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-red-600" />
           <div className="flex items-start gap-4">
@@ -1442,23 +1646,25 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
             {prolongedAlertSites.map((alert) => (
               <div key={alert.siteId} className="bg-black/40 border border-red-500/20 rounded-xl p-3 font-mono text-[11px] space-y-2">
                 <div className="flex justify-between items-center border-b border-red-500/10 pb-1.5">
-                  <span className="font-black text-red-400 uppercase text-xs">{alert.siteId}</span>
-                  <span className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 font-bold text-[10px]">
-                    Objectif: {alert.dispoTarget}%
-                  </span>
+                  <span className="font-black text-red-400 uppercase text-[11.5px]">{alert.siteId}</span>
+                  <span className="bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded text-[9px] font-black">SOUS CIBLE</span>
                 </div>
                 <div className="space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">{alert.m2} (M-2) :</span>
-                    <span className="text-red-400 font-bold">{alert.dispo2.toFixed(1)}%</span>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Mois Référence :</span>
+                    <span className="text-slate-200 font-bold">{alert.dispo0.toFixed(1)}%</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">{alert.m1} (M-1) :</span>
-                    <span className="text-red-400 font-bold">{alert.dispo1.toFixed(1)}%</span>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Mois Précédent (M-1) :</span>
+                    <span className="text-slate-200 font-bold">{alert.dispo1.toFixed(1)}%</span>
                   </div>
-                  <div className="flex justify-between font-black">
-                    <span className="text-slate-300">Mois en cours :</span>
-                    <span className="text-red-500">{alert.dispo0.toFixed(1)}%</span>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Mois M-2 :</span>
+                    <span className="text-slate-200 font-bold">{alert.dispo2.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between border-t border-red-500/10 pt-1.5 font-bold text-red-400 text-[10px]">
+                    <span>Objectif Cible :</span>
+                    <span>{alert.dispoTarget}%</span>
                   </div>
                 </div>
               </div>
@@ -1467,99 +1673,177 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
         </div>
       )}
 
-      {/* --- SECTION 1 : COMPARAISON MENSUELLE (CE MOIS VS MOIS PRÉCÉDENT) --- */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <BarChart2 className="h-5 w-5 text-[#D4AF37]" />
-          <h2 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white font-mono">
-            Comparaison Performance Mensuelle (Ce mois vs Mois précédent)
-          </h2>
-        </div>
-        
-        {isLoading ? (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(n => (
-              <div key={n} className="h-24 bg-slate-100 dark:bg-slate-900 animate-pulse rounded-xl" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* RENDER ACTIVE TAB CONTENT */}
+      {activeSiteTab === "ensemble" ? (
+        <>
+          {/* --- SECTION 1 : COMPARAISON MENSUELLE (CE MOIS VS MOIS PRÉCÉDENT) --- */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <BarChart2 className="h-5 w-5 text-[#D4AF37]" />
+              <h2 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white font-mono">
+                Comparaison Performance Mensuelle (Ce mois vs Mois précédent)
+              </h2>
+            </div>
             
-            {/* Card 1: Pannes */}
-            <Card className="border border-slate-200/80 bg-white relative overflow-hidden rounded-xl">
-              <CardContent className="p-4 flex flex-col justify-between h-full">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Pannes Déclarées</span>
-                    <h3 className="text-2xl font-black text-slate-900 font-mono mt-1">
-                      {comparisonData.current.totalPannes}
-                    </h3>
-                  </div>
-                  <div className="p-2 bg-red-50 text-red-600 rounded-lg">
-                    <AlertTriangle className="h-4 w-4" />
-                  </div>
-                </div>
-                {renderVarBadge(comparisonData.pannesVar, true)}
-              </CardContent>
-            </Card>
+            {isLoading ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map(n => (
+                  <div key={n} className="h-24 bg-slate-100 dark:bg-slate-900 animate-pulse rounded-xl" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                {/* Card 1: Ratio Préventif global Card */}
+                <Card className="border-2 border-[#D4AF37]/50 bg-white relative overflow-hidden rounded-xl shadow-xs">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-[#D4AF37]" />
+                  <CardContent className="p-4 flex flex-col justify-between h-full">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Ratio Préventif (Cible &gt;70%)</span>
+                        <h3 className="text-2xl font-black text-slate-900 font-mono mt-1">
+                          {globalPreventiveRatio.ratio}%
+                        </h3>
+                      </div>
+                      <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+                        <Gauge className="h-4 w-4" />
+                      </div>
+                    </div>
+                    
+                    {/* Progress indicator bar */}
+                    <div className="mt-2 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden relative">
+                      <div 
+                        className={`h-full rounded-full transition-all ${
+                          globalPreventiveRatio.ratio >= 70 ? "bg-emerald-500" : "bg-red-500"
+                        }`}
+                        style={{ width: `${globalPreventiveRatio.ratio}%` }}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
-            {/* Card 2: Préventif réalisé */}
-            <Card className="border border-slate-200/80 bg-white relative overflow-hidden rounded-xl">
-              <CardContent className="p-4 flex flex-col justify-between h-full">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Préventifs Réalisés</span>
-                    <h3 className="text-2xl font-black text-slate-900 font-mono mt-1">
-                      {comparisonData.current.totalPreventives}
-                    </h3>
-                  </div>
-                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-                    <CheckCircle2 className="h-4 w-4" />
-                  </div>
-                </div>
-                {renderVarBadge(comparisonData.preventivesVar, false)}
-              </CardContent>
-            </Card>
+                {/* Card 2: Pannes */}
+                <Card className="border border-slate-200 bg-white relative overflow-hidden rounded-xl">
+                  <CardContent className="p-4 flex flex-col justify-between h-full">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Pannes Déclarées</span>
+                        <h3 className="text-2xl font-black text-slate-900 font-mono mt-1">
+                          {comparisonData.current.totalPannes}
+                        </h3>
+                      </div>
+                      <div className="p-2 bg-red-50 text-red-600 rounded-lg">
+                        <AlertTriangle className="h-4 w-4" />
+                      </div>
+                    </div>
+                    {renderVarBadge(comparisonData.pannesVar, true)}
+                  </CardContent>
+                </Card>
 
-            {/* Card 3: Correctif réalisé */}
-            <Card className="border border-slate-200/80 bg-white relative overflow-hidden rounded-xl">
-              <CardContent className="p-4 flex flex-col justify-between h-full">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Correctifs Réalisés</span>
-                    <h3 className="text-2xl font-black text-slate-900 font-mono mt-1">
-                      {comparisonData.current.totalCorrectives}
-                    </h3>
-                  </div>
-                  <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
-                    <Wrench className="h-4 w-4" />
-                  </div>
-                </div>
-                {renderVarBadge(comparisonData.correctivesVar, true)}
-              </CardContent>
-            </Card>
+                {/* Card 3: Préventif réalisé */}
+                <Card className="border border-slate-200 bg-white relative overflow-hidden rounded-xl">
+                  <CardContent className="p-4 flex flex-col justify-between h-full">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Préventifs Réalisés</span>
+                        <h3 className="text-2xl font-black text-slate-900 font-mono mt-1">
+                          {comparisonData.current.totalPreventives}
+                        </h3>
+                      </div>
+                      <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                        <CheckCircle2 className="h-4 w-4" />
+                      </div>
+                    </div>
+                    {renderVarBadge(comparisonData.preventivesVar, false)}
+                  </CardContent>
+                </Card>
 
-            {/* Card 4: Coût total de maintenance */}
-            <Card className="border border-slate-200/80 bg-white relative overflow-hidden rounded-xl">
-              <CardContent className="p-4 flex flex-col justify-between h-full">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Coûts de Maintenance (Est.)</span>
-                    <h3 className="text-2xl font-black text-slate-900 font-mono mt-1">
-                      {comparisonData.current.totalCost.toLocaleString()} <span className="text-xs">DH</span>
-                    </h3>
-                  </div>
-                  <div className="p-2 bg-sky-50 text-sky-600 rounded-lg">
-                    <DollarSign className="h-4 w-4" />
-                  </div>
-                </div>
-                {renderVarBadge(comparisonData.costVar, true)}
-              </CardContent>
-            </Card>
+                {/* Card 4: Coût total de maintenance */}
+                <Card className="border border-slate-200 bg-white relative overflow-hidden rounded-xl">
+                  <CardContent className="p-4 flex flex-col justify-between h-full">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Coûts de Maintenance (Est.)</span>
+                        <h3 className="text-2xl font-black text-slate-900 font-mono mt-1">
+                          {comparisonData.current.totalCost.toLocaleString()} <span className="text-xs font-sans">DH</span>
+                        </h3>
+                      </div>
+                      <div className="p-2 bg-sky-50 text-sky-600 rounded-lg">
+                        <DollarSign className="h-4 w-4" />
+                      </div>
+                    </div>
+                    {renderVarBadge(comparisonData.costVar, true)}
+                  </CardContent>
+                </Card>
 
+              </div>
+            )}
           </div>
-        )}
-      </div>
+
+          {/* MONTHLY RECHARTS GRAPHICAL & REPORTING ANALYSES */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Chart 1: Écart Planifié vs Réalisé (BarChart) */}
+            <Card className="border border-slate-200 bg-white rounded-2xl shadow-sm p-4 col-span-1 lg:col-span-2 space-y-4">
+              <div className="flex justify-between items-start border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-xs font-black uppercase font-mono tracking-wider text-slate-900 flex items-center gap-2">
+                    <BarChart2 className="w-4 h-4 text-amber-500" />
+                    Écart Planifié vs Réalisé (Tâches de Maintenance)
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-medium">Nombre de bons de travail programmés comparés aux réalisés par site.</p>
+                </div>
+                <span className="text-[9px] font-mono font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">Rapport Consolidé</span>
+              </div>
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={sitesRealVsPlanned} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fontFamily: "monospace", fill: "#64748b" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fontFamily: "monospace", fill: "#64748b" }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ fontSize: "11px", fontFamily: "sans-serif", borderRadius: "12px", border: "1px solid #e2e8f0" }} />
+                    <Legend wrapperStyle={{ fontSize: "10px", marginTop: "10px" }} />
+                    <Bar dataKey="planifie" name="Planifiés" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="realise" name="Réalisés (Préventif)" fill="#d97706" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="correctif" name="Correctif Clôturé" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+
+            {/* Chart 2: Stacked Dual-Trend Evolution curves (Pannes & Coûts) */}
+            <Card className="border border-slate-200 bg-white rounded-2xl shadow-sm p-4 space-y-4">
+              <div className="flex justify-between items-start border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-xs font-black uppercase font-mono tracking-wider text-slate-900 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-500" />
+                    Évolution Historique (5 Derniers Mois)
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-medium">Progression mensuelle consolidée des pannes et des coûts d'intervention.</p>
+                </div>
+              </div>
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={historicalMonthsData} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorCout" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#d97706" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#d97706" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "12px" }} />
+                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                    <Area yAxisId="left" type="monotone" dataKey="cout" name="Coût (kDH)" stroke="#d97706" fillOpacity={1} fill="url(#colorCout)" strokeWidth={2.5} />
+                    <Line yAxisId="right" type="monotone" dataKey="pannes" name="Pannes" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 4 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </div>
 
       {/* TWO COLUMN GRID : SITES CLASSIFICATION AND IMMOBILIZED VEHICLES */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -2196,6 +2480,386 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
           </div>
         </CardContent>
       </Card>
+
+      {/* --- SECTION 6 : ESPACE DÉCISIONNEL IA CONSOLIDÉ --- */}
+      <Card className="border-2 border-[#D4AF37] bg-white rounded-3xl overflow-hidden shadow-[0_12px_40px_rgba(212,175,55,0.08)] relative">
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 via-[#D4AF37] to-yellow-600" />
+        
+        {/* Corner L-brackets */}
+        <div className="absolute top-3 left-3 w-2 h-2 border-t-2 border-l-2 border-[#D4AF37]/60" />
+        <div className="absolute top-3 right-3 w-2 h-2 border-t-2 border-r-2 border-[#D4AF37]/60" />
+        <div className="absolute bottom-3 left-3 w-2 h-2 border-b-2 border-l-2 border-[#D4AF37]/60" />
+        <div className="absolute bottom-3 right-3 w-2 h-2 border-b-2 border-r-2 border-[#D4AF37]/60" />
+
+        <CardContent className="p-6 md:p-8 space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-6">
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[9px] font-mono font-black uppercase tracking-widest text-[#D4AF37] bg-slate-950 rounded-md">
+                <Sparkles className="w-3 h-3 text-[#D4AF37]" />
+                ASSISTANT STRATÉGIQUE IA
+              </span>
+              <h3 className="text-base font-black uppercase tracking-tight text-slate-950 font-mono">
+                Espace Décisionnel Stratégique — Mr : MOUNIR Outbrrit
+              </h3>
+              <p className="text-[11px] text-slate-500 font-medium">
+                Générez des directives prescriptives pour chaque site d'Hydromines basées sur les données factuelles de la plateforme.
+              </p>
+            </div>
+            <button
+              onClick={handleLaunchAIPanel}
+              disabled={aiLoading}
+              className="shrink-0 inline-flex items-center gap-2 px-6 py-3 bg-slate-950 hover:bg-slate-900 text-[#D4AF37] border-2 border-[#D4AF37] font-mono font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
+            >
+              <Activity className={`w-4 h-4 ${aiLoading ? "animate-spin" : "animate-pulse"}`} />
+              {aiLoading ? "Analyse en cours..." : "Lancer l'Analyse Globale IA"}
+            </button>
+          </div>
+
+          {aiLoading ? (
+            <div className="py-16 flex flex-col items-center justify-center gap-4 text-center">
+              <div className="h-12 w-12 border-4 border-[#D4AF37]/20 border-t-[#D4AF37] rounded-full animate-spin" />
+              <div className="space-y-1">
+                <span className="text-xs font-mono font-black uppercase text-[#D4AF37] tracking-widest block animate-pulse">Consultation de la base de connaissances...</span>
+                <p className="text-[10px] text-slate-400 font-mono">Consolidation des pannes, des coûts, des MTTR et conformités d'Hydromines.</p>
+              </div>
+            </div>
+          ) : aiResponse ? (
+            <div className="bg-gradient-to-br from-amber-50/20 via-white to-slate-50/40 border border-amber-200/50 rounded-2xl p-6 md:p-8 space-y-4 max-h-[500px] overflow-y-auto">
+              <div className="flex justify-between items-center border-b border-amber-100 pb-3">
+                <span className="text-[10px] font-mono font-black text-[#D4AF37] uppercase tracking-wider">Rapport Directif — Mounir Outbrrit</span>
+                <span className="text-[8.5px] font-mono text-slate-400">Analyse Générée d'après la plateforme</span>
+              </div>
+              <div className="space-y-3 font-sans text-xs leading-relaxed text-slate-800">
+                {renderMarkdownText(aiResponse)}
+              </div>
+            </div>
+          ) : (
+            <div className="p-8 border border-slate-200 border-dashed rounded-2xl bg-slate-50/50 text-center space-y-3">
+              <Sparkles className="h-10 w-10 text-[#D4AF37] mx-auto animate-pulse" />
+              <p className="text-[11px] text-slate-500 font-medium font-mono uppercase">
+                Aucune analyse globale n'a été exécutée pour ce mois.
+              </p>
+              <p className="text-[10px] text-slate-400 max-w-md mx-auto">
+                Cliquez sur le bouton ci-dessus pour lancer la consolidation automatique de la performance de tous les sites d'Hydromines.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+        </>
+      ) : (
+        /* ==========================================
+           SPECIFIC SITE DASHBOARD VIEW
+           ========================================== */
+        (() => {
+          const site = activeSiteTab; // e.g. "SMI"
+          
+          // Get specific targets
+          const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === site) || {
+            dispoTarget: 85,
+            complianceTarget: 80,
+            mttrTarget: 4,
+            coutTarget: 1500
+          };
+
+          const siteDispo = getSiteDispo(site, moisReference);
+          const siteCompliance = getSiteCompliance(site, moisReference);
+          const siteMttr = getSiteMttr(site, moisReference);
+          const siteCoutVal = getSiteCout(site, moisReference);
+
+          // Pannes actives filtrées
+          const sitePannesActive = (pannesLive || []).filter(p => !p.deleted && (p.siteId === site || p.site === site) && p.statut !== "CLOS");
+          const sitePannesClosesCeMois = (pannesLive || []).filter(p => !p.deleted && (p.siteId === site || p.site === site) && p.statut === "CLOS" && getPanneCloseMonth(p) === moisReference);
+
+          // Bons de travail du mois
+          const siteWorkOrdersCeMois = (workOrdersLive || []).filter(w => !w.deleted && (w.siteId === site || w.site === site) && w.datePlanifiee && w.datePlanifiee.startsWith(moisReference));
+          const siteImmobilizedEngins = (enginsLive || []).filter(e => (e.siteId === site || e.site === site) && (e.statut === "IMMOBILISE" || e.disponibilite === "NON"));
+
+          // Helper for metric compared to targets
+          const renderSiteGoalCard = (label: string, value: number | null, target: number, unit: string, isLowerBetter: boolean = false) => {
+            if (value === null) {
+              return (
+                <div className="text-xl font-mono text-slate-400 font-bold">N/A</div>
+              );
+            }
+            const diff = value - target;
+            const isOk = isLowerBetter ? diff <= 0 : diff >= 0;
+            return (
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-slate-900 font-mono">
+                    {value.toFixed(1)}{unit}
+                  </span>
+                  <span className={`text-[10px] font-mono font-bold ${isOk ? "text-emerald-600 bg-emerald-50" : "text-red-600 bg-red-50"} px-1.5 py-0.5 rounded`}>
+                    Cible: {target}{unit}
+                  </span>
+                </div>
+                <div className="text-[9px] text-slate-400 font-mono uppercase">
+                  {isOk ? "✓ Objectif atteint" : "✗ Sous l'objectif"}
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div className="space-y-6">
+              
+              {/* Site KPI Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                {/* Availability card */}
+                <Card className="border border-slate-200 bg-white relative overflow-hidden rounded-xl">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500" />
+                  <CardContent className="p-4 flex flex-col justify-between h-full">
+                    <div className="flex justify-between items-start">
+                      <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Disponibilité Flotte</span>
+                      <Building2 className="h-4 w-4 text-amber-500" />
+                    </div>
+                    <div className="mt-2">
+                      {renderSiteGoalCard("Disponibilité", siteDispo, tgt.dispoTarget, "%")}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Preventive compliance card */}
+                <Card className="border border-slate-200 bg-white relative overflow-hidden rounded-xl">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500" />
+                  <CardContent className="p-4 flex flex-col justify-between h-full">
+                    <div className="flex justify-between items-start">
+                      <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Taux de Préventif Conforme</span>
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    </div>
+                    <div className="mt-2">
+                      {renderSiteGoalCard("Préventif", siteCompliance, tgt.complianceTarget, "%")}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Active pannes card */}
+                <Card className="border border-slate-200 bg-white relative overflow-hidden rounded-xl">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-red-500" />
+                  <CardContent className="p-4 flex flex-col justify-between h-full">
+                    <div className="flex justify-between items-start">
+                      <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Pannes Actives</span>
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                    </div>
+                    <div className="mt-2 font-mono">
+                      <div className="text-2xl font-black text-slate-900">
+                        {sitePannesActive.length} <span className="text-xs text-slate-400 font-bold font-sans">ouvertes</span>
+                      </div>
+                      <div className="text-[9px] text-slate-400 uppercase font-black mt-1">
+                        {sitePannesClosesCeMois.length} résolues ce mois-ci
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Estimated site cost card */}
+                <Card className="border border-slate-200 bg-white relative overflow-hidden rounded-xl">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-sky-500" />
+                  <CardContent className="p-4 flex flex-col justify-between h-full">
+                    <div className="flex justify-between items-start">
+                      <span className="text-[9px] font-mono text-slate-400 font-black uppercase tracking-wider block">Estimation des Coûts (Mois)</span>
+                      <DollarSign className="h-4 w-4 text-sky-500" />
+                    </div>
+                    <div className="mt-2">
+                      {renderSiteGoalCard("Coût Horaire", siteCoutVal, tgt.coutTarget, " DH/h", true)}
+                    </div>
+                  </CardContent>
+                </Card>
+
+              </div>
+
+              {/* Two Column Grid: Fleet Status & AI Directives */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* Fleet status table */}
+                <div className="lg:col-span-7 space-y-6">
+                  
+                  {/* Immobilized machines */}
+                  <Card className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden relative">
+                    <CardHeader className="bg-slate-50 border-b border-slate-200/50 p-4">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <Activity className="h-4 w-4 text-red-500" />
+                          <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-900 font-mono">
+                            Engins Immobilisés sur {site} ({siteImmobilizedEngins.length})
+                          </CardTitle>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      {siteImmobilizedEngins.length === 0 ? (
+                        <div className="text-center py-12 text-slate-400 font-mono text-xs">
+                          Aucun engin immobilisé sur le site {site}. Performance optimale !
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left border-collapse text-xs font-mono">
+                            <thead>
+                              <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-black uppercase text-slate-500">
+                                <th className="py-2.5 px-4">Engin / Matricule</th>
+                                <th className="py-2.5 px-4">Modèle / Type</th>
+                                <th className="py-2.5 px-4 text-center">Statut</th>
+                                <th className="py-2.5 px-4 text-right">Raison</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 font-bold">
+                              {siteImmobilizedEngins.map((eng) => (
+                                <tr key={eng.id} className="hover:bg-slate-50/50">
+                                  <td className="py-3 px-4 font-black uppercase text-slate-950">{eng.matricule || eng.nom}</td>
+                                  <td className="py-3 px-4 uppercase text-slate-500">{eng.modele || eng.type || "N/A"}</td>
+                                  <td className="py-3 px-4 text-center">
+                                    <span className="inline-block px-2 py-0.5 rounded bg-red-100 border border-red-200 text-red-700 text-[10px] font-black">
+                                      IMMOBILISÉ
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-4 text-right text-red-500 uppercase text-[10px]">
+                                    {eng.raisonImmobilisation || "Panne non résolue"}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Site active work orders */}
+                  <Card className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden relative">
+                    <CardHeader className="bg-slate-50 border-b border-slate-200/50 p-4">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <Wrench className="h-4 w-4 text-amber-500" />
+                          <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-900 font-mono">
+                            Dernières Interventions Récentes ({site})
+                          </CardTitle>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      {siteWorkOrdersCeMois.length === 0 ? (
+                        <div className="text-center py-12 text-slate-400 font-mono text-xs">
+                          Aucune tâche répertoriée ce mois-ci sur le site {site}.
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-slate-100 font-mono text-[11px]">
+                          {siteWorkOrdersCeMois.slice(0, 5).map((wo) => {
+                            const dateStr = wo.datePlanifiee ? new Date(wo.datePlanifiee).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' }) : "N/A";
+                            return (
+                              <div key={wo.id} className="p-3.5 flex justify-between items-center hover:bg-slate-50/50">
+                                <div className="space-y-1">
+                                  <span className="font-black text-slate-950 block uppercase text-xs">
+                                    {wo.titre || wo.description}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 block uppercase">
+                                    Type : {wo.type} — {wo.enginId}
+                                  </span>
+                                </div>
+                                <div className="text-right space-y-1">
+                                  <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black ${
+                                    wo.statut === "FAIT" || wo.statut === "VALIDE" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+                                  }`}>
+                                    {wo.statut || "PROGRAMMÉ"}
+                                  </span>
+                                  <p className="text-[9px] text-slate-400">{dateStr}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                </div>
+
+                {/* Right Column: Site-specific AI Directives panel */}
+                <div className="lg:col-span-5 space-y-6">
+                  
+                  <Card className="border-2 border-[#D4AF37] bg-white rounded-2xl overflow-hidden shadow-lg relative">
+                    <CardHeader className="bg-slate-50 border-b border-[#D4AF37]/20 p-4">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-[#D4AF37] animate-pulse" />
+                        <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-900 font-mono">
+                          Directives IA Spécifiques - {site}
+                        </CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-5 space-y-4">
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Générez des instructions et analyses décisionnelles ciblées pour optimiser la disponibilité de la flotte du site <strong className="uppercase">{site}</strong>.
+                      </p>
+                      
+                      <button
+                        onClick={async () => {
+                          setAiLoading(true);
+                          setAiResponse(null);
+                          try {
+                            const response = await fetch("/api/ai/command-center-analysis", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                siteScores: classementSites.filter(s => s.site === site),
+                                metrics: {
+                                  current: {
+                                    totalPannes: sitePannesActive.length + sitePannesClosesCeMois.length,
+                                    totalPreventives: siteWorkOrdersCeMois.filter(w => w.type === "PREVENTIF" && w.statut === "FAIT").length,
+                                    totalCorrectives: siteWorkOrdersCeMois.filter(w => w.type === "CORRECTIF" && w.statut === "FAIT").length,
+                                    totalCost: siteCoutVal || 0
+                                  }
+                                },
+                                data: {
+                                  siteName: site,
+                                  immobilizedCount: siteImmobilizedEngins.length,
+                                  pannesCount: sitePannesActive.length
+                                }
+                              })
+                            });
+                            const resData = await response.json();
+                            setAiResponse(resData.analysis || "Rapport structuré.");
+                          } catch (e) {
+                            setAiResponse("Impossible de joindre le consultant.");
+                          } finally {
+                            setAiLoading(false);
+                          }
+                        }}
+                        disabled={aiLoading}
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-950 text-[#D4AF37] hover:bg-slate-900 border-2 border-[#D4AF37] font-mono font-black text-[11px] uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
+                      >
+                        <Sparkles className="w-4 h-4 animate-pulse" />
+                        {aiLoading ? "Consultation..." : `Analyser la performance de ${site}`}
+                      </button>
+
+                      {aiLoading ? (
+                        <div className="py-8 flex flex-col items-center justify-center gap-2 text-center">
+                          <div className="h-8 w-8 border-2 border-[#D4AF37]/20 border-t-[#D4AF37] rounded-full animate-spin" />
+                          <span className="text-[10px] font-mono text-amber-600 font-bold uppercase animate-pulse">Calcul stratégique...</span>
+                        </div>
+                      ) : aiResponse ? (
+                        <div className="bg-amber-50/20 border border-amber-200/50 rounded-xl p-4 space-y-3 max-h-[350px] overflow-y-auto">
+                          <span className="text-[9px] font-mono font-black text-[#D4AF37] uppercase tracking-wider block">Rapport stratégique IA {site} :</span>
+                          <div className="font-mono text-[10.5px] leading-relaxed text-slate-800 space-y-2">
+                            {renderMarkdownText(aiResponse)}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center text-slate-400 font-mono text-[10px]">
+                          Cliquez pour obtenir les recommandations de Mounir Outbrrit.
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                </div>
+
+              </div>
+
+            </div>
+          );
+        })()
+      )}
 
       {/* MODALS POUR DRILL-THROUGH */}
       <AnimatePresence>

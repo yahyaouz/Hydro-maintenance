@@ -1,7 +1,7 @@
 // Hook useMecaniciens.ts - Phase 2 Refactoring with Dynamic Real-time Stats
 import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
-import { getLocalDateString } from "@/lib/utils";
+import { getLocalDateString, getLocalMonthString } from "@/lib/utils";
 import { 
   collection, 
   onSnapshot, 
@@ -103,7 +103,7 @@ export function useMecaniciens() {
 
   // Compute stats and mecaniciens list dynamically
   const mecaniciens = useMemo(() => {
-    const currentMonthStr = new Date().toISOString().substring(0, 7);
+    const currentMonthStr = getLocalMonthString();
 
     const getHoursFromDuree = (duree: string): number => {
       if (duree === '15min') return 0.25;

@@ -11,7 +11,7 @@ import { useAuthStore } from '@/lib/store';
 import { useCollection } from '@/hooks/useCollection';
 import { toast } from 'sonner';
 import { dbService } from '@/services/firestoreService';
-import { getLocalDateString } from '@/lib/utils';
+import { getLocalDateString, getLocalMonthString } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { PageBanner } from '@/components/ui/PageBanner';
@@ -642,7 +642,7 @@ export default function TachesPlanning() {
 
   // Leaders calculations
   const statsParMeca = React.useMemo(() => {
-    const currentMonthStr = new Date().toISOString().substring(0, 7); // YYYY-MM
+    const currentMonthStr = getLocalMonthString(); // YYYY-MM
     return filteredMecaniciens.map(meca => {
       const tasksMeca = filteredTasks.filter(t => 
         t.mecanicienId === meca.id && 
@@ -674,7 +674,7 @@ export default function TachesPlanning() {
   }, [filteredMecaniciens, filteredTasks]);
 
   const kpis = React.useMemo(() => {
-    const currentMonthStr = new Date().toISOString().substring(0, 7);
+    const currentMonthStr = getLocalMonthString();
     const tasksMois = filteredTasks.filter(t => (t.datePlanifiee || '').startsWith(currentMonthStr));
     const total = tasksMois.length;
     const faites = tasksMois.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;

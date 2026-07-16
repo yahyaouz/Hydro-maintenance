@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PageBanner } from "@/components/ui/PageBanner";
 
 interface HistoryLog {
   id: string;
@@ -252,45 +253,43 @@ export function ImportConfig() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* CORRECTIONS 3 — Header simple mode clair cohérent avec le Dashboard */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-1">
-          <Database className="h-6 w-6 text-amber-500" />
-          <h1 className="text-xl font-black text-slate-900 tracking-tight">
-            Centre d'Importation & d'Intégration
-          </h1>
-        </div>
-        <p className="text-sm text-slate-600">
-          Consolidez les données de votre flotte minière depuis les plateformes externes.
-        </p>
-        <Badge variant="outline" className="mt-2 text-xs">
-          {activeSite === 'TOUS' ? 'TOUS LES SITES' : activeSite}
-        </Badge>
-      </div>
+    <div className="space-y-6 bg-white text-slate-900 pb-12 border-2 border-amber-500 shadow-xl relative overflow-hidden p-6 rounded-2xl">
+      {/* Ligne de haut style Hydromines (Mélange bleu ciel et rouge un peu foncé) */}
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400 z-10" />
 
-      {/* Main navigation tabs */}
-      <div className="flex bg-slate-100 p-1 rounded-xl w-full max-w-md">
-        <button
-          onClick={() => setActiveTab("imports")}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wide transition-all ${
-            activeTab === "imports"
-              ? "bg-white text-slate-900 shadow-xs"
-              : "text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          <Upload className="w-4 h-4" /> Plateformes d'Import
-        </button>
-        <button
-          onClick={() => setActiveTab("history")}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wide transition-all ${
-            activeTab === "history"
-              ? "bg-white text-slate-900 shadow-xs"
-              : "text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          <Clock className="w-4 h-4" /> Historique d'Intégration
-        </button>
+      <PageBanner
+        icon={Database}
+        badgeLabel="ADMINISTRATION & PARAMÈTRES"
+        title="Import & Paramètres"
+        subtitle="Intégration des fichiers CSV terrain et synchronisation des données d'exploitation"
+        siteLabel={activeSite === "TOUS" ? "TOUS SITES" : activeSite}
+      />
+
+      {/* Main navigation tabs (centered & matched to Admin.tsx style) */}
+      <div className="flex justify-center w-full">
+        <div className="flex gap-1.5 bg-slate-100/80 pt-2.5 pb-1.5 px-1.5 rounded-xl border-2 border-amber-500 shadow-md relative overflow-hidden w-full max-w-lg">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+          <button
+            onClick={() => setActiveTab("imports")}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+              activeTab === "imports"
+                ? "bg-amber-500 text-slate-950 shadow-md font-extrabold border border-amber-600"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 border border-transparent"
+            }`}
+          >
+            <Upload className="w-4 h-4" /> Plateformes d'Import
+          </button>
+          <button
+            onClick={() => setActiveTab("history")}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+              activeTab === "history"
+                ? "bg-amber-500 text-slate-950 shadow-md font-extrabold border border-amber-600"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 border border-transparent"
+            }`}
+          >
+            <Clock className="w-4 h-4" /> Historique d'Intégration
+          </button>
+        </div>
       </div>
 
       {activeTab === "imports" && (
@@ -300,9 +299,9 @@ export function ImportConfig() {
           <div className="lg:col-span-2 space-y-6">
             
             {/* CARD 1: Espace Magasinier */}
-            <Card className="relative overflow-hidden border border-[#D4AF37]/50 rounded-2xl shadow-sm bg-white">
-              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
-              <CardHeader className="bg-slate-50 p-4 border-b border-slate-200">
+            <Card className="relative overflow-hidden border-2 border-amber-500 rounded-2xl shadow-lg bg-white pt-1.5">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400 z-10" />
+              <CardHeader className="bg-slate-50 p-4 border-b border-slate-200 mt-1">
                 <div className="flex justify-between items-start">
                   <div>
                     <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 font-mono text-[9px] mb-1.5 uppercase font-bold">
@@ -382,9 +381,9 @@ export function ImportConfig() {
             </Card>
 
             {/* CARD 2: Carburants & Lubrifiants */}
-            <Card className="relative overflow-hidden border border-[#D4AF37]/50 rounded-2xl shadow-sm bg-white">
-              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
-              <CardHeader className="bg-slate-50 p-4 border-b border-slate-200">
+            <Card className="relative overflow-hidden border-2 border-amber-500 rounded-2xl shadow-lg bg-white pt-1.5">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400 z-10" />
+              <CardHeader className="bg-slate-50 p-4 border-b border-slate-200 mt-1">
                 <div className="flex justify-between items-start">
                   <div>
                     <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100 font-mono text-[9px] mb-1.5 uppercase font-bold">
@@ -463,9 +462,9 @@ export function ImportConfig() {
             </Card>
 
             {/* CARD 3: Plateforme Production - Planification */}
-            <Card className="relative overflow-hidden border border-[#D4AF37]/50 rounded-2xl shadow-sm bg-white">
-              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
-              <CardHeader className="bg-slate-50 p-4 border-b border-slate-200">
+            <Card className="relative overflow-hidden border-2 border-amber-500 rounded-2xl shadow-lg bg-white pt-1.5">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400 z-10" />
+              <CardHeader className="bg-slate-50 p-4 border-b border-slate-200 mt-1">
                 <div className="flex justify-between items-start">
                   <div>
                     <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100 font-mono text-[9px] mb-1.5 uppercase font-bold">
@@ -544,9 +543,9 @@ export function ImportConfig() {
             </Card>
 
             {/* CARD 4: Plateforme Production - Réalisation */}
-            <Card className="relative overflow-hidden border border-[#D4AF37]/50 rounded-2xl shadow-sm bg-white">
-              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
-              <CardHeader className="bg-slate-50 p-4 border-b border-slate-200">
+            <Card className="relative overflow-hidden border-2 border-amber-500 rounded-2xl shadow-lg bg-white pt-1.5">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400 z-10" />
+              <CardHeader className="bg-slate-50 p-4 border-b border-slate-200 mt-1">
                 <div className="flex justify-between items-start">
                   <div>
                     <Badge className="bg-teal-100 text-teal-800 hover:bg-teal-100 font-mono text-[9px] mb-1.5 uppercase font-bold">
@@ -633,9 +632,9 @@ export function ImportConfig() {
           {/* Right Sidebar - Active Report Feedback */}
           <div className="space-y-6">
             
-            <Card className="relative overflow-hidden border border-[#D4AF37]/50 rounded-2xl shadow-sm bg-white">
-              <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
-              <CardHeader className="p-4 bg-slate-50 border-b border-slate-200">
+            <Card className="relative overflow-hidden border-2 border-amber-500 rounded-2xl shadow-lg bg-white pt-1.5">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400 z-10" />
+              <CardHeader className="p-4 bg-slate-50 border-b border-slate-200 mt-1">
                 <CardTitle className="text-xs font-black uppercase text-slate-800 flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-500" /> Rapport d'Importation en Direct
                 </CardTitle>
@@ -723,9 +722,9 @@ export function ImportConfig() {
       )}
 
       {activeTab === "history" && (
-        <Card className="relative overflow-hidden border border-[#D4AF37]/50 rounded-2xl shadow-sm bg-white">
-          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
-          <CardHeader className="bg-slate-50 p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <Card className="relative overflow-hidden border-2 border-amber-500 rounded-2xl shadow-lg bg-white pt-1.5">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400 z-10" />
+          <CardHeader className="bg-slate-50 p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mt-1">
             <div>
               <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
                 <Clock className="w-4.5 h-4.5 text-amber-500" /> Registre des Actions d'Intégration

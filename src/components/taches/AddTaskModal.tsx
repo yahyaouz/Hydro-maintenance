@@ -2,6 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TaskType, TaskPriority, Engin, Mecanicien } from './types';
+import { getLocalDateString } from '@/lib/utils';
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -32,7 +33,7 @@ export function AddTaskModal({
   const [newEnginId, setNewEnginId] = React.useState("");
   const [newMecaId, setNewMecaId] = React.useState("");
   const [newPoste, setNewPoste] = React.useState<'Poste 1' | 'Poste 2' | 'Poste 3'>("Poste 1");
-  const [newDate, setNewDate] = React.useState(new Date().toISOString().split('T')[0]);
+  const [newDate, setNewDate] = React.useState(getLocalDateString());
   const [newDuree, setNewDuree] = React.useState<'15min' | '30min' | '1h' | '2h' | '4h' | '6h' | '1j'>("1h");
   const [newPrioriteManual, setNewPrioriteManual] = React.useState<"BASSE" | "NORMALE" | "HAUTE">("NORMALE");
 

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getLocalDateString } from "@/lib/utils";
 
 interface SystematicTaskMechanicProps {
   user: User;
@@ -24,7 +25,7 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
   const { getOrCreateDailySheet, saveSheetProgress } = useSystematicTasks();
   const [selectedPoste, setSelectedPoste] = useState<string>("Poste 1");
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
+    getLocalDateString()
   );
   const [sheet, setSheet] = useState<SystematicTaskSheet | null>(null);
   const [localTasks, setLocalTasks] = useState<SystematicTaskItem[]>([]);

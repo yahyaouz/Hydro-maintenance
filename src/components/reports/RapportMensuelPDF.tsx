@@ -5,7 +5,12 @@ import {
   View, 
   Text, 
   Image, 
-  StyleSheet 
+  StyleSheet,
+  Svg,
+  Line,
+  Circle,
+  Rect,
+  Polyline
 } from "@react-pdf/renderer";
 
 // Relative path to the logo
@@ -20,6 +25,8 @@ interface RapportMensuelPDFProps {
   interventions: any[];
   monthKey: string; // e.g. "2026-07"
   moisLabel: string; // e.g. "Juillet 2026"
+  siteId?: string | "ensemble";
+  reportType?: "mensuel" | "trimestriel" | "annuel";
 }
 
 // Executive style palette
@@ -278,20 +285,103 @@ export default function RapportMensuelPDF({
   mecaniciens,
   interventions,
   monthKey,
-  moisLabel
+  moisLabel,
+  siteId = "ensemble",
+  reportType = "mensuel"
 }: RapportMensuelPDFProps) {
+  
+  // 0. Filter arrays by siteId if specified and not "ensemble" or "all"
+  const { targetEngins, targetTasks, targetPannes, targetInterventions, targetMecaniciens } = React.useMemo(() => {
+    const activeSite = (siteId === "ensemble" || siteId === "all") ? null : siteId;
+    if (!activeSite) {
+      return {
+        targetEngins: engins,
+        targetTasks: tasks,
+        targetPannes: pannes,
+        targetInterventions: interventions,
+        targetMecaniciens: mecaniciens
+      };
+    }
+    
+    return {
+      targetEngins: engins.filter(e => e.siteId === activeSite || e.site === activeSite),
+      targetTasks: tasks.filter(t => t.siteId === activeSite || t.site === activeSite),
+      targetPannes: pannes.filter(p => p.siteId === activeSite || p.site === activeSite),
+      targetInterventions: interventions.filter(i => i.siteId === activeSite || i.site === activeSite),
+      targetMecaniciens: mecaniciens.filter(m => m.siteId === activeSite)
+    };
+  }, [engins, tasks, pannes, interventions, mecaniciens, siteId]);
+
+  // Check if a record matches the date filter
+  const matchesPeriod = React.useCallback((dateString: string, key: string) => {
+    if (!dateString) return false;
+    
+    // Monthly
+    if (reportType === "mensuel") {
+      return dateString.startsWith(key); // e.g. "2026-07"
+    }
+    
+    // Quarterly
+    if (reportType === "trimestriel") {
+      // key is e.g. "2026-Q3"
+      const parts = key.split("-Q");
+      const year = parts[0];
+      const qStr = parts[1];
+      const qNum = parseInt(qStr || "1"); // 1, 2, 3, 4
+      const monthNum = parseInt(dateString.split("-")[1]); // e.g. 7 from "2026-07-15"
+      if (isNaN(monthNum)) return false;
+      
+      const startMonth = (qNum - 1) * 3 + 1;
+      const endMonth = qNum * 3;
+      return dateString.startsWith(year) && monthNum >= startMonth && monthNum <= endMonth;
+    }
+    
+    // Annual
+    if (reportType === "annuel") {
+      // key is e.g. "2026"
+      return dateString.startsWith(key);
+    }
+    
+    return false;
+  }, [reportType]);
   
   // 1. Calculate previous month key and label
   const { prevMonthKey, prevMonthLabel } = React.useMemo(() => {
-    const [yearStr, monthStr] = monthKey.split("-");
-    const year = parseInt(yearStr);
-    const month = parseInt(monthStr);
-    const prevDate = new Date(year, month - 2, 1);
-    return {
-      prevMonthKey: `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`,
-      prevMonthLabel: prevDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
-    };
-  }, [monthKey]);
+    if (reportType === "trimestriel") {
+      const parts = monthKey.split("-Q");
+      const yearStr = parts[0];
+      const qStr = parts[1];
+      let year = parseInt(yearStr || "2026");
+      let qNum = parseInt(qStr || "1");
+      let prevQ = qNum - 1;
+      let prevYear = year;
+      if (prevQ < 1) {
+        prevQ = 4;
+        prevYear = year - 1;
+      }
+      return {
+        prevMonthKey: `${prevYear}-Q${prevQ}`,
+        prevMonthLabel: `Trimestre T${prevQ} ${prevYear}`
+      };
+    } else if (reportType === "annuel") {
+      const year = parseInt(monthKey || "2026");
+      const prevYear = year - 1;
+      return {
+        prevMonthKey: String(prevYear),
+        prevMonthLabel: `Année ${prevYear}`
+      };
+    } else {
+      // Default: "mensuel"
+      const [yearStr, monthStr] = monthKey.split("-");
+      const year = parseInt(yearStr || "2026");
+      const month = parseInt(monthStr || "07");
+      const prevDate = new Date(year, month - 2, 1);
+      return {
+        prevMonthKey: `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`,
+        prevMonthLabel: prevDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+      };
+    }
+  }, [monthKey, reportType]);
 
   // 2. Constants
   const SITES_LIST = ["SMI", "OUMEJRANE", "KOUDIA", "OUANSIMI", "BOU-AZZER"];
@@ -356,12 +446,12 @@ export default function RapportMensuelPDF({
   // 4. Monthly calculations for MonthKey and PrevMonthKey
   const statsMois = React.useMemo(() => {
     const calcStats = (key: string) => {
-      const pannesMois = pannes.filter(p => !p.deleted && (p.dateDeclaration || "").startsWith(key));
-      const preventives = tasks.filter(t => !t.deleted && t.type === "PREVENTIF" && (t.statut === "FAIT" || t.statut === "VALIDE") && (t.datePlanifiee || "").startsWith(key));
-      const correctives = tasks.filter(t => !t.deleted && (t.type === "CORRECTIF" || t.type === "CURATIF") && (t.statut === "FAIT" || t.statut === "VALIDE") && (t.datePlanifiee || "").startsWith(key));
+      const pannesMois = targetPannes.filter(p => !p.deleted && matchesPeriod(p.dateDeclaration || "", key));
+      const preventives = targetTasks.filter(t => !t.deleted && t.type === "PREVENTIF" && (t.statut === "FAIT" || t.statut === "VALIDE") && matchesPeriod(t.datePlanifiee || "", key));
+      const correctives = targetTasks.filter(t => !t.deleted && (t.type === "CORRECTIF" || t.type === "CURATIF") && (t.statut === "FAIT" || t.statut === "VALIDE") && matchesPeriod(t.datePlanifiee || "", key));
       
-      const closedPannes = pannes.filter(p => !p.deleted && p.statut === "CLOS" && (p.dateResolution || p.dateCloture || "").startsWith(key));
-      const interventionsMois = interventions.filter(i => !i.deleted && (i.date || "").startsWith(key));
+      const closedPannes = targetPannes.filter(p => !p.deleted && p.statut === "CLOS" && matchesPeriod(p.dateResolution || p.dateCloture || "", key));
+      const interventionsMois = targetInterventions.filter(i => !i.deleted && matchesPeriod(i.date || "", key));
 
       let cost = 0;
       preventives.forEach(t => { cost += getTaskCost(t); });
@@ -369,17 +459,17 @@ export default function RapportMensuelPDF({
       closedPannes.forEach(p => { cost += getPanneCost(p); });
       interventionsMois.forEach(i => { cost += getTaskCost(i); });
 
-      const activeEngins = engins.filter(e => !e.deleted);
+      const activeEngins = targetEngins.filter(e => !e.deleted);
       const dispoCount = activeEngins.filter(e => getNormalizedStatus(e) === "DISPONIBLE").length;
       const dispoRate = activeEngins.length > 0 ? (dispoCount / activeEngins.length) * 100 : 92;
 
       const pCount = pannesMois.length;
       const mtbf = pCount > 0 ? Math.round((activeEngins.length * 30 * 24) / pCount) : 480;
 
-      const closedPannesMonth = pannes.filter(p => !p.deleted && p.statut === "CLOS" && (p.dateDeclaration || "").startsWith(key) && typeof p.dureeImmobilisation === "number");
+      const closedPannesMonth = targetPannes.filter(p => !p.deleted && p.statut === "CLOS" && matchesPeriod(p.dateDeclaration || "", key) && typeof p.dureeImmobilisation === "number");
       const mttr = closedPannesMonth.length > 0 ? (closedPannesMonth.reduce((acc, p) => acc + (p.dureeImmobilisation || 0), 0) / closedPannesMonth.length) : 3.2;
 
-      const pmTotalList = tasks.filter(t => !t.deleted && t.type === "PREVENTIF" && (t.datePlanifiee || "").startsWith(key));
+      const pmTotalList = targetTasks.filter(t => !t.deleted && t.type === "PREVENTIF" && matchesPeriod(t.datePlanifiee || "", key));
       const pmFaites = pmTotalList.filter(t => t.statut === "FAIT" || t.statut === "VALIDE").length;
       const compliance = pmTotalList.length > 0 ? Math.round((pmFaites / pmTotalList.length) * 100) : 100;
 
@@ -394,8 +484,8 @@ export default function RapportMensuelPDF({
         compliance,
         pmTotal: pmTotalList.length,
         pmFaites,
-        btOuverts: tasks.filter(t => !t.deleted && (t.datePlanifiee || "").startsWith(key)).length,
-        btClos: tasks.filter(t => !t.deleted && (t.statut === "FAIT" || t.statut === "VALIDE") && (t.datePlanifiee || "").startsWith(key)).length,
+        btOuverts: targetTasks.filter(t => !t.deleted && matchesPeriod(t.datePlanifiee || "", key)).length,
+        btClos: targetTasks.filter(t => !t.deleted && (t.statut === "FAIT" || t.statut === "VALIDE") && matchesPeriod(t.datePlanifiee || "", key)).length,
       };
     };
 
@@ -403,7 +493,7 @@ export default function RapportMensuelPDF({
       current: calcStats(monthKey),
       previous: calcStats(prevMonthKey),
     };
-  }, [monthKey, prevMonthKey, pannes, tasks, interventions, engins, getTaskCost, getPanneCost, getNormalizedStatus]);
+  }, [monthKey, prevMonthKey, targetPannes, targetTasks, targetInterventions, targetEngins, getTaskCost, getPanneCost, getNormalizedStatus, matchesPeriod]);
 
   // 5. Ranking sites (exactly same as dashboard/command center)
   const classementSitesData = React.useMemo(() => {
@@ -504,14 +594,14 @@ export default function RapportMensuelPDF({
   // 7. Breakdown of pannes by category
   const categoriesBreakdown = React.useMemo(() => {
     const counts: Record<string, number> = {};
-    const pMois = pannes.filter(p => !p.deleted && (p.dateDeclaration || "").startsWith(monthKey));
+    const pMois = targetPannes.filter(p => !p.deleted && matchesPeriod(p.dateDeclaration || "", monthKey));
     pMois.forEach(p => {
       const cat = p.categorie || "Autres";
       counts[cat] = (counts[cat] || 0) + 1;
     });
 
     const prevCounts: Record<string, number> = {};
-    const pPrev = pannes.filter(p => !p.deleted && (p.dateDeclaration || "").startsWith(prevMonthKey));
+    const pPrev = targetPannes.filter(p => !p.deleted && matchesPeriod(p.dateDeclaration || "", prevMonthKey));
     pPrev.forEach(p => {
       const cat = p.categorie || "Autres";
       prevCounts[cat] = (prevCounts[cat] || 0) + 1;
@@ -527,12 +617,12 @@ export default function RapportMensuelPDF({
         diff: diff > 0 ? `+${diff}` : `${diff}`
       };
     }).sort((a, b) => b.count - a.count);
-  }, [pannes, monthKey, prevMonthKey]);
+  }, [targetPannes, monthKey, prevMonthKey, matchesPeriod]);
 
   // 8. Top 3 parts/pieces
   const topPieces = React.useMemo(() => {
     const counts: Record<string, number> = {};
-    const pMois = pannes.filter(p => !p.deleted && (p.dateDeclaration || "").startsWith(monthKey));
+    const pMois = targetPannes.filter(p => !p.deleted && matchesPeriod(p.dateDeclaration || "", monthKey));
     pMois.forEach(p => {
       const list = p.piecesConcernees || p.pieces || [];
       list.forEach((piece: string) => {
@@ -542,7 +632,7 @@ export default function RapportMensuelPDF({
       });
     });
 
-    tasks.filter(t => !t.deleted && (t.datePlanifiee || "").startsWith(monthKey)).forEach(t => {
+    targetTasks.filter(t => !t.deleted && matchesPeriod(t.datePlanifiee || "", monthKey)).forEach(t => {
       const list = t.piecesUtilisees || t.pieces || [];
       list.forEach((piece: string) => {
         if (!piece) return;
@@ -555,19 +645,19 @@ export default function RapportMensuelPDF({
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 3);
-  }, [pannes, tasks, monthKey]);
+  }, [targetPannes, targetTasks, monthKey, matchesPeriod]);
 
   // 9. Least reliable models (last 90 days)
   const modelsReliability = React.useMemo(() => {
     const limit90 = Date.now() - (90 * 24 * 60 * 60 * 1000);
     const enginsByModel: Record<string, any[]> = {};
-    engins.filter(e => !e.deleted).forEach(e => {
+    targetEngins.filter(e => !e.deleted).forEach(e => {
       const model = (e.type || "Inconnu").trim();
       if (!enginsByModel[model]) enginsByModel[model] = [];
       enginsByModel[model].push(e);
     });
 
-    const p90 = pannes.filter(p => !p.deleted && p.statut === "CLOS" && p.dateDeclaration && new Date(p.dateDeclaration).getTime() >= limit90);
+    const p90 = targetPannes.filter(p => !p.deleted && p.statut === "CLOS" && p.dateDeclaration && new Date(p.dateDeclaration).getTime() >= limit90);
 
     return Object.entries(enginsByModel).map(([model, list]) => {
       const ids = new Set(list.map(e => e.id));
@@ -582,14 +672,14 @@ export default function RapportMensuelPDF({
         mtbf
       };
     }).sort((a, b) => b.rate - a.rate).slice(0, 5);
-  }, [engins, pannes]);
+  }, [targetEngins, targetPannes]);
 
   // 10. Mechanics leaderboard & workload
   const felicitationsMecaniciens = React.useMemo(() => {
-    return mecaniciens
+    return targetMecaniciens
       .filter(m => m.active !== false && m.statut !== "Inactif")
       .map(m => {
-        const siteTasks = tasks.filter(t => t.mecanicienId === m.id && (t.datePlanifiee || "").startsWith(monthKey));
+        const siteTasks = targetTasks.filter(t => t.mecanicienId === m.id && matchesPeriod(t.datePlanifiee || "", monthKey));
         const completed = siteTasks.filter(t => t.statut === "FAIT" || t.statut === "VALIDE").length;
         const total = siteTasks.length;
         const rate = total > 0 ? Math.round((completed / total) * 100) : null;
@@ -609,7 +699,7 @@ export default function RapportMensuelPDF({
       .filter(m => m.completed > 0)
       .sort((a, b) => b.completed - a.completed)
       .slice(0, 3);
-  }, [mecaniciens, tasks, monthKey]);
+  }, [targetMecaniciens, targetTasks, monthKey, matchesPeriod]);
 
   // 11. Historical monthly data for the last 6 months (safely computed for table)
   const historical6Months = React.useMemo(() => {
@@ -620,12 +710,12 @@ export default function RapportMensuelPDF({
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       const label = d.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
       
-      const pmCount = pannes.filter(p => !p.deleted && (p.dateDeclaration || "").startsWith(key)).length;
-      const pmTotalList = tasks.filter(t => !t.deleted && t.type === "PREVENTIF" && (t.datePlanifiee || "").startsWith(key));
+      const pmCount = targetPannes.filter(p => !p.deleted && (p.dateDeclaration || "").startsWith(key)).length;
+      const pmTotalList = targetTasks.filter(t => !t.deleted && t.type === "PREVENTIF" && (t.datePlanifiee || "").startsWith(key));
       const pmFaites = pmTotalList.filter(t => t.statut === "FAIT" || t.statut === "VALIDE").length;
       const compRate = pmTotalList.length > 0 ? Math.round((pmFaites / pmTotalList.length) * 100) : 95;
 
-      const actEngins = engins.filter(e => !e.deleted);
+      const actEngins = targetEngins.filter(e => !e.deleted);
       const dispCount = actEngins.filter(e => getNormalizedStatus(e) === "DISPONIBLE").length;
       const dRate = actEngins.length > 0 ? (dispCount / actEngins.length) * 100 : 92;
 
@@ -638,7 +728,7 @@ export default function RapportMensuelPDF({
       });
     }
     return list;
-  }, [pannes, tasks, engins, getNormalizedStatus]);
+  }, [targetPannes, targetTasks, targetEngins, getNormalizedStatus]);
 
   // 12. Dynamic condition-driven Recommendations (JAMAIS de texte inventé ou générique)
   const recommandationsList = React.useMemo(() => {
@@ -733,6 +823,34 @@ export default function RapportMensuelPDF({
     minute: "2-digit"
   });
 
+  const docTitle = reportType === "trimestriel" 
+    ? "Rapport Trimestriel de Maintenance" 
+    : reportType === "annuel" 
+    ? "Rapport Annuel de Maintenance" 
+    : "Rapport Mensuel de Maintenance";
+
+  const docHeader = reportType === "trimestriel"
+    ? `Rapport Trimestriel Maintenance — ${moisLabel}`
+    : reportType === "annuel"
+    ? `Rapport Annuel Maintenance — ${moisLabel}`
+    : `Rapport Mensuel Maintenance — ${moisLabel}`;
+
+  const docSiteDetail = (!siteId || siteId === "ensemble" || siteId === "all")
+    ? "Évaluation consolidée des 5 chantiers : SMI, Oumejrane, Koudia Aïcha, Ouansimi, Bou-Azzer"
+    : `Évaluation technique détaillée du chantier : ${siteId}`;
+
+  const svgPointsDispo = historical6Months.map((item, index) => {
+    const x = 40 + index * 74;
+    const y = 25 + (100 - item.dispoRate) * 1.4;
+    return { x, y, rate: item.dispoRate, label: item.label };
+  });
+
+  const svgPointsCompliance = historical6Months.map((item, index) => {
+    const x = 40 + index * 74;
+    const y = 25 + (100 - item.compliance) * 1.4;
+    return { x, y, rate: item.compliance };
+  });
+
   return (
     <Document style={styles.document}>
       
@@ -742,11 +860,11 @@ export default function RapportMensuelPDF({
           <Image src={logoImg} style={styles.coverLogo} />
           
           <View style={styles.coverMiddle}>
-            <Text style={styles.coverTitle}>Rapport Mensuel de Maintenance</Text>
+            <Text style={styles.coverTitle}>{docTitle}</Text>
             <View style={styles.goldLine} />
             <Text style={[styles.coverSubtitle, styles.bold]}>{moisLabel.toUpperCase()}</Text>
             <Text style={styles.coverSitesList}>
-              Évaluation consolidée des 5 chantiers : SMI, Oumejrane, Koudia Aïcha, Ouansimi, Bou-Azzer
+              {docSiteDetail}
             </Text>
           </View>
 
@@ -760,7 +878,7 @@ export default function RapportMensuelPDF({
       {/* 2. SYNTHÈSE EXÉCUTIVE */}
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text>Rapport Mensuel Maintenance — {moisLabel}</Text>
+          <Text>{docHeader}</Text>
           <Text style={styles.rightAlign}>Hydromines</Text>
         </View>
 
@@ -788,7 +906,7 @@ export default function RapportMensuelPDF({
       {/* 3. KPIS CLÉS DU MOIS */}
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text>Rapport Mensuel Maintenance — {moisLabel}</Text>
+          <Text>{docHeader}</Text>
           <Text style={styles.rightAlign}>Hydromines</Text>
         </View>
 
@@ -855,7 +973,7 @@ export default function RapportMensuelPDF({
       {/* 4. CLASSEMENT DES SITES */}
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text>Rapport Mensuel Maintenance — {moisLabel}</Text>
+          <Text>{docHeader}</Text>
           <Text style={styles.rightAlign}>Hydromines</Text>
         </View>
 
@@ -921,13 +1039,13 @@ export default function RapportMensuelPDF({
       {/* 5. ÉVOLUTION 6 MOIS */}
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text>Rapport Mensuel Maintenance — {moisLabel}</Text>
+          <Text>{docHeader}</Text>
           <Text style={styles.rightAlign}>Hydromines</Text>
         </View>
 
         <Text style={styles.pageTitle}>4. Évolution Historique des Chantiers</Text>
         <Text style={styles.paragraph}>
-          Étant donné que les graphiques vectoriels interactifs (SVG) ne sont pas nativement supportés à 100% sans risque d'erreur de rendu par les moteurs de PDF, nous présentons ici l'historique officiel consolidé sous forme tabulaire stricte des 6 derniers mois d'exploitation :
+          Évolution historique consolidée combinant une courbe vectorielle de tendance de haute précision et une restitution tabulaire stricte de l'exploitation pour les 6 derniers mois d'activité :
         </Text>
 
         <View style={styles.table}>
@@ -956,7 +1074,89 @@ export default function RapportMensuelPDF({
           ))}
         </View>
 
-        <Text style={[styles.paragraph, { marginTop: 15 }]}>
+        <View style={{ marginVertical: 12, padding: 8, backgroundColor: "#F8FAFC", borderRadius: 4, border: "1px solid #E2E8F0" }}>
+          <Text style={{ fontSize: 9, fontWeight: "bold", color: "#1E293B", marginBottom: 6, textAlign: "center" }}>
+            Visualisation Graphique des Tendances (Derniers 6 mois)
+          </Text>
+          <Svg height="110" width="450" style={{ alignSelf: "center" }}>
+            {/* Grid lines */}
+            <Line x1="40" y1="15" x2="410" y2="15" stroke="#F1F5F9" strokeWidth="1" />
+            <Line x1="40" y1="43" x2="410" y2="43" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
+            <Line x1="40" y1="71" x2="410" y2="71" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
+            <Line x1="40" y1="85" x2="410" y2="85" stroke="#E2E8F0" strokeWidth="1.5" />
+            
+            {/* Left labels for Y axis */}
+            <Text style={{ fontSize: 6.5, fill: "#64748B" }} {...{ x: 14, y: 18 }}>100%</Text>
+            <Text style={{ fontSize: 6.5, fill: "#64748B" }} {...{ x: 18, y: 46 }}>80%</Text>
+            <Text style={{ fontSize: 6.5, fill: "#64748B" }} {...{ x: 18, y: 74 }}>60%</Text>
+
+            {/* X axis labels (months) */}
+            {svgPointsDispo.map((pt) => (
+              <Text key={`lbl-${pt.x}`} style={{ fontSize: 6.5, fill: "#64748B" }} {...{ x: pt.x - 12, y: 98 }}>
+                {pt.label.toUpperCase()}
+              </Text>
+            ))}
+
+            {/* Draw Availability Curve (Blue / Primary) */}
+            {svgPointsDispo.map((pt, i) => {
+              if (i === 0) return null;
+              const prev = svgPointsDispo[i - 1];
+              return (
+                <Line 
+                  key={`line-dispo-${i}`}
+                  x1={prev.x} 
+                  y1={prev.y} 
+                  x2={pt.x} 
+                  y2={pt.y} 
+                  stroke="#0284C7" 
+                  strokeWidth="2.5" 
+                />
+              );
+            })}
+
+            {/* Draw Compliance Curve (Gold) */}
+            {svgPointsCompliance.map((pt, i) => {
+              if (i === 0) return null;
+              const prev = svgPointsCompliance[i - 1];
+              return (
+                <Line 
+                  key={`line-comp-${i}`}
+                  x1={prev.x} 
+                  y1={prev.y} 
+                  x2={pt.x} 
+                  y2={pt.y} 
+                  stroke="#D4AF37" 
+                  strokeWidth="2" 
+                  strokeDasharray="4 2"
+                />
+              );
+            })}
+
+            {/* Draw dots on Availability points */}
+            {svgPointsDispo.map((pt) => (
+              <Circle key={`dot-dispo-${pt.x}`} cx={pt.x} cy={pt.y} r="3" fill="#0284C7" />
+            ))}
+
+            {/* Draw dots on Compliance points */}
+            {svgPointsCompliance.map((pt) => (
+              <Circle key={`dot-comp-${pt.x}`} cx={pt.x} cy={pt.y} r="2" fill="#D4AF37" />
+            ))}
+          </Svg>
+          
+          {/* Legend */}
+          <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 4, gap: 12 }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ width: 6, height: 6, backgroundColor: "#0284C7", borderRadius: 3, marginRight: 3 }} />
+              <Text style={{ fontSize: 6.5, color: "#475569" }}>Disponibilité Moyenne</Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ width: 6, height: 2, backgroundColor: "#D4AF37", marginRight: 3 }} />
+              <Text style={{ fontSize: 6.5, color: "#475569" }}>Conformité Préventive</Text>
+            </View>
+          </View>
+        </View>
+
+        <Text style={[styles.paragraph, { marginTop: 10 }]}>
           <Text style={styles.bold}>Tendance générale : </Text>
           L'historique montre une corrélation directe entre la rigueur d'exécution du plan de maintenance préventive et la disponibilité opérationnelle de la flotte. Les mois de faible conformité préventive entraînent systématiquement une augmentation des pannes curatives au cours des 45 jours suivants.
         </Text>
@@ -970,7 +1170,7 @@ export default function RapportMensuelPDF({
       {/* 6. ANALYSE DES PANNES */}
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text>Rapport Mensuel Maintenance — {moisLabel}</Text>
+          <Text>{docHeader}</Text>
           <Text style={styles.rightAlign}>Hydromines</Text>
         </View>
 
@@ -1049,7 +1249,7 @@ export default function RapportMensuelPDF({
       {/* 7. FIABILITÉ PAR MODÈLE */}
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text>Rapport Mensuel Maintenance — {moisLabel}</Text>
+          <Text>{docHeader}</Text>
           <Text style={styles.rightAlign}>Hydromines</Text>
         </View>
 
@@ -1106,7 +1306,7 @@ export default function RapportMensuelPDF({
       {/* 8. PRÉVENTIF VS CORRECTIF */}
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text>Rapport Mensuel Maintenance — {moisLabel}</Text>
+          <Text>{docHeader}</Text>
           <Text style={styles.rightAlign}>Hydromines</Text>
         </View>
 
@@ -1173,7 +1373,7 @@ export default function RapportMensuelPDF({
       {/* 9. VOLET HUMAIN */}
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text>Rapport Mensuel Maintenance — {moisLabel}</Text>
+          <Text>{docHeader}</Text>
           <Text style={styles.rightAlign}>Hydromines</Text>
         </View>
 
@@ -1265,7 +1465,7 @@ export default function RapportMensuelPDF({
       {/* 10. RECOMMANDATIONS */}
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text>Rapport Mensuel Maintenance — {moisLabel}</Text>
+          <Text>{docHeader}</Text>
           <Text style={styles.rightAlign}>Hydromines</Text>
         </View>
 

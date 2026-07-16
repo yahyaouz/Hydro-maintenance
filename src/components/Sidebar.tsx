@@ -1,4 +1,5 @@
 import * as React from "react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   LayoutDashboard,
   HeartPulse,
@@ -19,9 +20,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Radar,
-  Type
+  Type,
+  Crown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCollection } from "@/hooks/useCollection";
 
 interface SidebarProps {
   currentPage: string;
@@ -75,7 +78,40 @@ export function Sidebar({
   textDensity,
   setTextDensity,
 }: SidebarProps) {
+  const { data: pannes } = useCollection<any>('pannes');
+  const { data: engins } = useCollection<any>('engins');
+
+  const siteStatuses = React.useMemo(() => {
+    const statuses: Record<string, string> = {};
+    
+    SITES_LIST.forEach(site => {
+      const activeCriticalPannesCount = pannes
+        ? pannes.filter((p: any) => p.siteId === site.value && p.statut !== 'CLOS' && p.gravite === 'CRITIQUE').length
+        : 0;
+        
+      if (activeCriticalPannesCount === 0) {
+        statuses[site.value] = 'bg-emerald-500';
+      } else if (activeCriticalPannesCount <= 2) {
+        statuses[site.value] = 'bg-amber-500';
+      } else {
+        statuses[site.value] = 'bg-red-500';
+      }
+    });
+    
+    return statuses;
+  }, [pannes]);
+
+  const hasCriticalPannes = React.useMemo(() => {
+    if (!pannes) return false;
+    return pannes.some((p: any) => 
+      p.statut !== 'CLOS' && 
+      p.gravite === 'CRITIQUE' && 
+      (!currentSite || p.siteId === currentSite)
+    );
+  }, [pannes, currentSite]);
+
   const [isSiteDropdownOpen, setIsSiteDropdownOpen] = React.useState(false);
+  const [hoveredItem, setHoveredItem] = React.useState<{ label: string; top: number } | null>(null);
   const [isCollapsed, setIsCollapsed] = React.useState(() => {
     const saved = localStorage.getItem("sidebar_collapsed");
     return saved === "true";
@@ -129,7 +165,7 @@ export function Sidebar({
     {
       title: "DIRECTION",
       items: [
-        { id: "centre_commandement", label: "Centre de Commandement", icon: Radar }
+        { id: "centre_commandement", label: "Centre de Commandement", icon: Crown }
       ]
     },
     {
@@ -204,13 +240,13 @@ export function Sidebar({
           <div className="flex items-center gap-2">
             <div className="shiny-logo flex items-center text-xl tracking-tight font-black uppercase">
               <span className="logo-hydro text-sky-500 font-black">HYDRO</span>
-              <span className="logo-mines text-red-600 font-black ml-1">MINES</span>
+              <span className="logo-mines text-red-600 font-black ml-1.5 pl-1.5 border-l border-[rgba(212,175,55,0.4)]">MINES</span>
             </div>
           </div>
         ) : (
           <div className="shiny-logo flex items-center text-lg tracking-tight font-black uppercase" title="HYDRO MINES">
             <span className="logo-hydro text-sky-500 font-black">H</span>
-            <span className="logo-mines text-red-600 font-black ml-0.5">M</span>
+            <span className="logo-mines text-red-600 font-black ml-1 pl-1 border-l border-[rgba(212,175,55,0.4)]">M</span>
           </div>
         )}
         
@@ -254,9 +290,12 @@ export function Sidebar({
             onClick={() => setIsSiteDropdownOpen(!isSiteDropdownOpen)}
             className="w-full flex items-center justify-between h-10 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100/70 transition-colors cursor-pointer"
           >
-            <span className="truncate">
-              {SITES_LIST.find((s) => s.value === currentSite)?.label || currentSite || "SMI"}
-            </span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", siteStatuses[currentSite] || "bg-emerald-500")} />
+              <span className="truncate">
+                {SITES_LIST.find((s) => s.value === currentSite)?.label || currentSite || "SMI"}
+              </span>
+            </div>
             <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform duration-200", isSiteDropdownOpen && "rotate-180")} />
           </button>
 
@@ -270,13 +309,14 @@ export function Sidebar({
                     setIsSiteDropdownOpen(false);
                   }}
                   className={cn(
-                    "w-full text-left px-3 py-2 text-xs transition-colors cursor-pointer",
+                    "w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors cursor-pointer",
                     currentSite === site.value
                       ? "bg-sky-50 text-sky-700 font-bold"
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   )}
                 >
-                  {site.label}
+                  <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", siteStatuses[site.value] || "bg-emerald-500")} />
+                  <span className="truncate">{site.label}</span>
                 </button>
               ))}
             </div>
@@ -307,19 +347,45 @@ export function Sidebar({
                       onNavigate(item.id);
                       if (isMobile) onClose(); // auto close drawer on mobile selection
                     }}
-                    title={isCollapsedDesktop ? item.label : undefined}
+                    onMouseEnter={(e) => {
+                      if (isCollapsedDesktop) {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoveredItem({
+                          label: item.label,
+                          top: rect.top + (rect.height / 2)
+                        });
+                      }
+                    }}
+                    onMouseLeave={() => setHoveredItem(null)}
                     className={cn(
                       "w-full flex items-center h-10 rounded-lg transition-all duration-150 cursor-pointer text-left relative",
                       isCollapsedDesktop ? "justify-center px-0" : "gap-3 px-3 text-[11.5px] font-semibold",
                       isActive
                         ? isCollapsedDesktop
-                          ? "bg-slate-950 dark:bg-black text-[#D4AF37] border-l-[4px] border-[#D4AF37] rounded-l-none"
-                          : "bg-slate-950 dark:bg-black text-white border-l-[4px] border-[#D4AF37] rounded-r-xl rounded-l-none pl-2.5 font-black"
+                          ? "bg-transparent text-slate-850 dark:text-slate-200 border-l-[2px] border-slate-400 dark:border-slate-500 rounded-l-none"
+                          : "bg-slate-50 dark:bg-slate-800/40 text-slate-900 dark:text-white border-l-[2px] border-slate-400 dark:border-slate-500 rounded-r-xl rounded-l-none pl-2.5 font-bold"
                         : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                     )}
                   >
-                    <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-[#D4AF37]" : "text-slate-400")} />
-                    {!isCollapsedDesktop && <span className="truncate">{item.label}</span>}
+                    <div className={cn(
+                      "flex items-center justify-center transition-colors",
+                      isCollapsedDesktop && "h-8 w-8 rounded-lg",
+                      isCollapsedDesktop && isActive && "bg-slate-100 dark:bg-slate-800"
+                    )}>
+                      <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-slate-600 dark:text-slate-300" : "text-slate-400")} />
+                    </div>
+                    {!isCollapsedDesktop && (
+                      <div className="flex items-center justify-between flex-1 min-w-0">
+                        <span className="truncate">{item.label}</span>
+                        {(item.id === "alertes" || item.id === "centre_commandement") && hasCriticalPannes && (
+                          <span 
+                            className="h-1.5 w-1.5 rounded-full bg-[#D4AF37] shrink-0 ml-2" 
+                            style={{ boxShadow: "0 0 6px 1.5px rgba(212, 175, 55, 0.6)" }} 
+                            title="Attention requise"
+                          />
+                        )}
+                      </div>
+                    )}
                   </button>
                 );
               })}
@@ -335,10 +401,13 @@ export function Sidebar({
       )}>
         {/* User Card */}
         <div className={cn("flex items-center px-1 py-1", isCollapsedDesktop ? "justify-center" : "gap-3")}>
-          <div className="h-9 w-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0" title={user?.displayName || "Collaborateur"}>
-            <span className="text-xs font-black uppercase text-slate-600 font-mono">
-              {user?.displayName ? user.displayName.substring(0, 2) : "HM"}
-            </span>
+          <div className="relative shrink-0">
+            <div className="h-9 w-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center" title={user?.displayName || "Collaborateur"}>
+              <span className="text-xs font-black uppercase text-slate-600 font-mono">
+                {user?.displayName ? user.displayName.substring(0, 2) : "HM"}
+              </span>
+            </div>
+            <span className="absolute bottom-0 right-0 h-1 w-1 rounded-full bg-emerald-400 animate-gentle-breath" />
           </div>
           {!isCollapsedDesktop && (
             <div className="min-w-0 flex-1">
@@ -367,7 +436,17 @@ export function Sidebar({
             }}
             className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-sky-50/50 hover:text-sky-600 transition-colors cursor-pointer shrink-0"
             aria-label="Notifications"
-            title="Alertes"
+            title={isCollapsedDesktop ? undefined : "Alertes"}
+            onMouseEnter={(e) => {
+              if (isCollapsedDesktop) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setHoveredItem({
+                  label: "Alertes",
+                  top: rect.top + (rect.height / 2)
+                });
+              }
+            }}
+            onMouseLeave={() => setHoveredItem(null)}
           >
             <Bell className={cn("h-4 w-4", unreadCount > 0 && "text-amber-500 animate-pulse")} />
             {unreadCount > 0 && (
@@ -380,7 +459,17 @@ export function Sidebar({
             onClick={onToggleDarkMode}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-sky-50/50 hover:text-sky-600 transition-colors cursor-pointer shrink-0"
             aria-label="Changer de thème"
-            title="Changer de thème"
+            title={isCollapsedDesktop ? undefined : "Changer de thème"}
+            onMouseEnter={(e) => {
+              if (isCollapsedDesktop) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setHoveredItem({
+                  label: isDarkMode ? "Mode Clair" : "Mode Sombre",
+                  top: rect.top + (rect.height / 2)
+                });
+              }
+            }}
+            onMouseLeave={() => setHoveredItem(null)}
           >
             {isDarkMode ? (
               <Sun className="h-4 w-4 text-amber-500 animate-spin" style={{ animationDuration: "12s" }} />
@@ -399,7 +488,17 @@ export function Sidebar({
                 : "border-slate-200 bg-white text-slate-500 hover:bg-sky-50/50 hover:text-sky-600"
             )}
             aria-label="Changer la densité du texte"
-            title={textDensity === 'COMPACT' ? "Format compact activé" : "Format large"}
+            title={isCollapsedDesktop ? undefined : (textDensity === 'COMPACT' ? "Format compact activé" : "Format large")}
+            onMouseEnter={(e) => {
+              if (isCollapsedDesktop) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setHoveredItem({
+                  label: textDensity === 'COMPACT' ? "Format Large" : "Format Compact",
+                  top: rect.top + (rect.height / 2)
+                });
+              }
+            }}
+            onMouseLeave={() => setHoveredItem(null)}
           >
             <Type className="h-4 w-4" />
           </button>
@@ -414,7 +513,17 @@ export function Sidebar({
                 : "flex-1 gap-2 h-9 px-3 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
             )}
             aria-label="Se déconnecter"
-            title="Se déconnecter"
+            title={isCollapsedDesktop ? undefined : "Se déconnecter"}
+            onMouseEnter={(e) => {
+              if (isCollapsedDesktop) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setHoveredItem({
+                  label: "Sortie / Déconnexion",
+                  top: rect.top + (rect.height / 2)
+                });
+              }
+            }}
+            onMouseLeave={() => setHoveredItem(null)}
           >
             <LogOut className="h-3.5 w-3.5 shrink-0" />
             {!isCollapsedDesktop && <span>Sortie</span>}
@@ -448,6 +557,28 @@ export function Sidebar({
           </aside>
         </div>
       )}
+
+      {/* High-Fidelity Floating Tooltip for Collapsed Sidebar */}
+      <AnimatePresence>
+        {hoveredItem && isCollapsed && (
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.15 }}
+            style={{ top: hoveredItem.top, transform: "translateY(-50%)" }}
+            className="fixed left-[84px] z-[99999] bg-[#b8860b] text-white border border-[#b8860b]/30 text-[10px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.4)] pointer-events-none whitespace-nowrap flex items-center gap-2"
+          >
+            {/* Point bleu ciel pulsant */}
+            <motion.div 
+              animate={{ scale: [1, 1.4, 1] }}
+              transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+              className="w-1.5 h-1.5 rounded-full bg-[#00BFFF] shadow-[0_0_8px_#00BFFF]" 
+            />
+            {hoveredItem.label}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

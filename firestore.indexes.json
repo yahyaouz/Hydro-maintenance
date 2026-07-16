@@ -1,45 +1,4 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "workorders",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "siteId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "pannes",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "enginId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "auditLogs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "siteId", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "preventiveTasks",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "dueHours", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "stockMovements",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "reference", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "DESCENDING" }
-      ]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }

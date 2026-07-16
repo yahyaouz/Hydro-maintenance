@@ -13,6 +13,7 @@ import {
 import { useAuthStore } from "@/lib/store";
 import { toast } from "sonner";
 import { csvToObjects, normalizeSite, isValidDate } from "@/lib/csvParser";
+import { getLocalDateString } from "@/lib/utils";
 
 export interface ImportError {
   line: number;
@@ -471,7 +472,7 @@ export function useImports() {
                 email: emailMec || `${matriculeMec.toLowerCase()}@hydromines.ma`,
                 adresse: "",
                 dateNaissance: "",
-                dateEmbauche: new Date().toISOString().split('T')[0],
+                dateEmbauche: getLocalDateString(),
                 documents: {
                   contrat: "",
                   diplome: "",

@@ -33,7 +33,7 @@ import { collection, addDoc, doc, updateDoc, Timestamp } from 'firebase/firestor
 import { db, auth } from '@/lib/firebase';
 import { useCollection } from '@/hooks/useCollection';
 import { useAuthStore } from '@/lib/store';
-import { getLocalDateString } from '@/lib/utils';
+import { getLocalDateString, escapeCsvField } from '@/lib/utils';
 
 // Types
 interface Engin {
@@ -548,7 +548,20 @@ export default function Checklists() {
         const total = Object.keys(s.items || {}).length;
         const conformes = Object.values(s.items || {}).filter(v => v === "OK").length;
         const defauts = Object.values(s.items || {}).filter(v => v === "KO").length;
-        return `"${s.id}";"${s.type}";"${s.date}";"${s.heure}";"${s.enginId}";"${s.enginModele}";"${s.signataire}";"${s.poste}";"${s.siteId || ''}";"${conformes}";"${defauts}";"${total}"`;
+        return [
+          s.id,
+          s.type,
+          s.date,
+          s.heure,
+          s.enginId,
+          s.enginModele,
+          s.signataire,
+          s.poste,
+          s.siteId || '',
+          conformes,
+          defauts,
+          total
+        ].map(escapeCsvField).join(';');
       })
     ];
 
@@ -1096,7 +1109,7 @@ export default function Checklists() {
             {/* Titre Principal */}
             <div className="text-center mb-8">
               <h1 className="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-wide">
-                RAPPORT GLOBAL D'INSPECTION TECHNIQUE
+                FICHES DE CONTRÔLE
               </h1>
               <p className="text-slate-500 text-xs font-bold uppercase mt-1 tracking-widest">
                 Type de contrôle : {viewingSubmission.type === "CONDUCTEUR" && "🚗 CONDUITE AVANT-DÉMARRAGE"}

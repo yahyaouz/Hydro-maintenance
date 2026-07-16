@@ -18,6 +18,7 @@ import {
   FileCheck
 } from "lucide-react";
 import { toast } from "sonner";
+import { getLocalDateString } from "@/lib/utils";
 
 interface SystematicTaskValidationProps {
   user: User;
@@ -26,7 +27,7 @@ interface SystematicTaskValidationProps {
 export const SystematicTaskValidation: React.FC<SystematicTaskValidationProps> = ({ user }) => {
   const { sheets, validateSheet, loading } = useSystematicTasks();
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
+    getLocalDateString()
   );
   const [selectedSite, setSelectedSite] = useState<string>("TOUS");
   const [selectedSheet, setSelectedSheet] = useState<SystematicTaskSheet | null>(null);

@@ -223,6 +223,38 @@ async function startServer() {
     }
   });
 
+  app.post("/api/ai/command-center-analysis", async (req, res) => {
+    try {
+      const { data, metrics, siteScores } = req.body;
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: `Analyses les données de maintenance d'Hydromines pour M. MOUNIR Outbrrit (Responsable de la Maintenance Globale).
+        
+Données des sites et scores globaux d'évaluation :
+${JSON.stringify(siteScores, null, 2)}
+
+Métriques consolidées et KPIs de comparaison :
+${JSON.stringify(metrics, null, 2)}
+
+Détails additionnels consolidés (pannes, tâches) :
+${JSON.stringify(data, null, 2)}
+
+Règles de diagnostic strictes :
+1. Analyse uniquement les chiffres et faits de la plateforme. N'invente jamais d'explications physiques imaginaires de terrain (ex. "une rupture de tuyau due à la chaleur extérieure") si elle n'est pas consignée dans les données.
+2. Évalue la conformité vis-à-vis des objectifs fondamentaux : cible de 70% de maintenance préventive minimale. Évalue l'écart exact planifié vs réalisé.
+3. Repère les sites critiques sous surveillance et liste les 3 recommandations opérationnelles majeures en tant que Directeur Global.
+4. Reste professionnel, rigoureux, direct, et utilise un ton exécutif de haute qualité avec un style soigné en Français.`,
+        config: {
+          temperature: 0.5,
+        }
+      });
+      res.json({ analysis: response.text });
+    } catch (error) {
+      console.error("Command Center AI Error:", error);
+      res.status(500).json({ error: "Erreur d'analyse IA du Centre de Commandement" });
+    }
+  });
+
   app.post("/api/ai/vision-analyze", async (req, res) => {
     try {
       const { image, prompt } = req.body; // image is base64

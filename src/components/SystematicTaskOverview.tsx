@@ -25,6 +25,7 @@ import {
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
+import { getLocalDateString } from "@/lib/utils";
 
 interface SystematicTaskOverviewProps {
   user: User;
@@ -111,7 +112,7 @@ export const SystematicTaskOverview: React.FC<SystematicTaskOverviewProps> = ({ 
     for (let i = 0; i < 7; i++) {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
-      const dateStr = d.toISOString().split("T")[0];
+      const dateStr = getLocalDateString(d);
       days.push({
         dateStr,
         label: `${names[i]} ${d.getDate()}/${d.getMonth() + 1}`,
@@ -308,7 +309,7 @@ export const SystematicTaskOverview: React.FC<SystematicTaskOverviewProps> = ({ 
 
             {/* Print title (visible only during print) */}
             <div className="hidden print:block p-6 border-b border-slate-200 text-center space-y-2">
-              <h1 className="text-2xl font-bold text-slate-800">HYDRO-MAINTENANCE — RAPPORT D'ASSIDUITÉ SYSTÉMATIQUE</h1>
+              <h1 className="text-2xl font-bold text-slate-800">CONTRÔLES RÉGULIERS — ASSIDUITÉ DES ÉQUIPES</h1>
               <p className="text-sm text-slate-500">
                 Période de surveillance : Semaine du {startOfWeek.toLocaleDateString("fr-FR")} au {new Date(startOfWeek.getTime() + 6*24*60*60*1000).toLocaleDateString("fr-FR")}
               </p>

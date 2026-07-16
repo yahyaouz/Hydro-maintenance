@@ -741,8 +741,8 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
         <PageBanner
           icon={Truck}
           badgeLabel="Parc Équipements — 5 Chantiers Miniers"
-          title="État de la Flotte"
-          subtitle="Surveillance opérationnelle des engins, véhicules et perforateurs souterrains"
+          title="Parc Matériel"
+          subtitle="État et disponibilité de la flotte"
           siteLabel={activeSite === "TOUS" ? "TOUS LES SITES" : activeSite}
         >
           {canAddEngin ? (

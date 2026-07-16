@@ -10,6 +10,7 @@ import {
 import { useMecaniciens, DEFAULT_DOCUMENTS, DEFAULT_STATS } from "@/hooks/useMecaniciens";
 import { useAuthStore } from "@/lib/store";
 import { toast } from "sonner";
+import { getLocalDateString } from "@/lib/utils";
 import { SiteID, Mecanicien, Documents } from "@/types";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -144,7 +145,7 @@ export function AdminMecaniciens() {
     setFormEmail("");
     setFormAdresse("");
     setFormDateNaissance("");
-    setFormDateEmbauche(new Date().toISOString().split('T')[0]);
+    setFormDateEmbauche(getLocalDateString());
     setFormCompetences([]);
     setFormDocuments(JSON.parse(JSON.stringify(DEFAULT_DOCUMENTS)));
     setFormStats(DEFAULT_STATS);

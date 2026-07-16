@@ -69,6 +69,7 @@ import { useCollection } from "@/hooks/useCollection";
 import { useMecaniciens } from "@/hooks/useMecaniciens";
 import { SiteID } from "@/types";
 import { toast } from "sonner";
+import { getLocalMonthString } from "@/lib/utils";
 // @ts-ignore
 import bannerImg from "@/assets/images/banner-mecanique.webp";
 // @ts-ignore
@@ -367,7 +368,7 @@ export function Dashboard() {
   }, [user, activeSite]);
 
   const classementSites = React.useMemo(() => {
-    const currentMonthStr = new Date().toISOString().substring(0, 7);
+    const currentMonthStr = getLocalMonthString();
 
     const list = SITES_LIST.map(site => {
       // 1. dispoSite

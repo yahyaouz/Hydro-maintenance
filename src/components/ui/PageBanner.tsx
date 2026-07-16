@@ -25,9 +25,11 @@ export function PageBanner({
 }: PageBannerProps) {
   return (
     <div className={cn(
-      "bg-white border-2 border-amber-500/10 rounded-[14px] shadow-sm overflow-hidden",
+      "bg-white border-2 border-amber-500 rounded-[14px] shadow-md overflow-hidden relative",
       className
     )}>
+      {/* Ligne de haut style Hydromines (Mélange bleu ciel et rouge un peu foncé) */}
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400 z-10" />
       <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
 
         {/* Icône gauche */}

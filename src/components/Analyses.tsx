@@ -19,7 +19,7 @@ import { PageBanner } from '@/components/ui/PageBanner';
 import { useCollection } from '@/hooks/useCollection';
 import { useAuthStore } from '@/lib/store';
 import { toast } from 'sonner';
-import { getLocalDateString } from '@/lib/utils';
+import { getLocalDateString, escapeCsvField, getLocalMonthString } from '@/lib/utils';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import RapportMensuelPDF from './reports/RapportMensuelPDF';
 import { collection, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
@@ -34,6 +34,45 @@ export default function Analyses() {
   const [compareSiteA, setCompareSiteA] = useState<string>("SMI");
   const [compareSiteB, setCompareSiteB] = useState<string>("OUMEJRANE");
   const [compareMetric, setCompareMetric] = useState<"pannes" | "dispo" | "mtbf">("pannes");
+
+  // Configuration pour l'export PDF dynamique
+  const [pdfReportType, setPdfReportType] = useState<"mensuel" | "trimestriel" | "annuel">("mensuel");
+  const [pdfSiteId, setPdfSiteId] = useState<string>("ensemble");
+  const [pdfSelectedYear, setPdfSelectedYear] = useState<string>("2026");
+  const [pdfSelectedQuarter, setPdfSelectedQuarter] = useState<string>("Q3");
+  const [pdfSelectedMonth, setPdfSelectedMonth] = useState<string>("07");
+
+  const pdfMonthKey = useMemo(() => {
+    if (pdfReportType === "trimestriel") {
+      return `${pdfSelectedYear}-${pdfSelectedQuarter}`;
+    }
+    if (pdfReportType === "annuel") {
+      return pdfSelectedYear;
+    }
+    return `${pdfSelectedYear}-${pdfSelectedMonth}`;
+  }, [pdfReportType, pdfSelectedYear, pdfSelectedQuarter, pdfSelectedMonth]);
+
+  const pdfMoisLabel = useMemo(() => {
+    if (pdfReportType === "trimestriel") {
+      const qNum = pdfSelectedQuarter.replace("Q", "");
+      return `TRIMESTRE T${qNum} ${pdfSelectedYear}`;
+    }
+    if (pdfReportType === "annuel") {
+      return `ANNÉE ${pdfSelectedYear}`;
+    }
+    const monthsNames = [
+      "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+      "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+    ];
+    const mIdx = parseInt(pdfSelectedMonth) - 1;
+    return `${monthsNames[mIdx]} ${pdfSelectedYear}`;
+  }, [pdfReportType, pdfSelectedYear, pdfSelectedQuarter, pdfSelectedMonth]);
+
+  const pdfFileName = useMemo(() => {
+    const siteSlug = pdfSiteId === "ensemble" ? "consolidated" : pdfSiteId.toLowerCase().replace(/[^a-z0-9]/g, "-");
+    const periodSlug = pdfMonthKey.toLowerCase();
+    return `rapport-maintenance-${pdfReportType}-${siteSlug}-${periodSlug}.pdf`;
+  }, [pdfReportType, pdfSiteId, pdfMonthKey]);
 
   const { user, activeSite } = useAuthStore();
 
@@ -349,7 +388,7 @@ export default function Analyses() {
   
   // KPI 1 - Global Preventive Compliance (This Month)
   const complianceGlobale = useMemo(() => {
-    const mois = new Date().toISOString().substring(0, 7);
+    const mois = getLocalMonthString();
     const pmMois = tasks.filter(t => t.type === 'PREVENTIF' && (t.datePlanifiee || '').startsWith(mois));
     const pmFaites = pmMois.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
     return pmMois.length > 0 ? Math.round((pmFaites / pmMois.length) * 100) : null;
@@ -357,7 +396,7 @@ export default function Analyses() {
 
   // KPI 2 - Preventive / Corrective Ratio (This Month)
   const ratioPreventifCorrectif = useMemo(() => {
-    const mois = new Date().toISOString().substring(0, 7);
+    const mois = getLocalMonthString();
     const tachesMois = tasks.filter(t =>
       (t.statut === 'FAIT' || t.statut === 'VALIDE') &&
       (t.datePlanifiee || '').startsWith(mois) &&
@@ -412,7 +451,7 @@ export default function Analyses() {
     const sites = isAdminOrDirection
       ? ['SMI', 'OUMEJRANE', 'KOUDIA', 'OUANSIMI', 'BOU-AZZER']
       : (user?.siteId ? [user.siteId] : []);
-    const mois = new Date().toISOString().substring(0, 7);
+    const mois = getLocalMonthString();
 
     return sites.map(code => {
       const siteEngins = isAdminOrDirection
@@ -522,7 +561,7 @@ export default function Analyses() {
 
   // Leaderboard mechanics
   const leaderboardMecaniciens = useMemo(() => {
-    const mois = new Date().toISOString().substring(0, 7);
+    const mois = getLocalMonthString();
 
     return mecaniciens
       .filter(m => m.statut === 'Actif' || (m.statut === undefined && m.active !== false))
@@ -810,20 +849,50 @@ export default function Analyses() {
   // ----------------------------------------------------
   
   const generateMonthlyReport = () => {
-    const mois = new Date().toISOString().substring(0, 7);
-    const moisLabel = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    const targetSiteId = pdfSiteId === "ensemble" ? null : pdfSiteId;
+    const currentMoisLabel = pdfMoisLabel;
 
-    const pmMois = tasks.filter(t => t.type === 'PREVENTIF' && (t.datePlanifiee || '').startsWith(mois));
+    // Period matching helper
+    const matchesPeriod = (dateStr: string) => {
+      if (!dateStr) return false;
+      const cleanDate = dateStr.trim();
+      if (pdfReportType === "annuel") {
+        return cleanDate.startsWith(pdfSelectedYear);
+      }
+      if (pdfReportType === "trimestriel") {
+        const year = pdfSelectedYear;
+        const q = pdfSelectedQuarter; // Q1, Q2, Q3, Q4
+        if (!cleanDate.startsWith(year)) return false;
+        const m = cleanDate.substring(5, 7);
+        if (q === "Q1") return m === "01" || m === "02" || m === "03";
+        if (q === "Q2") return m === "04" || m === "05" || m === "06";
+        if (q === "Q3") return m === "07" || m === "08" || m === "09";
+        if (q === "Q4") return m === "10" || m === "11" || m === "12";
+        return false;
+      }
+      // Mensuel
+      const monthStr = `${pdfSelectedYear}-${pdfSelectedMonth}`;
+      return cleanDate.startsWith(monthStr);
+    };
+
+    const siteTasks = targetSiteId
+      ? tasks.filter(t => t.siteId === targetSiteId || t.site === targetSiteId)
+      : tasks;
+    const sitePannes = targetSiteId
+      ? pannes.filter(p => p.siteId === targetSiteId || p.site === targetSiteId)
+      : pannes;
+
+    const pmMois = siteTasks.filter(t => t.type === 'PREVENTIF' && matchesPeriod(t.datePlanifiee || ''));
     const pmFaites = pmMois.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
     const compliance = pmMois.length > 0 ? Math.round((pmFaites / pmMois.length) * 100) : 0;
 
-    const correctifsMois = tasks.filter(t => t.type === 'CORRECTIF' && (t.datePlanifiee || '').startsWith(mois));
+    const correctifsMois = siteTasks.filter(t => t.type === 'CORRECTIF' && matchesPeriod(t.datePlanifiee || ''));
     const correctifsFaits = correctifsMois.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length;
 
-    const pannesMois = pannes.filter(p => (p.dateDeclaration || '').startsWith(mois));
+    const pannesMois = sitePannes.filter(p => matchesPeriod(p.dateDeclaration || ''));
     const pannesResolues = pannesMois.filter(p => p.statut === 'CLOS').length;
 
-    // Site rankings computation (duplicated logic from Dashboard.tsx)
+    // Site rankings computation
     const SITES_LIST = ["SMI", "OUMEJRANE", "KOUDIA", "OUANSIMI", "BOU-AZZER"];
     const enginsLive = (rawEngins || []).filter(e => !e.deleted);
     const workOrdersLive = (rawTasks || []).filter(t => !t.deleted);
@@ -856,11 +925,11 @@ export default function Analyses() {
       const dispoEnginsCount = siteEngins.filter(e => getNormalizedStatus(e) === "DISPONIBLE").length;
       const dispoSite = siteEngins.length > 0 ? (dispoEnginsCount / siteEngins.length) * 100 : null;
 
-      const sitePannes = pannesLive.filter(p => p.siteId === site || p.site === site);
-      const pannesOuvertesSite = sitePannes.filter(p => p.statut !== "CLOS").length;
+      const sitePannesFiltered = pannesLive.filter(p => p.siteId === site || p.site === site);
+      const pannesOuvertesSite = sitePannesFiltered.filter(p => p.statut !== "CLOS").length;
       const notePannes = Math.max(0, 100 - (pannesOuvertesSite * (100 / 8)));
 
-      const preventifMoisTasks = workOrdersLive.filter(t => (t.siteId === site || t.site === site) && t.type === 'PREVENTIF' && t.datePlanifiee && t.datePlanifiee.startsWith(mois));
+      const preventifMoisTasks = workOrdersLive.filter(t => (t.siteId === site || t.site === site) && t.type === 'PREVENTIF' && t.datePlanifiee && matchesPeriod(t.datePlanifiee));
       const complianceSite = preventifMoisTasks.length > 0
         ? (preventifMoisTasks.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE').length / preventifMoisTasks.length) * 100
         : null;
@@ -902,7 +971,7 @@ export default function Analyses() {
       return scoreB - scoreA;
     });
 
-    // Top 3 categories of breakdowns this month
+    // Top 3 categories of breakdowns this period
     const catCounts: Record<string, number> = {};
     pannesMois.forEach(p => {
       const cat = p.categorie || "Non spécifié";
@@ -913,7 +982,7 @@ export default function Analyses() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 3);
 
-    // Top 3 pieces concerned this month
+    // Top 3 pieces concerned this period
     const piecesCounts: Record<string, { originalName: string; count: number }> = {};
     pannesMois.forEach(p => {
       const pList = p.piecesConcernees || [];
@@ -931,7 +1000,7 @@ export default function Analyses() {
       });
     });
 
-    const interventionsMois = interventions.filter(i => (i.date || '').startsWith(mois));
+    const interventionsMois = (rawInterventions || []).filter(i => matchesPeriod(i.date || ''));
     interventionsMois.forEach(i => {
       const pList = i.piecesUtilisees || [];
       pList.forEach((piece: string) => {
@@ -953,7 +1022,7 @@ export default function Analyses() {
       .slice(0, 3);
 
     const rapportData = {
-      moisLabel,
+      moisLabel: currentMoisLabel,
       compliance,
       pmTotal: pmMois.length,
       pmFaites,
@@ -981,7 +1050,16 @@ export default function Analyses() {
       rows = [
         'ID;Type;Label;EnginID;Date;Statut;Priorite;Site',
         ...tasks.map(t =>
-          `"${t.id}";"${t.type || 'N/A'}";"${(t.label || '').replace(/"/g, '""')}";"${t.enginId || 'N/A'}";"${t.datePlanifiee || 'N/A'}";"${t.statut || 'N/A'}";"${t.priorite || 'N/A'}";"${t.siteId || 'N/A'}"`
+          [
+            t.id,
+            t.type || 'N/A',
+            t.label || '',
+            t.enginId || 'N/A',
+            t.datePlanifiee || 'N/A',
+            t.statut || 'N/A',
+            t.priorite || 'N/A',
+            t.siteId || 'N/A'
+          ].map(escapeCsvField).join(';')
         )
       ];
       filename = `taches_gmao_${activeSite}_${getLocalDateString()}.csv`;
@@ -989,7 +1067,16 @@ export default function Analyses() {
       rows = [
         'ID;EnginID;Categorie;Gravite;Statut;DateDeclaration;DureeImmobilisation;Site',
         ...pannes.map(p =>
-          `"${p.id}";"${p.enginId || 'N/A'}";"${p.categorie || 'N/A'}";"${p.gravite || 'N/A'}";"${p.statut || 'N/A'}";"${p.dateDeclaration || 'N/A'}";"${p.dureeImmobilisation ?? ''}";"${p.siteId || 'N/A'}"`
+          [
+            p.id,
+            p.enginId || 'N/A',
+            p.categorie || 'N/A',
+            p.gravite || 'N/A',
+            p.statut || 'N/A',
+            p.dateDeclaration || 'N/A',
+            p.dureeImmobilisation ?? '',
+            p.siteId || 'N/A'
+          ].map(escapeCsvField).join(';')
         )
       ];
       filename = `pannes_gmao_${activeSite}_${getLocalDateString()}.csv`;
@@ -2031,11 +2118,11 @@ export default function Analyses() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-mono text-xs">
                     {['SMI', 'OUMEJRANE', 'KOUDIA', 'OUANSIMI', 'BOU-AZZER'].map((siteId) => {
-                      const curMonth = new Date().toISOString().substring(0, 7);
+                      const curMonth = getLocalMonthString();
                       const prevMonth = (() => {
                         const now = new Date();
                         const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                        return p.toISOString().substring(0, 7);
+                        return getLocalMonthString(p);
                       })();
 
                       // Fetch targets
@@ -3173,25 +3260,109 @@ export default function Analyses() {
               
               {/* Rapport Mensuel Generation */}
               <Card className="relative overflow-hidden bg-white border border-[#D4AF37]/50 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
-                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
+                <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#D4A017] via-[#D4AF37] to-amber-600" />
                 <div>
                   <CardHeader className="p-0 pb-4 border-b border-slate-100">
                     <CardTitle className="text-xs font-mono font-black uppercase text-slate-800 tracking-wide flex items-center gap-1.5">
-                      <Printer className="h-4 w-4 text-[#D4A017]" /> SYNTHÈSE MENSUELLE PRINT-READY
+                      <Printer className="h-4 w-4 text-[#D4A017]" /> CONFIGURATEUR DE RAPPORTS OFFICIELS
                     </CardTitle>
                     <p className="text-[10px] text-slate-500 mt-0.5 leading-none">
-                      Impression propre et formalisée pour transmission d'exploitation
+                      Choisissez la granularité, le chantier et la période d'évaluation
                     </p>
                   </CardHeader>
-                  <div className="pt-4 space-y-3 font-mono text-xs text-slate-600">
-                    <p className="leading-relaxed">
-                      Le bouton ci-dessous compile les indicateurs de compliance préventive, les statistiques d'immobilisation de la flotte, ainsi que les performances d'équipe du mois courant dans un document prêt à être imprimé ou enregistré en PDF.
-                    </p>
+                  <div className="pt-4 space-y-4 font-mono text-xs">
+                    {/* Selectors */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black font-mono text-slate-400 uppercase">Type de Rapport</label>
+                        <select
+                          value={pdfReportType}
+                          onChange={(e) => setPdfReportType(e.target.value as any)}
+                          className="w-full bg-white border border-slate-200 text-slate-800 text-xs rounded-lg px-2.5 py-1.5 font-bold focus:outline-none focus:ring-1 focus:ring-[#D4A017]"
+                        >
+                          <option value="mensuel">Mensuel</option>
+                          <option value="trimestriel">Trimestriel</option>
+                          <option value="annuel">Annuel</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black font-mono text-slate-400 uppercase">Chantier d'exploitation</label>
+                        <select
+                          value={pdfSiteId}
+                          onChange={(e) => setPdfSiteId(e.target.value)}
+                          className="w-full bg-white border border-slate-200 text-slate-800 text-xs rounded-lg px-2.5 py-1.5 font-bold focus:outline-none focus:ring-1 focus:ring-[#D4A017]"
+                        >
+                          <option value="ensemble">Tous les chantiers (Consolidé)</option>
+                          <option value="SMI">SMI</option>
+                          <option value="OUMEJRANE">Oumejrane</option>
+                          <option value="KOUDIA">Koudia Aïcha</option>
+                          <option value="OUANSIMI">Ouansimi</option>
+                          <option value="BOU-AZZER">Bou-Azzer</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black font-mono text-slate-400 uppercase">Année d'exploitation</label>
+                        <select
+                          value={pdfSelectedYear}
+                          onChange={(e) => setPdfSelectedYear(e.target.value)}
+                          className="w-full bg-white border border-slate-200 text-slate-800 text-xs rounded-lg px-2.5 py-1.5 font-bold focus:outline-none focus:ring-1 focus:ring-[#D4A017]"
+                        >
+                          <option value="2026">2026</option>
+                          <option value="2025">2025</option>
+                          <option value="2024">2024</option>
+                        </select>
+                      </div>
+
+                      {pdfReportType === "mensuel" && (
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black font-mono text-slate-400 uppercase">Mois</label>
+                          <select
+                            value={pdfSelectedMonth}
+                            onChange={(e) => setPdfSelectedMonth(e.target.value)}
+                            className="w-full bg-white border border-slate-200 text-slate-800 text-xs rounded-lg px-2.5 py-1.5 font-bold focus:outline-none focus:ring-1 focus:ring-[#D4A017]"
+                          >
+                            <option value="01">Janvier</option>
+                            <option value="02">Février</option>
+                            <option value="03">Mars</option>
+                            <option value="04">Avril</option>
+                            <option value="05">Mai</option>
+                            <option value="06">Juin</option>
+                            <option value="07">Juillet</option>
+                            <option value="08">Août</option>
+                            <option value="09">Septembre</option>
+                            <option value="10">Octobre</option>
+                            <option value="11">Novembre</option>
+                            <option value="12">Décembre</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {pdfReportType === "trimestriel" && (
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black font-mono text-slate-400 uppercase">Trimestre d'évaluation</label>
+                          <select
+                            value={pdfSelectedQuarter}
+                            onChange={(e) => setPdfSelectedQuarter(e.target.value)}
+                            className="w-full bg-white border border-slate-200 text-slate-800 text-xs rounded-lg px-2.5 py-1.5 font-bold focus:outline-none focus:ring-1 focus:ring-[#D4A017]"
+                          >
+                            <option value="Q1">Premier Trimestre (T1)</option>
+                            <option value="Q2">Deuxième Trimestre (T2)</option>
+                            <option value="Q3">Troisième Trimestre (T3)</option>
+                            <option value="Q4">Quatrième Trimestre (T4)</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[10px] leading-tight space-y-1">
-                      <p className="font-bold text-slate-800">Sections incluses :</p>
-                      <p>• Indicateurs clés de performance d'exploitation</p>
-                      <p>• Tâches d'inspections conformes vs en retard</p>
-                      <p>• Répartition des causes majeures de dysfonctionnement</p>
+                      <p className="font-bold text-slate-800">Paramètres appliqués :</p>
+                      <p>• Période : <span className="font-bold text-slate-700">{pdfMoisLabel}</span></p>
+                      <p>• Périmètre : <span className="font-bold text-slate-700">{pdfSiteId === "ensemble" ? "Consolidé d'entreprise" : `Chantier ${pdfSiteId}`}</span></p>
+                      <p>• Intégration : <span className="text-[#D4A017] font-bold">Logo officiel Hydromines incrusté</span></p>
                     </div>
                   </div>
                 </div>
@@ -3210,11 +3381,13 @@ export default function Analyses() {
                         pannes={rawPannes || []}
                         mecaniciens={rawMecaniciens || []}
                         interventions={rawInterventions || []}
-                        monthKey={new Date().toISOString().substring(0, 7)}
-                        moisLabel={new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                        monthKey={pdfMonthKey}
+                        moisLabel={pdfMoisLabel}
+                        siteId={pdfSiteId}
+                        reportType={pdfReportType}
                       />
                     }
-                    fileName={`rapport-maintenance-hydromines-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}.pdf`}
+                    fileName={pdfFileName}
                   >
                     {({ blob, url, loading, error }) => (
                       <Button
@@ -3285,7 +3458,7 @@ export default function Analyses() {
                 <Printer className="h-3.5 w-3.5 text-[#D4A017]" /> APERÇU AVANT IMPRESSION
               </span>
               <div className="flex gap-2">
-                <PDFDownloadLink
+                 <PDFDownloadLink
                   document={
                     <RapportMensuelPDF
                       engins={rawEngins || []}
@@ -3293,11 +3466,13 @@ export default function Analyses() {
                       pannes={rawPannes || []}
                       mecaniciens={rawMecaniciens || []}
                       interventions={rawInterventions || []}
-                      monthKey={new Date().toISOString().substring(0, 7)}
-                      moisLabel={new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                      monthKey={pdfMonthKey}
+                      moisLabel={pdfMoisLabel}
+                      siteId={pdfSiteId}
+                      reportType={pdfReportType}
                     />
                   }
-                  fileName={`rapport-maintenance-hydromines-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}.pdf`}
+                  fileName={pdfFileName}
                 >
                   {({ blob, url, loading, error }) => (
                     <Button 

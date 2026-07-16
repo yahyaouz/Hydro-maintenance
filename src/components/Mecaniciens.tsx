@@ -215,10 +215,10 @@ export function Mecaniciens() {
         <div>
           <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase flex items-center gap-2">
             <Users className="w-6 h-6 text-amber-500" />
-            Gestion des Équipes & Mécaniciens
+            Équipe Maintenance
           </h2>
           <p className="text-xs text-slate-500 font-mono mt-1">
-            Visualisation des fiches de compétences et du score de performance des équipes de maintenance.
+            Compétences, charge et performance
           </p>
         </div>
 

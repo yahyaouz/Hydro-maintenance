@@ -14,6 +14,7 @@ import {
   PieChart, Pie, Cell, Legend
 } from "recharts";
 import { toast } from "sonner";
+import { escapeCsvField, getLocalDateString } from "@/lib/utils";
 
 const POSITIONS = ["AV-G", "AV-D", "AR-G-EXT", "AR-G-INT", "AR-D-EXT", "AR-D-INT"] as const;
 const RAISONS_RETIRET = [
@@ -47,7 +48,7 @@ export function Pneumatiques() {
     dimension: "27.00R49",
     type: "X-Traction",
     numeroSerie: "",
-    datePose: new Date().toISOString().substring(0, 10),
+    datePose: getLocalDateString(),
     heurePose: 10000,
     ancienPneuDureeHeures: 4000,
     ancienPneuRaison: "Usure normale bande de roulement",
@@ -185,14 +186,30 @@ export function Pneumatiques() {
     try {
       const headers = "ID;Engin;Modele;Site;Position;Marque;Dimension;NumeroSerie;DatePose;HeuresPose;AncienDuree;AncienRaison;Cout;ChangePar;ValidePar\n";
       const rows = filteredPneumatiques.map(p => 
-        `"${p.id || ""}";"${p.enginId}";"${p.enginModele}";"${p.siteId}";"${p.position}";"${p.marque}";"${p.dimension}";"${p.numeroSerie}";"${p.datePose}";${p.heurePose};${p.ancienPneuDureeHeures};"${p.ancienPneuRaison}";${p.cout};"${p.changePar}";"${p.validePar}"`
+        [
+          p.id || "",
+          p.enginId,
+          p.enginModele,
+          p.siteId,
+          p.position,
+          p.marque,
+          p.dimension,
+          p.numeroSerie,
+          p.datePose,
+          p.heurePose,
+          p.ancienPneuDureeHeures,
+          p.ancienPneuRaison,
+          p.cout,
+          p.changePar,
+          p.validePar
+        ].map(escapeCsvField).join(";")
       ).join("\n");
       
       const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      link.setAttribute("download", `suivi_pneumatiques_${activeSite}_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.setAttribute("download", `suivi_pneumatiques_${activeSite}_${getLocalDateString()}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

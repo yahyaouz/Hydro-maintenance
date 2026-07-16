@@ -31,6 +31,7 @@ export function useCollection<T>(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
   const filtersRef = useRef(filters);
@@ -119,6 +120,7 @@ export function useCollection<T>(
   // Cursor pagination dynamic load more for infinite history support
   const loadMore = useCallback(async () => {
     if (!hasMore || !lastDocRef.current || loading) return;
+    setLoadMoreError(null);
     
     try {
       const activeFilters = [...filtersRef.current];
@@ -156,9 +158,10 @@ export function useCollection<T>(
       }
     } catch (err: any) {
       console.error(`Failed loading next cursor page of ${collectionName}:`, err);
+      setLoadMoreError("Impossible de charger plus de résultats, réessayez.");
     }
   }, [collectionName, filterKey, hasMore, lastDocRef, loading, limitCount, orderByField, orderByDirection, options.includeDeleted]);
 
-  return { data, loading, error, hasMore, loadMore };
+  return { data, loading, error, hasMore, loadMore, loadMoreError };
 }
 

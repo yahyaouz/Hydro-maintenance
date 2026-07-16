@@ -41,7 +41,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuthStore } from '@/lib/store';
-import { getLocalDateString } from '@/lib/utils';
+import { getLocalDateString, escapeCsvField } from '@/lib/utils';
 import { AdminMecaniciens } from "./admin/AdminMecaniciens";
 
 // RECONSTRUIT : Interfaces TypeScript pour typer proprement les collections stockées
@@ -693,37 +693,73 @@ export function Admin() {
   // EXPORT DE DONNÉES EN CSV
   // ==========================================
   const exportToCSV = () => {
-    let csvContent = "data:text/csv;charset=utf-8,";
+    let csvRows: string[] = [];
     
     if (activeTab === "engins") {
-      csvContent += "No Parc,Modele,Marque,Type,Site,Heures de Marche,Entree en Service,Etat,Conducteur\n";
+      csvRows.push("No Parc,Modele,Marque,Type,Site,Heures de Marche,Entree en Service,Etat,Conducteur");
       engins.forEach(e => {
-        csvContent += `"${e.id}","${e.modele}","${e.marque}","${e.type}","${e.siteId}",${e.heuresMarche},"${e.dateEntreeService}","${e.etat}","${e.conducteurAssigne}"\n`;
+        csvRows.push([
+          e.id,
+          e.modele,
+          e.marque,
+          e.type,
+          e.siteId,
+          e.heuresMarche,
+          e.dateEntreeService,
+          e.etat,
+          e.conducteurAssigne
+        ].map(escapeCsvField).join(","));
       });
     } else if (activeTab === "mecaniciens") {
-      csvContent += "Matricule,Nom Complet,Poste,Specialite,Telephone,Embauche,Statut,Site\n";
+      csvRows.push("Matricule,Nom Complet,Poste,Specialite,Telephone,Embauche,Statut,Site");
       mecaniciens.forEach(m => {
-        csvContent += `"${m.id}","${m.nomComplet}","${m.poste}","${m.specialite}","${m.telephone}","${m.dateEmbauche}","${m.statut}","${m.siteId || ''}"\n`;
+        csvRows.push([
+          m.id,
+          m.nomComplet,
+          m.poste,
+          m.specialite,
+          m.telephone,
+          m.dateEmbauche,
+          m.statut,
+          m.siteId || ''
+        ].map(escapeCsvField).join(","));
       });
     } else if (activeTab === "chantiers") {
-      csvContent += "Code,Nom Complet,Type,Localisation,Responsable,Statut\n";
+      csvRows.push("Code,Nom Complet,Type,Localisation,Responsable,Statut");
       chantiers.forEach(c => {
-        csvContent += `"${c.id}","${c.nomComplet}","${c.type}","${c.localisation}","${c.responsableId}","${c.statut}"\n`;
+        csvRows.push([
+          c.id,
+          c.nomComplet,
+          c.type,
+          c.localisation,
+          c.responsableId,
+          c.statut
+        ].map(escapeCsvField).join(","));
       });
     } else {
-      csvContent += "Type Engin,Operation,Intervalle (heures),Huile/Produit,Quantite,Priorite\n";
+      csvRows.push("Type Engin,Operation,Intervalle (heures),Huile/Produit,Quantite,Priorite");
       intervalles.forEach(i => {
-        csvContent += `"${i.typeEngin}","${i.operation}",${i.intervalleHeures},"${i.produitHuile}","${i.quantite}","${i.priorite}"\n`;
+        csvRows.push([
+          i.typeEngin,
+          i.operation,
+          i.intervalleHeures,
+          i.produitHuile,
+          i.quantite,
+          i.priorite
+        ].map(escapeCsvField).join(","));
       });
     }
 
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute("download", `export_${activeTab}_hydromines_espace_maintenance.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     toast.success("Fichier CSV généré avec succès !");
   };
 
@@ -795,33 +831,45 @@ export function Admin() {
 
       return (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-mono tracking-wider font-extrabold text-slate-500 uppercase">Total Engins</p>
-              <p className="text-2xl font-black text-slate-900 m-0">{total}</p>
+          <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+            <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+            <div className="flex items-center justify-between p-4">
+              <div>
+                <p className="text-[10px] font-mono tracking-wider font-extrabold text-slate-500 uppercase">Total Engins</p>
+                <p className="text-2xl font-black text-slate-900 m-0">{total}</p>
+              </div>
+              <Cpu className="h-8 w-8 text-amber-500/30" />
             </div>
-            <Cpu className="h-8 w-8 text-slate-400" />
           </Card>
-          <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-mono tracking-wider font-extrabold text-emerald-600 uppercase">Opérationnels</p>
-              <p className="text-2xl font-black text-emerald-600 m-0">{operationnels}</p>
+          <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+            <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+            <div className="flex items-center justify-between p-4">
+              <div>
+                <p className="text-[10px] font-mono tracking-wider font-extrabold text-emerald-600 uppercase">Opérationnels</p>
+                <p className="text-2xl font-black text-emerald-600 m-0">{operationnels}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-emerald-500/20" />
             </div>
-            <CheckCircle className="h-8 w-8 text-emerald-500/20" />
           </Card>
-          <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-mono tracking-wider font-extrabold text-amber-600 uppercase">En Maintenance</p>
-              <p className="text-2xl font-black text-amber-600 m-0">{maintenance}</p>
+          <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+            <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+            <div className="flex items-center justify-between p-4">
+              <div>
+                <p className="text-[10px] font-mono tracking-wider font-extrabold text-amber-600 uppercase">En Maintenance</p>
+                <p className="text-2xl font-black text-amber-600 m-0">{maintenance}</p>
+              </div>
+              <Wrench className="h-8 w-8 text-amber-500/20" />
             </div>
-            <Wrench className="h-8 w-8 text-amber-500/20" />
           </Card>
-          <Card className="bg-slate-50 border-rose-200/50 p-4 rounded-xl flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-mono tracking-wider font-extrabold text-rose-600 uppercase">Hors Service</p>
-              <p className="text-2xl font-black text-rose-600 m-0">{hs}</p>
+          <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+            <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+            <div className="flex items-center justify-between p-4">
+              <div>
+                <p className="text-[10px] font-mono tracking-wider font-extrabold text-rose-600 uppercase">Hors Service</p>
+                <p className="text-2xl font-black text-rose-600 m-0">{hs}</p>
+              </div>
+              <X className="h-8 w-8 text-rose-500/20" />
             </div>
-            <X className="h-8 w-8 text-rose-500/20" />
           </Card>
         </div>
       );
@@ -835,33 +883,45 @@ export function Admin() {
 
       return (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-mono tracking-wider font-extrabold text-slate-500 uppercase">Total Équipe</p>
-              <p className="text-2xl font-black text-slate-900 m-0">{total}</p>
+          <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+            <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+            <div className="flex items-center justify-between p-4">
+              <div>
+                <p className="text-[10px] font-mono tracking-wider font-extrabold text-slate-500 uppercase">Total Équipe</p>
+                <p className="text-2xl font-black text-slate-900 m-0">{total}</p>
+              </div>
+              <Users className="h-8 w-8 text-amber-500/30" />
             </div>
-            <Users className="h-8 w-8 text-slate-400" />
           </Card>
-          <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-mono tracking-wider font-extrabold text-[#4FC3F7] uppercase">Poste 1</p>
-              <p className="text-2xl font-black text-slate-900 m-0">{p1}</p>
+          <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+            <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+            <div className="flex items-center justify-between p-4">
+              <div>
+                <p className="text-[10px] font-mono tracking-wider font-extrabold text-[#4FC3F7] uppercase">Poste 1</p>
+                <p className="text-2xl font-black text-slate-900 m-0">{p1}</p>
+              </div>
+              <User className="h-8 w-8 text-sky-500/20" />
             </div>
-            <User className="h-8 w-8 text-sky-500/20" />
           </Card>
-          <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-mono tracking-wider font-extrabold text-teal-600 uppercase">Poste 2</p>
-              <p className="text-2xl font-black text-teal-600 m-0">{p2}</p>
+          <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+            <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+            <div className="flex items-center justify-between p-4">
+              <div>
+                <p className="text-[10px] font-mono tracking-wider font-extrabold text-teal-600 uppercase">Poste 2</p>
+                <p className="text-2xl font-black text-teal-600 m-0">{p2}</p>
+              </div>
+              <User className="h-8 w-8 text-teal-500/20" />
             </div>
-            <User className="h-8 w-8 text-teal-500/20" />
           </Card>
-          <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-mono tracking-wider font-extrabold text-violet-600 uppercase">Poste 3</p>
-              <p className="text-2xl font-black text-violet-600 m-0">{p3}</p>
+          <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+            <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+            <div className="flex items-center justify-between p-4">
+              <div>
+                <p className="text-[10px] font-mono tracking-wider font-extrabold text-violet-600 uppercase">Poste 3</p>
+                <p className="text-2xl font-black text-violet-600 m-0">{p3}</p>
+              </div>
+              <User className="h-8 w-8 text-violet-500/20" />
             </div>
-            <User className="h-8 w-8 text-violet-500/20" />
           </Card>
         </div>
       );
@@ -875,33 +935,45 @@ export function Admin() {
 
       return (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-mono tracking-wider font-extrabold text-slate-500 uppercase">Total Chantiers</p>
-              <p className="text-2xl font-black text-slate-900 m-0">{total}</p>
+          <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+            <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+            <div className="flex items-center justify-between p-4">
+              <div>
+                <p className="text-[10px] font-mono tracking-wider font-extrabold text-slate-500 uppercase">Total Chantiers</p>
+                <p className="text-2xl font-black text-slate-900 m-0">{total}</p>
+              </div>
+              <MapPin className="h-8 w-8 text-amber-500/30" />
             </div>
-            <MapPin className="h-8 w-8 text-slate-400" />
           </Card>
-          <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-mono tracking-wider font-extrabold text-emerald-600 uppercase">Actifs</p>
-              <p className="text-2xl font-black text-emerald-600 m-0">{actifs}</p>
+          <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+            <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+            <div className="flex items-center justify-between p-4">
+              <div>
+                <p className="text-[10px] font-mono tracking-wider font-extrabold text-emerald-600 uppercase">Actifs</p>
+                <p className="text-2xl font-black text-emerald-600 m-0">{actifs}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-emerald-500/20" />
             </div>
-            <CheckCircle className="h-8 w-8 text-emerald-500/20" />
           </Card>
-          <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-mono tracking-wider font-extrabold text-amber-600 uppercase">En Préparation</p>
-              <p className="text-2xl font-black text-amber-600 m-0">{prep}</p>
+          <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+            <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+            <div className="flex items-center justify-between p-4">
+              <div>
+                <p className="text-[10px] font-mono tracking-wider font-extrabold text-amber-600 uppercase">En Préparation</p>
+                <p className="text-2xl font-black text-amber-600 m-0">{prep}</p>
+              </div>
+              <Clock className="h-8 w-8 text-amber-500/20" />
             </div>
-            <Clock className="h-8 w-8 text-amber-500/20" />
           </Card>
-          <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-mono tracking-wider font-extrabold text-rose-600 uppercase">Inactifs</p>
-              <p className="text-2xl font-black text-rose-600 m-0">{inactifs}</p>
+          <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+            <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+            <div className="flex items-center justify-between p-4">
+              <div>
+                <p className="text-[10px] font-mono tracking-wider font-extrabold text-rose-600 uppercase">Inactifs</p>
+                <p className="text-2xl font-black text-rose-600 m-0">{inactifs}</p>
+              </div>
+              <X className="h-8 w-8 text-rose-500/20" />
             </div>
-            <X className="h-8 w-8 text-rose-500/20" />
           </Card>
         </div>
       );
@@ -915,33 +987,45 @@ export function Admin() {
 
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
-          <div>
-            <p className="text-[10px] font-mono tracking-wider font-extrabold text-slate-500 uppercase">Total Intervalles</p>
-            <p className="text-2xl font-black text-slate-900 m-0">{total}</p>
+        <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+          <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+          <div className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-[10px] font-mono tracking-wider font-extrabold text-slate-500 uppercase">Total Intervalles</p>
+              <p className="text-2xl font-black text-slate-900 m-0">{total}</p>
+            </div>
+            <Gauge className="h-8 w-8 text-amber-500/30" />
           </div>
-          <Gauge className="h-8 w-8 text-slate-400" />
         </Card>
-        <Card className="bg-slate-50 border-rose-200/50 p-4 rounded-xl flex items-center justify-between shadow-sm">
-          <div>
-            <p className="text-[10px] font-mono tracking-wider font-extrabold text-rose-600 uppercase">Critiques (Réglementaires)</p>
-            <p className="text-2xl font-black text-rose-600 m-0">{critiques}</p>
+        <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+          <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+          <div className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-[10px] font-mono tracking-wider font-extrabold text-rose-600 uppercase">Critiques (Réglementaires)</p>
+              <p className="text-2xl font-black text-rose-600 m-0">{critiques}</p>
+            </div>
+            <Shield className="h-8 w-8 text-rose-500/20" />
           </div>
-          <Shield className="h-8 w-8 text-rose-500/20" />
         </Card>
-        <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
-          <div>
-            <p className="text-[10px] font-mono tracking-wider font-extrabold text-amber-600 uppercase">Priorité Haute</p>
-            <p className="text-2xl font-black text-amber-600 m-0">{hautes}</p>
+        <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+          <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+          <div className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-[10px] font-mono tracking-wider font-extrabold text-amber-600 uppercase">Priorité Haute</p>
+              <p className="text-2xl font-black text-amber-600 m-0">{hautes}</p>
+            </div>
+            <Clock className="h-8 w-8 text-amber-500/20" />
           </div>
-          <Clock className="h-8 w-8 text-amber-500/20" />
         </Card>
-        <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
-          <div>
-            <p className="text-[10px] font-mono tracking-wider font-extrabold text-blue-600 uppercase">Priorité Normale</p>
-            <p className="text-2xl font-black text-blue-600 m-0">{normales}</p>
+        <Card className="bg-slate-50 border-2 border-amber-500 rounded-xl flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+          <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+          <div className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-[10px] font-mono tracking-wider font-extrabold text-blue-600 uppercase">Priorité Normale</p>
+              <p className="text-2xl font-black text-blue-600 m-0">{normales}</p>
+            </div>
+            <Settings className="h-8 w-8 text-blue-500/20" />
           </div>
-          <Settings className="h-8 w-8 text-blue-500/20" />
         </Card>
       </div>
     );
@@ -1016,7 +1100,8 @@ export function Admin() {
   const renderUserApprovals = () => {
     return (
       <div className="space-y-6">
-        <div className="flex justify-between items-center bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex justify-between items-center bg-slate-50 p-5 rounded-2xl border-2 border-amber-500 shadow-md relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
           <div>
             <h2 className="text-lg font-black text-slate-900 tracking-tight uppercase flex items-center gap-2">
               <span>🔑</span> Approbations des Comptes d'Agents
@@ -1030,8 +1115,9 @@ export function Admin() {
           </Badge>
         </div>
 
-        <Card className="border-slate-200 shadow-none">
-          <CardContent className="p-0">
+        <Card className="border-2 border-amber-500 shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+          <CardContent className="p-0 pt-1.5">
             {unapprovedUsers.length === 0 ? (
               <div className="text-center py-16 text-slate-400 space-y-2">
                 <CheckCircle className="w-10 h-10 mx-auto text-emerald-500/30" />
@@ -1042,7 +1128,7 @@ export function Admin() {
               <div className="overflow-x-auto animate-fade-in">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-450 font-mono text-[9px] uppercase tracking-wider font-extrabold">
+                    <tr className="bg-sky-100/80 border-b-2 border-rose-900/40 text-rose-950 font-mono text-[9px] uppercase tracking-wider font-black">
                       <th className="py-3.5 px-5">Agent de mine</th>
                       <th className="py-3.5 px-5">Email</th>
                       <th className="py-3.5 px-5">Rôle demandé (Habilitation)</th>
@@ -1798,107 +1884,241 @@ export function Admin() {
   };
 
   return (
-    <div className="space-y-6 bg-white min-h-screen text-slate-800 font-sans p-6 rounded-2xl border border-slate-200 shadow-xl">
+    <div className="space-y-6 bg-white min-h-screen text-slate-800 font-sans p-6 rounded-2xl border-2 border-amber-500 shadow-xl relative overflow-hidden">
+      {/* Ligne de haut style Hydromines (Mélange bleu ciel et rouge un peu foncé) */}
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+
       {/* RECONSTRUIT : Banner avec style conservé, changement de titre exact */}
       <PageBanner
         icon={Settings}
         badgeLabel="HYDROMINES - Espace Maintenance"
-        title="CONFIGURATION SYSTÈME"
-        subtitle="Gestion centralisée de votre parc, équipe et chantiers"
+        title="COMPTES & ACCÈS"
+        subtitle="Gestion des utilisateurs et permissions"
       />
 
-      {/* RECONSTRUIT : Onglets Tactiles (Glove-Friendly) */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
-        <button
-          onClick={() => setActiveTab("engins")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-xs transition-all ${
-            activeTab === "engins"
-              ? "bg-amber-500 text-slate-950 shadow-md"
-              : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
-          }`}
-        >
-          🚜 ENGINS & VÉHICULES
-        </button>
-        <button
-          onClick={() => setActiveTab("mecaniciens")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-xs transition-all ${
-            activeTab === "mecaniciens"
-              ? "bg-amber-500 text-slate-950 shadow-md"
-              : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
-          }`}
-        >
-          👷 MÉCANICIENS & ÉQUIPE
-        </button>
-        <button
-          onClick={() => setActiveTab("chantiers")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-xs transition-all ${
-            activeTab === "chantiers"
-              ? "bg-amber-500 text-slate-950 shadow-md"
-              : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
-          }`}
-        >
-          🏗️ CHANTIERS & SITES
-        </button>
-        <button
-          onClick={() => setActiveTab("intervalles")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-xs transition-all ${
-            activeTab === "intervalles"
-              ? "bg-amber-500 text-slate-950 shadow-md"
-              : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
-          }`}
-        >
-          ⚙️ INTERVALLES MAINTENANCE
-        </button>
-        <button
-          onClick={() => setActiveTab("comptes")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-xs transition-all relative ${
-            activeTab === "comptes"
-              ? "bg-amber-500 text-slate-950 shadow-md"
-              : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
-          }`}
-        >
-          🔑 COMPTES EN ATTENTE
-          {unapprovedUsers.length > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-red-600 text-white font-black text-[10px] rounded-full flex items-center justify-center animate-bounce">
-              {unapprovedUsers.length}
-            </span>
-          )}
-        </button>
-        {user?.role === "ADMIN" && (
-          <button
-            onClick={() => setActiveTab("sante_donnees")}
-            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-xs transition-all ${
-              activeTab === "sante_donnees"
-                ? "bg-amber-500 text-slate-950 shadow-md"
-                : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
-            }`}
-          >
-            <Stethoscope className="h-4.5 w-4.5" /> SANTÉ DES DONNÉES
-          </button>
-        )}
-        {user?.role === "ADMIN" && (
-          <button
-            onClick={() => setActiveTab("logs_erreurs")}
-            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-xs transition-all ${
-              activeTab === "logs_erreurs"
-                ? "bg-amber-500 text-slate-950 shadow-md"
-                : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
-            }`}
-          >
-            <ShieldAlert className="h-4.5 w-4.5" /> LOGS D'ERREURS
-          </button>
-        )}
-        <button
-          onClick={() => setActiveTab("objectifs")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold uppercase tracking-wider text-xs transition-all ${
-            activeTab === "objectifs"
-              ? "bg-amber-500 text-slate-950 shadow-md"
-              : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
-          }`}
-        >
-          🎯 OBJECTIFS PAR SITE
-        </button>
-      </div>
+      {/* RECONSTRUIT : Groupes Stratégiques de Navigation (Anti-Bruit Visuel) */}
+      {(() => {
+        const getMasterGroup = (tab: typeof activeTab) => {
+          if (tab === "comptes" || tab === "mecaniciens") return "personnel";
+          if (tab === "engins" || tab === "chantiers" || tab === "intervalles") return "parc";
+          if (tab === "objectifs") return "objectifs";
+          return "diagnostic";
+        };
+
+        const currentGroup = getMasterGroup(activeTab);
+
+        return (
+          <div className="space-y-4">
+            {/* TIER 1 : 4 Blocs Stratégiques de Contrôle */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* PERSONNEL & HABILITATIONS */}
+              <button
+                onClick={() => setActiveTab(unapprovedUsers.length > 0 ? "comptes" : "mecaniciens")}
+                className={`flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all relative overflow-hidden ${
+                  currentGroup === "personnel"
+                    ? "bg-slate-900 border-amber-500 text-white shadow-lg scale-[1.02]"
+                    : "bg-slate-50 border-amber-500/20 text-slate-700 hover:bg-slate-100/80 hover:border-amber-500/60 shadow-sm"
+                }`}
+              >
+                {/* Accent de haut Hydromines */}
+                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
+                  currentGroup === "personnel"
+                    ? "from-sky-400 via-rose-800 to-sky-400"
+                    : "from-sky-400/20 via-rose-800/20 to-sky-400/20"
+                }`} />
+                <div className={`p-3 rounded-xl shrink-0 ${currentGroup === "personnel" ? "bg-amber-500 text-slate-950" : "bg-white border border-slate-200 text-amber-600"}`}>
+                  <Users className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-extrabold text-xs uppercase tracking-wider block truncate">Personnel & Accès</span>
+                    {unapprovedUsers.length > 0 && (
+                      <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse shrink-0" />
+                    )}
+                  </div>
+                  <span className={`text-[10px] block truncate font-medium ${currentGroup === "personnel" ? "text-slate-300" : "text-slate-500"}`}>
+                    {unapprovedUsers.length > 0 ? `${unapprovedUsers.length} en attente` : "Habilitations & équipe"}
+                  </span>
+                </div>
+              </button>
+
+              {/* REFERENTIEL & PARC */}
+              <button
+                onClick={() => setActiveTab("engins")}
+                className={`flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all relative overflow-hidden ${
+                  currentGroup === "parc"
+                    ? "bg-slate-900 border-amber-500 text-white shadow-lg scale-[1.02]"
+                    : "bg-slate-50 border-amber-500/20 text-slate-700 hover:bg-slate-100/80 hover:border-amber-500/60 shadow-sm"
+                }`}
+              >
+                {/* Accent de haut Hydromines */}
+                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
+                  currentGroup === "parc"
+                    ? "from-sky-400 via-rose-800 to-sky-400"
+                    : "from-sky-400/20 via-rose-800/20 to-sky-400/20"
+                }`} />
+                <div className={`p-3 rounded-xl shrink-0 ${currentGroup === "parc" ? "bg-amber-500 text-slate-950" : "bg-white border border-slate-200 text-slate-600"}`}>
+                  <Settings className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="font-extrabold text-xs uppercase tracking-wider block truncate">Référentiel & Parc</span>
+                  <span className={`text-[10px] block truncate font-medium ${currentGroup === "parc" ? "text-slate-300" : "text-slate-500"}`}>
+                    Engins, chantiers, intervalles
+                  </span>
+                </div>
+              </button>
+
+              {/* OBJECTIFS DE PERFORMANCE */}
+              <button
+                onClick={() => setActiveTab("objectifs")}
+                className={`flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all relative overflow-hidden ${
+                  currentGroup === "objectifs"
+                    ? "bg-slate-900 border-amber-500 text-white shadow-lg scale-[1.02]"
+                    : "bg-slate-50 border-amber-500/20 text-slate-700 hover:bg-slate-100/80 hover:border-amber-500/60 shadow-sm"
+                }`}
+              >
+                {/* Accent de haut Hydromines */}
+                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
+                  currentGroup === "objectifs"
+                    ? "from-sky-400 via-rose-800 to-sky-400"
+                    : "from-sky-400/20 via-rose-800/20 to-sky-400/20"
+                }`} />
+                <div className={`p-3 rounded-xl shrink-0 ${currentGroup === "objectifs" ? "bg-amber-500 text-slate-950" : "bg-white border border-slate-200 text-emerald-600"}`}>
+                  <Target className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="font-extrabold text-xs uppercase tracking-wider block truncate">Objectifs par Site</span>
+                  <span className={`text-[10px] block truncate font-medium ${currentGroup === "objectifs" ? "text-slate-300" : "text-slate-500"}`}>
+                    Disponibilité & seuils
+                  </span>
+                </div>
+              </button>
+
+              {/* SECURITE & DIAGNOSTIC */}
+              <button
+                onClick={() => setActiveTab("sante_donnees")}
+                className={`flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all relative overflow-hidden ${
+                  currentGroup === "diagnostic"
+                    ? "bg-slate-900 border-amber-500 text-white shadow-lg scale-[1.02]"
+                    : "bg-slate-50 border-amber-500/20 text-slate-700 hover:bg-slate-100/80 hover:border-amber-500/60 shadow-sm"
+                }`}
+              >
+                {/* Accent de haut Hydromines */}
+                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
+                  currentGroup === "diagnostic"
+                    ? "from-sky-400 via-rose-800 to-sky-400"
+                    : "from-sky-400/20 via-rose-800/20 to-sky-400/20"
+                }`} />
+                <div className={`p-3 rounded-xl shrink-0 ${currentGroup === "diagnostic" ? "bg-amber-500 text-slate-950" : "bg-white border border-slate-200 text-purple-600"}`}>
+                  <ShieldAlert className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="font-extrabold text-xs uppercase tracking-wider block truncate">Sécurité & Diagnostic</span>
+                  <span className={`text-[10px] block truncate font-medium ${currentGroup === "diagnostic" ? "text-slate-300" : "text-slate-500"}`}>
+                    Santé des données & logs
+                  </span>
+                </div>
+              </button>
+            </div>
+
+            {/* TIER 2 : Sous-onglets contextuels (uniquement si le groupe a plusieurs vues, centrés et stylisés en Or) */}
+            <div className="flex justify-center w-full border-b border-slate-100 pb-3">
+              {currentGroup === "personnel" && (
+                <div className="flex gap-1.5 bg-slate-100/80 pt-2 pb-1 px-1 rounded-xl border-2 border-amber-500 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+                  <button
+                    onClick={() => setActiveTab("comptes")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+                      activeTab === "comptes"
+                        ? "bg-amber-500 text-slate-950 shadow-md font-extrabold border border-amber-600"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 border border-transparent"
+                    }`}
+                  >
+                    🔑 Comptes en Attente
+                    {unapprovedUsers.length > 0 && (
+                      <span className="h-5 w-5 bg-red-600 text-white font-black text-[9px] rounded-full flex items-center justify-center animate-bounce">
+                        {unapprovedUsers.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("mecaniciens")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+                      activeTab === "mecaniciens"
+                        ? "bg-amber-500 text-slate-950 shadow-md font-extrabold border border-amber-600"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 border border-transparent"
+                    }`}
+                  >
+                    👷 Équipe & Mécaniciens
+                  </button>
+                </div>
+              )}
+
+              {currentGroup === "parc" && (
+                <div className="flex flex-wrap gap-1.5 bg-slate-100/80 pt-2 pb-1 px-1 rounded-xl border-2 border-amber-500 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+                  <button
+                    onClick={() => setActiveTab("engins")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+                      activeTab === "engins"
+                        ? "bg-amber-500 text-slate-950 shadow-md font-extrabold border border-amber-600"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 border border-transparent"
+                    }`}
+                  >
+                    🚜 Engins & Véhicules
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("chantiers")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+                      activeTab === "chantiers"
+                        ? "bg-amber-500 text-slate-950 shadow-md font-extrabold border border-amber-600"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 border border-transparent"
+                    }`}
+                  >
+                    🏗️ Chantiers & Sites
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("intervalles")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+                      activeTab === "intervalles"
+                        ? "bg-amber-500 text-slate-950 shadow-md font-extrabold border border-amber-600"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 border border-transparent"
+                    }`}
+                  >
+                    ⚙️ Intervalles Maintenance
+                  </button>
+                </div>
+              )}
+
+              {currentGroup === "diagnostic" && (
+                <div className="flex gap-1.5 bg-slate-100/80 pt-2 pb-1 px-1 rounded-xl border-2 border-amber-500 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+                  <button
+                    onClick={() => setActiveTab("sante_donnees")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+                      activeTab === "sante_donnees"
+                        ? "bg-amber-500 text-slate-950 shadow-md font-extrabold border border-amber-600"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 border border-transparent"
+                    }`}
+                  >
+                    🔬 Diagnostic de Cohérence
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("logs_erreurs")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+                      activeTab === "logs_erreurs"
+                        ? "bg-amber-500 text-slate-950 shadow-md font-extrabold border border-amber-600"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 border border-transparent"
+                    }`}
+                  >
+                    📋 Logs Système & Sécurité
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {activeTab === "mecaniciens" ? (
         <AdminMecaniciens />
@@ -2070,8 +2290,10 @@ export function Admin() {
       </Card>
 
       {/* RECONSTRUIT : Listes / Tableaux Dynamiques pour chaque onglet */}
-      <Card className="bg-white border-slate-200 shadow-md rounded-xl overflow-hidden">
-        <CardContent className="p-0">
+      <Card className="bg-white border-2 border-amber-500 shadow-lg rounded-xl overflow-hidden relative">
+        {/* Ligne de haut style Hydromines (Mélange bleu ciel et rouge un peu foncé) */}
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400 z-10" />
+        <CardContent className="p-0 pt-1.5">
           
           {loading ? (
             <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
@@ -2086,7 +2308,7 @@ export function Admin() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-mono tracking-wider uppercase">
+                  <tr className="bg-sky-100/80 border-b-2 border-rose-900/40 text-rose-950 text-[10px] font-mono tracking-wider uppercase font-black">
                     
                     {/* ENGINS HEADERS */}
                     {activeTab === "engins" && (
