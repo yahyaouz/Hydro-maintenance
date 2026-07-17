@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from "firebase/firestore";
+import { dbService } from "@/services/firestoreService";
 import { toast } from "sonner";
 import { RootCauseAnalysis } from "@/components/types_gmao";
 
@@ -26,11 +27,7 @@ export function useRCA() {
 
   const saveRCA = async (rca: RootCauseAnalysis) => {
     try {
-      const rcaRef = doc(db, "rootCauseAnalysis", rca.id);
-      await setDoc(rcaRef, {
-        ...rca,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+      await dbService.rca.set(rca.id, rca);
       toast.success("Rapport d'analyse RCA enregistré !");
     } catch (err) {
       console.error("Error saving RCA:", err);
@@ -41,7 +38,7 @@ export function useRCA() {
 
   const deleteRCA = async (id: string) => {
     try {
-      await deleteDoc(doc(db, "rootCauseAnalysis", id));
+      await dbService.rca.delete(id);
       toast.success("Rapport d'analyse RCA supprimé !");
     } catch (err) {
       console.error("Error deleting RCA:", err);

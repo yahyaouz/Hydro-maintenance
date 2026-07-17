@@ -37,8 +37,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/lib/store";
 import { collection, addDoc, updateDoc, doc, deleteDoc, setDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { dbService } from "@/services/firestoreService";
 import { toast } from "sonner";
 import { useCollection } from "@/hooks/useCollection";
+import { DataLoadError } from "@/components/shared/DataLoadError";
 import { PageBanner } from "@/components/ui/PageBanner";
 import { CarnetSante } from "@/components/CarnetSante";
 import { SignalerPanne } from "./SignalerPanne";
@@ -88,9 +90,11 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
   const canAddEngin = ["ADMIN", "SECRETAIRE", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER"].includes(user?.role || "");
 
   // Load equipements from Firestore
-  const { data: allEquipements, loading } = useCollection<any>("engins");
-  const { data: allWorkorders } = useCollection<any>("maintenanceTasks");
-  const { data: allPannes } = useCollection<any>("pannes");
+  const { data: allEquipements, loading, error: enginsError } = useCollection<any>("engins");
+  const { data: allWorkorders, error: tasksError } = useCollection<any>("maintenanceTasks");
+  const { data: allPannes, error: pannesError } = useCollection<any>("pannes");
+
+  const hasLoadError = !!(enginsError || tasksError || pannesError);
 
   // State
   const [activeTab, setActiveTab] = React.useState<"LHD" | "VL" | "PERFORATEUR" | "CARNET">("LHD");
@@ -159,8 +163,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     try {
-      const docRef = doc(db, "engins", deleteTarget.id);
-      await deleteDoc(docRef);
+      await dbService.engines.delete(deleteTarget.id);
       toast.success(`Équipement ${deleteTarget.matricule} supprimé définitivement !`);
       setIsDeleteModalOpen(false);
       setDeleteTarget(null);
@@ -265,7 +268,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
         };
       }
 
-      await updateDoc(docRef, updatedData);
+      await dbService.engines.update(editingEquip.id, updatedData);
       toast.success(`Équipement ${editMatricule.toUpperCase()} mis à jour avec succès !`);
       setIsEditModalOpen(false);
       setEditingEquip(null);
@@ -396,8 +399,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
         };
       }
 
-      const docRef = doc(db, "engins", matriculeUpper);
-      await setDoc(docRef, docData);
+      await dbService.engines.create(matriculeUpper, docData);
       toast.success(`Équipement ${matriculeUpper} ajouté avec succès !`);
 
       // Reset
@@ -418,12 +420,10 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
   // Declare extreme failure (panne)
   const handleDeclarePanne = async (id: string, matricule: string) => {
     try {
-      const docRef = doc(db, "engins", id);
-      await updateDoc(docRef, { 
+      await dbService.engines.update(id, { 
         statut: "panne", 
         status: "EN_PANNE",
-        dispo: 0,
-        updatedAt: Timestamp.now()
+        dispo: 0
       });
       toast.success(`Panne déclarée avec succès pour l'équipement ${matricule}.`);
     } catch (err) {
@@ -735,6 +735,7 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 select-none bg-white text-slate-900 font-sans min-h-screen">
+      {hasLoadError && <DataLoadError />}
       
       {/* 1. Page Banner - Hide when Carnet de Sante is active */}
       {activeTab !== "CARNET" && (

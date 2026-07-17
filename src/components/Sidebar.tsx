@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCollection } from "@/hooks/useCollection";
+import { DataLoadError } from "@/components/shared/DataLoadError";
 
 interface SidebarProps {
   currentPage: string;
@@ -78,8 +79,10 @@ export function Sidebar({
   textDensity,
   setTextDensity,
 }: SidebarProps) {
-  const { data: pannes } = useCollection<any>('pannes');
-  const { data: engins } = useCollection<any>('engins');
+  const { data: pannes, error: pannesError } = useCollection<any>('pannes');
+  const { data: engins, error: enginsError } = useCollection<any>('engins');
+
+  const hasLoadError = !!(pannesError || enginsError);
 
   const siteStatuses = React.useMemo(() => {
     const statuses: Record<string, string> = {};
@@ -231,6 +234,11 @@ export function Sidebar({
   // Common render of the sidebar content to keep it DRY for Desktop & Mobile
   const renderSidebarContent = (isMobile = false, isCollapsedDesktop = false) => (
     <div className="flex flex-col h-full bg-white text-slate-900 border-r border-slate-200 select-none font-sans">
+      {hasLoadError && (
+        <div className="p-2 shrink-0">
+          <DataLoadError message="Données hors-ligne ou inaccessibles" />
+        </div>
+      )}
       {/* Header with Logo */}
       <div className={cn(
         "h-16 border-b border-slate-100 flex items-center shrink-0",

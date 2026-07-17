@@ -32,8 +32,10 @@ import { motion, AnimatePresence } from "motion/react";
 import { collection, addDoc, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { useCollection } from '@/hooks/useCollection';
+import { DataLoadError } from '@/components/shared/DataLoadError';
 import { useAuthStore } from '@/lib/store';
 import { getLocalDateString, escapeCsvField } from '@/lib/utils';
+import { dbService } from '@/services/firestoreService';
 
 // Types
 interface Engin {
@@ -158,9 +160,11 @@ export default function Checklists() {
 
   // Read collections from Firestore
   const { user, activeSite } = useAuthStore();
-  const { data: rawEngins, loading: enginsLoading } = useCollection<any>('engins');
-  const { data: rawMecaniciens, loading: mecaniciensLoading } = useCollection<any>('mecaniciens');
-  const { data: rawSubmissions, loading: submissionsLoading } = useCollection<any>('checklists', [], { orderByField: 'timestamp', orderByDirection: 'desc' });
+  const { data: rawEngins, loading: enginsLoading, error: enginsError } = useCollection<any>('engins');
+  const { data: rawMecaniciens, loading: mecaniciensLoading, error: mecaniciensError } = useCollection<any>('mecaniciens');
+  const { data: rawSubmissions, loading: submissionsLoading, error: submissionsError } = useCollection<any>('checklists', [], { orderByField: 'timestamp', orderByDirection: 'desc' });
+
+  const hasLoadError = !!(enginsError || mecaniciensError || submissionsError);
 
   // Filtrer selon le rôle et le site
   const engins = React.useMemo(() => {
@@ -393,7 +397,7 @@ export default function Checklists() {
 
     setIsSavingChecklist(true);
     try {
-      const docRef = await addDoc(collection(db, 'checklists'), {
+      const docId = await dbService.checklists.create({
         type: currentType,
         date: selectedDate,
         heure: selectedHeure,
@@ -406,13 +410,12 @@ export default function Checklists() {
         items: { ...formStates },
         commentaires: currentType === "MAINTENANCE" ? { ...sectionCommentaires } : singleCommentaire,
         timestamp: Date.now(),
-        deleted: false,
-        createdAt: Timestamp.now()
+        deleted: false
       });
 
       // Simuler un objet soumission pour viewingSubmission (depuis les données locales, pas besoin de re-fetch)
       const newSub: ChecklistSubmission = {
-        id: docRef.id,
+        id: docId,
         type: currentType,
         date: selectedDate,
         heure: selectedHeure,
@@ -459,7 +462,7 @@ export default function Checklists() {
     if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette fiche d'inspection ?")) return;
     
     try {
-      await updateDoc(doc(db, 'checklists', id), {
+      await dbService.checklists.update(id, {
         deleted: true
       });
       toast.success("Inspection supprimée.");
@@ -591,6 +594,7 @@ export default function Checklists() {
 
   return (
     <div className="space-y-6 select-none bg-white min-h-screen p-4 md:p-6 print:p-0 print:bg-white print:min-h-0">
+      {hasLoadError && <div className="print:hidden"><DataLoadError /></div>}
       
       {/* Banner - Cache lors de l'impression */}
       <div className="print:hidden">

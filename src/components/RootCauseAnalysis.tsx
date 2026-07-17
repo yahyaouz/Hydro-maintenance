@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/lib/store";
 import { useCollection } from "@/hooks/useCollection";
+import { DataLoadError } from "@/components/shared/DataLoadError";
 import { useRCA } from "@/hooks/useRCA";
 import { PageBanner } from "@/components/ui/PageBanner";
 import { RootCauseAnalysis as RCAType } from "@/components/types_gmao";
@@ -36,8 +37,10 @@ export function RootCauseAnalysis() {
   const { rcas, loading, saveRCA, deleteRCA } = useRCA();
 
   // Load existing workorders & engines to link
-  const { data: workorders } = useCollection<any>("maintenanceTasks");
-  const { data: engins } = useCollection<any>("engins");
+  const { data: workorders, error: tasksError } = useCollection<any>("maintenanceTasks");
+  const { data: engins, error: enginsError } = useCollection<any>("engins");
+
+  const hasLoadError = !!(tasksError || enginsError);
 
   const [selectedRcaId, setSelectedRcaId] = React.useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
@@ -210,6 +213,7 @@ export function RootCauseAnalysis() {
 
   return (
     <div className="space-y-6">
+      {hasLoadError && <DataLoadError />}
       <PageBanner
         icon={HelpCircle}
         badgeLabel="Méthodologie RCA"

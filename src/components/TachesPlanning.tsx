@@ -9,6 +9,7 @@ import {
 import { db } from '@/lib/firebase';
 import { useAuthStore } from '@/lib/store';
 import { useCollection } from '@/hooks/useCollection';
+import { DataLoadError } from '@/components/shared/DataLoadError';
 import { toast } from 'sonner';
 import { dbService } from '@/services/firestoreService';
 import { getLocalDateString, getLocalMonthString } from '@/lib/utils';
@@ -73,14 +74,16 @@ export default function TachesPlanning() {
   const isModeDirecteur = ['ADMIN', 'DIRECTION', 'RESPONSABLE_MAINTENANCE'].includes(user?.role || '');
 
   // Firestore collections queries with real-time useCollection hook
-  const { data: engins, loading: enginsLoading } = useCollection<Engin>('engins');
-  const { data: usersFirestore, loading: usersLoading } = useCollection<any>('users');
-  const { data: tasks, loading: tasksLoading } = useCollection<MaintenanceTask>('maintenanceTasks', [], { 
+  const { data: engins, loading: enginsLoading, error: enginsError } = useCollection<Engin>('engins');
+  const { data: usersFirestore, loading: usersLoading, error: usersError } = useCollection<any>('users');
+  const { data: tasks, loading: tasksLoading, error: tasksError } = useCollection<MaintenanceTask>('maintenanceTasks', [], { 
     orderByField: 'datePlanifiee', 
     orderByDirection: 'desc' 
   });
-  const { data: pmIntervalles, loading: pmIntervallesLoading } = useCollection<PmIntervalle>('pmIntervalles');
-  const { data: pannes, loading: pannesLoading } = useCollection<any>('pannes');
+  const { data: pmIntervalles, loading: pmIntervallesLoading, error: pmIntervallesError } = useCollection<PmIntervalle>('pmIntervalles');
+  const { data: pannes, loading: pannesLoading, error: pannesError } = useCollection<any>('pannes');
+
+  const hasLoadError = !!(enginsError || usersError || tasksError || pmIntervallesError || pannesError);
 
   // Dynamically derive mechanics from users collection where role is MECANICIEN
   const mecaniciens = React.useMemo(() => {
@@ -245,7 +248,7 @@ export default function TachesPlanning() {
               );
               if (hasDailyToday) continue;
 
-              await setDoc(doc(db, 'maintenanceTasks', taskId), {
+              await dbService.workOrders.set(taskId, {
                 id: taskId,
                 type: 'QUOTIDIEN',
                 label: `${def.label} — ${engin.id}`,
@@ -263,9 +266,8 @@ export default function TachesPlanning() {
                 heuresEnginAuMoment: engin.heuresMarche || 0,
                 generationType: 'AUTO_QUOTIDIEN',
                 deleted: false,
-                createdAt: Timestamp.now(),
-                updatedAt: Timestamp.now()
-              }, { merge: true });
+                createdAt: Timestamp.now()
+              });
             }
           }
 
@@ -310,7 +312,7 @@ export default function TachesPlanning() {
                 const isCritique = hoursSinceLastPm >= intervalle.intervalleHeures;
                 const priorite = isCritique ? 'CRITIQUE' : 'HAUTE';
 
-                await setDoc(doc(db, 'maintenanceTasks', taskId), {
+                await dbService.workOrders.set(taskId, {
                   id: taskId,
                   type: 'PREVENTIF',
                   label: `${intervalle.operation} — Échéance ${intervalle.intervalleHeures}h (Actuel: ${engin.heuresMarche}h, Dernier: ${lastPmHours}h)`,
@@ -329,9 +331,8 @@ export default function TachesPlanning() {
                   heuresEnginAuMoment: engin.heuresMarche || 0,
                   generationType: 'AUTO_PM',
                   deleted: false,
-                  createdAt: Timestamp.now(),
-                  updatedAt: Timestamp.now()
-                }, { merge: true });
+                  createdAt: Timestamp.now()
+                });
               }
             }
           }
@@ -709,6 +710,7 @@ export default function TachesPlanning() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
+      {hasLoadError && <DataLoadError />}
       
       {/* Banner */}
       <PageBanner
@@ -1644,13 +1646,12 @@ export default function TachesPlanning() {
                                 if (diagComment.length < 5) { toast.error("Veuillez saisir une note de diagnostic."); return; }
                                 try {
                                   const meca = filteredMecaniciens.find(m => m.id === diagMecaId);
-                                  await updateDoc(doc(db, 'pannes', selectedPanne.id), {
+                                  await dbService.pannes.update(selectedPanne.id, {
                                     statut: 'DIAGNOSTIQUE',
                                     mecanicienAssigne: diagMecaId,
                                     mecanicienAssigneNom: meca?.nomComplet || 'Inconnu',
                                     diagnostic: diagComment,
-                                    arretMachine: diagArret,
-                                    updatedAt: Timestamp.now()
+                                    arretMachine: diagArret
                                   });
                                   toast.success("Diagnostic enregistré ! Panne passée à l'étape suivante.");
                                   setSelectedPanne(prev => ({ 
@@ -1712,9 +1713,8 @@ export default function TachesPlanning() {
                                       generationType: 'MANUEL',
                                     }, idempotencyKey);
 
-                                    await updateDoc(doc(db, 'pannes', selectedPanne.id), {
-                                      statut: 'EN_REPARATION',
-                                      updatedAt: Timestamp.now()
+                                    await dbService.pannes.update(selectedPanne.id, {
+                                      statut: 'EN_REPARATION'
                                     });
 
                                     toast.success("Bon de Travail (BT) Correctif créé and assigné !");
@@ -1788,22 +1788,19 @@ export default function TachesPlanning() {
                                 if (solution.length < 5) { toast.error("Veuillez renseigner le remède apporté."); return; }
 
                                 try {
-                                  await updateDoc(doc(db, 'pannes', selectedPanne.id), {
+                                  await dbService.pannes.update(selectedPanne.id, {
                                     statut: 'CLOS',
                                     dureeImmobilisation: hours,
-                                    solution: solution,
-                                    updatedAt: Timestamp.now()
+                                    solution: solution
                                   });
 
                                   // Remettre l'engin en service
                                   if (selectedPanne.enginId) {
-                                    const enginRef = doc(db, 'engins', selectedPanne.enginId);
-                                    await updateDoc(enginRef, {
+                                    await dbService.engines.update(selectedPanne.enginId, {
                                       statut: 'actif',
                                       status: 'DISPONIBLE',
                                       dispo: 100,
-                                      etat: 'Opérationnel',
-                                      updatedAt: Timestamp.now()
+                                      etat: 'Opérationnel'
                                     });
                                   }
 

@@ -5,13 +5,12 @@ import {
   doc, 
   getDoc, 
   getDocs, 
-  setDoc, 
-  updateDoc, 
   query, 
   where, 
   onSnapshot,
   orderBy
 } from "firebase/firestore";
+import { dbService } from "@/services/firestoreService";
 import { SiteID } from "@/types";
 import { toast } from "sonner";
 
@@ -130,7 +129,7 @@ export function useSystematicTasks() {
           updatedAt: new Date().toISOString(),
           updatedBy: "System"
         };
-        await setDoc(docRef, newConfig);
+        await dbService.systematicTaskConfigs.set(configId, newConfig);
         return newConfig;
       }
     } catch (err) {
@@ -148,16 +147,15 @@ export function useSystematicTasks() {
   // Save/Update config
   const saveConfig = useCallback(async (siteId: string, poste: string, tasks: SystematicTaskConfigItem[], userNom: string) => {
     const configId = `${siteId}_${poste.replace(/\s+/g, "")}`;
-    const docRef = doc(db, "systematicTaskConfigs", configId);
     try {
-      await setDoc(docRef, {
+      await dbService.systematicTaskConfigs.set(configId, {
         id: configId,
         siteId,
         poste,
         tasks,
         updatedAt: new Date().toISOString(),
         updatedBy: userNom
-      }, { merge: true });
+      });
       toast.success("Configuration des tâches enregistrée avec succès !");
     } catch (err) {
       console.error("Error saving config:", err);
@@ -206,7 +204,7 @@ export function useSystematicTasks() {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-        await setDoc(docRef, newSheet);
+        await dbService.systematicTasks.set(sheetId, newSheet);
         return newSheet;
       }
     } catch (err) {
@@ -222,8 +220,6 @@ export function useSystematicTasks() {
     photo: string | undefined,
     finished: boolean
   ) => {
-    const docRef = doc(db, "systematicTasks", sheetId);
-    
     // Determine overall status
     const allDone = tasks.every(t => t.done);
     const anyDone = tasks.some(t => t.done);
@@ -243,7 +239,7 @@ export function useSystematicTasks() {
       if (photo !== undefined) {
         updateData.photo = photo;
       }
-      await updateDoc(docRef, updateData);
+      await dbService.systematicTasks.update(sheetId, updateData);
       toast.success(finished ? "Tournée enregistrée et finalisée !" : "Progression enregistrée avec succès !");
     } catch (err) {
       console.error("Error saving progress:", err);
@@ -257,8 +253,6 @@ export function useSystematicTasks() {
     validatedTasks: SystematicTaskItem[],
     secretaryNom: string
   ) => {
-    const docRef = doc(db, "systematicTasks", sheetId);
-    
     // Check if any validated task is marked with validated=false
     // Every task must be evaluated. If all validated are true => STATUS is VALIDÉ.
     // If any is false => STATUS is PARTIEL (since some tasks were rejected or failed validation).
@@ -267,7 +261,7 @@ export function useSystematicTasks() {
 
     // Also check for mandatory comments on non-validations (handled in UI, but good to double check)
     try {
-      await updateDoc(docRef, {
+      await dbService.systematicTasks.update(sheetId, {
         tasks: validatedTasks,
         status: updatedStatus,
         updatedAt: new Date().toISOString()
@@ -279,8 +273,7 @@ export function useSystematicTasks() {
         // Trigger alerts
         for (const ft of failedTasks) {
           const alertId = `syst_${sheetId}_${ft.id}`;
-          const alertRef = doc(db, "alerts", alertId);
-          await setDoc(alertRef, {
+          await dbService.alerts.create(alertId, {
             id: alertId,
             type: "MAJEUR",
             titre: `Tâche non validée : ${ft.label}`,
@@ -290,7 +283,7 @@ export function useSystematicTasks() {
             date: new Date().toISOString(),
             status: "OUVERT",
             createdAt: new Date().toISOString()
-          }, { merge: true });
+          });
         }
         toast.warning(`Validation enregistrée. ${failedTasks.length} alerte(s) générée(s) pour tâches refusées.`);
       } else {

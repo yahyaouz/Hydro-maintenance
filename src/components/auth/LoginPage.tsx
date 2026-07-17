@@ -12,8 +12,9 @@ import {
   GoogleAuthProvider, 
   signOut
 } from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { dbService } from "@/services/firestoreService";
 import { HydrominesLogo } from "./HydrominesLogo";
 
 // @ts-ignore
@@ -131,13 +132,13 @@ export function LoginPage() {
           siteId: "TOUS"
         };
         
-        await setDoc(userRef, {
+        await dbService.users.set(verifiedUser.uid, {
           ...adminProfile,
           active: true,
           authProvider: "google",
           createdAt: new Date().toISOString(),
           lastLogin: new Date().toISOString()
-        }, { merge: true });
+        });
 
         setUser(adminProfile);
         toast.success("🔐 Accès Super Administration : Yahya Ouzrirou");
@@ -156,7 +157,7 @@ export function LoginPage() {
         };
 
         try {
-          await updateDoc(userRef, { lastLogin: new Date().toISOString() });
+          await dbService.users.update(verifiedUser.uid, { lastLogin: new Date().toISOString() });
         } catch (err) {
           console.warn("Échec d'enregistrement du login timestamp", err);
         }
@@ -224,7 +225,7 @@ export function LoginPage() {
           role: "ADMIN",
           siteId: "TOUS"
         };
-        await setDoc(userRef, {
+        await dbService.users.set(verifiedUser.uid, {
           ...adminProfile,
           active: true,
           authProvider: "google",
@@ -284,8 +285,7 @@ export function LoginPage() {
         requestedRole: finalRole
       };
 
-      const userRef = doc(db, "users", googleUser.uid);
-      await setDoc(userRef, {
+      await dbService.users.set(googleUser.uid, {
         ...newUser,
         active: false,
         authProvider: "google",

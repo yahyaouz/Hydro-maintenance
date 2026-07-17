@@ -2,7 +2,9 @@ import * as React from 'react';
 import { collection, addDoc, doc, updateDoc, query, where, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuthStore } from '@/lib/store';
+import { dbService } from '@/services/firestoreService';
 import { useCollection } from '@/hooks/useCollection';
+import { DataLoadError } from '@/components/shared/DataLoadError';
 import { useNotificationStore } from '@/services/notificationStore';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
@@ -19,7 +21,9 @@ interface SignalerPanneProps {
 
 export function SignalerPanne({ isOpen, onClose, enginIdPrefill, descriptionPrefill, gravitePrefill }: SignalerPanneProps) {
   const { user } = useAuthStore();
-  const { data: engins } = useCollection<any>('engins');
+  const { data: engins, error: enginsError } = useCollection<any>('engins');
+
+  const hasLoadError = !!enginsError;
 
   const [enginId, setEnginId] = React.useState('');
   const [categorie, setCategorie] = React.useState<"Mécanique" | "Hydraulique" | "Électrique" | "Pneumatique" | "Transmission" | "Freinage" | "Autre">('Mécanique');
@@ -177,16 +181,15 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill, descriptionPref
         updatedAt: Timestamp.now()
       };
 
-      await addDoc(collection(db, 'pannes'), newPanne);
+      await dbService.pannes.create(newPanne);
 
       // Si arrêt machine : mettre à jour l'état de l'engin
       if (arretMachine) {
-        await updateDoc(doc(db, 'engins', enginId), {
+        await dbService.engines.update(enginId, {
           etat: 'En maintenance',
           statut: 'panne',
           status: 'EN_PANNE',
-          dispo: 0,
-          updatedAt: Timestamp.now()
+          dispo: 0
         });
       }
 
@@ -271,6 +274,7 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill, descriptionPref
 
             {/* Content */}
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1">
+              {hasLoadError && <DataLoadError />}
               
               {/* 1. Sélection Engin */}
               <div className="space-y-1.5">

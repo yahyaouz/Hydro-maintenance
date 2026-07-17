@@ -12,6 +12,7 @@ import {
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { toast } from "sonner";
 import { useAuthStore } from "@/lib/store";
+import { dbService } from "@/services/firestoreService";
 import { SiteID, Mecanicien, MecanicienStats, Documents } from "@/types";
 export type { Mecanicien, MecanicienStats, Documents };
 
@@ -32,6 +33,8 @@ export const DEFAULT_STATS: MecanicienStats = {
   tauxTournéesCompletes: null,
   heuresInterventionCeMois: 0
 };
+
+const migratedUids = new Set<string>();
 
 export function useMecaniciens() {
   const [mecaniciensRaw, setMecaniciensRaw] = useState<any[]>([]);
@@ -240,33 +243,31 @@ export function useMecaniciens() {
     });
   }, [mecaniciensRaw, tasksRaw, pannesRaw]);
 
-  // Handle automatic schema migration in the background
+  // Handle automatic schema migration in the background (loop-safe)
   useEffect(() => {
     const canMigrate = user?.role === "ADMIN" || user?.role === "RESPONSABLE_MAINTENANCE";
     if (!canMigrate || mecaniciens.length === 0) return;
 
     mecaniciens.forEach((m) => {
+      if (migratedUids.has(m.id)) return;
       const raw = mecaniciensRaw.find(r => r.id === m.id);
       if (!raw) return;
       const needsMigration = !raw.uid || !raw.documents || !raw.stats || !raw.prenom || !raw.nom;
       if (needsMigration) {
-        setDoc(doc(db, "mecaniciens", m.id), {
-          ...m,
-          updatedAt: new Date().toISOString()
-        }, { merge: true }).catch(err => {
+        migratedUids.add(m.id);
+        dbService.mecaniciens.set(m.id, m).catch(err => {
           console.warn(`Could not update mecanicien ${m.id} schema:`, err);
+          migratedUids.delete(m.id);
         });
+      } else {
+        migratedUids.add(m.id);
       }
     });
   }, [mecaniciens, user?.role, mecaniciensRaw]);
 
   const saveMecanicien = async (meca: Mecanicien) => {
     try {
-      const docRef = doc(db, "mecaniciens", meca.uid);
-      await setDoc(docRef, {
-        ...meca,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+      await dbService.mecaniciens.set(meca.uid, meca);
       toast.success(`Fiche de ${meca.prenom} ${meca.nom} enregistrée !`);
       return true;
     } catch (err) {
@@ -278,7 +279,7 @@ export function useMecaniciens() {
 
   const deleteMecanicien = async (uid: string) => {
     try {
-      await deleteDoc(doc(db, "mecaniciens", uid));
+      await dbService.mecaniciens.delete(uid);
       toast.success("Mécanicien supprimé avec succès de la Configuration.");
       return true;
     } catch (err) {

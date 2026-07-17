@@ -7,9 +7,9 @@ import {
   query, 
   where, 
   writeBatch, 
-  addDoc, 
   serverTimestamp 
 } from "firebase/firestore";
+import { dbService } from "@/services/firestoreService";
 import { useAuthStore } from "@/lib/store";
 import { toast } from "sonner";
 import { csvToObjects, normalizeSite, isValidDate } from "@/lib/csvParser";
@@ -187,8 +187,7 @@ export function useImports() {
       }
 
       // Record in import history log
-      await addDoc(collection(db, "config/imports/history"), {
-        timestamp: serverTimestamp(),
+      await dbService.importHistory.create({
         platform: "magasinier",
         status: result.errorCount > 0 ? (result.successCount > 0 ? "warning" : "error") : "success",
         elementsImported: `${result.successCount} pièces consommées réconciliées`,
@@ -312,8 +311,7 @@ export function useImports() {
         await commitInChunks(operations);
       }
 
-      await addDoc(collection(db, "config/imports/history"), {
-        timestamp: serverTimestamp(),
+      await dbService.importHistory.create({
         platform: "carburants",
         status: result.errorCount > 0 ? (result.successCount > 0 ? "warning" : "error") : "success",
         elementsImported: `${result.successCount} relevés carburants traités`,
@@ -531,8 +529,7 @@ export function useImports() {
         await commitInChunks(operations);
       }
 
-      await addDoc(collection(db, "config/imports/history"), {
-        timestamp: serverTimestamp(),
+      await dbService.importHistory.create({
         platform: "planification",
         status: result.errorCount > 0 ? (result.successCount > 0 ? "warning" : "error") : "success",
         elementsImported: `${result.successCount} plannings de mécaniciens importés`,
@@ -708,8 +705,7 @@ export function useImports() {
         await commitInChunks(operations);
       }
 
-      await addDoc(collection(db, "config/imports/history"), {
-        timestamp: serverTimestamp(),
+      await dbService.importHistory.create({
         platform: "realisation",
         status: result.errorCount > 0 ? (result.successCount > 0 ? "warning" : "error") : "success",
         elementsImported: `${result.successCount} interventions réelles enregistrées`,

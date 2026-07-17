@@ -54,6 +54,7 @@ import {
 import { useAuthStore } from "@/lib/store";
 import { useCollection } from "@/hooks/useCollection";
 import { useMecaniciens } from "@/hooks/useMecaniciens";
+import { DataLoadError } from "@/components/shared/DataLoadError";
 import { SiteID } from "@/types";
 import { getLocalMonthString } from "@/lib/utils";
 
@@ -70,10 +71,10 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
   const { user, theme, setPendingRcaPrefill } = useAuthStore();
   const isDark = theme === "dark";
 
-  // States for tab navigation & Mr Mounir's AI assistant
+  // States for tab navigation & performance analysis
   const [activeSiteTab, setActiveSiteTab] = React.useState<string>("ensemble");
-  const [aiLoading, setAiLoading] = React.useState<boolean>(false);
-  const [aiResponse, setAiResponse] = React.useState<string | null>(null);
+  const [analysisGenerated, setAnalysisGenerated] = React.useState<boolean>(false);
+  const [siteAnalysis, setSiteAnalysis] = React.useState<string | null>(null);
 
   // State for site expansion
   const [expandedSite, setExpandedSite] = React.useState<string | null>(null);
@@ -116,11 +117,13 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
   }, []);
 
   // Firestore real collections subscriptions
-  const { data: enginsLive, loading: enginsLoading } = useCollection<any>('engins');
-  const { data: workOrdersLive, loading: tasksLoading } = useCollection<any>('maintenanceTasks');
-  const { data: pannesLive, loading: pannesLoading } = useCollection<any>('pannes');
-  const { data: interventions, loading: interventionsLoading } = useCollection<any>('interventions');
-  const { data: objectifsSitesRaw, loading: objectifsLoading } = useCollection<any>('objectifsSites');
+  const { data: enginsLive, loading: enginsLoading, error: enginsError } = useCollection<any>('engins');
+  const { data: workOrdersLive, loading: tasksLoading, error: tasksError } = useCollection<any>('maintenanceTasks');
+  const { data: pannesLive, loading: pannesLoading, error: pannesError } = useCollection<any>('pannes');
+  const { data: interventions, loading: interventionsLoading, error: interventionsError } = useCollection<any>('interventions');
+  const { data: objectifsSitesRaw, loading: objectifsLoading, error: objectifsError } = useCollection<any>('objectifsSites');
+
+  const hasLoadError = !!(enginsError || tasksError || pannesError || interventionsError || objectifsError);
   
   // Use useMecaniciens for pre-computed rich stats
   const { mecaniciens, loading: mecsLoading } = useMecaniciens();
@@ -1301,77 +1304,143 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     };
   }, [sitesRealVsPlanned]);
 
-  const handleLaunchAIPanel = async () => {
-    setAiLoading(true);
-    setAiResponse(null);
-    try {
-      const response = await fetch("/api/ai/command-center-analysis", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          siteScores: classementSites,
-          metrics: comparisonData,
-          data: {
-            models: modelsReliability,
-            pieces: topPiecesStats,
-            ratio: globalPreventiveRatio
-          }
-        })
-      });
-      const resData = await response.json();
-      if (resData.analysis) {
-        setAiResponse(resData.analysis);
-      } else {
-        setAiResponse("Désolé, l'assistant décisionnel a rencontré un problème pour structurer les analyses.");
-      }
-    } catch (error) {
-      console.error("AI client error:", error);
-      setAiResponse("Échec de connexion avec le service décisionnel de l'intelligence artificielle.");
-    } finally {
-      setAiLoading(false);
+  const generateSiteAnalysis = (siteId: string): string => {
+    // 1. Get score of the site
+    const match = classementSites.find(s => s.site === siteId);
+    const score = match ? match.scoreGlobal : null;
+
+    // 2. Compute preventive/corrective ratio for current month and previous month
+    // Current month:
+    const currentWO = (workOrdersLive || []).filter(w => !w.deleted && (w.siteId === siteId || w.site === siteId) && w.datePlanifiee && w.datePlanifiee.startsWith(moisReference));
+    const currentPrev = currentWO.filter(w => w.type === "PREVENTIF" && w.statut === "FAIT").length;
+    const currentCorr = currentWO.filter(w => w.type === "CORRECTIF" && w.statut === "FAIT").length;
+    const totalCurrent = currentPrev + currentCorr;
+    const currentRatio = totalCurrent > 0 ? Math.round((currentPrev / totalCurrent) * 100) : 0;
+
+    // Previous month:
+    const prevWO = (workOrdersLive || []).filter(w => !w.deleted && (w.siteId === siteId || w.site === siteId) && w.datePlanifiee && w.datePlanifiee.startsWith(prevMonthStr));
+    const prevPrev = prevWO.filter(w => w.type === "PREVENTIF" && w.statut === "FAIT").length;
+    const prevCorr = prevWO.filter(w => w.type === "CORRECTIF" && w.statut === "FAIT").length;
+    const totalPrev = prevPrev + prevCorr;
+    const prevRatio = totalPrev > 0 ? Math.round((prevPrev / totalPrev) * 100) : 0;
+
+    // 3. Compute immobilized engins
+    const siteImmobilized = (enginsLive || []).filter(e => (e.siteId === siteId || e.site === siteId) && (e.statut === "IMMOBILISE" || e.disponibilite === "NON"));
+
+    // 4. Cost target check
+    const tgt = (objectifsSitesRaw || []).find((o: any) => o.id === siteId) || {
+      dispoTarget: 85,
+      complianceTarget: 80,
+      mttrTarget: 4,
+      coutTarget: 1500
+    };
+    const siteCoutVal = getSiteCout(siteId, moisReference);
+
+    const alerts: string[] = [];
+
+    if (score !== null && score < 60) {
+      alerts.push(`**Attention Prioritaire :** Le score global du site est de **${score}%**, ce qui est en dessous du seuil critique de 60%. Une intervention managériale et technique est requise.`);
     }
+
+    if (currentRatio < prevRatio) {
+      alerts.push(`**Dégradation du Ratio Préventif :** Le ratio préventif/correctif s'est détérioré ce mois-ci, s'établissant à **${currentRatio}%** contre **${prevRatio}%** le mois précédent. Il est impératif de recentrer les efforts sur les opérations de maintenance préventive.`);
+    }
+
+    if (siteImmobilized.length > 0) {
+      alerts.push(`**Engins Immobilisés :** Il y a actuellement **${siteImmobilized.length}** engin(s) immobilisé(s) sur ce site. Nous vous invitons à vérifier le classement des engins immobilisés pour accélérer leur remise en service.`);
+    }
+
+    if (siteCoutVal > tgt.coutTarget) {
+      const overCost = Math.round(siteCoutVal - tgt.coutTarget);
+      alerts.push(`**Dépassement de Budget :** Le coût total de maintenance ce mois-ci s'élève à **${Math.round(siteCoutVal)} USD**, dépassant l'objectif budgétaire de **${tgt.coutTarget} USD** (écart de **+${overCost} USD**).`);
+    }
+
+    if (alerts.length === 0) {
+      return "Aucun signal d'alerte pour ce site ce mois-ci. Les indicateurs sont au vert et respectent les objectifs opérationnels.";
+    }
+
+    return "### Rapport d'Analyse Opérationnelle — " + siteId + "\n\n" + alerts.map(a => "- " + a).join("\n\n");
   };
 
-  const formatBoldText = (text: string) => {
-    const parts = text.split(/\*\*(.*?)\*\*/g);
-    return parts.map((part, i) => {
-      if (i % 2 === 1) {
-        return <strong key={i} className="font-extrabold text-amber-950 dark:text-[#E2C799]">{part}</strong>;
-      }
-      return part;
-    });
+  const generateGlobalAnalysis = (): string => {
+    const alerts: string[] = [];
+
+    // 1. Liste les sites en score CRITIQUE ou VIGILANCE (s'il y en a)
+    const criticalSites = classementSites.filter(s => s.scoreGlobal !== null && s.scoreGlobal < 60);
+    const vigilanceSites = classementSites.filter(s => s.scoreGlobal !== null && s.scoreGlobal >= 60 && s.scoreGlobal < 80);
+
+    if (criticalSites.length > 0) {
+      const siteNames = criticalSites.map(s => `**${s.site}** (${s.scoreGlobal?.toFixed(1)}%)`).join(", ");
+      alerts.push(`**Sites en Alerte Critique (<60%) :** Le(s) site(s) ${siteNames} requiert/veulent une attention immédiate pour redresser les indicateurs de performance.`);
+    }
+
+    if (vigilanceSites.length > 0) {
+      const siteNames = vigilanceSites.map(s => `**${s.site}** (${s.scoreGlobal?.toFixed(1)}%)`).join(", ");
+      alerts.push(`**Sites sous Vigilance (60%-80%) :** Le(s) site(s) ${siteNames} présente(nt) des faiblesses temporaires au niveau de la disponibilité ou de la conformité préventive.`);
+    }
+
+    // 2. Modèle d'engin le moins fiable de toute la flotte si un écart significatif existe
+    const worstModel = modelsReliability[0];
+    if (worstModel && worstModel.tauxPanneMoyen > 1.0) {
+      alerts.push(`**Fiabilité de la Flotte :** Le modèle d'engin **${worstModel.model}** est actuellement le moins fiable avec un taux de **${worstModel.tauxPanneMoyen.toFixed(1)}** panne(s) par machine sur les 90 derniers jours (MTBF moyen de **${worstModel.mtbf ? worstModel.mtbf + 'h' : 'N/A'}**). Un audit technique sur ce type d'équipement est fortement préconisé.`);
+    }
+
+    // 3. Pièce la plus récurrente du mois si topPiecesStats a assez de données (count >= 2)
+    const topPiece = topPiecesStats[0];
+    if (topPiece && topPiece.count >= 2) {
+      alerts.push(`**Pièces de rechange récurrentes :** La pièce d'usure **${topPiece.name}** est la plus fréquemment sollicitée ce mois-ci avec **${topPiece.count}** occurrences enregistrées. Un contrôle préventif ciblé sur cet organe pourrait limiter les pannes fortuites.`);
+    }
+
+    // 4. Dégradation de globalPreventiveRatio vs le mois précédent
+    const prevWO = (workOrdersLive || []).filter(w => !w.deleted && w.datePlanifiee && w.datePlanifiee.startsWith(prevMonthStr));
+    const prevPrev = prevWO.filter(w => w.type === "PREVENTIF" && w.statut === "FAIT").length;
+    const prevCorr = prevWO.filter(w => w.type === "CORRECTIF" && w.statut === "FAIT").length;
+    const totalPrev = prevPrev + prevCorr;
+    const prevRatio = totalPrev > 0 ? Math.round((prevPrev / totalPrev) * 100) : 0;
+
+    const currentRatio = globalPreventiveRatio.ratio;
+    if (currentRatio < prevRatio) {
+      alerts.push(`**Politique Préventive Globale :** Le ratio de maintenance préventive globale s'est dégradé, s'établissant à **${currentRatio}%** ce mois-ci contre **${prevRatio}%** le mois précédent (cible recommandée à 70%). Une remobilisation des équipes sur les fiches de maintenance préventive planifiées est préconisée.`);
+    }
+
+    // 5. Message final ou message positif si aucun problème n'est détecté
+    if (alerts.length === 0) {
+      return `### Synthèse Opérationnelle d'Hydromines — ${moisReference}\n\n` +
+             `**Tous les indicateurs de performance globale sont optimaux pour ce mois.** Aucun site n'est en état critique ou de vigilance, la fiabilité de la flotte d'engins est stable, les pièces d'usure ne révèlent pas d'anomalie récurrente majeure, et la politique de maintenance préventive globale progresse conformément aux objectifs industriels d'Hydromines.`;
+    }
+
+    return `### Synthèse Opérationnelle d'Hydromines — ${moisReference}\n\n` +
+           `Consolidation automatique de la performance globale du réseau :\n\n` +
+           alerts.map(a => "- " + a).join("\n\n");
   };
 
-  const renderMarkdownText = (text: string) => {
+  const renderAnalysisText = (text: string | null) => {
     if (!text) return null;
-    const lines = text.split("\n");
-    return lines.map((line, idx) => {
-      let cleanLine = line.trim();
-      
-      if (cleanLine.startsWith("### ")) {
-        return <h4 key={idx} className="text-xs font-black text-[#D4AF37] mt-3 mb-1 uppercase font-mono tracking-wider">{cleanLine.substring(4)}</h4>;
+    const paragraphs = text.split("\n\n");
+    return paragraphs.map((p, i) => {
+      const cleanParagraph = p.trim();
+      if (cleanParagraph.startsWith("### ")) {
+        return <h4 key={i} className="text-xs font-black text-[#D4AF37] mt-3 mb-1 uppercase font-mono tracking-wider">{cleanParagraph.substring(4)}</h4>;
       }
-      if (cleanLine.startsWith("## ")) {
-        return <h3 key={idx} className="text-sm font-black text-amber-900 dark:text-amber-400 mt-4 mb-2 uppercase font-mono tracking-widest border-b border-[#D4AF37]/20 pb-1">{cleanLine.substring(3)}</h3>;
+      if (cleanParagraph.startsWith("#### ")) {
+        return <h5 key={i} className="text-[11px] font-black text-slate-900 dark:text-[#E2C799] mt-3 mb-1 uppercase font-mono tracking-wide">{cleanParagraph.substring(5)}</h5>;
       }
-      if (cleanLine.startsWith("# ")) {
-        return <h2 key={idx} className="text-base font-black text-amber-950 dark:text-[#F4EAD4] mt-5 mb-2.5 uppercase font-mono tracking-widest">{cleanLine.substring(2)}</h2>;
-      }
-      
-      if (cleanLine.startsWith("- ") || cleanLine.startsWith("* ")) {
-        const content = cleanLine.substring(2);
+      if (cleanParagraph.startsWith("- ")) {
+        const content = cleanParagraph.substring(2);
+        const parts = content.split(/\*\*(.*?)\*\*/g);
         return (
-          <li key={idx} className="ml-4 list-disc text-xs text-slate-700 dark:text-[#F4EAD4]/80 leading-relaxed font-sans mb-1">
-            {formatBoldText(content)}
-          </li>
+          <div key={i} className="ml-4 text-xs text-slate-700 dark:text-[#F4EAD4]/80 leading-relaxed font-sans mb-1 flex items-start gap-1.5">
+            <span className="text-[#D4AF37]">•</span>
+            <span>
+              {parts.map((part, idx) => idx % 2 === 1 ? <strong key={idx} className="font-extrabold text-amber-950 dark:text-[#E2C799]">{part}</strong> : part)}
+            </span>
+          </div>
         );
       }
-      
-      if (cleanLine === "") return <div key={idx} className="h-1.5" />;
-      
+      const parts = cleanParagraph.split(/\*\*(.*?)\*\*/g);
       return (
-        <p key={idx} className="text-xs text-slate-700 dark:text-[#F4EAD4]/80 leading-relaxed font-sans mb-1.5">
-          {formatBoldText(cleanLine)}
+        <p key={i} className="text-xs leading-relaxed text-slate-700 dark:text-[#F4EAD4]/80 font-sans">
+          {parts.map((part, idx) => idx % 2 === 1 ? <strong key={idx} className="font-extrabold text-amber-950 dark:text-[#E2C799]">{part}</strong> : part)}
         </p>
       );
     });
@@ -1456,6 +1525,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
 
   return (
     <div className={`flex-1 min-h-screen p-4 lg:p-6 space-y-6 overflow-y-auto transition-colors duration-500 bg-white dark:bg-[#090e18] text-slate-800 dark:text-[#F4EAD4]`}>
+      {hasLoadError && <DataLoadError />}
       
       {/* EXECUTIVE TOP HEADER BANNER */}
       <div 
@@ -2481,7 +2551,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
         </CardContent>
       </Card>
 
-      {/* --- SECTION 6 : ESPACE DÉCISIONNEL IA CONSOLIDÉ --- */}
+      {/* --- SECTION 6 : ESPACE DE DIAGNOSTIC ET SYNTHÈSE DE PERFORMANCE --- */}
       <Card className="border-2 border-[#D4AF37] bg-white rounded-3xl overflow-hidden shadow-[0_12px_40px_rgba(212,175,55,0.08)] relative">
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 via-[#D4AF37] to-yellow-600" />
         
@@ -2496,48 +2566,54 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
             <div className="space-y-1">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[9px] font-mono font-black uppercase tracking-widest text-[#D4AF37] bg-slate-950 rounded-md">
                 <Sparkles className="w-3 h-3 text-[#D4AF37]" />
-                ASSISTANT STRATÉGIQUE IA
+                CONSOLIDATION DU RÉSEAU
               </span>
               <h3 className="text-base font-black uppercase tracking-tight text-slate-950 font-mono">
-                Espace Décisionnel Stratégique — Mr : MOUNIR Outbrrit
+                Espace de Synthèse Opérationnelle — Diagnostic de Performance
               </h3>
               <p className="text-[11px] text-slate-500 font-medium">
-                Générez des directives prescriptives pour chaque site d'Hydromines basées sur les données factuelles de la plateforme.
+                Générez des analyses et directives basées sur les données factuelles consolidées de la plateforme.
               </p>
             </div>
             <button
-              onClick={handleLaunchAIPanel}
-              disabled={aiLoading}
-              className="shrink-0 inline-flex items-center gap-2 px-6 py-3 bg-slate-950 hover:bg-slate-900 text-[#D4AF37] border-2 border-[#D4AF37] font-mono font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
+              onClick={() => {
+                setSiteAnalysis(generateGlobalAnalysis());
+                setAnalysisGenerated(true);
+              }}
+              className="shrink-0 inline-flex items-center gap-2 px-6 py-3 bg-slate-950 hover:bg-slate-900 text-[#D4AF37] border-2 border-[#D4AF37] font-mono font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             >
-              <Activity className={`w-4 h-4 ${aiLoading ? "animate-spin" : "animate-pulse"}`} />
-              {aiLoading ? "Analyse en cours..." : "Lancer l'Analyse Globale IA"}
+              <Activity className="w-4 h-4" />
+              Lancer l'Analyse Globale
             </button>
           </div>
 
-          {aiLoading ? (
-            <div className="py-16 flex flex-col items-center justify-center gap-4 text-center">
-              <div className="h-12 w-12 border-4 border-[#D4AF37]/20 border-t-[#D4AF37] rounded-full animate-spin" />
-              <div className="space-y-1">
-                <span className="text-xs font-mono font-black uppercase text-[#D4AF37] tracking-widest block animate-pulse">Consultation de la base de connaissances...</span>
-                <p className="text-[10px] text-slate-400 font-mono">Consolidation des pannes, des coûts, des MTTR et conformités d'Hydromines.</p>
-              </div>
-            </div>
-          ) : aiResponse ? (
-            <div className="bg-gradient-to-br from-amber-50/20 via-white to-slate-50/40 border border-amber-200/50 rounded-2xl p-6 md:p-8 space-y-4 max-h-[500px] overflow-y-auto">
+          {siteAnalysis && !activeSiteTab.includes("ensemble") && analysisGenerated ? (
+            // If we generated a site-specific analysis, show it or reset on tab change.
+            // Actually, we can check if it's there.
+            <div className="bg-gradient-to-br from-amber-50/20 via-white to-slate-50/40 border border-amber-200/50 rounded-2xl p-6 md:p-8 space-y-4 max-h-[500px] overflow-y-auto animate-in fade-in duration-200">
               <div className="flex justify-between items-center border-b border-amber-100 pb-3">
-                <span className="text-[10px] font-mono font-black text-[#D4AF37] uppercase tracking-wider">Rapport Directif — Mounir Outbrrit</span>
-                <span className="text-[8.5px] font-mono text-slate-400">Analyse Générée d'après la plateforme</span>
+                <span className="text-[10px] font-mono font-black text-[#D4AF37] uppercase tracking-wider">Rapport Opérationnel — Consolidation</span>
+                <span className="text-[8.5px] font-mono text-slate-400">Analyse déterministe d'après les indicateurs du site</span>
               </div>
               <div className="space-y-3 font-sans text-xs leading-relaxed text-slate-800">
-                {renderMarkdownText(aiResponse)}
+                {renderAnalysisText(siteAnalysis)}
+              </div>
+            </div>
+          ) : siteAnalysis ? (
+            <div className="bg-gradient-to-br from-amber-50/20 via-white to-slate-50/40 border border-amber-200/50 rounded-2xl p-6 md:p-8 space-y-4 max-h-[500px] overflow-y-auto animate-in fade-in duration-200">
+              <div className="flex justify-between items-center border-b border-amber-100 pb-3">
+                <span className="text-[10px] font-mono font-black text-[#D4AF37] uppercase tracking-wider">Rapport Opérationnel — Consolidation</span>
+                <span className="text-[8.5px] font-mono text-slate-400">Analyse déterministe d'après les indicateurs du site</span>
+              </div>
+              <div className="space-y-3 font-sans text-xs leading-relaxed text-slate-800">
+                {renderAnalysisText(siteAnalysis)}
               </div>
             </div>
           ) : (
             <div className="p-8 border border-slate-200 border-dashed rounded-2xl bg-slate-50/50 text-center space-y-3">
               <Sparkles className="h-10 w-10 text-[#D4AF37] mx-auto animate-pulse" />
               <p className="text-[11px] text-slate-500 font-medium font-mono uppercase">
-                Aucune analyse globale n'a été exécutée pour ce mois.
+                Aucune analyse globale n'a été générée pour ce mois.
               </p>
               <p className="text-[10px] text-slate-400 max-w-md mx-auto">
                 Cliquez sur le bouton ci-dessus pour lancer la consolidation automatique de la performance de tous les sites d'Hydromines.
@@ -2775,78 +2851,44 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
 
                 </div>
 
-                {/* Right Column: Site-specific AI Directives panel */}
+                {/* Right Column: Site-specific performance analysis panel */}
                 <div className="lg:col-span-5 space-y-6">
                   
                   <Card className="border-2 border-[#D4AF37] bg-white rounded-2xl overflow-hidden shadow-lg relative">
                     <CardHeader className="bg-slate-50 border-b border-[#D4AF37]/20 p-4">
                       <div className="flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-[#D4AF37] animate-pulse" />
+                        <Sparkles className="h-4 w-4 text-[#D4AF37]" />
                         <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-900 font-mono">
-                          Directives IA Spécifiques - {site}
+                          Directives de Performance - {site}
                         </CardTitle>
                       </div>
                     </CardHeader>
                     <CardContent className="p-5 space-y-4">
                       <p className="text-xs text-slate-500 leading-relaxed">
-                        Générez des instructions et analyses décisionnelles ciblées pour optimiser la disponibilité de la flotte du site <strong className="uppercase">{site}</strong>.
+                        Générez des instructions et analyses de performance ciblées pour optimiser la disponibilité de la flotte du site <strong className="uppercase">{site}</strong>.
                       </p>
                       
                       <button
-                        onClick={async () => {
-                          setAiLoading(true);
-                          setAiResponse(null);
-                          try {
-                            const response = await fetch("/api/ai/command-center-analysis", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({
-                                siteScores: classementSites.filter(s => s.site === site),
-                                metrics: {
-                                  current: {
-                                    totalPannes: sitePannesActive.length + sitePannesClosesCeMois.length,
-                                    totalPreventives: siteWorkOrdersCeMois.filter(w => w.type === "PREVENTIF" && w.statut === "FAIT").length,
-                                    totalCorrectives: siteWorkOrdersCeMois.filter(w => w.type === "CORRECTIF" && w.statut === "FAIT").length,
-                                    totalCost: siteCoutVal || 0
-                                  }
-                                },
-                                data: {
-                                  siteName: site,
-                                  immobilizedCount: siteImmobilizedEngins.length,
-                                  pannesCount: sitePannesActive.length
-                                }
-                              })
-                            });
-                            const resData = await response.json();
-                            setAiResponse(resData.analysis || "Rapport structuré.");
-                          } catch (e) {
-                            setAiResponse("Impossible de joindre le consultant.");
-                          } finally {
-                            setAiLoading(false);
-                          }
+                        onClick={() => {
+                          setSiteAnalysis(generateSiteAnalysis(site));
+                          setAnalysisGenerated(true);
                         }}
-                        disabled={aiLoading}
                         className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-950 text-[#D4AF37] hover:bg-slate-900 border-2 border-[#D4AF37] font-mono font-black text-[11px] uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
                       >
-                        <Sparkles className="w-4 h-4 animate-pulse" />
-                        {aiLoading ? "Consultation..." : `Analyser la performance de ${site}`}
+                        <Sparkles className="w-4 h-4" />
+                        Analyser la performance de {site}
                       </button>
 
-                      {aiLoading ? (
-                        <div className="py-8 flex flex-col items-center justify-center gap-2 text-center">
-                          <div className="h-8 w-8 border-2 border-[#D4AF37]/20 border-t-[#D4AF37] rounded-full animate-spin" />
-                          <span className="text-[10px] font-mono text-amber-600 font-bold uppercase animate-pulse">Calcul stratégique...</span>
-                        </div>
-                      ) : aiResponse ? (
-                        <div className="bg-amber-50/20 border border-amber-200/50 rounded-xl p-4 space-y-3 max-h-[350px] overflow-y-auto">
-                          <span className="text-[9px] font-mono font-black text-[#D4AF37] uppercase tracking-wider block">Rapport stratégique IA {site} :</span>
+                      {analysisGenerated && siteAnalysis ? (
+                        <div className="bg-amber-50/20 border border-amber-200/50 rounded-xl p-4 space-y-3 max-h-[350px] overflow-y-auto animate-in fade-in duration-200">
+                          <span className="text-[9px] font-mono font-black text-[#D4AF37] uppercase tracking-wider block">Rapport de performance {site} :</span>
                           <div className="font-mono text-[10.5px] leading-relaxed text-slate-800 space-y-2">
-                            {renderMarkdownText(aiResponse)}
+                            {renderAnalysisText(siteAnalysis)}
                           </div>
                         </div>
                       ) : (
                         <div className="p-4 bg-slate-50 border border-slate-200 border-dashed rounded-xl text-center text-slate-400 font-mono text-[10px]">
-                          Cliquez pour obtenir les recommandations de Mounir Outbrrit.
+                          Cliquez ci-dessus pour générer les analyses du site.
                         </div>
                       )}
                     </CardContent>

@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PageBanner } from '@/components/ui/PageBanner';
 import { useCollection } from '@/hooks/useCollection';
+import { DataLoadError } from '@/components/shared/DataLoadError';
 import { useAuthStore } from '@/lib/store';
 import { toast } from 'sonner';
 import { getLocalDateString, escapeCsvField, getLocalMonthString } from '@/lib/utils';
@@ -24,6 +25,7 @@ import { PDFDownloadLink } from '@react-pdf/renderer';
 import RapportMensuelPDF from './reports/RapportMensuelPDF';
 import { collection, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { dbService } from "@/services/firestoreService";
 
 export default function Analyses() {
   const [activeTab, setActiveTab] = useState<"directeur" | "performances" | "fiabilite" | "export" | "pannes">("directeur");
@@ -77,7 +79,7 @@ export default function Analyses() {
   const { user, activeSite } = useAuthStore();
 
   // Load annotations in real-time
-  const { data: rawAnnotations, loading: annotationsLoading } = useCollection<any>('annotationsEvenements');
+  const { data: rawAnnotations, loading: annotationsLoading, error: annotationsError } = useCollection<any>('annotationsEvenements');
 
   // Filter annotations by activeSite
   const annotations = useMemo(() => {
@@ -112,12 +114,14 @@ export default function Analyses() {
   const [isSubmittingAnnotation, setIsSubmittingAnnotation] = useState<boolean>(false);
 
   // 5 Firestore collections read in real-time
-  const { data: rawEngins, loading: enginsLoading } = useCollection<any>('engins');
-  const { data: rawTasks, loading: tasksLoading } = useCollection<any>('maintenanceTasks');
-  const { data: rawPannes, loading: pannesLoading } = useCollection<any>('pannes');
-  const { data: rawMecaniciens, loading: mecaniciensLoading } = useCollection<any>('mecaniciens');
-  const { data: rawInterventions, loading: interventionsLoading } = useCollection<any>('interventions');
-  const { data: objectifsSitesRaw, loading: objectifsLoading } = useCollection<any>('objectifsSites');
+  const { data: rawEngins, loading: enginsLoading, error: enginsError } = useCollection<any>('engins');
+  const { data: rawTasks, loading: tasksLoading, error: tasksError } = useCollection<any>('maintenanceTasks');
+  const { data: rawPannes, loading: pannesLoading, error: pannesError } = useCollection<any>('pannes');
+  const { data: rawMecaniciens, loading: mecaniciensLoading, error: mecaniciensError } = useCollection<any>('mecaniciens');
+  const { data: rawInterventions, loading: interventionsLoading, error: interventionsError } = useCollection<any>('interventions');
+  const { data: objectifsSitesRaw, loading: objectifsLoading, error: objectifsError } = useCollection<any>('objectifsSites');
+
+  const hasLoadError = !!(annotationsError || enginsError || tasksError || pannesError || mecaniciensError || interventionsError || objectifsError);
 
   // Filter helper based on role and activeSite
   const filterBySite = <T extends { siteId?: string; deleted?: boolean }>(data: T[] | null) => {
@@ -1731,11 +1735,10 @@ export default function Analyses() {
         type: newAnnotationType,
         texte: newAnnotationText.trim(),
         auteurId: user?.uid || "unknown",
-        auteurNom: user?.displayName || user?.email || "Responsable Maintenance",
-        createdAt: Timestamp.now()
+        auteurNom: user?.displayName || user?.email || "Responsable Maintenance"
       };
 
-      await addDoc(collection(db, "annotationsEvenements"), docData);
+      await dbService.annotationsEvenements.create(docData);
       toast.success("Événement annoté avec succès !");
       setNewAnnotationText("");
       setIsAnnotationModalOpen(false);
@@ -1749,7 +1752,7 @@ export default function Analyses() {
   const handleRemoveAnnotation = async (id: string) => {
     if (!window.confirm("Voulez-vous vraiment supprimer cette annotation ?")) return;
     try {
-      await deleteDoc(doc(db, "annotationsEvenements", id));
+      await dbService.annotationsEvenements.delete(id);
       toast.success("Annotation supprimée !");
     } catch (err) {
       handleFirestoreError(err, 'DELETE', `annotationsEvenements/${id}`);
@@ -1785,6 +1788,7 @@ export default function Analyses() {
 
   return (
     <div className={`space-y-6 bg-white min-h-screen ${isPrintModalOpen ? 'print:p-0' : 'p-4 md:p-6'} select-none`}>
+      {hasLoadError && <DataLoadError />}
       
       {/* 1. Page Header */}
       <div className="print:hidden">

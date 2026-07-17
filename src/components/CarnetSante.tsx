@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/lib/store";
 import { useCollection } from "@/hooks/useCollection";
+import { DataLoadError } from "@/components/shared/DataLoadError";
 import { useCarnetSante, calculSecoursSante } from "@/hooks/useCarnetSante";
 import { PageBanner } from "@/components/ui/PageBanner";
 import { toast } from "sonner";
@@ -39,12 +40,14 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
   const { user, activeSite } = useAuthStore();
   
   // Fetch engines if not provided as props
-  const { data: dbEngins, loading: loadingEngins } = useCollection<any>("engins");
+  const { data: dbEngins, loading: loadingEngins, error: enginsError } = useCollection<any>("engins");
   const engins = propEngins || dbEngins || [];
 
   // Fetch active breakdowns and work orders
-  const { data: pannes, loading: loadingPannes } = useCollection<any>("pannes");
-  const { data: workorders, loading: loadingWorkorders } = useCollection<any>("maintenanceTasks");
+  const { data: pannes, loading: loadingPannes, error: pannesError } = useCollection<any>("pannes");
+  const { data: workorders, loading: loadingWorkorders, error: tasksError } = useCollection<any>("maintenanceTasks");
+
+  const hasLoadError = !!(enginsError || pannesError || tasksError);
 
   // Hook for carnet state
   const { profiles, saveProfile, computeHealthScore } = useCarnetSante();
@@ -142,6 +145,7 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
 
   return (
     <div className="space-y-6">
+      {hasLoadError && <DataLoadError />}
       <PageBanner
         icon={HeartPulse}
         badgeLabel="Indice Flotte"

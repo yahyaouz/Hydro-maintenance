@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, setDoc } from "firebase/firestore";
+import { dbService } from "@/services/firestoreService";
 import { toast } from "sonner";
 import { CarnetSanteProfile } from "@/components/types_gmao";
 
@@ -64,10 +65,7 @@ export function useCarnetSante() {
 
   const saveProfile = async (profile: CarnetSanteProfile) => {
     try {
-      await setDoc(doc(db, "carnetSante", profile.id), {
-        ...profile,
-        lastChecked: new Date().toISOString()
-      }, { merge: true });
+      await dbService.carnetSante.set(profile.id, profile);
       toast.success("Fiche santé sauvegardée !");
     } catch (err) {
       console.error("Error saving carnetSante:", err);

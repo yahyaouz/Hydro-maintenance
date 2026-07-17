@@ -235,6 +235,40 @@ export const dbService = {
       } catch (err) {
         handleFirestoreError(err, OperationType.UPDATE, `engins/${id}`);
       }
+    },
+
+    async update(id: string, fields: any) {
+      const ref = doc(db, 'engins', id);
+      try {
+        await updateDoc(ref, {
+          ...fields,
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `engins/${id}`);
+      }
+    },
+
+    async create(id: string, data: any) {
+      const ref = doc(db, 'engins', id);
+      try {
+        await setDoc(ref, {
+          ...data,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, `engins/${id}`);
+      }
+    },
+
+    async delete(id: string) {
+      const ref = doc(db, 'engins', id);
+      try {
+        await deleteDoc(ref);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `engins/${id}`);
+      }
     }
   },
 
@@ -309,6 +343,44 @@ export const dbService = {
       } catch (err) {
         handleFirestoreError(err, OperationType.CREATE, 'maintenanceTasks');
         return '';
+      }
+    },
+
+    async createWithId(id: string, data: any) {
+      const ref = doc(db, 'maintenanceTasks', id);
+      try {
+        await setDoc(ref, {
+          ...data,
+          deleted: false,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, `maintenanceTasks/${id}`);
+      }
+    },
+
+    async set(id: string, data: any) {
+      const ref = doc(db, 'maintenanceTasks', id);
+      try {
+        await setDoc(ref, {
+          ...data,
+          updatedAt: Timestamp.now()
+        }, { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `maintenanceTasks/${id}`);
+      }
+    },
+
+    async update(id: string, updates: any) {
+      const ref = doc(db, 'maintenanceTasks', id);
+      try {
+        await updateDoc(ref, {
+          ...updates,
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `maintenanceTasks/${id}`);
       }
     },
 
@@ -618,6 +690,366 @@ export const dbService = {
       } catch (err) {
         handleFirestoreError(err, OperationType.LIST, 'rapportsFinIntervention');
         return [];
+      }
+    }
+  },
+
+  // Pannes collection operations
+  pannes: {
+    async create(panne: any) {
+      try {
+        const collRef = collection(db, 'pannes');
+        const ref = await addDoc(collRef, {
+          ...panne,
+          createdAt: panne.createdAt || Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+        return ref.id;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, 'pannes');
+        return '';
+      }
+    },
+    async update(id: string, updates: any) {
+      try {
+        const ref = doc(db, 'pannes', id);
+        await updateDoc(ref, {
+          ...updates,
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `pannes/${id}`);
+      }
+    }
+  },
+
+  // Checklists collection operations
+  checklists: {
+    async create(checklist: any) {
+      try {
+        const collRef = collection(db, 'checklists');
+        const ref = await addDoc(collRef, {
+          ...checklist,
+          createdAt: checklist.createdAt || Timestamp.now()
+        });
+        return ref.id;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, 'checklists');
+        return '';
+      }
+    },
+    async update(id: string, updates: any) {
+      try {
+        const ref = doc(db, 'checklists', id);
+        await updateDoc(ref, {
+          ...updates,
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `checklists/${id}`);
+      }
+    }
+  },
+
+  // Alerts collection operations
+  alerts: {
+    async create(id: string, alert: any) {
+      try {
+        const ref = doc(db, 'alerts', id);
+        await setDoc(ref, {
+          ...alert,
+          createdAt: alert.createdAt || Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, `alerts/${id}`);
+      }
+    },
+    async update(id: string, updates: any) {
+      try {
+        const ref = doc(db, 'alerts', id);
+        await updateDoc(ref, {
+          ...updates,
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `alerts/${id}`);
+      }
+    },
+    async batchUpdateStatus(ids: string[], status: string) {
+      const batchRef = writeBatch(db);
+      try {
+        for (const id of ids) {
+          const ref = doc(db, 'alerts', id);
+          batchRef.update(ref, {
+            status,
+            updatedAt: Timestamp.now()
+          });
+        }
+        await batchRef.commit();
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, 'alerts_batch_update');
+      }
+    },
+    async batchDelete(ids: string[]) {
+      const batchRef = writeBatch(db);
+      try {
+        for (const id of ids) {
+          const ref = doc(db, 'alerts', id);
+          batchRef.delete(ref);
+        }
+        await batchRef.commit();
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, 'alerts_batch_delete');
+      }
+    }
+  },
+
+  mecaniciens: {
+    async set(id: string, data: any) {
+      try {
+        const ref = doc(db, 'mecaniciens', id);
+        await setDoc(ref, {
+          ...data,
+          updatedAt: Timestamp.now()
+        }, { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `mecaniciens/${id}`);
+      }
+    },
+    async delete(id: string) {
+      try {
+        const ref = doc(db, 'mecaniciens', id);
+        await deleteDoc(ref);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `mecaniciens/${id}`);
+      }
+    }
+  },
+
+  carnetSante: {
+    async set(id: string, profile: any) {
+      try {
+        const ref = doc(db, 'carnetSante', id);
+        await setDoc(ref, {
+          ...profile,
+          lastChecked: new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `carnetSante/${id}`);
+      }
+    }
+  },
+
+  rca: {
+    async set(id: string, data: any) {
+      try {
+        const ref = doc(db, 'rootCauseAnalysis', id);
+        await setDoc(ref, {
+          ...data,
+          updatedAt: Timestamp.now()
+        }, { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `rootCauseAnalysis/${id}`);
+      }
+    },
+    async delete(id: string) {
+      try {
+        const ref = doc(db, 'rootCauseAnalysis', id);
+        await deleteDoc(ref);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `rootCauseAnalysis/${id}`);
+      }
+    }
+  },
+
+  annotationsEvenements: {
+    async create(data: any) {
+      try {
+        const collRef = collection(db, 'annotationsEvenements');
+        const ref = await addDoc(collRef, {
+          ...data,
+          createdAt: Timestamp.now()
+        });
+        return ref.id;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, 'annotationsEvenements');
+        return '';
+      }
+    },
+    async delete(id: string) {
+      try {
+        const ref = doc(db, 'annotationsEvenements', id);
+        await deleteDoc(ref);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `annotationsEvenements/${id}`);
+      }
+    }
+  },
+
+  pneumatiques: {
+    async set(enginId: string, data: any) {
+      try {
+        const ref = doc(db, 'pneumatiques', enginId);
+        await setDoc(ref, {
+          ...data,
+          lastUpdated: new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `pneumatiques/${enginId}`);
+      }
+    }
+  },
+
+  systematicTaskConfigs: {
+    async set(configId: string, data: any) {
+      try {
+        const ref = doc(db, 'systematicTaskConfigs', configId);
+        await setDoc(ref, {
+          ...data,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `systematicTaskConfigs/${configId}`);
+      }
+    }
+  },
+
+  systematicTasks: {
+    async set(sheetId: string, data: any) {
+      try {
+        const ref = doc(db, 'systematicTasks', sheetId);
+        await setDoc(ref, {
+          ...data,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `systematicTasks/${sheetId}`);
+      }
+    },
+    async update(sheetId: string, updates: any) {
+      try {
+        const ref = doc(db, 'systematicTasks', sheetId);
+        await updateDoc(ref, {
+          ...updates,
+          updatedAt: new Date().toISOString()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `systematicTasks/${sheetId}`);
+      }
+    }
+  },
+
+  chantiers: {
+    async set(id: string, data: any) {
+      try {
+        const ref = doc(db, 'chantiers', id);
+        await setDoc(ref, {
+          ...data,
+          updatedAt: Timestamp.now()
+        }, { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `chantiers/${id}`);
+      }
+    },
+    async update(id: string, updates: any) {
+      try {
+        const ref = doc(db, 'chantiers', id);
+        await updateDoc(ref, {
+          ...updates,
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `chantiers/${id}`);
+      }
+    }
+  },
+
+  pmIntervalles: {
+    async create(data: any) {
+      try {
+        const collRef = collection(db, 'pmIntervalles');
+        const ref = await addDoc(collRef, {
+          ...data,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+        return ref.id;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, 'pmIntervalles');
+        return '';
+      }
+    },
+    async update(id: string, updates: any) {
+      try {
+        const ref = doc(db, 'pmIntervalles', id);
+        await updateDoc(ref, {
+          ...updates,
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `pmIntervalles/${id}`);
+      }
+    }
+  },
+
+  objectifsSites: {
+    async set(siteId: string, data: any) {
+      try {
+        const ref = doc(db, 'objectifsSites', siteId);
+        await setDoc(ref, {
+          ...data,
+          updatedAt: Timestamp.now()
+        }, { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `objectifsSites/${siteId}`);
+      }
+    }
+  },
+
+  importHistory: {
+    async create(data: any) {
+      try {
+        const collRef = collection(db, 'config/imports/history');
+        await addDoc(collRef, {
+          ...data,
+          timestamp: Timestamp.now()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, 'config/imports/history');
+      }
+    },
+    async delete(id: string) {
+      try {
+        const ref = doc(db, 'config/imports/history', id);
+        await deleteDoc(ref);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `config/imports/history/${id}`);
+      }
+    }
+  },
+
+  users: {
+    async set(uid: string, data: any) {
+      try {
+        const ref = doc(db, 'users', uid);
+        await setDoc(ref, {
+          ...data,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `users/${uid}`);
+      }
+    },
+    async update(uid: string, updates: any) {
+      try {
+        const ref = doc(db, 'users', uid);
+        await updateDoc(ref, {
+          ...updates,
+          updatedAt: new Date().toISOString()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `users/${uid}`);
       }
     }
   },

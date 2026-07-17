@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useMecaniciens, Mecanicien } from "@/hooks/useMecaniciens";
 import { useAuthStore } from "@/lib/store";
 import { useCollection } from "@/hooks/useCollection";
+import { DataLoadError } from "@/components/shared/DataLoadError";
 import { MaintenanceTask } from "@/components/taches/types";
 import { 
   Users, Award, Search, Filter, CheckCircle2, XCircle, 
@@ -27,7 +28,9 @@ export function Mecaniciens() {
   const [selectedMeca, setSelectedMeca] = useState<Mecanicien | null>(null);
 
   // Load tasks for real workload analysis
-  const { data: tasks, loading: tasksLoading } = useCollection<MaintenanceTask>('maintenanceTasks', [], { limitNum: 1000 });
+  const { data: tasks, loading: tasksLoading, error: tasksError } = useCollection<MaintenanceTask>('maintenanceTasks', [], { limitNum: 1000 });
+
+  const hasLoadError = !!tasksError;
 
   const isPrivileged = user?.role && ['ADMIN', 'DIRECTION', 'RESPONSABLE_MAINTENANCE'].includes(user.role);
 
@@ -210,6 +213,7 @@ export function Mecaniciens() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-4 md:px-0">
+      {hasLoadError && <DataLoadError />}
       {/* Module Title & Subtitle */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

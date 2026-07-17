@@ -67,6 +67,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuthStore } from "@/lib/store";
 import { useCollection } from "@/hooks/useCollection";
 import { useMecaniciens } from "@/hooks/useMecaniciens";
+import { DataLoadError } from "@/components/shared/DataLoadError";
 import { SiteID } from "@/types";
 import { toast } from "sonner";
 import { getLocalMonthString } from "@/lib/utils";
@@ -114,9 +115,11 @@ export function Dashboard() {
   const [selectedSeverity, setSelectedSeverity] = React.useState<string | null>(null);
 
   // Firestore real collections subscriptions
-  const { data: enginsLive } = useCollection<any>('engins');
-  const { data: workOrdersLive } = useCollection<any>('maintenanceTasks');
-  const { data: pannesLive } = useCollection<any>('pannes');
+  const { data: enginsLive, error: enginsError } = useCollection<any>('engins');
+  const { data: workOrdersLive, error: workOrdersError } = useCollection<any>('maintenanceTasks');
+  const { data: pannesLive, error: pannesError } = useCollection<any>('pannes');
+
+  const hasLoadError = !!(enginsError || workOrdersError || pannesError);
 
   // Normalizer status
   const getNormalizedStatus = React.useCallback((e: any) => {
@@ -524,6 +527,8 @@ export function Dashboard() {
       transition={{ duration: 0.4 }}
       className={`flex-1 min-h-screen font-sans p-4 lg:p-6 space-y-6 overflow-y-auto transition-colors duration-500 ${mainBgClass}`}
     >
+      {hasLoadError && <DataLoadError />}
+
       {/* CORRECTION 1 : GORGEOUS UNIFIED BANNER */}
       <div 
         id="dashboard-banner" 

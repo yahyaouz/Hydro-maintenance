@@ -3,10 +3,9 @@ import { db } from "@/lib/firebase";
 import { 
   collection, 
   onSnapshot, 
-  doc, 
-  setDoc, 
-  addDoc 
+  doc
 } from "firebase/firestore";
+import { dbService } from "@/services/firestoreService";
 import { toast } from "sonner";
 import { SiteID } from "@/types";
 
@@ -62,12 +61,12 @@ export function usePneumatiques() {
 
   const addPneumatiqueRecord = async (record: Omit<Pneumatique, "id" | "createdAt">) => {
     try {
-      const docRef = await addDoc(collection(db, "pneumatiques"), {
+      const docRef = doc(collection(db, "pneumatiques"));
+      await dbService.pneumatiques.set(docRef.id, {
         ...record,
+        id: docRef.id,
         createdAt: new Date().toISOString()
       });
-      // Update with its own ID
-      await setDoc(doc(db, "pneumatiques", docRef.id), { id: docRef.id }, { merge: true });
       toast.success("Rapport de remplacement pneumatique enregistré !");
       return docRef.id;
     } catch (err) {

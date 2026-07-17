@@ -5,9 +5,10 @@ import {
   RefreshCw, Upload, Play, Download, Trash2, ShieldCheck, HelpCircle
 } from "lucide-react";
 import { 
-  collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs, deleteDoc, doc
+  collection, serverTimestamp, query, orderBy, limit, getDocs, doc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { dbService } from "@/services/firestoreService";
 import { useAuthStore } from "@/lib/store";
 import { useImports, ImportResult } from "@/hooks/useImports";
 import { toast } from "sonner";
@@ -193,7 +194,7 @@ export function ImportConfig() {
       const snap = await getDocs(q);
       const batch = [];
       snap.forEach(d => {
-        batch.push(deleteDoc(doc(db, "config/imports/history", d.id)));
+        batch.push(dbService.importHistory.delete(d.id));
       });
       await Promise.all(batch);
       toast.success("Historique vidé avec succès.");

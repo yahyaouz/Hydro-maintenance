@@ -34,12 +34,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useCollection } from "@/hooks/useCollection";
+import { DataLoadError } from "@/components/shared/DataLoadError";
 import { 
-  collection, doc, setDoc, addDoc, updateDoc, 
-  onSnapshot, query, where, orderBy,
+  collection, doc, onSnapshot, query, where, orderBy,
   writeBatch, Timestamp, getDocs, limit
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { dbService } from '@/services/firestoreService';
 import { useAuthStore } from '@/lib/store';
 import { getLocalDateString, escapeCsvField } from '@/lib/utils';
 import { AdminMecaniciens } from "./admin/AdminMecaniciens";
@@ -100,7 +101,9 @@ export function Admin() {
   const [logLevelFilter, setLogLevelFilter] = React.useState<string>("ALL");
 
   const SITES_LIST = ['SMI', 'OUMEJRANE', 'KOUDIA', 'OUANSIMI', 'BOU-AZZER'];
-  const { data: objectifsSitesRaw, loading: objectifsLoading } = useCollection<any>('objectifsSites');
+  const { data: objectifsSitesRaw, loading: objectifsLoading, error: objectifsError } = useCollection<any>('objectifsSites');
+
+  const hasLoadError = !!objectifsError;
 
   const [editedTargets, setEditedTargets] = React.useState<Record<string, {
     dispoTarget: string;
@@ -239,7 +242,7 @@ export function Admin() {
         updatedBy: user?.displayName || user?.email || "Responsable Maintenance"
       };
 
-      await setDoc(doc(db, "objectifsSites", siteId), docData);
+      await dbService.objectifsSites.set(siteId, docData);
       toast.success(`Objectifs pour le site ${siteId} enregistrés avec succès !`);
     } catch (err: any) {
       console.error("Error saving site objectives: ", err);
@@ -430,7 +433,6 @@ export function Admin() {
       }
 
       if (editingItem) {
-        const docRef = doc(db, 'engins', editingItem.id);
         const payload = {
           modele: data.modele || "ST2G",
           marque: data.marque || "Epiroc",
@@ -445,14 +447,13 @@ export function Admin() {
           conducteurAssigne: data.conducteurAssigne || "Non assigné",
           updatedAt: Timestamp.now()
         };
-        await updateDoc(docRef, payload);
+        await dbService.engines.update(editingItem.id, payload);
         toast.success(`Engin ${editingItem.id} mis à jour avec succès !`);
       } else {
         if (engins.some(e => (e.id || "").toLowerCase() === (data.id || "").toLowerCase())) {
           toast.error(`Le N° de Parc ${data.id} existe déjà.`);
           return;
         }
-        const docRef = doc(db, 'engins', data.id);
         const payload = {
           id: data.id,
           modele: data.modele || "ST2G",
@@ -469,7 +470,7 @@ export function Admin() {
           deleted: false,
           updatedAt: Timestamp.now()
         };
-        await setDoc(docRef, payload);
+        await dbService.engines.create(data.id, payload);
         toast.success(`Engin ${data.id} ajouté avec succès !`);
       }
       setModalOpen(false);
@@ -482,8 +483,7 @@ export function Admin() {
 
   const handleDeleteEngin = async (id: string) => {
     try {
-      const docRef = doc(db, 'engins', id);
-      await updateDoc(docRef, {
+      await dbService.engines.update(id, {
         deleted: true,
         updatedAt: Timestamp.now()
       });
@@ -506,7 +506,6 @@ export function Admin() {
 
     try {
       if (editingItem) {
-        const docRef = doc(db, 'mecaniciens', editingItem.id);
         const payload = {
           nomComplet: data.nomComplet,
           poste: data.poste || "Poste 1",
@@ -514,17 +513,15 @@ export function Admin() {
           telephone: data.telephone || "",
           dateEmbauche: data.dateEmbauche || getLocalDateString(),
           statut: data.statut || "Actif",
-          siteId: data.siteId || "SMI",
-          updatedAt: Timestamp.now()
+          siteId: data.siteId || "SMI"
         };
-        await updateDoc(docRef, payload);
+        await dbService.mecaniciens.set(editingItem.id, payload);
         toast.success(`Mécanicien ${data.nomComplet} mis à jour !`);
       } else {
         if (mecaniciens.some(m => (m.id || "").toLowerCase() === (data.id || "").toLowerCase())) {
           toast.error(`Le matricule ${data.id} existe déjà.`);
           return;
         }
-        const docRef = doc(db, 'mecaniciens', data.id);
         const payload = {
           id: data.id,
           nomComplet: data.nomComplet,
@@ -534,10 +531,9 @@ export function Admin() {
           dateEmbauche: data.dateEmbauche || getLocalDateString(),
           statut: data.statut || "Actif",
           siteId: data.siteId || "SMI",
-          deleted: false,
-          updatedAt: Timestamp.now()
+          deleted: false
         };
-        await setDoc(docRef, payload);
+        await dbService.mecaniciens.set(data.id, payload);
         toast.success(`Mécanicien ${data.nomComplet} enregistré avec succès !`);
       }
       setModalOpen(false);
@@ -550,10 +546,8 @@ export function Admin() {
 
   const handleDeleteMecanicien = async (id: string) => {
     try {
-      const docRef = doc(db, 'mecaniciens', id);
-      await updateDoc(docRef, {
-        deleted: true,
-        updatedAt: Timestamp.now()
+      await dbService.mecaniciens.set(id, {
+        deleted: true
       });
       toast.success(`Le mécanicien a été supprimé.`);
       setConfirmDeleteId(null);
@@ -576,23 +570,20 @@ export function Admin() {
 
     try {
       if (editingItem) {
-        const docRef = doc(db, 'chantiers', editingItem.id);
         const payload = {
           nomComplet: data.nomComplet,
           type: data.type || "Mine souterraine",
           localisation: data.localisation || "",
           responsableId: data.responsableId || "",
-          statut: data.statut || "Actif",
-          updatedAt: Timestamp.now()
+          statut: data.statut || "Actif"
         };
-        await updateDoc(docRef, payload);
+        await dbService.chantiers.update(editingItem.id, payload);
         toast.success(`Chantier ${data.nomComplet} mis à jour.`);
       } else {
         if (chantiers.some(c => c.id.toUpperCase() === docId)) {
           toast.error(`Le code chantier ${data.id} existe déjà.`);
           return;
         }
-        const docRef = doc(db, 'chantiers', docId);
         const payload = {
           id: docId,
           nomComplet: data.nomComplet,
@@ -600,10 +591,9 @@ export function Admin() {
           localisation: data.localisation || "",
           responsableId: data.responsableId || "",
           statut: data.statut || "Actif",
-          deleted: false,
-          updatedAt: Timestamp.now()
+          deleted: false
         };
-        await setDoc(docRef, payload);
+        await dbService.chantiers.set(docId, payload);
         toast.success(`Chantier ${data.nomComplet} créé avec succès !`);
       }
       setModalOpen(false);
@@ -616,10 +606,8 @@ export function Admin() {
 
   const handleDeleteChantier = async (id: string) => {
     try {
-      const docRef = doc(db, 'chantiers', id);
-      await updateDoc(docRef, {
-        deleted: true,
-        updatedAt: Timestamp.now()
+      await dbService.chantiers.update(id, {
+        deleted: true
       });
       toast.success(`Le chantier ${id} a été supprimé.`);
       setConfirmDeleteId(null);
@@ -640,17 +628,15 @@ export function Admin() {
 
     try {
       if (editingItem) {
-        const docRef = doc(db, 'pmIntervalles', editingItem.id);
         const payload = {
           typeEngin: data.typeEngin || "Générique",
           operation: data.operation,
           intervalleHeures: Number(data.intervalleHeures),
           produitHuile: data.produitHuile || "N/A",
           quantite: data.quantite || "N/A",
-          priorite: data.priorite || "Normale",
-          updatedAt: Timestamp.now()
+          priorite: data.priorite || "Normale"
         };
-        await updateDoc(docRef, payload);
+        await dbService.pmIntervalles.update(editingItem.id, payload);
         toast.success("Intervalle de maintenance mis à jour.");
       } else {
         const payload = {
@@ -660,10 +646,9 @@ export function Admin() {
           produitHuile: data.produitHuile || "N/A",
           quantite: data.quantite || "N/A",
           priorite: data.priorite || "Normale",
-          deleted: false,
-          updatedAt: Timestamp.now()
+          deleted: false
         };
-        await addDoc(collection(db, 'pmIntervalles'), payload);
+        await dbService.pmIntervalles.create(payload);
         toast.success("Nouvel intervalle de maintenance ajouté !");
       }
       setModalOpen(false);
@@ -676,10 +661,8 @@ export function Admin() {
 
   const handleDeleteIntervalle = async (id: string) => {
     try {
-      const docRef = doc(db, 'pmIntervalles', id);
-      await updateDoc(docRef, {
-        deleted: true,
-        updatedAt: Timestamp.now()
+      await dbService.pmIntervalles.update(id, {
+        deleted: true
       });
       toast.success("L'intervalle a été supprimé.");
       setConfirmDeleteId(null);
@@ -1060,9 +1043,8 @@ export function Admin() {
       return;
     }
     try {
-      const userRef = doc(db, 'users', userToApprove.uid);
       const roleToSet = userToApprove.requestedRole || userToApprove.role || 'MECANICIEN';
-      await updateDoc(userRef, {
+      await dbService.users.update(userToApprove.uid, {
         role: roleToSet,
         active: true,
         updatedAt: new Date().toISOString()
@@ -1083,8 +1065,7 @@ export function Admin() {
       return;
     }
     try {
-      const userRef = doc(db, 'users', userToReject.uid);
-      await setDoc(userRef, {
+      await dbService.users.set(userToReject.uid, {
         ...userToReject,
         active: false,
         rejected: true,
@@ -1887,6 +1868,8 @@ export function Admin() {
     <div className="space-y-6 bg-white min-h-screen text-slate-800 font-sans p-6 rounded-2xl border-2 border-amber-500 shadow-xl relative overflow-hidden">
       {/* Ligne de haut style Hydromines (Mélange bleu ciel et rouge un peu foncé) */}
       <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400" />
+
+      {hasLoadError && <DataLoadError />}
 
       {/* RECONSTRUIT : Banner avec style conservé, changement de titre exact */}
       <PageBanner

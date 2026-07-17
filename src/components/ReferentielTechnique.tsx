@@ -6,11 +6,13 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
 import { useCollection } from "@/hooks/useCollection";
+import { DataLoadError } from "@/components/shared/DataLoadError";
 import { PageBanner } from "@/components/ui/PageBanner";
 
 export function ReferentielTechnique() {
   const { activeSite } = useAuthStore();
-  const { data: engins, loading } = useCollection<any>("engins");
+  const { data: engins, loading, error: enginsError } = useCollection<any>("engins");
+  const hasLoadError = !!enginsError;
   const [selectedEnginId, setSelectedEnginId] = React.useState<string>("");
 
   // Filter engins by siteId
@@ -55,6 +57,8 @@ export function ReferentielTechnique() {
     <div className="space-y-6 bg-white min-h-screen text-slate-900 pb-12 border-2 border-amber-500 shadow-xl relative overflow-hidden p-6 rounded-2xl">
       {/* Ligne de haut style Hydromines (Mélange bleu ciel et rouge un peu foncé) */}
       <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-400 via-rose-800 to-sky-400 z-10" />
+
+      {hasLoadError && <DataLoadError />}
 
       <PageBanner
         icon={BookOpen}

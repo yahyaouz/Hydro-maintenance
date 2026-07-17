@@ -10,8 +10,10 @@ import {
   collection, doc, getDoc, setDoc, updateDoc, deleteDoc, Timestamp, writeBatch 
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { dbService } from "@/services/firestoreService";
 import { useAuthStore } from "@/lib/store";
 import { useCollection } from "@/hooks/useCollection";
+import { DataLoadError } from "@/components/shared/DataLoadError";
 import { PageBanner } from "@/components/ui/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -41,17 +43,19 @@ export function Alertes() {
   const isAuthorized = ['ADMIN', 'DIRECTION', 'RESPONSABLE_MAINTENANCE'].includes(user?.role || '');
 
   // Fetch Firestore collections
-  const { data: alerts, loading: alertsLoading } = useCollection<AlertDocument>('alerts', [], {
+  const { data: alerts, loading: alertsLoading, error: alertsError } = useCollection<AlertDocument>('alerts', [], {
     orderByField: 'updatedAt',
     orderByDirection: 'desc',
     limitNum: 100
   });
 
-  const { data: engins, loading: enginsLoading } = useCollection<any>('engins');
-  const { data: pmIntervalles, loading: pmIntervallesLoading } = useCollection<any>('pmIntervalles');
-  const { data: pannes, loading: pannesLoading } = useCollection<any>('pannes');
-  const { data: pieces, loading: piecesLoading } = useCollection<any>('pieces');
-  const { data: tasks, loading: tasksLoading } = useCollection<any>('maintenanceTasks');
+  const { data: engins, loading: enginsLoading, error: enginsError } = useCollection<any>('engins');
+  const { data: pmIntervalles, loading: pmIntervallesLoading, error: pmIntervallesError } = useCollection<any>('pmIntervalles');
+  const { data: pannes, loading: pannesLoading, error: pannesError } = useCollection<any>('pannes');
+  const { data: pieces, loading: piecesLoading, error: piecesError } = useCollection<any>('pieces');
+  const { data: tasks, loading: tasksLoading, error: tasksError } = useCollection<any>('maintenanceTasks');
+
+  const hasLoadError = !!(alertsError || enginsError || pmIntervallesError || pannesError || piecesError || tasksError);
 
   const loading = alertsLoading || enginsLoading || pmIntervallesLoading || pannesLoading || piecesLoading || tasksLoading;
 
@@ -282,7 +286,7 @@ export function Alertes() {
           const alertRef = doc(db, 'alerts', alert.id);
           const snap = await getDoc(alertRef);
           if (!snap.exists()) {
-            await setDoc(alertRef, alert);
+            await dbService.alerts.create(alert.id, alert);
             createdCount++;
           }
         }
@@ -303,8 +307,7 @@ export function Alertes() {
   // Handle alert status transition
   const handleTransition = async (alertId: string, currentStatus: string, targetStatus: 'ACTIVE' | 'VUE' | 'TRAITEE' | 'ARCHIVEE') => {
     try {
-      const alertRef = doc(db, 'alerts', alertId);
-      await updateDoc(alertRef, {
+      await dbService.alerts.update(alertId, {
         status: targetStatus,
         updatedAt: new Date().toISOString()
       });
@@ -324,16 +327,7 @@ export function Alertes() {
         return;
       }
 
-      const batch = writeBatch(db);
-      activeAlerts.forEach(a => {
-        const ref = doc(db, 'alerts', a.id);
-        batch.update(ref, {
-          status: action,
-          updatedAt: new Date().toISOString()
-        });
-      });
-
-      await batch.commit();
+      await dbService.alerts.batchUpdateStatus(activeAlerts.map(a => a.id), action);
       toast.success(`${activeAlerts.length} alerte(s) mise(s) à jour en bloc.`);
     } catch (err) {
       console.error(err);
@@ -350,13 +344,7 @@ export function Alertes() {
         return;
       }
 
-      const batch = writeBatch(db);
-      archivedAlerts.forEach(a => {
-        const ref = doc(db, 'alerts', a.id);
-        batch.delete(ref);
-      });
-
-      await batch.commit();
+      await dbService.alerts.batchDelete(archivedAlerts.map(a => a.id));
       toast.success(`${archivedAlerts.length} alerte(s) archivée(s) définitivement supprimée(s).`);
     } catch (err) {
       console.error(err);
@@ -428,8 +416,8 @@ export function Alertes() {
             updatedAt: Timestamp.now()
           };
 
-          await setDoc(doc(db, 'maintenanceTasks', newBtId), newBt);
-          await updateDoc(doc(db, 'alerts', alert.id), {
+          await dbService.workOrders.createWithId(newBtId, newBt);
+          await dbService.alerts.update(alert.id, {
             status: 'VUE',
             updatedAt: new Date().toISOString()
           });
@@ -440,7 +428,7 @@ export function Alertes() {
         case 'PANNE_24H':
         case 'PANNE_48H': {
           // Open work orders or assign mechanics by opening toast / mock transition
-          await updateDoc(doc(db, 'alerts', alert.id), {
+          await dbService.alerts.update(alert.id, {
             status: 'TRAITEE',
             updatedAt: new Date().toISOString()
           });
@@ -450,7 +438,7 @@ export function Alertes() {
         case 'PIECE_STOCK_BAS': {
           // Order pieces simulation
           toast.success(`Demande d'achat d'urgence initiée pour la pièce détériorée [${alert.details?.nom || alert.targetId}].`);
-          await updateDoc(doc(db, 'alerts', alert.id), {
+          await dbService.alerts.update(alert.id, {
             status: 'VUE',
             updatedAt: new Date().toISOString()
           });
@@ -458,7 +446,7 @@ export function Alertes() {
         }
         case 'GASOIL_ANORMAL': {
           toast.success(`Ordre d'audit énergétique et d'investigation moteur programmé sur l'engin ${alert.targetId}.`);
-          await updateDoc(doc(db, 'alerts', alert.id), {
+          await dbService.alerts.update(alert.id, {
             status: 'TRAITEE',
             updatedAt: new Date().toISOString()
           });
@@ -466,7 +454,7 @@ export function Alertes() {
         }
         case 'ENGIN_INACTIF': {
           toast.success(`Vérification physique ordonnée au superviseur du chantier pour l'engin ${alert.targetId}.`);
-          await updateDoc(doc(db, 'alerts', alert.id), {
+          await dbService.alerts.update(alert.id, {
             status: 'TRAITEE',
             updatedAt: new Date().toISOString()
           });
@@ -483,6 +471,7 @@ export function Alertes() {
 
   return (
     <div className="space-y-6" id="gmao-alerts-page">
+      {hasLoadError && <DataLoadError />}
       {/* Page Banner Header */}
       <PageBanner
         icon={AlertTriangle}
