@@ -69,23 +69,6 @@ service cloud.firestore {
       );
     }
 
-    match /workorders/{orderId} {
-      allow read: if isSignedIn();
-      // Prevent creating workorders for locked machines unless admin override
-      allow create: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
-        !isMachineLotoLocked(request.resource.data.machineCode) || isRole('ADMIN')
-      );
-      // Validate that only the workorder responsible for LOTO lock or non-locked ones can be modified
-      allow update: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
-        (isRole('CHEF_QUART') || isRole('MECANICIEN') || isRole('ADMIN')) && (
-          !isMachineLotoLocked(resource.data.machineCode) || 
-          orderId == get(/databases/$(database)/documents/lotoLocks/$(resource.data.machineCode)).data.lotoWorkOrderId ||
-          isRole('ADMIN')
-        )
-      );
-      allow delete: if isSignedIn() && isRole('ADMIN');
-    }
-
     match /lotoLocks/{lockId} {
       allow read: if isSignedIn();
       // Authorized maintenance crews can engage, approve or release LOTO locks
@@ -105,13 +88,15 @@ service cloud.firestore {
 
     match /pannes/{panneId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
+      allow create: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
+      allow update: if isSignedIn() && matchesSite(resource.data.siteId || 'SMI');
+      allow delete: if isSignedIn() && isRole('ADMIN');
     }
 
     match /pieces/{pieceId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
-        isRole('CHEF_QUART') || 
+        isRole('RESPONSABLE_CHANTIER') || 
         getUserData().role == 'RESPONSABLE_MAINTENANCE' ||
         getUserData().role == 'DIRECTION' ||
         getUserData().role == 'SECRETAIRE'
@@ -121,7 +106,7 @@ service cloud.firestore {
     match /maintenances/{maintenanceId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
-        isRole('MECANICIEN') || isRole('CHEF_QUART') || isRole('ADMIN')
+        isRole('MECANICIEN') || isRole('RESPONSABLE_CHANTIER') || isRole('ADMIN')
       );
     }
 
@@ -151,14 +136,14 @@ service cloud.firestore {
     match /pneus/{pneuId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
-        isRole('MECANICIEN') || isRole('CHEF_QUART') || isRole('ADMIN')
+        isRole('MECANICIEN') || isRole('RESPONSABLE_CHANTIER') || isRole('ADMIN')
       );
     }
 
     match /pneumatiques/{pneuId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
-        isRole('MECANICIEN') || isRole('CHEF_QUART') || isRole('ADMIN')
+        isRole('MECANICIEN') || isRole('RESPONSABLE_CHANTIER') || isRole('ADMIN')
       );
     }
 
@@ -171,7 +156,7 @@ service cloud.firestore {
     match /rapportsFinIntervention/{rfiId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI') && (
-        isRole('MECANICIEN') || isRole('CHEF_QUART') || isRole('ADMIN')
+        isRole('MECANICIEN') || isRole('RESPONSABLE_CHANTIER') || isRole('ADMIN')
       );
     }
 
@@ -188,6 +173,11 @@ service cloud.firestore {
         (request.resource.data.get('deleted', false) == false || isRole('ADMIN')) && (
           isRole('MECANICIEN') || isRole('RESPONSABLE_MAINTENANCE') || isRole('ADMIN') ||
           getUserData().role == 'DIRECTION' || getUserData().role == 'SECRETAIRE'
+        ) && (
+          // Transition rule: only ADMIN and RESPONSABLE_MAINTENANCE can close a work order
+          // Note: checklist complete verification remains client-side only because there is no checklist field on task documents.
+          !(request.resource.data.get('statut', '') == 'CLOS' && resource.data.get('statut', '') != 'CLOS') ||
+          (getUserData().role == 'ADMIN' || getUserData().role == 'RESPONSABLE_MAINTENANCE')
         )
       );
       allow delete: if isSignedIn() && isRole('ADMIN');
@@ -222,7 +212,9 @@ service cloud.firestore {
 
     match /alerts/{alertId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow create: if isSignedIn() && matchesSite(request.resource.data.siteId || 'SMI');
+      allow update: if isSignedIn() && matchesSite(resource.data.siteId || 'SMI');
+      allow delete: if isSignedIn() && (matchesSite(resource.data.siteId || 'SMI') && (isRole('ADMIN') || isRole('RESPONSABLE_MAINTENANCE')));
     }
 
     match /carnetSante/{id} {

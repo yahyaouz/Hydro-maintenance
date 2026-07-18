@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
 import { LoginPage } from "@/components/auth/LoginPage";
+import { IntroSplash } from "@/components/auth/IntroSplash";
 import { ReferentielTechnique } from "@/components/ReferentielTechnique";
 import Checklists from "@/components/Checklists";
 import TachesPlanning from "@/components/TachesPlanning";
@@ -199,6 +200,7 @@ export default function App() {
   const { isAuthenticated, user, setUser, theme, setTheme, activeSite, setActiveSite, logout, textDensity, setTextDensity } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [authInitialized, setAuthInitialized] = React.useState(false);
+  const [showSplash, setShowSplash] = React.useState(true);
 
   // Sync state between Firebase Auth and Zustand store on mount
   React.useEffect(() => {
@@ -487,10 +489,30 @@ export default function App() {
 
   if (!isAuthenticated) {
     return (
-      <>
-        <LoginPage />
-        <Toaster position="top-right" />
-      </>
+      <AnimatePresence mode="wait">
+        {showSplash ? (
+          <motion.div
+            key="splash"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
+            className="w-full h-full"
+          >
+            <IntroSplash onComplete={() => setShowSplash(false)} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="login"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
+            className="w-full h-full"
+          >
+            <LoginPage />
+            <Toaster position="top-right" />
+          </motion.div>
+        )}
+      </AnimatePresence>
     );
   }
 

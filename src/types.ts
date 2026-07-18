@@ -111,7 +111,7 @@ export interface Mecanicien {
   stats: MecanicienStats;
   active: boolean;
   statut?: string;
-  source: "MOCK_SPRINT4" | "PRODUCTION_IMPORT" | "ADMIN_CREATION";
+  source: "MIGRATION_SPRINT6" | "PRODUCTION_IMPORT" | "ADMIN_CREATION" | "IMPORT_PLANIFICATION" | "MOCK_SPRINT4";
   updatedAt?: string;
 }
 

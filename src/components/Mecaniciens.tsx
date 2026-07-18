@@ -856,6 +856,26 @@ export function Mecaniciens() {
                       <span className="text-xs bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-bold uppercase border border-emerald-500/20">
                         {selectedMeca.active ? "Actif" : "Inactif"}
                       </span>
+                      {selectedMeca.source === "MIGRATION_SPRINT6" && (
+                        <span className="text-xs bg-blue-500/15 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded font-bold uppercase border border-blue-500/20">
+                          Profil migré
+                        </span>
+                      )}
+                      {selectedMeca.source === "IMPORT_PLANIFICATION" && (
+                        <span className="text-xs bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded font-bold uppercase border border-indigo-500/20">
+                          Profil importé
+                        </span>
+                      )}
+                      {selectedMeca.source === "PRODUCTION_IMPORT" && (
+                        <span className="text-xs bg-slate-500/15 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded font-bold uppercase border border-slate-500/20">
+                          Import Production
+                        </span>
+                      )}
+                      {selectedMeca.source === "ADMIN_CREATION" && (
+                        <span className="text-xs bg-teal-500/15 text-teal-600 dark:text-teal-400 px-2 py-0.5 rounded font-bold uppercase border border-teal-500/20">
+                          Création Admin
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-xs text-slate-500 font-mono">
                       <span>Matricule: {selectedMeca.matricule}</span>
@@ -970,17 +990,7 @@ export function Mecaniciens() {
                       </div>
                     </div>
 
-                    {/* Operational trace details */}
-                    {selectedMeca.source !== "PRODUCTION_IMPORT" && selectedMeca.source !== "ADMIN_CREATION" && (
-                      <div className="bg-amber-500/5 dark:bg-slate-900/40 p-4 rounded-xl border border-amber-500/10 dark:border-slate-900/60 flex items-center gap-3">
-                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></div>
-                        <div className="text-[10px] text-amber-800 dark:text-amber-400 font-mono leading-relaxed">
-                          <strong>LOG SPRINT 4 :</strong> Cette fiche est actuellement alimentée par des données mockées identifiées 
-                          par la source <code className="bg-amber-500/10 px-1 rounded uppercase font-black">{selectedMeca.source}</code>. 
-                          Au Sprint 6, ce profil sera synchronisé automatiquement avec les données d'import SAP/GMAO.
-                        </div>
-                      </div>
-                    )}
+
                   </div>
                 </div>
               </div>

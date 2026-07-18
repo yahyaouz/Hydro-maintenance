@@ -178,8 +178,11 @@ export function LoginPage() {
           toast.warning("Votre compte est actuellement en attente d'approbation d'un Administrateur.");
         }
       } else {
-        toast.error("Aucun profil enregistré associé à cet email. Veuillez utiliser l'onglet 'S'INSCRIRE'.");
-        await signOut(auth);
+        // Automatically direct new Google profiles to onboarding fiche!
+        setGoogleUser(verifiedUser);
+        setFormNom(verifiedUser.displayName || "");
+        setAuthMode("ONBOARDING");
+        toast.info("📋 Nouveau profil détecté. Veuillez renseigner votre fiche d'habilitation.");
       }
     } catch (err: any) {
       console.error("Erreur connexion google:", err);
@@ -356,62 +359,55 @@ export function LoginPage() {
           object-fit: cover;
           object-position: center;
           display: block;
-          opacity: 0.98;
+          opacity: 1;
         }
-        /* Extrêmement lisse gradient pour effacer complètement la ligne de démarcation */
+        /* No white fading on the right, background image is fully clear and bright */
         .panel-img__overlay {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(
-            to right, 
-            rgba(255, 255, 255, 0) 0%, 
-            rgba(255, 255, 255, 0) 48%, 
-            rgba(255, 255, 255, 0.08) 58%, 
-            rgba(255, 255, 255, 0.35) 68%, 
-            rgba(255, 255, 255, 0.72) 76%, 
-            rgba(255, 255, 255, 0.94) 82%, 
-            #ffffff 86%, 
-            #ffffff 100%
-          );
-          pointer-events: none;
+          display: none;
         }
         .panel-img__overlay-ambient {
           position: absolute;
           inset: 0;
-          background: linear-gradient(180deg, rgba(13,27,42,0.1) 0%, transparent 45%, rgba(13,27,42,0.3) 100%);
+          background: linear-gradient(180deg, rgba(13,27,42,0.05) 0%, transparent 50%, rgba(13,27,42,0.15) 100%);
           pointer-events: none;
         }
-
-        /* ── FORM PANEL (OVERLAID ON THE RIGHT) ──────────────────── */
+        
+        /* ── FORM PANEL (COMPACT WHITE CARD ON THE RIGHT) ────────── */
         .panel-form {
           position: absolute;
-          right: 0;
-          top: 0;
-          bottom: 0;
-          width: 22%;
-          min-width: 410px;
+          right: 5%;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 390px;
+          min-width: 390px;
+          max-width: 420px;
+          height: auto;
+          max-height: 90vh;
           z-index: 2;
-          background: transparent !important;
+          background: #ffffff !important;
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
-          padding: 44px 32px;
+          justify-content: flex-start;
+          padding: 36px 28px;
+          border-radius: 16px;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.08);
           overflow-y: auto;
         }
-
-        /* Accent line top spanning the whole top of form space without visual boundary */
+        
+        /* Top contour border with custom Hydromines blend: sky blue, gold, deep red */
         .panel-form::before {
           content: '';
           position: absolute;
           top: 0; left: 0; right: 0;
-          height: 3px;
-          background: linear-gradient(90deg, rgba(26, 159, 212, 0) 0%, #1a9fd4 50%, #C0392B 100%);
+          height: 5px;
+          background: linear-gradient(90deg, #1a9fd4 0%, #C9A227 45%, #9c1a1a 100%);
+          border-top-left-radius: 16px;
+          border-top-right-radius: 16px;
         }
 
         .form-inner {
           width: 100%;
-          max-width: 360px;
           z-index: 1;
         }
 
@@ -419,12 +415,13 @@ export function LoginPage() {
         .logo-block {
           display: flex;
           align-items: center;
-          gap: 12px;
-          margin-bottom: 48px;
+          justify-content: center;
+          margin-bottom: 24px;
+          width: 100%;
         }
         .logo-block img {
-          height: 44px;
-          width: auto;
+          max-height: 100%;
+          max-width: 100%;
           filter: none;
         }
         .logo-text { line-height: 1.1; }
@@ -597,35 +594,25 @@ export function LoginPage() {
 
         /* Version + copyright */
         .form-footer {
-          position: absolute;
-          bottom: 24px;
-          left: 0; right: 0;
+          margin-top: 24px;
           text-align: center;
           font-family: 'JetBrains Mono', monospace;
           font-size: 0.48rem;
-          letter-spacing: 2px;
+          letter-spacing: 1.5px;
           text-transform: uppercase;
           color: #7f8c8d;
+          width: 100%;
         }
 
         /* ── RESPONSIVE ────────────────────────────────────────── */
         @media (max-width: 1280px) {
           .panel-form {
-            width: 28%;
-            min-width: 390px;
+            right: 3%;
+            width: 380px;
+            min-width: 380px;
           }
           .panel-img__overlay {
-            background: linear-gradient(
-              to right, 
-              rgba(255, 255, 255, 0) 0%, 
-              rgba(255, 255, 255, 0) 40%, 
-              rgba(255, 255, 255, 0.1) 50%, 
-              rgba(255, 255, 255, 0.45) 60%, 
-              rgba(255, 255, 255, 0.82) 68%, 
-              rgba(255, 255, 255, 0.98) 74%, 
-              #ffffff 80%, 
-              #ffffff 100%
-            );
+            display: none;
           }
         }
         @media (max-width: 960px) {
@@ -637,32 +624,29 @@ export function LoginPage() {
             min-height: 100vh;
           }
           .panel-img {
-            position: relative;
-            inset: auto;
+            position: fixed;
+            inset: 0;
             width: 100%;
-            height: 42vh;
+            height: 100%;
+            z-index: 1;
           }
           .panel-img__overlay {
-            background: linear-gradient(
-              to bottom, 
-              rgba(255, 255, 255, 0) 0%, 
-              rgba(255, 255, 255, 0.2) 40%, 
-              rgba(255, 255, 255, 0.7) 70%, 
-              rgba(255, 255, 255, 0.95) 90%, 
-              #ffffff 100%
-            );
+            display: none;
           }
           .panel-form {
             position: relative;
             inset: auto;
-            width: 100%;
+            margin: 40px auto;
+            transform: none;
+            width: 90%;
             min-width: 0;
-            min-height: 58vh;
-            padding: 40px 32px;
+            max-width: 385px;
+            z-index: 2;
             background: #ffffff !important;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
           }
           .panel-form::before {
-            background: linear-gradient(90deg, #1a9fd4, #C0392B);
+            background: linear-gradient(90deg, #1a9fd4 0%, #C9A227 50%, #9c1a1a 100%);
           }
         }
         @media (max-width: 480px) {
@@ -766,8 +750,8 @@ export function LoginPage() {
         <div className="form-inner">
 
           {/* Logo block with animate system */}
-          <div className="logo-block flex flex-col items-center justify-center text-center gap-1 w-full" style={{ marginBottom: "28px" }}>
-            <HydrominesLogo size={130} variant="full" className="transform transition-transform hover:scale-105" />
+          <div className="logo-block flex flex-col items-center justify-center text-center gap-1 w-full" style={{ marginBottom: "20px" }}>
+            <HydrominesLogo size={175} variant="full" className="transform transition-transform hover:scale-105" />
           </div>
 
           {authMode !== "ONBOARDING" ? (
@@ -778,37 +762,11 @@ export function LoginPage() {
                 Espace dédié aux mécaniciens, responsables de maintenance et secrétaires des chantiers. Connexion sécurisée via votre compte Google professionnel.
               </p>
 
-              {/* Light Custom Selector Tabs for Connexion / Inscription */}
-              <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-950 p-1 border border-slate-200 dark:border-slate-850 rounded-xl my-5">
-                <button
-                  onClick={() => { if (!isLoading) setAuthMode("CONNEXION"); }}
-                  type="button"
-                  className={`h-9 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
-                    authMode === "CONNEXION"
-                      ? "bg-white text-slate-900 dark:bg-[#1e293b] dark:text-white shadow-sm border border-slate-200/50 dark:border-slate-700"
-                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
-                  }`}
-                >
-                  CONNEXION
-                </button>
-                <button
-                  onClick={() => { if (!isLoading) setAuthMode("S_INSCRIRE"); }}
-                  type="button"
-                  className={`h-9 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
-                    authMode === "S_INSCRIRE"
-                      ? "bg-white text-slate-900 dark:bg-[#1e293b] dark:text-white shadow-sm border border-slate-200/50 dark:border-slate-700"
-                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
-                  }`}
-                >
-                  S'INSCRIRE
-                </button>
-              </div>
-
               <div className="space-y-4 pt-2">
                 <button 
                   type="button"
                   disabled={isLoading}
-                  onClick={authMode === "CONNEXION" ? handleConnexionFlow : handleRegistrationFlow} 
+                  onClick={handleConnexionFlow} 
                   className="btn-google"
                 >
                   {isLoading ? (
@@ -821,7 +779,7 @@ export function LoginPage() {
                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     </svg>
                   )}
-                  <span>{isLoading ? "Authentification..." : (authMode === "CONNEXION" ? "Se connecter avec Google" : "S'inscrire avec Google")}</span>
+                  <span>{isLoading ? "Authentification..." : "Se connecter avec Google"}</span>
                 </button>
               </div>
 
