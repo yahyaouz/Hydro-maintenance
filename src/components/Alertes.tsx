@@ -7,7 +7,7 @@ import {
   ExternalLink, UserCheck, ShoppingCart, Search, Filter, Calendar
 } from "lucide-react";
 import { 
-  collection, doc, getDoc, setDoc, updateDoc, deleteDoc, Timestamp, writeBatch 
+  collection, doc, getDoc, setDoc, updateDoc, deleteDoc, Timestamp, writeBatch, query, where, getDocs 
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { dbService } from "@/services/firestoreService";
@@ -36,6 +36,8 @@ export interface AlertDocument {
   emailSent: boolean;
   smsSent: boolean;
   details?: any;
+  resolvedAt?: string;
+  resolvedReason?: string;
 }
 
 export function Alertes() {
@@ -293,6 +295,44 @@ export function Alertes() {
 
         if (createdCount > 0) {
           toast.success(`${createdCount} nouvelle(s) alerte(s) métier identifiée(s) et enregistrée(s).`);
+        }
+
+        // --- AUTO-RESOLUTION STEP ---
+        // 1. Identify all currently valid alert IDs
+        const generatedAlertIds = new Set(batchAlerts.map(a => a.id));
+
+        // 2. Fetch all currently ACTIVE or VUE alerts from Firestore
+        const activeAlertsQuery = query(
+          collection(db, 'alerts'),
+          where('status', 'in', ['ACTIVE', 'VUE'])
+        );
+        const activeAlertsSnap = await getDocs(activeAlertsQuery);
+
+        // 3. Find alerts to auto-resolve (conditions no longer met)
+        const targetCodes = ['PM_OVERDUE', 'PM_CRITICAL', 'PANNE_24H', 'PANNE_48H', 'PIECE_STOCK_BAS', 'GASOIL_ANORMAL', 'ENGIN_INACTIF'];
+        const resolveBatch = writeBatch(db);
+        let autoResolvedCount = 0;
+
+        for (const docSnap of activeAlertsSnap.docs) {
+          const alertData = docSnap.data() as AlertDocument;
+          if (targetCodes.includes(alertData.code)) {
+            // If the alert's ID is not in current generatedAlertIds, the condition is resolved
+            if (!generatedAlertIds.has(docSnap.id)) {
+              resolveBatch.update(docSnap.ref, {
+                status: 'ARCHIVEE',
+                resolvedAt: now.toISOString(),
+                resolvedReason: 'auto - condition no longer met',
+                updatedAt: now.toISOString()
+              });
+              autoResolvedCount++;
+            }
+          }
+        }
+
+        // 4. Commit auto-resolved updates in a single batch
+        if (autoResolvedCount > 0) {
+          await resolveBatch.commit();
+          toast.info(`${autoResolvedCount} alerte(s) résolue(s) automatiquement.`);
         }
       } catch (err) {
         console.error("Failed to execute alert generation rules:", err);

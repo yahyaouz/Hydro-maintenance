@@ -378,21 +378,21 @@ export function LoginPage() {
           right: 5%;
           top: 50%;
           transform: translateY(-50%);
-          width: 390px;
-          min-width: 390px;
-          max-width: 420px;
+          width: 320px;
+          min-width: 320px;
+          max-width: 330px;
           height: auto;
-          max-height: 90vh;
+          max-height: 95vh;
           z-index: 2;
           background: #ffffff !important;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: flex-start;
-          padding: 36px 28px;
-          border-radius: 16px;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.08);
-          overflow-y: auto;
+          padding: 20px 18px;
+          border-radius: 14px;
+          box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.08);
+          overflow: hidden;
         }
         
         /* Top contour border with custom Hydromines blend: sky blue, gold, deep red */
@@ -400,10 +400,10 @@ export function LoginPage() {
           content: '';
           position: absolute;
           top: 0; left: 0; right: 0;
-          height: 5px;
+          height: 4px;
           background: linear-gradient(90deg, #1a9fd4 0%, #C9A227 45%, #9c1a1a 100%);
-          border-top-left-radius: 16px;
-          border-top-right-radius: 16px;
+          border-top-left-radius: 14px;
+          border-top-right-radius: 14px;
         }
 
         .form-inner {
@@ -416,7 +416,7 @@ export function LoginPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-bottom: 24px;
+          margin-bottom: 12px;
           width: 100%;
         }
         .logo-block img {
@@ -427,44 +427,44 @@ export function LoginPage() {
         .logo-text { line-height: 1.1; }
         .logo-name {
           font-family: 'Syne', sans-serif;
-          font-size: 1.05rem;
+          font-size: 0.95rem;
           font-weight: 700;
-          letter-spacing: 1px;
+          letter-spacing: 0.8px;
         }
         .logo-name .h { color: #1a9fd4; }
         .logo-name .m { color: #C0392B; }
         .logo-tagline {
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.52rem;
-          letter-spacing: 2.5px;
+          font-size: 0.48rem;
+          letter-spacing: 2px;
           text-transform: uppercase;
           color: #7f8c8d;
-          margin-top: 3px;
+          margin-top: 2px;
         }
 
         /* Heading */
         .form-eyebrow {
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.58rem;
-          letter-spacing: 4px;
+          font-size: 0.5rem;
+          letter-spacing: 2.5px;
           text-transform: uppercase;
           color: #1a9fd4;
-          margin-bottom: 10px;
+          margin-bottom: 4px;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
+          gap: 6px;
         }
         .form-eyebrow::before,
         .form-eyebrow::after {
           content: '';
           display: inline-block;
-          width: 20px; height: 1.5px;
+          width: 15px; height: 1.2px;
           background: #1a9fd4;
         }
         .form-title {
           font-family: 'Syne', sans-serif;
-          font-size: clamp(1.7rem, 2.5vw, 2rem);
+          font-size: 1.45rem;
           font-weight: 800;
           color: #0d1b2a;
           letter-spacing: -0.5px;
@@ -474,39 +474,34 @@ export function LoginPage() {
         }
         .form-title span { color: #C0392B; }
         .form-desc {
-          font-size: 0.84rem;
-          color: #7f8c8d;
-          line-height: 1.65;
-          margin-bottom: 36px;
-          font-weight: 300;
-          text-align: center;
+          display: none;
         }
 
         /* Google button */
         .btn-google {
           width: 100%;
-          padding: 14px 20px;
+          padding: 11px 16px;
           background: #0d1b2a;
           color: #fff;
           border: none;
-          border-radius: 10px;
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 12px;
+          gap: 10px;
           font-family: 'DM Sans', sans-serif;
-          font-size: 0.9rem;
+          font-size: 0.82rem;
           font-weight: 500;
           cursor: pointer;
           transition: background 0.25s, transform 0.2s, box-shadow 0.25s;
-          box-shadow: 0 4px 14px rgba(13,27,42,0.18);
+          box-shadow: 0 3px 10px rgba(13,27,42,0.15);
           letter-spacing: 0.2px;
-          margin-bottom: 28px;
+          margin-bottom: 14px;
         }
         .btn-google:hover {
           background: #2c3e50;
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(13,27,42,0.22);
+          transform: translateY(-1.5px);
+          box-shadow: 0 6px 18px rgba(13,27,42,0.2);
         }
         .btn-google svg { flex-shrink: 0; }
 
@@ -532,9 +527,9 @@ export function LoginPage() {
 
         /* Security badge */
         .security-block {
-          padding: 14px 16px;
+          padding: 8px 12px;
           border: 1px solid rgba(13, 27, 42, 0.03);
-          border-radius: 10px;
+          border-radius: 8px;
           background: #ffffff;
           box-shadow: 0 4px 20px rgba(13, 27, 42, 0.02);
           display: flex;
@@ -546,40 +541,40 @@ export function LoginPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          margin-bottom: 8px;
+          gap: 6px;
+          margin-bottom: 4px;
         }
         .sec-dot {
-          width: 6px; height: 6px;
+          width: 5px; height: 5px;
           border-radius: 50%;
           background: #059669;
-          box-shadow: 0 0 0 3px rgba(5,150,105,0.15);
+          box-shadow: 0 0 0 2px rgba(5,150,105,0.15);
           animation: blink 2.4s infinite;
           flex-shrink: 0;
         }
         .sec-label {
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.52rem;
-          letter-spacing: 1.5px;
+          font-size: 0.48rem;
+          letter-spacing: 1.2px;
           text-transform: uppercase;
           color: #059669;
           font-weight: 600;
         }
         .sec-text {
-          font-size: 0.72rem;
+          font-size: 0.68rem;
           color: #7f8c8d;
-          line-height: 1.55;
-          margin-bottom: 10px;
+          line-height: 1.45;
+          margin-bottom: 6px;
         }
         .sec-footer {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          padding-top: 10px;
+          gap: 6px;
+          padding-top: 6px;
           border-top: 1px solid rgba(13, 27, 42, 0.05);
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.48rem;
+          font-size: 0.44rem;
           letter-spacing: 1px;
           text-transform: uppercase;
           color: #059669;
@@ -594,11 +589,11 @@ export function LoginPage() {
 
         /* Version + copyright */
         .form-footer {
-          margin-top: 24px;
+          margin-top: 12px;
           text-align: center;
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.48rem;
-          letter-spacing: 1.5px;
+          font-size: 0.44rem;
+          letter-spacing: 1.2px;
           text-transform: uppercase;
           color: #7f8c8d;
           width: 100%;
@@ -608,8 +603,8 @@ export function LoginPage() {
         @media (max-width: 1280px) {
           .panel-form {
             right: 3%;
-            width: 380px;
-            min-width: 380px;
+            width: 320px;
+            min-width: 320px;
           }
           .panel-img__overlay {
             display: none;
@@ -640,7 +635,7 @@ export function LoginPage() {
             transform: none;
             width: 90%;
             min-width: 0;
-            max-width: 385px;
+            max-width: 320px;
             z-index: 2;
             background: #ffffff !important;
             box-shadow: 0 10px 25px rgba(0,0,0,0.25);
@@ -651,9 +646,9 @@ export function LoginPage() {
         }
         @media (max-width: 480px) {
           .panel-form {
-            padding: 32px 20px; 
+            padding: 20px 16px; 
           }
-          .form-title { font-size: 1.5rem; }
+          .form-title { font-size: 1.35rem; }
         }
 
         /* Fade-in animation */
@@ -750,7 +745,7 @@ export function LoginPage() {
         <div className="form-inner">
 
           {/* Logo block with animate system */}
-          <div className="logo-block flex flex-col items-center justify-center text-center gap-1 w-full" style={{ marginBottom: "20px" }}>
+          <div className="logo-block flex flex-col items-center justify-center text-center gap-1 w-full" style={{ marginBottom: "8px" }}>
             <HydrominesLogo size={175} variant="full" className="transform transition-transform hover:scale-105" />
           </div>
 
@@ -758,9 +753,6 @@ export function LoginPage() {
             <>
               <div className="form-eyebrow">Accès sécurisé</div>
               <h1 className="form-title">Espace<br /><span>Maintenance</span></h1>
-              <p className="form-desc" style={{ marginBottom: "20px" }}>
-                Espace dédié aux mécaniciens, responsables de maintenance et secrétaires des chantiers. Connexion sécurisée via votre compte Google professionnel.
-              </p>
 
               <div className="space-y-4 pt-2">
                 <button 

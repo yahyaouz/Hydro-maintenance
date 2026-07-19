@@ -426,21 +426,14 @@ export default function RapportMensuelPDF({
   const getTaskCost = React.useCallback((t: any) => {
     if (typeof t.cout === "number") return t.cout;
     if (typeof t.cost === "number") return t.cost;
-    const hours = getHoursFromDuree(t.dureeEstimee || t.duree || "");
-    const laborCost = hours * 250;
-    const partsCount = (t.piecesUtilisees || t.pieces || []).length;
-    const partsCost = partsCount * 450;
-    return laborCost + partsCost;
+    if (typeof t.coutTotal === "number") return t.coutTotal;
+    return null;
   }, []);
 
   const getPanneCost = React.useCallback((p: any) => {
     if (typeof p.cout === "number") return p.cout;
     if (typeof p.cost === "number") return p.cost;
-    const hours = typeof p.dureeImmobilisation === "number" ? p.dureeImmobilisation : 2;
-    const laborCost = hours * 250;
-    const partsCount = (p.pieces || p.piecesConcernees || []).length;
-    const partsCost = partsCount * 450;
-    return laborCost + partsCost;
+    return null;
   }, []);
 
   // 4. Monthly calculations for MonthKey and PrevMonthKey
@@ -454,20 +447,32 @@ export default function RapportMensuelPDF({
       const interventionsMois = targetInterventions.filter(i => !i.deleted && matchesPeriod(i.date || "", key));
 
       let cost = 0;
-      preventives.forEach(t => { cost += getTaskCost(t); });
-      correctives.forEach(t => { cost += getTaskCost(t); });
-      closedPannes.forEach(p => { cost += getPanneCost(p); });
-      interventionsMois.forEach(i => { cost += getTaskCost(i); });
+      let realCostCount = 0;
+
+      const addRealCost = (item: any, isPanne = false) => {
+        const itemCost = isPanne ? getPanneCost(item) : getTaskCost(item);
+        if (itemCost !== null && itemCost !== undefined && !isNaN(itemCost)) {
+          cost += itemCost;
+          realCostCount++;
+        }
+      };
+
+      preventives.forEach(t => { addRealCost(t); });
+      correctives.forEach(t => { addRealCost(t); });
+      closedPannes.forEach(p => { addRealCost(p, true); });
+      interventionsMois.forEach(i => { addRealCost(i); });
+
+      const totalCost = realCostCount > 0 ? cost : null;
 
       const activeEngins = targetEngins.filter(e => !e.deleted);
       const dispoCount = activeEngins.filter(e => getNormalizedStatus(e) === "DISPONIBLE").length;
-      const dispoRate = activeEngins.length > 0 ? (dispoCount / activeEngins.length) * 100 : 92;
+      const dispoRate = activeEngins.length > 0 ? (dispoCount / activeEngins.length) * 100 : null;
 
       const pCount = pannesMois.length;
-      const mtbf = pCount > 0 ? Math.round((activeEngins.length * 30 * 24) / pCount) : 480;
+      const mtbf = (pCount > 0 && activeEngins.length > 0) ? Math.round((activeEngins.length * 30 * 24) / pCount) : null;
 
       const closedPannesMonth = targetPannes.filter(p => !p.deleted && p.statut === "CLOS" && matchesPeriod(p.dateDeclaration || "", key) && typeof p.dureeImmobilisation === "number");
-      const mttr = closedPannesMonth.length > 0 ? (closedPannesMonth.reduce((acc, p) => acc + (p.dureeImmobilisation || 0), 0) / closedPannesMonth.length) : 3.2;
+      const mttr = closedPannesMonth.length > 0 ? (closedPannesMonth.reduce((acc, p) => acc + (p.dureeImmobilisation || 0), 0) / closedPannesMonth.length) : null;
 
       const pmTotalList = targetTasks.filter(t => !t.deleted && t.type === "PREVENTIF" && matchesPeriod(t.datePlanifiee || "", key));
       const pmFaites = pmTotalList.filter(t => t.statut === "FAIT" || t.statut === "VALIDE").length;
@@ -477,7 +482,7 @@ export default function RapportMensuelPDF({
         totalPannes: pCount,
         totalPreventives: preventives.length,
         totalCorrectives: correctives.length + closedPannes.length + interventionsMois.length,
-        totalCost: cost,
+        totalCost,
         dispoRate,
         mtbf,
         mttr,
@@ -764,7 +769,7 @@ export default function RapportMensuelPDF({
 
     // Rule 4: High MTTR (> 4 hours)
     const currentMttr = statsMois.current.mttr;
-    if (currentMttr > 4) {
+    if (currentMttr !== null && currentMttr > 4) {
       list.push(
         `TEMPS DE RÉPARATION MOYEN ÉLEVÉ : Le MTTR atteint ${currentMttr.toFixed(1)} heures ce mois. Cela suggère un goulot d'étranglement dans l'approvisionnement des pièces détachées ou un manque d'outillage spécialisé sur site.`
       );
@@ -789,8 +794,10 @@ export default function RapportMensuelPDF({
   }, [classementSitesData, statsMois, modelsReliability]);
 
   // Variation helper
-  const getVarSymbol = (curr: number, prev: number, lowerIsBetter = false) => {
-    if (prev === 0) return { text: "N/A", sign: "" };
+  const getVarSymbol = (curr: number | null, prev: number | null, lowerIsBetter = false) => {
+    if (curr === null || prev === null || prev === 0) {
+      return { text: "Données insuffisantes", sign: "", pct: 0, arrow: "", isImproving: null };
+    }
     const diff = curr - prev;
     const pct = Math.round((diff / prev) * 100);
     const arrow = diff === 0 ? "→" : diff > 0 ? "↑" : "↓";
@@ -811,7 +818,8 @@ export default function RapportMensuelPDF({
   const costVar = getVarSymbol(statsMois.current.totalCost, statsMois.previous.totalCost, true);
   const complianceVar = getVarSymbol(statsMois.current.compliance, statsMois.previous.compliance, false);
 
-  const formatCost = (val: number) => {
+  const formatCost = (val: number | null) => {
+    if (val === null || val === undefined) return "Données insuffisantes";
     return val.toLocaleString("fr-FR") + " DH";
   };
 
@@ -952,7 +960,9 @@ export default function RapportMensuelPDF({
         <View style={styles.grid2}>
           <View style={styles.card}>
             <Text style={styles.cardLabel}>Disponibilité Flotte</Text>
-            <Text style={styles.cardValue}>{Math.round(statsMois.current.dispoRate)}%</Text>
+            <Text style={styles.cardValue}>
+              {statsMois.current.dispoRate !== null ? `${Math.round(statsMois.current.dispoRate)}%` : "Données insuffisantes"}
+            </Text>
             <Text style={styles.cardSub}>Objectif cible: &gt; 90%</Text>
           </View>
           <View style={styles.card}>

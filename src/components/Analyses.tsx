@@ -233,68 +233,32 @@ export default function Analyses() {
     const siteEngins = (rawEngins || []).filter(e => !e.deleted && e.siteId === siteId);
     if (siteEngins.length === 0) return null;
 
-    const getHoursFromDuree = (duree: string) => {
-      if (!duree) return 0;
-      const clean = duree.toLowerCase().trim();
-      if (clean === '15min') return 0.25;
-      if (clean === '30min') return 0.5;
-      if (clean === '1h') return 1;
-      if (clean === '2h') return 2;
-      if (clean === '4h') return 4;
-      if (clean === '6h') return 6;
-      if (clean === '1j') return 8;
-      const num = parseFloat(clean);
-      return isNaN(num) ? 0 : num;
-    };
-
-    const getTaskCost = (task: any) => {
-      if (typeof task.cout === "number") return task.cout;
-      if (typeof task.cost === "number") return task.cost;
-      if (typeof task.coutTotal === "number") return task.coutTotal;
-      
-      const hours = getHoursFromDuree(task.dureeEstimee || task.duree || "");
-      const laborCost = hours * 250; 
-      const partsCount = (task.piecesUtilisees || task.pieces || []).length;
-      const partsCost = partsCount * 450; 
-      return laborCost + partsCost;
-    };
-
-    const getPanneCost = (p: any) => {
-      if (typeof p.cout === "number") return p.cout;
-      if (typeof p.cost === "number") return p.cost;
-      
-      const parseToDate = (field: any): Date | null => {
-        if (!field) return null;
-        if (typeof field.toMillis === 'function') return new Date(field.toMillis());
-        if (field.seconds) return new Date(field.seconds * 1000);
-        const d = new Date(field);
-        return isNaN(d.getTime()) ? null : d;
-      };
-
-      let laborHours = 0;
-      const dPrise = parseToDate(p.datePriseEnCharge);
-      const dRes = parseToDate(p.dateResolution);
-      if (dPrise && dRes && dRes > dPrise) {
-        laborHours = (dRes.getTime() - dPrise.getTime()) / (1000 * 60 * 60);
-      } else {
-        laborHours = 2; 
-      }
-      const laborCost = laborHours * 250;
-      const partsCount = (p.pieces || p.piecesConcernees || []).length;
-      const partsCost = partsCount * 450;
-      return laborCost + partsCost;
-    };
-
     const preventives = (rawTasks || []).filter(t => !t.deleted && (t.siteId === siteId || t.site === siteId) && t.type === 'PREVENTIF' && (t.statut === 'FAIT' || t.statut === 'VALIDE') && t.datePlanifiee && t.datePlanifiee.startsWith(monthStr));
     const correctives = (rawTasks || []).filter(t => !t.deleted && (t.siteId === siteId || t.site === siteId) && (t.type === 'CORRECTIF' || t.type === 'CURATIF') && (t.statut === 'FAIT' || t.statut === 'VALIDE') && t.datePlanifiee && t.datePlanifiee.startsWith(monthStr));
     const closedPannes = (rawPannes || []).filter(p => !p.deleted && (p.siteId === siteId || p.site === siteId) && p.statut === 'CLOS' && p.dateResolution && p.dateResolution.startsWith(monthStr));
     const interventionsMois = (rawInterventions || []).filter(i => !i.deleted && (i.siteId === siteId || i.site === siteId) && (i.typeIntervention === 'CORRECTIF' || i.type === 'CORRECTIF' || i.type === 'CURATIF') && i.date && i.date.startsWith(monthStr));
 
     let totalCost = 0;
-    preventives.forEach(t => { totalCost += getTaskCost(t); });
-    correctives.forEach(t => { totalCost += getTaskCost(t); });
-    closedPannes.forEach(p => { totalCost += getPanneCost(p); });
-    interventionsMois.forEach(i => { totalCost += getTaskCost(i); });
+    let realCostCount = 0;
+
+    const addRealCost = (item: any) => {
+      let cost: any = undefined;
+      if (typeof item.cout === "number") cost = item.cout;
+      else if (typeof item.cost === "number") cost = item.cost;
+      else if (typeof item.coutTotal === "number") cost = item.coutTotal;
+
+      if (cost !== undefined && cost !== null && !isNaN(cost)) {
+        totalCost += cost;
+        realCostCount++;
+      }
+    };
+
+    preventives.forEach(t => { addRealCost(t); });
+    correctives.forEach(t => { addRealCost(t); });
+    closedPannes.forEach(p => { addRealCost(p); });
+    interventionsMois.forEach(i => { addRealCost(i); });
+
+    if (realCostCount === 0) return null;
 
     const totalHours = siteEngins.length * 160;
     if (totalHours === 0) return null;
@@ -664,7 +628,7 @@ export default function Analyses() {
         : null;
 
       // Availability: 100% - (total downtime duration / (90d * 24h)) * 100
-      const totalImmobilH = pannesEngin.reduce((acc, p) => acc + (p.dureeImmobilisation || 0), 0);
+      const totalImmobilH = pannes90j.reduce((acc, p) => acc + (p.dureeImmobilisation || 0), 0);
       const dispoPct = Math.max(0, Math.round((1 - totalImmobilH / (90 * 24)) * 100));
 
       return {

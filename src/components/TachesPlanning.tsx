@@ -12,6 +12,7 @@ import { useCollection } from '@/hooks/useCollection';
 import { DataLoadError } from '@/components/shared/DataLoadError';
 import { toast } from 'sonner';
 import { dbService } from '@/services/firestoreService';
+import { OfflineQueueManager } from '@/services/offlineQueueManager';
 import { getLocalDateString, getLocalMonthString } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -357,7 +358,7 @@ export default function TachesPlanning() {
       }
 
       const idempotencyKey = `bt_man_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      await dbService.workOrders.create({
+      const payload = {
         ...data,
         enginModele: targetEngin.modele,
         mecanicienNom: targetMeca.nomComplet,
@@ -366,9 +367,44 @@ export default function TachesPlanning() {
         commentaire: '',
         heuresEnginAuMoment: targetEngin.heuresMarche || 0,
         generationType: 'MANUEL',
-      }, idempotencyKey);
+      };
 
-      toast.success("Tâche planifiée avec succès !");
+      const isOffline = !navigator.onLine;
+
+      if (isOffline) {
+        OfflineQueueManager.enqueue({
+          idempotencyKey,
+          actionType: 'CREATE_BT',
+          payload,
+          label: `Planification BT : ${data.label}`,
+          siteId: targetEngin.siteId || user?.siteId || 'SMI',
+          userId: user?.uid
+        });
+
+        toast.warning("Action enregistrée localement (Hors-ligne). Elle sera synchronisée au retour du réseau.");
+        return;
+      }
+
+      try {
+        await dbService.workOrders.create(payload, idempotencyKey);
+        toast.success("Tâche planifiée avec succès !");
+      } catch (err: any) {
+        const isNetworkError = err?.message?.includes('unavailable') || err?.message?.includes('network') || err?.code === 'unavailable';
+        if (isNetworkError) {
+          OfflineQueueManager.enqueue({
+            idempotencyKey,
+            actionType: 'CREATE_BT',
+            payload,
+            label: `Planification BT : ${data.label}`,
+            siteId: targetEngin.siteId || user?.siteId || 'SMI',
+            userId: user?.uid
+          });
+
+          toast.warning("Réseau indisponible. Planification enregistrée localement pour synchronisation ultérieure.");
+        } else {
+          throw err;
+        }
+      }
     } catch (err) {
       handleFirestoreError(err, 'Planifier');
     }
@@ -377,9 +413,46 @@ export default function TachesPlanning() {
   // V4-FIRESTORE: Atomic transaction for task updates, engine states, and corrective panne closures
   const handleUpdateTask = async (taskId: string, fields: Partial<MaintenanceTask>) => {
     try {
+      const existingTask = tasks.find(t => t.id === taskId);
+      const enginId = existingTask?.enginId;
+
+      let candidatePanneIds: string[] = [];
+      let candidateTaskIds: string[] = [];
+
+      if (enginId) {
+        candidatePanneIds = pannes
+          .filter(p => p.enginId === enginId && p.deleted !== true && p.statut !== 'CLOS')
+          .map(p => p.id);
+
+        candidateTaskIds = tasks
+          .filter(t => t.enginId === enginId && t.id !== taskId && t.type === 'CORRECTIF' && t.deleted !== true && !['FAIT', 'VALIDE'].includes(t.statut))
+          .map(t => t.id);
+      }
+
       const taskRef = doc(db, 'maintenanceTasks', taskId);
 
-      await runTransaction(db, async (transaction) => {
+      const isOffline = !navigator.onLine;
+
+      if (isOffline) {
+        const idempotencyKey = `upd_bt_${taskId}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        OfflineQueueManager.enqueue({
+          idempotencyKey,
+          actionType: 'UPDATE_BT',
+          payload: {
+            id: taskId,
+            updates: fields
+          },
+          label: `Mise à jour BT ${existingTask?.label || taskId} : ${fields.statut || 'Modifié'}`,
+          siteId: existingTask?.siteId || user?.siteId || 'SMI',
+          userId: user?.uid
+        });
+
+        toast.warning("Action enregistrée localement (Hors-ligne). Elle sera synchronisée au retour du réseau.");
+        return;
+      }
+
+      try {
+        await runTransaction(db, async (transaction) => {
         // 1. Fetch current task state atomically
         const taskSnap = await transaction.get(taskRef);
         if (!taskSnap.exists()) {
@@ -458,34 +531,145 @@ export default function TachesPlanning() {
 
             if (taskData.enginId) {
               const enginRef = doc(db, 'engins', taskData.enginId);
-              transaction.update(enginRef, {
-                statut: 'actif',
-                status: 'DISPONIBLE',
-                etat: 'Opérationnel',
-                dispo: 100,
-                updatedAt: Timestamp.now()
-              });
+              
+              let otherPannesOpen = 0;
+              let otherCorrectiveTasksOpen = 0;
+
+              for (const pid of candidatePanneIds) {
+                if (pid === taskData.panneId) {
+                  continue;
+                }
+                const pSnap = await transaction.get(doc(db, 'pannes', pid));
+                if (pSnap.exists()) {
+                  const pData = pSnap.data();
+                  if (pData.statut !== 'CLOS' && pData.deleted !== true) {
+                    otherPannesOpen++;
+                  }
+                }
+              }
+
+              for (const tid of candidateTaskIds) {
+                const tSnap = await transaction.get(doc(db, 'maintenanceTasks', tid));
+                if (tSnap.exists()) {
+                  const tData = tSnap.data();
+                  if (tData.deleted !== true && !['FAIT', 'VALIDE'].includes(tData.statut)) {
+                    otherCorrectiveTasksOpen++;
+                  }
+                }
+              }
+
+              const enginSnap = await transaction.get(enginRef);
+              if (enginSnap.exists()) {
+                if (otherPannesOpen > 0) {
+                  transaction.update(enginRef, {
+                    statut: 'panne',
+                    status: 'EN_PANNE',
+                    etat: 'En maintenance',
+                    dispo: 0,
+                    updatedAt: Timestamp.now()
+                  });
+                } else if (otherCorrectiveTasksOpen > 0) {
+                  transaction.update(enginRef, {
+                    statut: 'maintenance',
+                    status: 'EN_MAINTENANCE',
+                    etat: 'En maintenance',
+                    dispo: 50,
+                    updatedAt: Timestamp.now()
+                  });
+                } else {
+                  transaction.update(enginRef, {
+                    statut: 'actif',
+                    status: 'DISPONIBLE',
+                    etat: 'Opérationnel',
+                    dispo: 100,
+                    updatedAt: Timestamp.now()
+                  });
+                }
+              }
             }
           }
 
           // B. Preventive task completion -> synchronize and put engine back to Operational
           if (taskData.type === 'PREVENTIF' && taskData.enginId) {
             const enginRef = doc(db, 'engins', taskData.enginId);
+
+            let otherPannesOpen = 0;
+            let otherCorrectiveTasksOpen = 0;
+
+            for (const pid of candidatePanneIds) {
+              const pSnap = await transaction.get(doc(db, 'pannes', pid));
+              if (pSnap.exists()) {
+                const pData = pSnap.data();
+                if (pData.statut !== 'CLOS' && pData.deleted !== true) {
+                  otherPannesOpen++;
+                }
+              }
+            }
+
+            for (const tid of candidateTaskIds) {
+              const tSnap = await transaction.get(doc(db, 'maintenanceTasks', tid));
+              if (tSnap.exists()) {
+                const tData = tSnap.data();
+                if (tData.deleted !== true && !['FAIT', 'VALIDE'].includes(tData.statut)) {
+                  otherCorrectiveTasksOpen++;
+                }
+              }
+            }
+
             const enginSnap = await transaction.get(enginRef);
             if (enginSnap.exists()) {
-              transaction.update(enginRef, {
-                statut: 'actif',
-                status: 'DISPONIBLE',
-                etat: 'Opérationnel',
-                dispo: 100,
-                updatedAt: Timestamp.now()
-              });
+              if (otherPannesOpen > 0) {
+                transaction.update(enginRef, {
+                  statut: 'panne',
+                  status: 'EN_PANNE',
+                  etat: 'En maintenance',
+                  dispo: 0,
+                  updatedAt: Timestamp.now()
+                });
+              } else if (otherCorrectiveTasksOpen > 0) {
+                transaction.update(enginRef, {
+                  statut: 'maintenance',
+                  status: 'EN_MAINTENANCE',
+                  etat: 'En maintenance',
+                  dispo: 50,
+                  updatedAt: Timestamp.now()
+                });
+              } else {
+                transaction.update(enginRef, {
+                  statut: 'actif',
+                  status: 'DISPONIBLE',
+                  etat: 'Opérationnel',
+                  dispo: 100,
+                  updatedAt: Timestamp.now()
+                });
+              }
             }
           }
         }
       });
 
       toast.success("Tâche mise à jour avec succès (Transaction V4 validée) !");
+      } catch (err: any) {
+        const isNetworkError = err?.message?.includes('unavailable') || err?.message?.includes('network') || err?.code === 'unavailable';
+        if (isNetworkError) {
+          const idempotencyKey = `upd_bt_${taskId}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          OfflineQueueManager.enqueue({
+            idempotencyKey,
+            actionType: 'UPDATE_BT',
+            payload: {
+              id: taskId,
+              updates: fields
+            },
+            label: `Mise à jour BT ${existingTask?.label || taskId} : ${fields.statut || 'Modifié'}`,
+            siteId: existingTask?.siteId || user?.siteId || 'SMI',
+            userId: user?.uid
+          });
+
+          toast.warning("Réseau indisponible. Action enregistrée localement, sera synchronisée au retour du réseau.");
+        } else {
+          throw err;
+        }
+      }
     } catch (err: any) {
       if (err?.message?.startsWith("VALIDATION_ERROR: ")) {
         toast.error(err.message.replace("VALIDATION_ERROR: ", ""));

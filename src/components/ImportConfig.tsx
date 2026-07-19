@@ -321,6 +321,9 @@ export function ImportConfig() {
                 <div className="text-[11px] bg-slate-50 text-slate-600 rounded-lg p-2.5 font-mono space-y-1">
                   <span className="font-bold text-slate-700 uppercase block mb-1">Structure attendue (pieces.csv) :</span>
                   <code>code_piece, designation, quantite, unite, engin_matricule, engin_type, site, date_conso, mecanicien_matricule, cout_unite_dh, cout_total_dh</code>
+                  <p className="text-[10px] text-amber-600 font-sans mt-1">
+                    💡 Note: Les séparateurs décimaux en format français (virgule, ex: 125,5) ou standard (point, ex: 125.5) sont acceptés pour les colonnes numériques.
+                  </p>
                 </div>
 
                 {/* Drag and Drop Box */}
@@ -403,6 +406,9 @@ export function ImportConfig() {
                 <div className="text-[11px] bg-slate-50 text-slate-600 rounded-lg p-2.5 font-mono space-y-1">
                   <span className="font-bold text-slate-700 uppercase block mb-1">Structure attendue (carburants.csv) :</span>
                   <code>matricule_engin, type_engin, site, date_releve, heures_moteur, conso_gasoil_litres, conso_huile_moteur_litres, conso_huile_hydraulique_litres, conso_autres_lubrifiants_litres</code>
+                  <p className="text-[10px] text-amber-600 font-sans mt-1">
+                    💡 Note: Les séparateurs décimaux en format français (virgule, ex: 125,5) ou standard (point, ex: 125.5) sont acceptés pour les colonnes numériques.
+                  </p>
                 </div>
 
                 <div
@@ -565,6 +571,9 @@ export function ImportConfig() {
                 <div className="text-[11px] bg-slate-50 text-slate-600 rounded-lg p-2.5 font-mono space-y-1">
                   <span className="font-bold text-slate-700 uppercase block mb-1">Structure attendue (realisation.csv) :</span>
                   <code>mecanicien_matricule, date, engin_matricule, type_intervention, heure_debut_reelle, heure_fin_reelle, duree_heures, description_travaux, statut, pieces_utilisees, categorie</code>
+                  <p className="text-[10px] text-amber-600 font-sans mt-1">
+                    💡 Note: Les séparateurs décimaux en format français (virgule, ex: 125,5) ou standard (point, ex: 125.5) sont acceptés pour les colonnes numériques.
+                  </p>
                   <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
                     * La colonne <strong>categorie</strong> doit contenir l'une des valeurs suivantes : <code>Mécanique</code>, <code>Hydraulique</code>, <code>Électrique</code>, <code>Pneumatique</code>, <code>Transmission</code>, <code>Freinage</code>, <code>Autre</code>.
                     Si la colonne est absente, vide ou contient une valeur invalide, la valeur <code>"Non catégorisé"</code> sera automatiquement attribuée (sans deviner).

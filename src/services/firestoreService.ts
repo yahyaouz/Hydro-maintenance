@@ -1061,20 +1061,183 @@ export const dbService = {
       
       switch (action.actionType) {
         case 'DECLARE_STOP': {
-          const { machineCode, stop } = action.payload;
-          const id = machineCode;
-          const ref = doc(db, 'engins', id);
+          const { machineCode, stop, panne } = action.payload;
+          const id = machineCode || panne?.enginId;
+          if (id) {
+            const ref = doc(db, 'engins', id);
+            try {
+              await updateDoc(ref, {
+                status: ENGIN_STATUS.EN_PANNE,
+                statut: 'panne',
+                etat: 'En maintenance',
+                dispo: 0,
+                lastStopReason: stop?.reason || panne?.description || 'Saignement/Panne signalée hors-ligne',
+                updatedAt: Timestamp.now()
+              });
+            } catch (err) {
+              handleFirestoreError(err, OperationType.WRITE, `engins/${id}`);
+            }
+          }
+          if (panne) {
+            try {
+              await dbService.pannes.create(panne);
+            } catch (err) {
+              console.error("Failed to create panne during DECLARE_STOP replay:", err);
+            }
+          }
+          break;
+        }
+
+        case 'UPDATE_BT': {
+          const { id, updates } = action.payload;
+          const taskRef = doc(db, 'maintenanceTasks', id);
+          
           try {
-            await updateDoc(ref, {
-              status: ENGIN_STATUS.EN_PANNE,
-              statut: 'panne',
-              etat: 'En maintenance',
-              dispo: 0,
-              lastStopReason: stop.reason || 'Saignement/Panne signalée hors-ligne',
-              updatedAt: Timestamp.now()
+            await runTransaction(db, async (transaction) => {
+              const taskSnap = await transaction.get(taskRef);
+              if (!taskSnap.exists()) {
+                console.warn(`Task ${id} not found on replay. Creating/setting merged updates.`);
+                transaction.set(taskRef, {
+                  ...updates,
+                  updatedAt: Timestamp.now()
+                }, { merge: true });
+                return;
+              }
+              const taskData = taskSnap.data() as any;
+              
+              const taskUpdates = {
+                ...updates,
+                updatedAt: Timestamp.now()
+              };
+
+              if (
+                updates.statut === 'EN_COURS' &&
+                taskData.type === 'CORRECTIF' &&
+                updates.datePriseEnCharge === undefined &&
+                !taskData.datePriseEnCharge
+              ) {
+                const now = Timestamp.now();
+                taskUpdates.datePriseEnCharge = now;
+                if (taskData.panneId) {
+                  const panneRef = doc(db, 'pannes', taskData.panneId);
+                  transaction.update(panneRef, {
+                    datePriseEnCharge: now,
+                    updatedAt: now
+                  });
+                }
+              }
+
+              transaction.update(taskRef, taskUpdates);
+
+              const isCompletedNow = updates.statut === 'FAIT' || updates.statut === 'VALIDE';
+              if (isCompletedNow) {
+                if (taskData.type === 'CORRECTIF' && taskData.panneId) {
+                  const panneRef = doc(db, 'pannes', taskData.panneId);
+                  transaction.update(panneRef, {
+                    statut: 'CLOS',
+                    solution: updates.commentaire || "Fiche d'intervention validée.",
+                    dateResolution: Timestamp.now(),
+                    updatedAt: Timestamp.now()
+                  });
+
+                  if (taskData.enginId) {
+                    const enginRef = doc(db, 'engins', taskData.enginId);
+                    
+                    const pannesQuery = query(collection(db, 'pannes'), where('enginId', '==', taskData.enginId));
+                    const pSnap = await getDocs(pannesQuery);
+                    let otherPannesOpen = 0;
+                    pSnap.docs.forEach(d => {
+                      if (d.id !== taskData.panneId && d.data().statut !== 'CLOS' && d.data().deleted !== true) {
+                        otherPannesOpen++;
+                      }
+                    });
+
+                    const tasksQuery = query(collection(db, 'maintenanceTasks'), where('enginId', '==', taskData.enginId));
+                    const tSnap = await getDocs(tasksQuery);
+                    let otherCorrectiveTasksOpen = 0;
+                    tSnap.docs.forEach(d => {
+                      if (d.id !== id && d.data().type === 'CORRECTIF' && !['FAIT', 'VALIDE'].includes(d.data().statut) && d.data().deleted !== true) {
+                        otherCorrectiveTasksOpen++;
+                      }
+                    });
+
+                    if (otherPannesOpen > 0) {
+                      transaction.update(enginRef, {
+                        statut: 'panne',
+                        status: 'EN_PANNE',
+                        etat: 'En maintenance',
+                        dispo: 0,
+                        updatedAt: Timestamp.now()
+                      });
+                    } else if (otherCorrectiveTasksOpen > 0) {
+                      transaction.update(enginRef, {
+                        statut: 'maintenance',
+                        status: 'EN_MAINTENANCE',
+                        etat: 'En maintenance',
+                        dispo: 50,
+                        updatedAt: Timestamp.now()
+                      });
+                    } else {
+                      transaction.update(enginRef, {
+                        statut: 'actif',
+                        status: 'DISPONIBLE',
+                        etat: 'Opérationnel',
+                        dispo: 100,
+                        updatedAt: Timestamp.now()
+                      });
+                    }
+                  }
+                } else if (taskData.type === 'PREVENTIF' && taskData.enginId) {
+                  const enginRef = doc(db, 'engins', taskData.enginId);
+
+                  const pannesQuery = query(collection(db, 'pannes'), where('enginId', '==', taskData.enginId));
+                  const pSnap = await getDocs(pannesQuery);
+                  let otherPannesOpen = 0;
+                  pSnap.docs.forEach(d => {
+                    if (d.data().statut !== 'CLOS' && d.data().deleted !== true) {
+                      otherPannesOpen++;
+                    }
+                  });
+
+                  const tasksQuery = query(collection(db, 'maintenanceTasks'), where('enginId', '==', taskData.enginId));
+                  const tSnap = await getDocs(tasksQuery);
+                  let otherCorrectiveTasksOpen = 0;
+                  tSnap.docs.forEach(d => {
+                    if (d.id !== id && d.data().type === 'CORRECTIF' && !['FAIT', 'VALIDE'].includes(d.data().statut) && d.data().deleted !== true) {
+                      otherCorrectiveTasksOpen++;
+                    }
+                  });
+
+                  if (otherPannesOpen > 0) {
+                    transaction.update(enginRef, {
+                      statut: 'panne',
+                      status: 'EN_PANNE',
+                      etat: 'En maintenance',
+                      dispo: 0,
+                      updatedAt: Timestamp.now()
+                    });
+                  } else if (otherCorrectiveTasksOpen > 0) {
+                    transaction.update(enginRef, {
+                      statut: 'maintenance',
+                      status: 'EN_MAINTENANCE',
+                      etat: 'En maintenance',
+                      dispo: 50,
+                      updatedAt: Timestamp.now()
+                    });
+                  } else {
+                    transaction.update(enginRef, {
+                      statut: 'actif',
+                      status: 'DISPONIBLE',
+                      etat: 'Opérationnel',
+                      dispo: 100,
+                      updatedAt: Timestamp.now()
+                    });
+                  }
+                }
+              }
             });
           } catch (err) {
-            handleFirestoreError(err, OperationType.WRITE, `engins/${id}`);
+            handleFirestoreError(err, OperationType.WRITE, `maintenanceTasks/${id}`);
           }
           break;
         }
@@ -1099,6 +1262,12 @@ export const dbService = {
         case 'CREATE_BT': {
           const newBT = action.payload;
           await dbService.workOrders.create(newBT, action.idempotencyKey || '');
+          break;
+        }
+
+        case 'CREATE_CHECKLIST': {
+          const newChecklist = action.payload;
+          await dbService.checklists.create(newChecklist);
           break;
         }
 

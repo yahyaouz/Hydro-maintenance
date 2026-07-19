@@ -20,6 +20,7 @@ import { Pneumatiques } from "@/components/Pneumatiques";
 import { CarnetSante } from "@/components/CarnetSante";
 import { RootCauseAnalysis } from "@/components/RootCauseAnalysis";
 import CentreCommandement from "@/components/CentreCommandement";
+import { AccesRefuse } from "@/components/shared/AccesRefuse";
 
 function IndustrialSkeleton() {
   return (
@@ -189,10 +190,43 @@ const KNOWN_TABS = [
   "admin"
 ];
 
+const TAB_ALLOWED_ROLES: Record<string, string[]> = {
+  centre_commandement: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE"],
+  dashboard: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"],
+  alertes: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"],
+  carnet_sante: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER"],
+  systematique: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"],
+  taches_planning: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"],
+  checklists: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"],
+  engins: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN"],
+  mecaniciens: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER"],
+  pneumatiques: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN"],
+  rca: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE"],
+  analyses: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE"],
+  referentiel: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER", "MECANICIEN", "SECRETAIRE"],
+  import_config: ["ADMIN", "DIRECTION", "RESPONSABLE_MAINTENANCE", "SECRETAIRE"],
+  admin: ["ADMIN", "DIRECTION"]
+};
+
 const getInitialTab = () => {
   if (typeof window === "undefined") return "dashboard";
   const path = window.location.pathname.replace(/^\//, "");
-  return KNOWN_TABS.includes(path) ? path : "dashboard";
+  const tab = KNOWN_TABS.includes(path) ? path : "dashboard";
+  
+  try {
+    const raw = localStorage.getItem('sg_current_user');
+    const user = raw ? JSON.parse(raw) : null;
+    if (user && user.role) {
+      const allowed = TAB_ALLOWED_ROLES[tab];
+      if (allowed && !allowed.includes(user.role)) {
+        return "dashboard";
+      }
+    }
+  } catch (e) {
+    console.error("Error reading current user for initial tab guard:", e);
+  }
+  
+  return tab;
 };
 
 export default function App() {
@@ -305,6 +339,15 @@ export default function App() {
     const handlePopState = (event: PopStateEvent) => {
       const path = window.location.pathname.replace(/^\//, "");
       const matchedTab = KNOWN_TABS.includes(path) ? path : "dashboard";
+      
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser) {
+        const allowed = TAB_ALLOWED_ROLES[matchedTab];
+        if (allowed && !allowed.includes(currentUser.role)) {
+          navigateToTab("dashboard");
+          return;
+        }
+      }
       setActiveTab(matchedTab);
     };
 
@@ -312,12 +355,22 @@ export default function App() {
     
     const initialPath = window.location.pathname.replace(/^\//, "");
     const initialTab = KNOWN_TABS.includes(initialPath) ? initialPath : "dashboard";
-    window.history.replaceState({ tabId: initialTab }, '', `/${initialTab}`);
+    
+    const currentUser = useAuthStore.getState().user;
+    let resolvedTab = initialTab;
+    if (currentUser) {
+      const allowed = TAB_ALLOWED_ROLES[initialTab];
+      if (allowed && !allowed.includes(currentUser.role)) {
+        resolvedTab = "dashboard";
+      }
+    }
+    
+    window.history.replaceState({ tabId: resolvedTab }, '', `/${resolvedTab}`);
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, []);
+  }, [navigateToTab]);
 
   // Network heartbeat and offline queue monitoring
   React.useEffect(() => {
@@ -403,6 +456,20 @@ export default function App() {
       });
     }
   }, [isAuthenticated]);
+
+  // Security guard redirect: If user loads on or tries to navigate to an unauthorized tab, redirect to dashboard after 7s countdown
+  React.useEffect(() => {
+    if (authInitialized && isAuthenticated && user) {
+      const allowed = TAB_ALLOWED_ROLES[activeTab];
+      if (allowed && !allowed.includes(user.role)) {
+        const timer = setTimeout(() => {
+          navigateToTab("dashboard");
+          toast.error(`Redirection de sécurité : accès non autorisé au module "${activeTab}".`);
+        }, 7000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [authInitialized, isAuthenticated, user, activeTab, navigateToTab]);
 
   // Real-time Firestore notifications shared feed listener
   React.useEffect(() => {
@@ -640,20 +707,108 @@ export default function App() {
           <div className="relative z-10 w-full h-full p-6">
             <React.Suspense fallback={<IndustrialSkeleton />}>
               {activeTab === "dashboard" && <Dashboard />}
-              {activeTab === "centre_commandement" && <CentreCommandement setActiveTab={navigateToTab} />}
+              {activeTab === "centre_commandement" && (
+                user && TAB_ALLOWED_ROLES["centre_commandement"].includes(user.role) ? (
+                  <CentreCommandement setActiveTab={navigateToTab} />
+                ) : (
+                  <AccesRefuse 
+                    onRedirect={() => navigateToTab("dashboard")} 
+                    message="Accès réservé aux administrateurs, à la direction et aux responsables de maintenance."
+                    allowedRoles={TAB_ALLOWED_ROLES["centre_commandement"]}
+                    userRole={user?.role}
+                  />
+                )
+              )}
               {activeTab === "alertes" && <Alertes />}
               {activeTab === "engins" && <EnginList />}
-              {activeTab === "import_config" && <ImportConfig />}
-              {activeTab === "admin" && <Admin />}
-              {activeTab === "referentiel" && <ReferentielTechnique />}
+              {activeTab === "import_config" && (
+                user && TAB_ALLOWED_ROLES["import_config"].includes(user.role) ? (
+                  <ImportConfig />
+                ) : (
+                  <AccesRefuse 
+                    onRedirect={() => navigateToTab("dashboard")} 
+                    message="Accès réservé aux administrateurs, à la direction, aux responsables de maintenance et aux secrétaires."
+                    allowedRoles={TAB_ALLOWED_ROLES["import_config"]}
+                    userRole={user?.role}
+                  />
+                )
+              )}
+              {activeTab === "admin" && (
+                user && TAB_ALLOWED_ROLES["admin"].includes(user.role) ? (
+                  <Admin />
+                ) : (
+                  <AccesRefuse 
+                    onRedirect={() => navigateToTab("dashboard")} 
+                    message="Accès réservé aux administrateurs de la mine."
+                    allowedRoles={TAB_ALLOWED_ROLES["admin"]}
+                    userRole={user?.role}
+                  />
+                )
+              )}
+              {activeTab === "referentiel" && (
+                user && TAB_ALLOWED_ROLES["referentiel"].includes(user.role) ? (
+                  <ReferentielTechnique />
+                ) : (
+                  <AccesRefuse 
+                    onRedirect={() => navigateToTab("dashboard")} 
+                    message="Accès réservé aux profils techniques habilités."
+                    allowedRoles={TAB_ALLOWED_ROLES["referentiel"]}
+                    userRole={user?.role}
+                  />
+                )
+              )}
               {activeTab === "checklists" && <Checklists />}
               {activeTab === "taches_planning" && <TachesPlanning />}
-              {activeTab === "analyses" && <Analyses />}
+              {activeTab === "analyses" && (
+                user && TAB_ALLOWED_ROLES["analyses"].includes(user.role) ? (
+                  <Analyses />
+                ) : (
+                  <AccesRefuse 
+                    onRedirect={() => navigateToTab("dashboard")} 
+                    message="Accès réservé à la direction, aux administrateurs et aux responsables de maintenance."
+                    allowedRoles={TAB_ALLOWED_ROLES["analyses"]}
+                    userRole={user?.role}
+                  />
+                )
+              )}
               {activeTab === "systematique" && <SystematicTasks />}
-              {activeTab === "mecaniciens" && <Mecaniciens />}
+              {activeTab === "mecaniciens" && (
+                user && TAB_ALLOWED_ROLES["mecaniciens"].includes(user.role) ? (
+                  <Mecaniciens />
+                ) : (
+                  <AccesRefuse 
+                    onRedirect={() => navigateToTab("dashboard")} 
+                    message="Accès réservé aux gestionnaires d'équipe et à l'administration."
+                    allowedRoles={TAB_ALLOWED_ROLES["mecaniciens"]}
+                    userRole={user?.role}
+                  />
+                )
+              )}
               {activeTab === "pneumatiques" && <Pneumatiques />}
-              {activeTab === "carnet_sante" && <CarnetSante />}
-              {activeTab === "rca" && <RootCauseAnalysis />}
+              {activeTab === "carnet_sante" && (
+                user && TAB_ALLOWED_ROLES["carnet_sante"].includes(user.role) ? (
+                  <CarnetSante />
+                ) : (
+                  <AccesRefuse 
+                    onRedirect={() => navigateToTab("dashboard")} 
+                    message="Accès réservé aux planificateurs, chefs de chantiers et à la direction."
+                    allowedRoles={TAB_ALLOWED_ROLES["carnet_sante"]}
+                    userRole={user?.role}
+                  />
+                )
+              )}
+              {activeTab === "rca" && (
+                user && TAB_ALLOWED_ROLES["rca"].includes(user.role) ? (
+                  <RootCauseAnalysis />
+                ) : (
+                  <AccesRefuse 
+                    onRedirect={() => navigateToTab("dashboard")} 
+                    message="Accès réservé à la direction et aux responsables de maintenance."
+                    allowedRoles={TAB_ALLOWED_ROLES["rca"]}
+                    userRole={user?.role}
+                  />
+                )
+              )}
               
               {!["dashboard", "centre_commandement", "alertes", "engins", "referentiel", "admin", "checklists", "taches_planning", "analyses", "systematique", "import_config", "mecaniciens", "pneumatiques", "carnet_sante", "rca"].includes(activeTab) && (
                 <div className="flex items-center justify-center h-full text-muted-foreground bg-white dark:bg-slate-900">

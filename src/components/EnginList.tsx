@@ -107,6 +107,21 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isSubmitLoading, setIsSubmitLoading] = React.useState(false);
 
+  // LOTO Lock states
+  const [lotoLocks, setLotoLocks] = React.useState<Record<string, { statutLOTO: "ACTIF" | "INACTIF"; lotoDetails?: string; details?: any }>>({});
+  const [isLotoModalOpen, setIsLotoModalOpen] = React.useState(false);
+  const [lotoMode, setLotoMode] = React.useState<"LOCK" | "UNLOCK">("LOCK");
+  const [lotoTarget, setLotoTarget] = React.useState<any | null>(null);
+  const [lotoDetailsInput, setLotoDetailsInput] = React.useState("");
+
+  React.useEffect(() => {
+    const siteId = activeSite || "SMI";
+    const unsubscribe = dbService.lotoLocks.onSyncLocks(siteId, (locks) => {
+      setLotoLocks(locks);
+    });
+    return () => unsubscribe();
+  }, [activeSite]);
+
   // States for advanced mechanical diagnostics & reliability
   const [isAnalyticsOpen, setIsAnalyticsOpen] = React.useState(true); // Open by default for maximum visibility!
   const [selectedDiagnosticId, setSelectedDiagnosticId] = React.useState<string | null>(null);
@@ -173,6 +188,60 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
     }
   };
 
+  const handleOpenLotoLockModal = (equip: any) => {
+    setLotoTarget(equip);
+    setLotoMode("LOCK");
+    setLotoDetailsInput("");
+    setIsLotoModalOpen(true);
+  };
+
+  const handleOpenLotoUnlockModal = (equip: any) => {
+    setLotoTarget(equip);
+    setLotoMode("UNLOCK");
+    setLotoDetailsInput("");
+    setIsLotoModalOpen(true);
+  };
+
+  const handleLotoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lotoTarget) return;
+
+    setIsSubmitLoading(true);
+    const currentUserDisplayName = user?.displayName || user?.email || "Agent de Maintenance";
+
+    try {
+      if (lotoMode === "LOCK") {
+        await dbService.lotoLocks.createOrUpdateLock(lotoTarget.id, {
+          machineCode: lotoTarget.matricule,
+          lotoLocked: true,
+          lotoOwner: currentUserDisplayName,
+          lotoStartedAt: new Date().toISOString(),
+          lotoReleasedAt: null,
+          lotoWorkOrderId: "",
+          lotoSupervisorValidation: ["RESPONSABLE_MAINTENANCE", "ADMIN"].includes(user?.role || ""),
+          lotoDetails: lotoDetailsInput.trim() || "Cadenassage de sécurité standard.",
+          siteId: lotoTarget.site || lotoTarget.siteId || "SMI"
+        });
+        toast.success(`Équipement ${lotoTarget.matricule} cadenassé avec succès (LOTO) !`);
+      } else {
+        await dbService.lotoLocks.releaseLock(lotoTarget.id, {
+          lotoReleasedAt: new Date().toISOString(),
+          lotoDetails: `Levé par ${currentUserDisplayName}. Motif: ${lotoDetailsInput.trim() || "Aucun motif spécifié"}`,
+          siteId: lotoTarget.site || lotoTarget.siteId || "SMI"
+        });
+        toast.success(`Cadenas LOTO levé avec succès pour l'équipement ${lotoTarget.matricule} !`);
+      }
+      setIsLotoModalOpen(false);
+      setLotoTarget(null);
+      setLotoDetailsInput("");
+    } catch (err) {
+      console.error("Error submitting LOTO action:", err);
+      toast.error("Erreur lors de la mise à jour de la sécurité LOTO.");
+    } finally {
+      setIsSubmitLoading(false);
+    }
+  };
+
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingEquip) return;
@@ -184,6 +253,14 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
     setIsSubmitLoading(true);
 
     try {
+      // LOTO lock check: Prevent manual status changes on locked equipment unless user is admin
+      const isLotoLocked = editingEquip && lotoLocks[editingEquip.id]?.statutLOTO === "ACTIF";
+      if (isLotoLocked && editStatut !== editingEquip.statut && user?.role !== "ADMIN") {
+        toast.error("Modification refusée: Cet équipement est cadenassé (LOTO). Seul un administrateur peut modifier son statut.");
+        setIsSubmitLoading(false);
+        return;
+      }
+
       // HSE Guard: Un engin ne peut pas être remis DISPONIBLE s'il possède au moins un BT actif de gravité CRITIQUE.
       if (editStatut === "actif") {
         const activeBTs = (allWorkorders || []).filter(
@@ -541,11 +618,12 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
     const maintCount = baseList.filter((e) => (e.statut || "").toLowerCase() === "maintenance").length;
     const panneCount = baseList.filter((e) => (e.statut || "").toLowerCase() === "panne").length;
     
-    const totalWithDispo = baseList.length;
-    const dispoSum = baseList.reduce((sum, e) => sum + (typeof e.dispo === "number" ? e.dispo : 100), 0);
-    const dispoMoy = totalWithDispo > 0 ? (dispoSum / totalWithDispo).toFixed(1) : null;
+    const enginsAvecDispo = baseList.filter(e => typeof e.dispo === "number");
+    const dispoSum = enginsAvecDispo.reduce((sum, e) => sum + e.dispo, 0);
+    const dispoMoy = enginsAvecDispo.length > 0 ? (dispoSum / enginsAvecDispo.length).toFixed(1) : null;
+    const sansDispoCount = baseList.length - enginsAvecDispo.length;
     
-    return { activeCount, maintCount, panneCount, dispoMoy };
+    return { activeCount, maintCount, panneCount, dispoMoy, sansDispoCount };
   }, [allEquipements, activeSite, activeTab, searchTerm]);
 
   // Memoized advanced mechanics data for diagnostics & reliability (3 expert features)
@@ -817,6 +895,11 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
               {kpis.dispoMoy !== null ? `${kpis.dispoMoy}%` : "—"}
             </span>
             <span className="text-[10px] font-extrabold uppercase tracking-wider">Dispo Moy.</span>
+            {kpis.sansDispoCount > 0 && (
+              <span className="text-[9px] font-bold text-amber-600 mt-1 block max-w-full truncate" title={`${kpis.sansDispoCount} engin(s) sans donnée de disponibilité`}>
+                ⚠️ {kpis.sansDispoCount} sans donnée
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -1355,8 +1438,24 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
           {activeTab === "LHD" && filteredEquipements.map((equip) => {
             const spec = ENGIN_SPECS[equip.type as string] || ENGIN_SPECS.ST2G;
             const isPanne = equip.statut === "panne";
-            const borderCol = isPanne ? "border-rose-200" : equip.statut === "maintenance" ? "border-amber-200" : "border-slate-200/80";
-            const glowCol = isPanne ? "hover:border-rose-455 hover:shadow-rose-50" : equip.statut === "maintenance" ? "hover:border-amber-455 hover:shadow-amber-50" : "hover:border-amber-500/30 hover:shadow-amber-50/50";
+            const isLotoLocked = lotoLocks[equip.id]?.statutLOTO === "ACTIF";
+            const lockDetails = lotoLocks[equip.id]?.details;
+
+            const borderCol = isLotoLocked 
+              ? "border-rose-400 bg-rose-50/10" 
+              : isPanne 
+                ? "border-rose-200" 
+                : equip.statut === "maintenance" 
+                  ? "border-amber-200" 
+                  : "border-slate-200/80";
+
+            const glowCol = isLotoLocked 
+              ? "hover:border-rose-500 hover:shadow-rose-50" 
+              : isPanne 
+                ? "hover:border-rose-455 hover:shadow-rose-50" 
+                : equip.statut === "maintenance" 
+                  ? "hover:border-amber-455 hover:shadow-amber-50" 
+                  : "hover:border-amber-500/30 hover:shadow-amber-50/50";
             
             const dispoValue = typeof equip.dispo === "number" ? equip.dispo : 100;
             const dispoColor = dispoValue >= 80 ? "text-emerald-500" : dispoValue >= 50 ? "text-amber-500" : "text-rose-500";
@@ -1409,6 +1508,28 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                       {equip.type || "LHD"} • Chargeuse Mine
                     </p>
                   </div>
+
+                  {/* LOTO Lock Details */}
+                  {isLotoLocked && (
+                    <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-rose-700 uppercase tracking-widest flex items-center gap-1">
+                          🔐 CADENASSÉ (LOTO)
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-rose-800 font-bold uppercase tracking-wider">
+                        Responsable: <span className="font-mono text-rose-900 font-black">{lockDetails?.lotoOwner}</span>
+                      </p>
+                      <p className="text-[10px] text-rose-800 font-bold uppercase tracking-wider">
+                        Date de pose: <span className="font-mono text-rose-900 font-black">{lockDetails?.lotoStartedAt ? new Date(lockDetails.lotoStartedAt).toLocaleString('fr-FR') : 'N/A'}</span>
+                      </p>
+                      {lockDetails?.lotoDetails && (
+                        <p className="text-[10px] text-rose-700/85 italic font-bold leading-normal border-t border-rose-100 pt-1 mt-1">
+                          Motif: {lockDetails.lotoDetails}
+                        </p>
+                      )}
+                    </div>
+                  )}
  
                   {/* Feature badges */}
                   <div className="grid grid-cols-3 gap-2 pt-1">
@@ -1440,6 +1561,29 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                     </div>
                   </div>
 
+                  {/* LOTO Actions block inside the card */}
+                  {["MECANICIEN", "RESPONSABLE_MAINTENANCE", "ADMIN"].includes(user?.role || "") && (
+                    <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                      {!isLotoLocked ? (
+                        <button
+                          onClick={() => handleOpenLotoLockModal(equip)}
+                          className="w-full text-[10px] font-extrabold uppercase tracking-widest py-1.5 rounded-lg border bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 cursor-pointer shadow-sm flex items-center justify-center gap-1 transition-all"
+                        >
+                          🔒 Cadenasser (LOTO)
+                        </button>
+                      ) : (
+                        ["RESPONSABLE_MAINTENANCE", "ADMIN"].includes(user?.role || "") && (
+                          <button
+                            onClick={() => handleOpenLotoUnlockModal(equip)}
+                            className="w-full text-[10px] font-extrabold uppercase tracking-widest py-1.5 rounded-lg border bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 cursor-pointer shadow-sm flex items-center justify-center gap-1 transition-all"
+                          >
+                            🔓 Lever le cadenas
+                          </button>
+                        )
+                      )}
+                    </div>
+                  )}
+
                 </div>
 
                 {/* Footer contextual actions */}
@@ -1466,8 +1610,24 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
             const spec = getVehiSpec(equip.type);
             const isPanne = equip.statut === "panne";
             const kmReading = equip.heuresMarche ? `${equip.heuresMarche} km` : (equip.heures ? `${equip.heures} km` : (equip.km ? `${equip.km} km` : "0 km"));
-            const borderCol = isPanne ? "border-rose-200" : equip.statut === "maintenance" ? "border-amber-200" : "border-slate-200/80";
-            const glowCol = isPanne ? "hover:border-rose-455 hover:shadow-rose-50" : equip.statut === "maintenance" ? "hover:border-amber-455 hover:shadow-amber-50" : "hover:border-amber-500/30 hover:shadow-amber-50/50";
+            const isLotoLocked = lotoLocks[equip.id]?.statutLOTO === "ACTIF";
+            const lockDetails = lotoLocks[equip.id]?.details;
+
+            const borderCol = isLotoLocked 
+              ? "border-rose-400 bg-rose-50/10" 
+              : isPanne 
+                ? "border-rose-200" 
+                : equip.statut === "maintenance" 
+                  ? "border-amber-200" 
+                  : "border-slate-200/80";
+
+            const glowCol = isLotoLocked 
+              ? "hover:border-rose-500 hover:shadow-rose-50" 
+              : isPanne 
+                ? "hover:border-rose-455 hover:shadow-rose-50" 
+                : equip.statut === "maintenance" 
+                  ? "hover:border-amber-455 hover:shadow-amber-50" 
+                  : "hover:border-amber-500/30 hover:shadow-amber-50/50";
             
             const dispoValue = typeof equip.dispo === "number" ? equip.dispo : 100;
             const dispoColor = dispoValue >= 80 ? "text-emerald-500" : dispoValue >= 50 ? "text-amber-500" : "text-rose-500";
@@ -1523,6 +1683,28 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                       📋 Usage: {spec.usage}
                     </p>
                   </div>
+
+                  {/* LOTO Lock Details */}
+                  {isLotoLocked && (
+                    <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-rose-700 uppercase tracking-widest flex items-center gap-1">
+                          🔐 CADENASSÉ (LOTO)
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-rose-800 font-bold uppercase tracking-wider">
+                        Responsable: <span className="font-mono text-rose-900 font-black">{lockDetails?.lotoOwner}</span>
+                      </p>
+                      <p className="text-[10px] text-rose-800 font-bold uppercase tracking-wider">
+                        Date de pose: <span className="font-mono text-rose-900 font-black">{lockDetails?.lotoStartedAt ? new Date(lockDetails.lotoStartedAt).toLocaleString('fr-FR') : 'N/A'}</span>
+                      </p>
+                      {lockDetails?.lotoDetails && (
+                        <p className="text-[10px] text-rose-700/85 italic font-bold leading-normal border-t border-rose-100 pt-1 mt-1">
+                          Motif: {lockDetails.lotoDetails}
+                        </p>
+                      )}
+                    </div>
+                  )}
  
                   {/* Feature badges */}
                   <div className="grid grid-cols-3 gap-2 pt-1">
@@ -1554,6 +1736,29 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                     </div>
                   </div>
 
+                  {/* LOTO Actions block inside the card */}
+                  {["MECANICIEN", "RESPONSABLE_MAINTENANCE", "ADMIN"].includes(user?.role || "") && (
+                    <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                      {!isLotoLocked ? (
+                        <button
+                          onClick={() => handleOpenLotoLockModal(equip)}
+                          className="w-full text-[10px] font-extrabold uppercase tracking-widest py-1.5 rounded-lg border bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 cursor-pointer shadow-sm flex items-center justify-center gap-1 transition-all"
+                        >
+                          🔒 Cadenasser (LOTO)
+                        </button>
+                      ) : (
+                        ["RESPONSABLE_MAINTENANCE", "ADMIN"].includes(user?.role || "") && (
+                          <button
+                            onClick={() => handleOpenLotoUnlockModal(equip)}
+                            className="w-full text-[10px] font-extrabold uppercase tracking-widest py-1.5 rounded-lg border bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 cursor-pointer shadow-sm flex items-center justify-center gap-1 transition-all"
+                          >
+                            🔓 Lever le cadenas
+                          </button>
+                        )
+                      )}
+                    </div>
+                  )}
+
                 </div>
 
                 {/* Footer actions */}
@@ -1580,8 +1785,24 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
             const spec = getPerfSpec(equip.type);
             const isPanne = equip.statut === "panne";
             const serieNo = equip.serie || equip.matricule || "N/A";
-            const borderCol = isPanne ? "border-rose-200" : equip.statut === "maintenance" ? "border-amber-200" : "border-slate-200/80";
-            const glowCol = isPanne ? "hover:border-rose-455 hover:shadow-rose-50" : equip.statut === "maintenance" ? "hover:border-amber-455 hover:shadow-amber-50" : "hover:border-amber-500/30 hover:shadow-amber-50/50";
+            const isLotoLocked = lotoLocks[equip.id]?.statutLOTO === "ACTIF";
+            const lockDetails = lotoLocks[equip.id]?.details;
+
+            const borderCol = isLotoLocked 
+              ? "border-rose-400 bg-rose-50/10" 
+              : isPanne 
+                ? "border-rose-200" 
+                : equip.statut === "maintenance" 
+                  ? "border-amber-200" 
+                  : "border-slate-200/80";
+
+            const glowCol = isLotoLocked 
+              ? "hover:border-rose-500 hover:shadow-rose-50" 
+              : isPanne 
+                ? "hover:border-rose-455 hover:shadow-rose-50" 
+                : equip.statut === "maintenance" 
+                  ? "hover:border-amber-455 hover:shadow-amber-50" 
+                  : "hover:border-amber-500/30 hover:shadow-amber-50/50";
             
             const dispoValue = typeof equip.dispo === "number" ? equip.dispo : 100;
             const dispoColor = dispoValue >= 80 ? "text-emerald-500" : dispoValue >= 50 ? "text-amber-500" : "text-rose-500";
@@ -1643,6 +1864,28 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                       </p>
                     )}
                   </div>
+
+                  {/* LOTO Lock Details */}
+                  {isLotoLocked && (
+                    <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-rose-700 uppercase tracking-widest flex items-center gap-1">
+                          🔐 CADENASSÉ (LOTO)
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-rose-800 font-bold uppercase tracking-wider">
+                        Responsable: <span className="font-mono text-rose-900 font-black">{lockDetails?.lotoOwner}</span>
+                      </p>
+                      <p className="text-[10px] text-rose-800 font-bold uppercase tracking-wider">
+                        Date de pose: <span className="font-mono text-rose-900 font-black">{lockDetails?.lotoStartedAt ? new Date(lockDetails.lotoStartedAt).toLocaleString('fr-FR') : 'N/A'}</span>
+                      </p>
+                      {lockDetails?.lotoDetails && (
+                        <p className="text-[10px] text-rose-700/85 italic font-bold leading-normal border-t border-rose-100 pt-1 mt-1">
+                          Motif: {lockDetails.lotoDetails}
+                        </p>
+                      )}
+                    </div>
+                  )}
  
                   {/* Feature badges */}
                   <div className="grid grid-cols-2 gap-2 pt-1">
@@ -1677,6 +1920,29 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                       />
                     </div>
                   </div>
+
+                  {/* LOTO Actions block inside the card */}
+                  {["MECANICIEN", "RESPONSABLE_MAINTENANCE", "ADMIN"].includes(user?.role || "") && (
+                    <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                      {!isLotoLocked ? (
+                        <button
+                          onClick={() => handleOpenLotoLockModal(equip)}
+                          className="w-full text-[10px] font-extrabold uppercase tracking-widest py-1.5 rounded-lg border bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 cursor-pointer shadow-sm flex items-center justify-center gap-1 transition-all"
+                        >
+                          🔒 Cadenasser (LOTO)
+                        </button>
+                      ) : (
+                        ["RESPONSABLE_MAINTENANCE", "ADMIN"].includes(user?.role || "") && (
+                          <button
+                            onClick={() => handleOpenLotoUnlockModal(equip)}
+                            className="w-full text-[10px] font-extrabold uppercase tracking-widest py-1.5 rounded-lg border bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 cursor-pointer shadow-sm flex items-center justify-center gap-1 transition-all"
+                          >
+                            🔓 Lever le cadenas
+                          </button>
+                        )
+                      )}
+                    </div>
+                  )}
 
                 </div>
 
@@ -2128,26 +2394,38 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                 <label className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">
                   Statut Opérationnel *
                 </label>
+                {editingEquip && lotoLocks[editingEquip.id]?.statutLOTO === "ACTIF" && user?.role !== "ADMIN" && (
+                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-[10px] leading-relaxed text-rose-850 font-extrabold uppercase tracking-wider flex items-center gap-1.5 mb-2 shadow-sm">
+                    <AlertTriangle className="h-4 w-4 text-rose-600 animate-pulse shrink-0" />
+                    <span>Cet équipement est cadenassé (LOTO). Le statut ne peut être modifié que par un administrateur.</span>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2 mt-1">
                   {[
                     { val: "actif", label: "🟢 En service / Actif" },
                     { val: "maintenance", label: "🟡 Planifié / Maintenance" },
                     { val: "panne", label: "🔴 Diagnostic / En Panne" },
                     { val: "hors service", label: "⚪ Arrêté / Hors Service" }
-                  ].map((opt) => (
-                    <button
-                      key={opt.val}
-                      type="button"
-                      onClick={() => setEditStatut(opt.val as any)}
-                      className={`h-10 px-3 text-xs font-bold rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                        editStatut === opt.val
-                          ? "bg-amber-50 border-amber-500/30 text-amber-800"
-                          : "bg-slate-50 border-slate-200/70 text-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
-                      <span>{opt.label}</span>
-                    </button>
-                  ))}
+                  ].map((opt) => {
+                    const isLotoLockedAndNotAdmin = editingEquip && lotoLocks[editingEquip.id]?.statutLOTO === "ACTIF" && user?.role !== "ADMIN";
+                    return (
+                      <button
+                        key={opt.val}
+                        type="button"
+                        disabled={isLotoLockedAndNotAdmin}
+                        onClick={() => setEditStatut(opt.val as any)}
+                        className={`h-10 px-3 text-xs font-bold rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                          isLotoLockedAndNotAdmin
+                            ? "opacity-60 bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                            : editStatut === opt.val
+                              ? "bg-amber-50 border-amber-500/30 text-amber-800"
+                              : "bg-slate-50 border-slate-200/70 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span>{opt.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -2225,6 +2503,88 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
                 Confirmer la suppression
               </Button>
             </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 5.3. LOTO ACTION MODAL */}
+      {isLotoModalOpen && lotoTarget && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-amber-100 animate-in fade-in zoom-in-95 duration-150">
+            
+            <form onSubmit={handleLotoSubmit}>
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-full bg-amber-50 flex items-center justify-center shrink-0 border border-amber-100">
+                  {lotoMode === "LOCK" ? (
+                    <span className="text-xl">🔒</span>
+                  ) : (
+                    <span className="text-xl">🔓</span>
+                  )}
+                </div>
+                <div className="space-y-1 flex-1">
+                  <h3 className="text-base font-black uppercase text-slate-950 tracking-tight">
+                    {lotoMode === "LOCK" ? "Cadenasser l'Équipement (LOTO)" : "Lever le Cadenas (LOTO)"}
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                    {lotoMode === "LOCK" 
+                      ? `Verrouillage de sécurité haute-criticité pour l'équipement `
+                      : `Validation superviseur pour lever le cadenas de l'équipement `}
+                    <span className="font-extrabold text-slate-900 font-mono">{lotoTarget.matricule}</span>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3 mt-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">
+                    {lotoMode === "LOCK" ? "Motif / Détails du cadenassage *" : "Motif / Détails de la levée *"}
+                  </label>
+                  <textarea
+                    required
+                    value={lotoDetailsInput}
+                    onChange={(e) => setLotoDetailsInput(e.target.value)}
+                    placeholder={lotoMode === "LOCK" 
+                      ? "Ex: Remplacement du flexible de direction principal en cours. Interdiction formelle de démarrer le moteur."
+                      : "Ex: Travaux terminés, pression hydraulique purgée, essais à blanc concluants."}
+                    className="w-full min-h-[100px] p-3 text-xs border border-slate-200 rounded-xl bg-slate-50 font-medium focus:bg-white focus:outline-none focus:border-amber-500/50 transition-all"
+                  />
+                </div>
+
+                <div className="p-3 bg-rose-50/50 rounded-xl text-[10px] leading-relaxed text-rose-950 border border-rose-200/40 font-extrabold uppercase tracking-wider flex items-start gap-1.5">
+                  <Info className="h-4 w-4 shrink-0 mt-0.5 text-rose-700" />
+                  <span>
+                    {lotoMode === "LOCK"
+                      ? "ATTENTION : Le cadenassage LOTO bloque toute modification de statut de cet équipement sur l'ensemble de l'application."
+                      : "ATTENTION : La levée du cadenas LOTO confirme que l'équipement est sécurisé pour reprendre du service ou retourner en maintenance normale."}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end pt-4 border-t border-slate-100 mt-6">
+                <Button 
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsLotoModalOpen(false);
+                    setLotoTarget(null);
+                    setLotoDetailsInput("");
+                  }}
+                  className="h-10 px-4 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-500 cursor-pointer"
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={isSubmitLoading}
+                  className={`h-10 px-6 rounded-xl text-white font-extrabold uppercase tracking-widest text-xs cursor-pointer shadow-sm ${
+                    lotoMode === "LOCK" ? "bg-rose-600 hover:bg-rose-700 animate-pulse" : "bg-emerald-600 hover:bg-emerald-700"
+                  }`}
+                >
+                  {isSubmitLoading ? "Traitement..." : lotoMode === "LOCK" ? "Activer le verrou LOTO" : "Confirmer la levée"}
+                </Button>
+              </div>
+            </form>
 
           </div>
         </div>

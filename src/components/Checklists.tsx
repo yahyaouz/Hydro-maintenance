@@ -29,13 +29,15 @@ import { PageBanner } from "@/components/ui/PageBanner";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 
-import { collection, addDoc, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, Timestamp, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { useCollection } from '@/hooks/useCollection';
 import { DataLoadError } from '@/components/shared/DataLoadError';
 import { useAuthStore } from '@/lib/store';
 import { getLocalDateString, escapeCsvField } from '@/lib/utils';
 import { dbService } from '@/services/firestoreService';
+import { OfflineQueueManager } from '@/services/offlineQueueManager';
+import { useNotificationStore } from '@/services/notificationStore';
 
 // Types
 interface Engin {
@@ -62,6 +64,7 @@ interface ChecklistItem {
   id: string;
   label: string;
   section: string;
+  critique?: boolean;
 }
 
 interface ChecklistSubmission {
@@ -233,22 +236,20 @@ export default function Checklists() {
 
   // ============================================================
   // DEFINITION DES ITEMS DE SÉCURITÉ ET CHECKLISTS
-  // ============================================================
-
-  // CHECKLIST : Structure des items pour l'onglet CONDUCTEUR
+  // ============================================  // CHECKLIST : Structure des items pour l'onglet CONDUCTEUR
   const itemsConducteur: ChecklistItem[] = [
     // SECTION A — VÉRIFICATIONS VISUELLES
     { id: "C_A1", label: "A1. Niveau huile moteur visible et correct (jauge)", section: "SECTION A — VÉRIFICATIONS VISUELLES" },
     { id: "C_A2", label: "A2. Niveau liquide de refroidissement (vase d'expansion)", section: "SECTION A — VÉRIFICATIONS VISUELLES" },
-    { id: "C_A3", label: "A3. Fuites visibles sous l'engin (huile, hydraulique, carburant)", section: "SECTION A — VÉRIFICATIONS VISUELLES" },
+    { id: "C_A3", label: "A3. Fuites visibles sous l'engin (huile, hydraulique, carburant)", section: "SECTION A — VÉRIFICATIONS VISUELLES", critique: true },
     // SECTION B — SÉCURITÉ CABINE
-    { id: "C_B1", label: "B1. Ceinture de sécurité fonctionnelle et non effilochée", section: "SECTION B — SÉCURITÉ CABINE" },
-    { id: "C_B2", label: "B2. ROPS/FOPS intact (pas de fissures, pas de déformation)", section: "SECTION B — SÉCURITÉ CABINE" },
-    { id: "C_B3", label: "B3. Extincteur présent et manomètre dans la zone verte", section: "SECTION B — SÉCURITÉ CABINE" },
+    { id: "C_B1", label: "B1. Ceinture de sécurité fonctionnelle et non effilochée", section: "SECTION B — SÉCURITÉ CABINE", critique: true },
+    { id: "C_B2", label: "B2. ROPS/FOPS intact (pas de fissures, pas de déformation)", section: "SECTION B — SÉCURITÉ CABINE", critique: true },
+    { id: "C_B3", label: "B3. Extincteur présent et manomètre dans la zone verte", section: "SECTION B — SÉCURITÉ CABINE", critique: true },
     // SECTION C — FREINS & COMMANDES
-    { id: "C_C1", label: "C1. Frein de service répond correctement (pédale ferme)", section: "SECTION C — FREINS & COMMANDES" },
-    { id: "C_C2", label: "C2. Frein de parking tient sur pente (test à l'arrêt)", section: "SECTION C — FREINS & COMMANDES" },
-    { id: "C_C3", label: "C3. Direction répond sans jeu excessif (volant/levier)", section: "SECTION C — FREINS & COMMANDES" },
+    { id: "C_C1", label: "C1. Frein de service répond correctement (pédale ferme)", section: "SECTION C — FREINS & COMMANDES", critique: true },
+    { id: "C_C2", label: "C2. Frein de parking tient sur pente (test à l'arrêt)", section: "SECTION C — FREINS & COMMANDES", critique: true },
+    { id: "C_C3", label: "C3. Direction répond sans jeu excessif (volant/levier)", section: "SECTION C — FREINS & COMMANDES", critique: true },
     // SECTION D — VOYANTS & ÉCLAIRAGE
     { id: "C_D1", label: "D1. Voyants tableau de bord s'allument au contact (pas d'alarme rouge)", section: "SECTION D — VOYANTS & ÉCLAIRAGE" },
     { id: "C_D2", label: "D2. Phares avant/arrière fonctionnels (haut et bas)", section: "SECTION D — VOYANTS & ÉCLAIRAGE" },
@@ -256,7 +257,7 @@ export default function Checklists() {
     // SECTION E — HYDRAULIQUE & CHARGE
     { id: "C_E1", label: "E1. Bras de levage fonctionne sans à-coup (montée/descente)", section: "SECTION E — HYDRAULIQUE & CHARGE" },
     { id: "C_E2", label: "E2. Godet bascule correctement (chargement/déchargement)", section: "SECTION E — HYDRAULIQUE & CHARGE" },
-    { id: "C_E3", label: "E3. Pas de fuite hydraulique visible sur vérins/tuyaux", section: "SECTION E — HYDRAULIQUE & CHARGE" }
+    { id: "C_E3", label: "E3. Pas de fuite hydraulique visible sur vérins/tuyaux", section: "SECTION E — HYDRAULIQUE & CHARGE", critique: true }
   ];
 
   // CHECKLIST : Structure des items pour l'onglet MAINTENANCE
@@ -275,22 +276,22 @@ export default function Checklists() {
     // SECTION C — HYDRAULIQUE
     { id: "M_C1", label: "C1. Niveau huile hydraulique correct (voyant ou jauge)", section: "SECTION C — HYDRAULIQUE" },
     { id: "M_C2", label: "C2. Filtre hydraulique propre (indicateur de restriction)", section: "SECTION C — HYDRAULIQUE" },
-    { id: "M_C3", label: "C3. Tuyaux hydrauliques non craquelés/boursouflés", section: "SECTION C — HYDRAULIQUE" },
-    { id: "M_C4", label: "C4. Vérins de levage sans fuite au niveau des joints de tige", section: "SECTION C — HYDRAULIQUE" },
-    { id: "M_C5", label: "C5. Pompe hydraulique pas bruyante anormalement", section: "SECTION C — HYDRAULIQUE" },
+    { id: "M_C3", label: "C3. Tuyaux hydrauliques non craquelés/boursouflés", section: "SECTION C — HYDRAULIQUE", critique: true },
+    { id: "M_C4", label: "C4. Vérins de levage sans fuite au niveau des joints de tige", section: "SECTION C — HYDRAULIQUE", critique: true },
+    { id: "M_C5", label: "M_C5. Pompe hydraulique pas bruyante anormalement", section: "SECTION C — HYDRAULIQUE" },
     // SECTION D — FREINS & ROUES
-    { id: "M_D1", label: "D1. Épaisseur garnitures/disques frein > minimum (visuel ou jauge)", section: "SECTION D — FREINS & ROUES" },
-    { id: "M_D2", label: "D2. Câbles de frein non effilochés/détendus (frein mécanique)", section: "SECTION D — FREINS & ROUES" },
+    { id: "M_D1", label: "D1. Épaisseur garnitures/disques frein > minimum (visuel ou jauge)", section: "SECTION D — FREINS & ROUES", critique: true },
+    { id: "M_D2", label: "D2. Câbles de frein non effilochés/détendus (frein mécanique)", section: "SECTION D — FREINS & ROUES", critique: true },
     { id: "M_D3", label: "D3. Pneus non entaillés, pression correcte (visuel + testeur si dispo)", section: "SECTION D — FREINS & ROUES" },
     { id: "M_D4", label: "D4. Jantes/boulons de roues pas fissurés, serrage OK", section: "SECTION D — FREINS & ROUES" },
     // SECTION E — ÉLECTRIQUE & ÉCLAIRAGE
-    { id: "M_E1", label: "E1. Batterie bornes propres et serrées (pas de sulfate blanc)", section: "SECTION E — ÉLECTRIQUE & ÉCLAIRAGE" },
+    { id: "M_E1", label: "E1. Battery bornes propres et serrées (pas de sulfate blanc)", section: "SECTION E — ÉLECTRIQUE & ÉCLAIRAGE" },
     { id: "M_E2", label: "E2. Alternateur charge correcte (voyant éteint en marche)", section: "SECTION E — ÉLECTRIQUE & ÉCLAIRAGE" },
     { id: "M_E3", label: "E3. Phares/éclairage fonctionnels (test à l'arrêt)", section: "SECTION E — ÉLECTRIQUE & ÉCLAIRAGE" },
     { id: "M_E4", label: "E4. Faisceau électrique non usé/coupé sous gaine", section: "SECTION E — ÉLECTRIQUE & ÉCLAIRAGE" },
     // SECTION F — GRAISSAGE & STRUCTURE
     { id: "M_F1", label: "F1. Graisseurs de pivots fonctionnels (débordement de graisse visible)", section: "SECTION F — GRAISSAGE & STRUCTURE" },
-    { id: "M_F2", label: "F2. Châssis/articulation pas de fissure visible (inspection visuelle)", section: "SECTION F — GRAISSAGE & STRUCTURE" },
+    { id: "M_F2", label: "F2. Châssis/articulation pas de fissure visible (inspection visuelle)", section: "SECTION F — GRAISSAGE & STRUCTURE", critique: true },
     { id: "M_F3", label: "F3. Godet/dents pas de fissure au niveau des soudures", section: "SECTION F — GRAISSAGE & STRUCTURE" },
     { id: "M_F4", label: "F4. Cabine/portes pas de jeu excessif, charnières OK", section: "SECTION F — GRAISSAGE & STRUCTURE" }
   ];
@@ -298,18 +299,18 @@ export default function Checklists() {
   // CHECKLIST : Structure des items pour l'onglet SÉCURITÉ
   const itemsSecurite: ChecklistItem[] = [
     // SECTION A — ÉQUIPEMENTS DE PROTECTION
-    { id: "S_A1", label: "A1. ROPS/FOPS certifié, pas de déformation, pas de fissure", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION" },
-    { id: "S_A2", label: "A2. Siège avec ceinture 2 points ou 3 points fonctionnel", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION" },
-    { id: "S_A3", label: "A3. Extincteur manuel présent, manomètre OK, date de contrôle < 1 an", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION" },
-    { id: "S_A4", label: "A4. Extincteur automatique (Ansul) pression OK, fusibles intacts", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION" },
+    { id: "S_A1", label: "A1. ROPS/FOPS certifié, pas de déformation, pas de fissure", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION", critique: true },
+    { id: "S_A2", label: "A2. Siège avec ceinture 2 points ou 3 points fonctionnel", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION", critique: true },
+    { id: "S_A3", label: "A3. Extincteur manuel présent, manomètre OK, date de contrôle < 1 an", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION", critique: true },
+    { id: "S_A4", label: "A4. Extincteur automatique (Ansul) pression OK, fusibles intacts", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION", critique: true },
     // SECTION B — SIGNALISATION & ÉVACUATION
     { id: "S_B1", label: "B1. Gyrophare/flash fonctionnel (test à l'arrêt)", section: "SECTION B — SIGNALISATION & ÉVACUATION" },
     { id: "S_B2", label: "B2. Alarme de recul fonctionnelle (volume audible)", section: "SECTION B — SIGNALISATION & ÉVACUATION" },
-    { id: "S_B3", label: "B3. Panneau d'arrêt d'urgence accessible et testé", section: "SECTION B — SIGNALISATION & ÉVACUATION" },
+    { id: "S_B3", label: "B3. Panneau d'arrêt d'urgence accessible et testé", section: "SECTION B — SIGNALISATION & ÉVACUATION", critique: true },
     { id: "S_B4", label: "B4. Signalisation réfléchissante visible et non délavée", section: "SECTION B — SIGNALISATION & ÉVACUATION" },
     // SECTION C — CONTRÔLE ATMOSPHÈRE
-    { id: "S_C1", label: "C1. Détecteur de gaz calibré et fonctionnel (test avec gaz test)", section: "SECTION C — CONTRÔLE ATMOSPHÈRE" },
-    { id: "S_C2", label: "C2. Auto-sauveteur présent et dans la date de validité", section: "SECTION C — CONTRÔLE ATMOSPHÈRE" },
+    { id: "S_C1", label: "C1. Détecteur de gaz calibré et fonctionnel (test avec gaz test)", section: "SECTION C — CONTRÔLE ATMOSPHÈRE", critique: true },
+    { id: "S_C2", label: "C2. Auto-sauveteur présent et dans la date de validité", section: "SECTION C — CONTRÔLE ATMOSPHÈRE", critique: true },
     { id: "S_C3", label: "C3. Ventilation cabine fonctionnelle (pas d'odeur d'échappement)", section: "SECTION C — CONTRÔLE ATMOSPHÈRE" },
     // SECTION D — DOCUMENTATION
     { id: "S_D1", label: "D1. Carnet de suivi de l'engin à jour (dernières interventions notées)", section: "SECTION D — DOCUMENTATION" },
@@ -363,6 +364,11 @@ export default function Checklists() {
 
   // Cocher tout en "OK" pour aller plus vite
   const checkAllOK = () => {
+    if (activeTab === "conducteur" || activeTab === "securite") {
+      const confirmInspection = window.confirm("Confirmez-vous avoir physiquement inspecté chaque point ?");
+      if (!confirmInspection) return;
+    }
+
     const currentItems = activeTab === "conducteur" ? itemsConducteur : activeTab === "maintenance" ? itemsMaintenance : itemsSecurite;
     const updated: { [itemId: string]: "OK" | "KO" | "NONE" } = {};
     currentItems.forEach(i => {
@@ -371,6 +377,29 @@ export default function Checklists() {
     setFormStates(updated);
     toast.success("Tous les éléments ont été marqués Conformes (OK)");
   };
+
+  async function generateNumeroPanne(): Promise<string> {
+    const year = new Date().getFullYear();
+    const q = query(
+      collection(db, 'pannes'),
+      where('numero', '>=', `PAN-${year}-`),
+      where('numero', '<', `PAN-${year + 1}-`),
+      orderBy('numero', 'desc')
+    );
+    const snap = await getDocs(q);
+    let lastNum = 0;
+    if (!snap.empty) {
+      const numStr = snap.docs[0].data().numero || "";
+      const parts = numStr.split('-');
+      if (parts.length >= 3) {
+        const parsed = parseInt(parts[2], 10);
+        if (!isNaN(parsed)) {
+          lastNum = parsed;
+        }
+      }
+    }
+    return `PAN-${year}-${String(lastNum + 1).padStart(4, '0')}`;
+  }
 
   // Validation et soumission de la checklist active
   const handleSaveChecklist = async () => {
@@ -395,42 +424,169 @@ export default function Checklists() {
     const enginModele = matchedEngin?.modele || "Inconnu";
     const siteId = matchedEngin?.siteId || user?.siteId || "SMI";
 
+    // Detect if any critical items are KO
+    const koCriticalItems = currentItems.filter(item => item.critique && formStates[item.id] === "KO");
+    const hasKOCritical = koCriticalItems.length > 0;
+
+    const checklistPayload = {
+      type: currentType,
+      date: selectedDate,
+      heure: selectedHeure,
+      enginId: selectedEngin,
+      enginModele,
+      signataire: signataireFinal,
+      signataireId: user?.uid || null,
+      poste: selectedPoste,
+      siteId,
+      items: { ...formStates },
+      commentaires: currentType === "MAINTENANCE" ? { ...sectionCommentaires } : singleCommentaire,
+      timestamp: Date.now(),
+      deleted: false
+    };
+
     setIsSavingChecklist(true);
+
+    const isOffline = !navigator.onLine;
+
+    if (isOffline) {
+      try {
+        const checkIdempKey = `checklist_${selectedEngin}_${Date.now()}`;
+        OfflineQueueManager.enqueue({
+          idempotencyKey: checkIdempKey,
+          actionType: 'CREATE_CHECKLIST',
+          payload: {
+            ...checklistPayload,
+            createdAt: new Date().toISOString()
+          },
+          label: `Checklist ${currentType} - ${selectedEngin}`,
+          siteId,
+          userId: user?.uid
+        });
+
+        if (hasKOCritical) {
+          const defectLabels = koCriticalItems.map(item => item.label).join(", ");
+          const description = `Défaut(s) critique(s) détecté(s) lors de l'inspection ${currentType} : ${defectLabels}`;
+          const panneIdempKey = `panne_${selectedEngin}_${Date.now()}`;
+          const pNo = `PAN-OFFLINE-${Date.now()}`;
+
+          OfflineQueueManager.enqueue({
+            idempotencyKey: panneIdempKey,
+            actionType: 'DECLARE_STOP',
+            payload: {
+              machineCode: selectedEngin,
+              stop: {
+                reason: `Défaut(s) critique(s) checklist: ${defectLabels}`
+              },
+              panne: {
+                numero: pNo,
+                enginId: selectedEngin,
+                enginModele,
+                categorie: "SÉCURITÉ / INSPECTION",
+                gravite: "Critique",
+                description,
+                signalePar: user?.displayName || user?.email || signataireFinal || 'Anonyme',
+                statut: 'OUVERT',
+                dateDeclaration: new Date().toISOString(),
+                arretMachine: true,
+                deleted: false,
+                createdAt: new Date().toISOString()
+              }
+            },
+            label: `Déclaration panne critique ${pNo} via checklist — ${selectedEngin}`,
+            siteId,
+            userId: user?.uid
+          });
+
+          toast.error(`⚠️ DÉFAUT CRITIQUE DETECTÉ ! L'engin ${selectedEngin} ne doit plus être utilisé. Le signalement de panne a été mis en attente de synchronisation.`, { duration: 10000 });
+        } else {
+          toast.warning("Réseau indisponible. La checklist sera synchronisée automatiquement dès la reconnexion.", { duration: 5000 });
+        }
+
+        const simDocId = `CHECK-OFFLINE-${Date.now()}`;
+        const newSub: ChecklistSubmission = {
+          id: simDocId,
+          ...checklistPayload,
+          idempotencyKey: checkIdempKey
+        } as any;
+
+        if (currentType === "MAINTENANCE") {
+          setViewingSubmission(newSub);
+        } else {
+          setActiveTab("historique");
+        }
+
+        resetFormState(currentType);
+        resetHeader();
+      } catch (offlineErr) {
+        console.error("Offline save failure:", offlineErr);
+        toast.error("Erreur lors de l'enregistrement local.");
+      } finally {
+        setIsSavingChecklist(false);
+      }
+      return;
+    }
+
     try {
-      const docId = await dbService.checklists.create({
-        type: currentType,
-        date: selectedDate,
-        heure: selectedHeure,
-        enginId: selectedEngin,
-        enginModele,
-        signataire: signataireFinal,
-        signataireId: user?.uid || null,
-        poste: selectedPoste,
-        siteId,
-        items: { ...formStates },
-        commentaires: currentType === "MAINTENANCE" ? { ...sectionCommentaires } : singleCommentaire,
-        timestamp: Date.now(),
-        deleted: false
-      });
+      const docId = await dbService.checklists.create(checklistPayload);
 
       // Simuler un objet soumission pour viewingSubmission (depuis les données locales, pas besoin de re-fetch)
       const newSub: ChecklistSubmission = {
         id: docId,
-        type: currentType,
-        date: selectedDate,
-        heure: selectedHeure,
-        enginId: selectedEngin,
-        enginModele,
-        signataire: signataireFinal,
-        signataireId: user?.uid || undefined,
-        poste: selectedPoste,
-        siteId,
-        items: { ...formStates },
-        commentaires: currentType === "MAINTENANCE" ? { ...sectionCommentaires } : singleCommentaire,
-        timestamp: Date.now()
-      };
+        ...checklistPayload
+      } as any;
 
-      toast.success(`Checklist ${currentType} enregistrée dans Firestore !`);
+      if (hasKOCritical) {
+        // Create the panne entry
+        const defectLabels = koCriticalItems.map(item => item.label).join(", ");
+        const description = `Défaut(s) critique(s) détecté(s) lors de l'inspection ${currentType} : ${defectLabels}`;
+        let numero = `PAN-OFFLINE-${Date.now()}`;
+        try {
+          numero = await generateNumeroPanne();
+        } catch (numErr) {
+          console.warn("Failed to generate sequential panne number, using offline format.", numErr);
+        }
+
+        const newPanne = {
+          numero,
+          enginId: selectedEngin,
+          enginModele,
+          categorie: "SÉCURITÉ / INSPECTION",
+          gravite: "Critique",
+          description,
+          signalePar: user?.displayName || user?.email || signataireFinal || 'Anonyme',
+          statut: 'OUVERT',
+          dateDeclaration: new Date().toISOString(),
+          arretMachine: true,
+          deleted: false,
+        };
+
+        await dbService.pannes.create(newPanne);
+
+        // Si arrêt machine : mettre à jour l'état de l'engin
+        await dbService.engines.update(selectedEngin, {
+          etat: 'En maintenance',
+          statut: 'panne',
+          status: 'EN_PANNE',
+          dispo: 0
+        });
+
+        // Créer la notification pour le responsable du site
+        try {
+          useNotificationStore.getState().addNotification({
+            type: 'CRITIQUE',
+            title: `PANNE CRITIQUE • ${selectedEngin}`,
+            message: `Défaut critique lors de l'inspection : ${defectLabels.substring(0, 60)}...`,
+            triggerSource: 'PANNE_TERRAIN',
+            siteId: siteId
+          });
+        } catch (notifErr) {
+          console.error("Failed to add notification:", notifErr);
+        }
+
+        toast.error(`⚠️ DÉFAUT CRITIQUE ! Un signalement de panne (${numero}) a été créé. L'engin ${selectedEngin} ne doit pas être utilisé tant que le point n'est pas résolu.`, { duration: 10000 });
+      } else {
+        toast.success(`Checklist ${currentType} enregistrée dans Firestore !`);
+      }
       
       // Si c'est maintenance, on propose d'ouvrir la vue d'impression
       if (currentType === "MAINTENANCE") {
@@ -446,10 +602,84 @@ export default function Checklists() {
 
     } catch (err: any) {
       console.error(err);
-      if (err?.code === 'permission-denied' || err?.message?.includes('permission')) {
+      const isNetworkError = err?.message?.includes('unavailable') || err?.message?.includes('network') || err?.code === 'unavailable';
+      if (isNetworkError) {
+        try {
+          const checkIdempKey = `checklist_${selectedEngin}_${Date.now()}`;
+          OfflineQueueManager.enqueue({
+            idempotencyKey: checkIdempKey,
+            actionType: 'CREATE_CHECKLIST',
+            payload: {
+              ...checklistPayload,
+              createdAt: new Date().toISOString()
+            },
+            label: `Checklist ${currentType} - ${selectedEngin}`,
+            siteId,
+            userId: user?.uid
+          });
+
+          if (hasKOCritical) {
+            const defectLabels = koCriticalItems.map(item => item.label).join(", ");
+            const description = `Défaut(s) critique(s) détecté(s) lors de l'inspection ${currentType} : ${defectLabels}`;
+            const panneIdempKey = `panne_${selectedEngin}_${Date.now()}`;
+            const pNo = `PAN-OFFLINE-${Date.now()}`;
+
+            OfflineQueueManager.enqueue({
+              idempotencyKey: panneIdempKey,
+              actionType: 'DECLARE_STOP',
+              payload: {
+                machineCode: selectedEngin,
+                stop: {
+                  reason: `Défaut(s) critique(s) checklist: ${defectLabels}`
+                },
+                panne: {
+                  numero: pNo,
+                  enginId: selectedEngin,
+                  enginModele,
+                  categorie: "SÉCURITÉ / INSPECTION",
+                  gravite: "Critique",
+                  description,
+                  signalePar: user?.displayName || user?.email || signataireFinal || 'Anonyme',
+                  statut: 'OUVERT',
+                  dateDeclaration: new Date().toISOString(),
+                  arretMachine: true,
+                  deleted: false,
+                  createdAt: new Date().toISOString()
+                }
+              },
+              label: `Déclaration panne critique ${pNo} via checklist — ${selectedEngin}`,
+              siteId,
+              userId: user?.uid
+            });
+
+            toast.error(`⚠️ DÉFAUT CRITIQUE ! Un signalement de panne a été enregistré localement. L'engin ${selectedEngin} ne doit pas être utilisé tant que le point n'est pas résolu.`, { duration: 10000 });
+          } else {
+            toast.warning("Réseau indisponible. La checklist sera synchronisée automatiquement dès la reconnexion.", { duration: 5000 });
+          }
+
+          const simDocId = `CHECK-OFFLINE-${Date.now()}`;
+          const newSub: ChecklistSubmission = {
+            id: simDocId,
+            ...checklistPayload,
+            idempotencyKey: checkIdempKey
+          } as any;
+
+          if (currentType === "MAINTENANCE") {
+            setViewingSubmission(newSub);
+          } else {
+            setActiveTab("historique");
+          }
+
+          resetFormState(currentType);
+          resetHeader();
+        } catch (offlineErr) {
+          console.error("Offline save failure:", offlineErr);
+          toast.error("Erreur lors de l'enregistrement local.");
+        }
+      } else if (err?.code === 'permission-denied' || err?.message?.includes('permission')) {
         handleFirestoreError(err, OperationType.WRITE, 'checklists');
       } else {
-        toast.warning("Réseau indisponible. La checklist sera synchronisée automatiquement dès la reconnexion.", { duration: 5000 });
+        toast.error("Une erreur est survenue lors de l'enregistrement.");
       }
     } finally {
       setIsSavingChecklist(false);
@@ -819,8 +1049,13 @@ export default function Checklists() {
                       const value = formStates[item.id] || "NONE";
                       return (
                         <div key={item.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
-                          <span className="text-xs font-bold text-slate-700 leading-relaxed max-w-xl">
+                          <span className="text-xs font-bold text-slate-700 leading-relaxed max-w-xl flex items-center flex-wrap gap-2">
                             {item.label}
+                            {item.critique && (
+                              <span className="bg-rose-50 text-rose-700 text-[10px] font-black uppercase px-2 py-0.5 rounded-md border border-rose-200 inline-flex items-center gap-1">
+                                <AlertTriangle className="h-2.5 w-2.5" /> CRITIQUE ⚠️
+                              </span>
+                            )}
                           </span>
                           
                           {/* Contrôle Conforme / Défectueux */}

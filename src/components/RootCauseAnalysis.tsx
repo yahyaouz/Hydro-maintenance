@@ -85,17 +85,26 @@ export function RootCauseAnalysis() {
     return rcas.find(r => r.id === selectedRcaId) || null;
   }, [rcas, selectedRcaId]);
 
-  // Set first RCA if none selected on load
+  // Set first RCA for current site, or reset if selected RCA doesn't match activeSite
   React.useEffect(() => {
-    if (!selectedRcaId && rcas.length > 0) {
-      const filtered = rcas.filter(r => {
-        if (!activeSite || activeSite === "TOUS") return true;
-        return r.siteId === activeSite;
-      });
+    if (rcas.length === 0) {
+      setSelectedRcaId(null);
+      return;
+    }
+
+    const filtered = rcas.filter(r => {
+      if (!activeSite || activeSite === "TOUS") return true;
+      return r.siteId === activeSite;
+    });
+
+    const currentRca = rcas.find(r => r.id === selectedRcaId);
+    const currentRcaIsValid = currentRca && (!activeSite || activeSite === "TOUS" || currentRca.siteId === activeSite);
+
+    if (!currentRcaIsValid) {
       if (filtered.length > 0) {
         setSelectedRcaId(filtered[0].id);
       } else {
-        setSelectedRcaId(rcas[0].id);
+        setSelectedRcaId(null);
       }
     }
   }, [rcas, selectedRcaId, activeSite]);
@@ -471,8 +480,17 @@ export function RootCauseAnalysis() {
           ) : (
             <div className="bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 p-12 rounded-3xl text-center h-[500px] flex flex-col justify-center items-center">
               <HelpCircle className="h-10 w-10 text-slate-300 dark:text-slate-700 animate-bounce mb-3" />
-              <p className="text-xs font-mono uppercase tracking-widest text-slate-400">Aucune analyse RCA sélectionnée</p>
-              <p className="text-[10px] text-slate-500 uppercase mt-1">Sélectionnez un dossier RCA dans le volet latéral ou créez un nouveau dossier</p>
+              {filteredRcas.length === 0 ? (
+                <>
+                  <p className="text-xs font-mono uppercase tracking-widest text-slate-400">Aucune analyse RCA pour ce site</p>
+                  <p className="text-[10px] text-slate-500 uppercase mt-1">Il n'y a pas encore de rapport d'analyse RCA enregistré pour le site {activeSite === "TOUS" ? "actif" : activeSite}.</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-mono uppercase tracking-widest text-slate-400">Aucune analyse RCA sélectionnée</p>
+                  <p className="text-[10px] text-slate-500 uppercase mt-1">Sélectionnez un dossier RCA dans le volet latéral ou créez un nouveau dossier</p>
+                </>
+              )}
             </div>
           )}
         </div>

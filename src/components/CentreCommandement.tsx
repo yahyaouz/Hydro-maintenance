@@ -643,16 +643,16 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
         scoreGlobal,
         isEchantillonFaible,
         siteEnginsCount: siteEngins.length,
-        siteMecasCount: siteMecas.length
+        siteMecasCount: siteMecas.length,
+        dataInsuffisante: scoreGlobal === null
       };
     });
 
-    // Sort list by scoreGlobal lowest to highest (Critical ones first)
-    return list.sort((a, b) => {
-      const scoreA = a.scoreGlobal !== null ? a.scoreGlobal : 999;
-      const scoreB = b.scoreGlobal !== null ? b.scoreGlobal : 999;
-      return scoreA - scoreB;
-    });
+    // Separate active sites with performance scores vs those with insufficient data
+    const valids = list.filter(s => s.scoreGlobal !== null).sort((a, b) => a.scoreGlobal! - b.scoreGlobal!);
+    const nulls = list.filter(s => s.scoreGlobal === null);
+
+    return [...valids, ...nulls];
   }, [enginsLive, workOrdersLive, pannesLive, mecaniciens, getNormalizedStatus, getPanneMonth, getTaskMonth, moisReference]);
 
   // 2. Situation banner computed text
@@ -662,9 +662,11 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     const stableCount = classementSites.filter(s => s.scoreGlobal !== null && s.scoreGlobal >= 80).length;
     const vigilanceCount = classementSites.filter(s => s.scoreGlobal !== null && s.scoreGlobal >= 60 && s.scoreGlobal < 80).length;
     const critiqueCount = classementSites.filter(s => s.scoreGlobal !== null && s.scoreGlobal < 60).length;
+    const donneesInsuffisantesCount = classementSites.filter(s => s.scoreGlobal === null).length;
+    const sitesInsuffisantsNoms = classementSites.filter(s => s.scoreGlobal === null).map(s => s.site).join(", ");
 
-    // Most in difficulty site (lowest score)
-    const worstSite = classementSites[0];
+    // Most in difficulty site (lowest valid score)
+    const worstSite = classementSites.find(s => s.scoreGlobal !== null);
     const hasUnstableSites = vigilanceCount > 0 || critiqueCount > 0;
 
     // Monthly panne counts
@@ -694,8 +696,15 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     if (hasUnstableSites && worstSite) {
       const siteNoun = worstSite.site;
       const totalProblems = critiqueCount + vigilanceCount;
-      return `${stableCount} sites stables, ${siteNoun} nécessite une attention immédiate (${totalProblems} site(s) sous surveillance)${variationSegment}`;
+      const baseText = `${stableCount} site(s) stable(s), ${siteNoun} nécessite une attention immédiate (${totalProblems} site(s) sous surveillance)${variationSegment}`;
+      if (donneesInsuffisantesCount > 0) {
+        return `${baseText}. Attention : ${donneesInsuffisantesCount} site(s) sans données exploitables ce mois-ci (${sitesInsuffisantsNoms}) — vérification recommandée.`;
+      }
+      return baseText;
     } else {
+      if (donneesInsuffisantesCount > 0) {
+        return `${stableCount} site(s) stable(s), mais ${donneesInsuffisantesCount} site(s) sans données exploitables ce mois-ci (${sitesInsuffisantsNoms}) — vérification recommandée.${variationSegment}`;
+      }
       return `Tous les sites sont actuellement stables et opérationnels (${stableCount} sites au vert)${variationSegment}. Excellent niveau global d'exploitation.`;
     }
   }, [classementSites, pannesLive, getPanneMonth, isLoading, moisReference]);
@@ -1338,7 +1347,9 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
 
     const alerts: string[] = [];
 
-    if (score !== null && score < 60) {
+    if (score === null) {
+      alerts.push(`**Données Insuffisantes :** Aucune donnée de disponibilité, conformité préventive ou charge d'équipe n'a été enregistrée pour ce site ce mois-ci. L'état opérationnel précis du site est actuellement indéterminable.`);
+    } else if (score < 60) {
       alerts.push(`**Attention Prioritaire :** Le score global du site est de **${score}%**, ce qui est en dessous du seuil critique de 60%. Une intervention managériale et technique est requise.`);
     }
 
@@ -1368,6 +1379,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     // 1. Liste les sites en score CRITIQUE ou VIGILANCE (s'il y en a)
     const criticalSites = classementSites.filter(s => s.scoreGlobal !== null && s.scoreGlobal < 60);
     const vigilanceSites = classementSites.filter(s => s.scoreGlobal !== null && s.scoreGlobal >= 60 && s.scoreGlobal < 80);
+    const missingDataSites = classementSites.filter(s => s.scoreGlobal === null);
 
     if (criticalSites.length > 0) {
       const siteNames = criticalSites.map(s => `**${s.site}** (${s.scoreGlobal?.toFixed(1)}%)`).join(", ");
@@ -1377,6 +1389,11 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     if (vigilanceSites.length > 0) {
       const siteNames = vigilanceSites.map(s => `**${s.site}** (${s.scoreGlobal?.toFixed(1)}%)`).join(", ");
       alerts.push(`**Sites sous Vigilance (60%-80%) :** Le(s) site(s) ${siteNames} présente(nt) des faiblesses temporaires au niveau de la disponibilité ou de la conformité préventive.`);
+    }
+
+    if (missingDataSites.length > 0) {
+      const siteNames = missingDataSites.map(s => `**${s.site}**`).join(", ");
+      alerts.push(`**Données Insuffisantes :** Le(s) site(s) ${siteNames} ne présente(nt) aucune donnée d'activité (disponibilité, conformité préventive ou charge) ce mois-ci.`);
     }
 
     // 2. Modèle d'engin le moins fiable de toute la flotte si un écart significatif existe
@@ -1961,13 +1978,14 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-bold">
-                      {classementSites.map((item) => {
+                      {classementSites.map((item, index) => {
                         const score = item.scoreGlobal;
                         const isExpanded = expandedSite === item.site;
+                        const showSectionHeader = score === null && (index === 0 || classementSites[index - 1].scoreGlobal !== null);
 
-                        let scoreColor = "text-red-600";
-                        let scoreBg = "bg-red-50 text-red-700 border-red-200/50";
-                        let statusDot = "bg-red-500";
+                        let scoreColor = "text-slate-500";
+                        let scoreBg = "bg-slate-100 text-slate-700 border-slate-200/50";
+                        let statusDot = "bg-slate-400";
 
                         if (score !== null) {
                           if (score >= 80) {
@@ -1978,11 +1996,23 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
                             scoreColor = "text-amber-600";
                             scoreBg = "bg-amber-50 text-amber-700 border-amber-200/50";
                             statusDot = "bg-amber-500";
+                          } else {
+                            scoreColor = "text-red-600";
+                            scoreBg = "bg-red-50 text-red-700 border-red-200/50";
+                            statusDot = "bg-red-500";
                           }
                         }
 
                         return (
                           <React.Fragment key={item.site}>
+                            {showSectionHeader && (
+                              <tr className="bg-amber-50/50 border-t border-b border-amber-200/40 text-amber-900 font-sans">
+                                <td colSpan={6} className="py-2.5 px-4 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                                  Données insuffisantes (Activité inactive ce mois)
+                                </td>
+                              </tr>
+                            )}
                             <tr 
                               onClick={() => setExpandedSite(isExpanded ? null : item.site)}
                               className={`hover:bg-amber-50/40 transition-colors cursor-pointer ${isExpanded ? "bg-amber-50/20" : ""}`}

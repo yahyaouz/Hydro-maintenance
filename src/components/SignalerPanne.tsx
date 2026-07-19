@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { AlertTriangle, Camera, X, Wrench, Zap, Droplets, CircleDot, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { OfflineQueueManager } from '@/services/offlineQueueManager';
 
 interface SignalerPanneProps {
   isOpen: boolean;
@@ -159,7 +160,17 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill, descriptionPref
     setIsSubmitting(true);
     try {
       const selectedEngin = engins?.find((e: any) => e.id === enginId);
-      const numero = await generateNumeroPanne();
+      let numero = `PAN-OFFLINE-${Date.now()}`;
+      
+      const isOffline = !navigator.onLine;
+
+      if (!isOffline) {
+        try {
+          numero = await generateNumeroPanne();
+        } catch (err) {
+          console.warn("Failed to generate sequential panne number, using offline format.", err);
+        }
+      }
 
       const newPanne = {
         numero,
@@ -177,33 +188,85 @@ export function SignalerPanne({ isOpen, onClose, enginIdPrefill, descriptionPref
         dateDeclaration: new Date().toISOString(),
         arretMachine,
         deleted: false,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
       };
 
-      await dbService.pannes.create(newPanne);
-
-      // Si arrêt machine : mettre à jour l'état de l'engin
-      if (arretMachine) {
-        await dbService.engines.update(enginId, {
-          etat: 'En maintenance',
-          statut: 'panne',
-          status: 'EN_PANNE',
-          dispo: 0
+      if (isOffline) {
+        const idempotencyKey = `panne_${enginId}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        OfflineQueueManager.enqueue({
+          idempotencyKey,
+          actionType: 'DECLARE_STOP',
+          payload: {
+            machineCode: enginId,
+            stop: {
+              reason: `${categorie}: ${description}`
+            },
+            panne: {
+              ...newPanne,
+              createdAt: new Date().toISOString()
+            }
+          },
+          label: `Déclaration panne ${numero} — ${enginId}`,
+          siteId: selectedEngin?.siteId || user.siteId,
+          userId: user.uid
         });
+
+        toast.warning("Action enregistrée localement (Hors-ligne). Elle sera synchronisée au retour du réseau.");
+        onClose();
+        return;
       }
 
-      // Créer la notification pour le responsable du site
-      useNotificationStore.getState().addNotification({
-        type: gravite === 'Critique' ? 'CRITIQUE' : gravite === 'Élevée' ? 'MAJEUR' : 'AVERTISSEMENT',
-        title: `NOUVELLE PANNE • ${selectedEngin?.id || enginId}`,
-        message: `${categorie} — ${description.substring(0, 80)}${description.length > 80 ? '...' : ''}`,
-        triggerSource: 'PANNE_TERRAIN',
-        siteId: selectedEngin?.siteId || user.siteId
-      });
+      try {
+        await dbService.pannes.create(newPanne);
 
-      toast.success(`Panne ${numero} signalée avec succès.`);
-      onClose();
+        // Si arrêt machine : mettre à jour l'état de l'engin
+        if (arretMachine) {
+          await dbService.engines.update(enginId, {
+            etat: 'En maintenance',
+            statut: 'panne',
+            status: 'EN_PANNE',
+            dispo: 0
+          });
+        }
+
+        // Créer la notification pour le responsable du site
+        useNotificationStore.getState().addNotification({
+          type: gravite === 'Critique' ? 'CRITIQUE' : gravite === 'Élevée' ? 'MAJEUR' : 'AVERTISSEMENT',
+          title: `NOUVELLE PANNE • ${selectedEngin?.id || enginId}`,
+          message: `${categorie} — ${description.substring(0, 80)}${description.length > 80 ? '...' : ''}`,
+          triggerSource: 'PANNE_TERRAIN',
+          siteId: selectedEngin?.siteId || user.siteId
+        });
+
+        toast.success(`Panne ${numero} signalée avec succès.`);
+        onClose();
+      } catch (err: any) {
+        const isNetworkError = err?.message?.includes('unavailable') || err?.message?.includes('network') || err?.code === 'unavailable';
+        if (isNetworkError) {
+          const idempotencyKey = `panne_${enginId}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          OfflineQueueManager.enqueue({
+            idempotencyKey,
+            actionType: 'DECLARE_STOP',
+            payload: {
+              machineCode: enginId,
+              stop: {
+                reason: `${categorie}: ${description}`
+              },
+              panne: {
+                ...newPanne,
+                createdAt: new Date().toISOString()
+              }
+            },
+            label: `Déclaration panne ${numero} — ${enginId}`,
+            siteId: selectedEngin?.siteId || user.siteId,
+            userId: user.uid
+          });
+
+          toast.warning("Réseau indisponible. Signalement enregistré localement pour synchronisation ultérieure.");
+          onClose();
+        } else {
+          throw err;
+        }
+      }
     } catch (err) {
       console.error(err);
       toast.error("Erreur lors du signalement de la panne.");

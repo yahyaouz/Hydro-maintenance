@@ -189,7 +189,14 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         (request.resource.data.get('deleted', false) == false || isRole('ADMIN')) && (
           isRole('ADMIN') || isRole('RESPONSABLE_MAINTENANCE') ||
-          (resource.data.signataireId == request.auth.uid)
+          (
+            resource.data.signataireId == request.auth.uid &&
+            (
+              (resource.data.timestamp is int && request.time.toMillis() - resource.data.timestamp < 1800000) ||
+              (resource.data.timestamp is timestamp && request.time.toMillis() - resource.data.timestamp.toMillis() < 1800000)
+            ) &&
+            request.resource.data.items == resource.data.items
+          )
         )
       );
       allow delete: if isSignedIn() && isRole('ADMIN');

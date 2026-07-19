@@ -28,6 +28,42 @@ export interface ImportResult {
   errors: ImportError[];
 }
 
+export function parseFrenchOrStandardFloat(value: string | undefined): number {
+  if (value === undefined || value === null) {
+    return 0;
+  }
+  let str = String(value).trim();
+  if (!str) {
+    return 0;
+  }
+
+  // Remove spaces and non-breaking spaces
+  str = str.replace(/[\s\u00a0\u202f]/g, "");
+
+  const hasComma = str.includes(",");
+  const hasDot = str.includes(".");
+
+  if (hasComma && !hasDot) {
+    str = str.replace(",", ".");
+  } else if (hasComma && hasDot) {
+    const lastCommaIndex = str.lastIndexOf(",");
+    const lastDotIndex = str.lastIndexOf(".");
+    
+    if (lastCommaIndex > lastDotIndex) {
+      str = str.replace(/\./g, "").replace(",", ".");
+    } else {
+      str = str.replace(/,/g, "");
+    }
+  }
+
+  const parsed = parseFloat(str);
+  if (isNaN(parsed)) {
+    console.warn(`parseFrenchOrStandardFloat: Failed to parse raw value "${value}" (processed as "${str}") to a valid number. Returning 0.`);
+    return 0;
+  }
+  return parsed;
+}
+
 export function useImports() {
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
@@ -93,15 +129,15 @@ export function useImports() {
 
         const codePiece = (row.code_piece || "").toUpperCase().trim();
         const designation = row.designation || "";
-        const quantite = parseFloat(row.quantite || "0");
+        const quantite = parseFrenchOrStandardFloat(row.quantite);
         const unite = row.unite || "UNITE";
         const enginMatricule = (row.engin_matricule || "").toUpperCase().trim();
         const enginType = row.engin_type || "";
         const site = normalizeSite(row.site || "");
         const dateConso = row.date_conso || "";
         const mecanicienMatricule = row.mecanicien_matricule || "";
-        const coutUnite = parseFloat(row.cout_unite_dh || "0");
-        const coutTotal = parseFloat(row.cout_total_dh || "0");
+        const coutUnite = parseFrenchOrStandardFloat(row.cout_unite_dh);
+        const coutTotal = parseFrenchOrStandardFloat(row.cout_total_dh);
 
         // VALIDATIONS
         if (!codePiece) {
@@ -228,6 +264,45 @@ export function useImports() {
         throw new Error("Le fichier CSV est vide ou n'a pas pu être parsé.");
       }
 
+      // Pre-fetch historical carburants records for unique matricules to calculate N-relevés averages
+      const uniqueMatricules = Array.from(
+        new Set(
+          rows
+            .map(r => (r.matricule_engin || "").toUpperCase().trim())
+            .filter(Boolean)
+        )
+      );
+
+      const historyMap = new Map<string, { dateReleve: string; consoGasoil: number }[]>();
+
+      // Chunk in blocks of 30 due to Firestore "in" query limits
+      for (let i = 0; i < uniqueMatricules.length; i += 30) {
+        const chunk = uniqueMatricules.slice(i, i + 30);
+        if (chunk.length > 0) {
+          const q = query(
+            collection(db, "carburants"),
+            where("matriculeEngin", "in", chunk)
+          );
+          const snap = await getDocs(q);
+          snap.forEach(d => {
+            const data = d.data();
+            const mat = (data.matriculeEngin || "").toUpperCase().trim();
+            if (!historyMap.has(mat)) {
+              historyMap.set(mat, []);
+            }
+            historyMap.get(mat)!.push({
+              dateReleve: data.dateReleve || "",
+              consoGasoil: typeof data.consoGasoil === "number" ? data.consoGasoil : 0
+            });
+          });
+        }
+      }
+
+      // Sort histories by date descending (newest first)
+      for (const [mat, list] of historyMap.entries()) {
+        list.sort((a, b) => b.dateReleve.localeCompare(a.dateReleve));
+      }
+
       const operations: ((batch: any) => void)[] = [];
 
       for (const row of rows) {
@@ -238,11 +313,11 @@ export function useImports() {
         const typeEngin = row.type_engin || "";
         const site = normalizeSite(row.site || "");
         const dateReleve = row.date_releve || "";
-        const heuresMoteur = parseFloat(row.heures_moteur || "0");
-        const consoGasoil = parseFloat(row.conso_gasoil_litres || "0");
-        const consoHuileMoteur = parseFloat(row.conso_huile_moteur_litres || "0");
-        const consoHuileHydraulique = parseFloat(row.conso_huile_hydraulique_litres || "0");
-        const consoAutresLubrifiants = parseFloat(row.conso_autres_lubrifiants_litres || "0");
+        const heuresMoteur = parseFrenchOrStandardFloat(row.heures_moteur);
+        const consoGasoil = parseFrenchOrStandardFloat(row.conso_gasoil_litres);
+        const consoHuileMoteur = parseFrenchOrStandardFloat(row.conso_huile_moteur_litres);
+        const consoHuileHydraulique = parseFrenchOrStandardFloat(row.conso_huile_hydraulique_litres);
+        const consoAutresLubrifiants = parseFrenchOrStandardFloat(row.conso_autres_lubrifiants_litres);
 
         // VALIDATIONS
         if (!matriculeEngin) {
@@ -276,6 +351,27 @@ export function useImports() {
           continue;
         }
 
+        // Calculate Consumption Stats:
+        // We calculate moving average on N (10) latest records before the current entry.
+        // A window of 10 matches standard industry practice, reducing random noise (short heavy lifts, idling, terrain variation)
+        // while remaining highly reactive to recent mechanical trends (e.g. engine fatigue, injection system issues, fuel leakage).
+        const pastList = historyMap.get(matriculeEngin) || [];
+        const N_latest = pastList.slice(0, 10);
+        let avgConso = 0;
+        if (N_latest.length > 0) {
+          const sum = N_latest.reduce((acc, item) => acc + item.consoGasoil, 0);
+          avgConso = sum / N_latest.length;
+        } else {
+          avgConso = consoGasoil;
+        }
+
+        // Save current entry to history map so any subsequent rows for same engine in the CSV can reference it
+        if (!historyMap.has(matriculeEngin)) {
+          historyMap.set(matriculeEngin, []);
+        }
+        historyMap.get(matriculeEngin)!.push({ dateReleve, consoGasoil });
+        historyMap.get(matriculeEngin)!.sort((a, b) => b.dateReleve.localeCompare(a.dateReleve));
+
         const carbId = `carb_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
         operations.push((batch) => {
@@ -295,13 +391,20 @@ export function useImports() {
             importedAt: new Date().toISOString()
           });
 
-          // 2. Update engine hours in engins collection
+          // 2. Update engine counters & consumption aggregates in engins collection
           const enginRef = doc(db, "engins", matchedEngin.id);
+          const updateFields: any = {
+            derniereConsommation: consoGasoil,
+            consommationMoyenne: avgConso
+          };
+
           // Only update if the imported counter is greater or equal to current to avoid reverting
           if (heuresMoteur >= (matchedEngin.heuresMarche || 0)) {
-            batch.update(enginRef, { heuresMarche: heuresMoteur });
+            updateFields.heuresMarche = heuresMoteur;
             matchedEngin.heuresMarche = heuresMoteur;
           }
+
+          batch.update(enginRef, updateFields);
         });
 
         result.successCount++;
@@ -593,7 +696,7 @@ export function useImports() {
         const typeIntervention = (row.type_intervention || "CORRECTIF").toUpperCase().trim();
         const heureDebutReelle = row.heure_debut_reelle || "";
         const heureFinReelle = row.heure_fin_reelle || "";
-        const dureeHeures = parseFloat(row.duree_heures || "0");
+        const dureeHeures = parseFrenchOrStandardFloat(row.duree_heures);
         const descriptionTravaux = row.description_travaux || "";
         const status = (row.statut || "FERME").toUpperCase().trim();
         const piecesUtiliseesRaw = row.pieces_utilisees || "";

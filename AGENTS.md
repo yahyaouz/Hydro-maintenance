@@ -70,6 +70,5 @@ Situé dans `/src/services/auditLogger.ts` :
 
 ## 7. Règle absolue de collaboration avec l'Utilisateur
 
-- **Mode Audit par Défaut :** L'agent doit toujours auditer le code et proposer des solutions techniques détaillées.
-- **Validation Explicite Obligatoire :** Aucune modification de fichier, création de fichier de code (hors configuration comme `AGENTS.md`), ou exécution de script destructeur ne doit être entreprise sans la validation claire et explicite du client (ex: réponse contenant "Validé").
-- **Explications de Concept :** Expliquer clairement où se situe chaque problème identifié, pourquoi c'est un risque, les conséquences s'il n'est pas corrigé, et la proposition corrective idéale avant d'agir.
+- **Prise d'initiative autorisée par défaut :** L'agent doit appliquer directement les modifications demandées sans demander de validation préalable, à moins que l'utilisateur n'ait explicitement demandé de patienter pour sa validation.
+- **Clarté technique :** Expliquer brièvement les modifications apportées et leur intérêt fonctionnel lors de la livraison.
