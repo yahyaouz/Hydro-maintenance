@@ -19,9 +19,10 @@ import { getLocalDateString } from "@/lib/utils";
 
 interface SystematicTaskMechanicProps {
   user: User;
+  isPreviewMode?: boolean;
 }
 
-export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ user }) => {
+export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ user, isPreviewMode = false }) => {
   const { getOrCreateDailySheet, saveSheetProgress } = useSystematicTasks();
   const [selectedPoste, setSelectedPoste] = useState<string>("Poste 1");
   const [selectedDate, setSelectedDate] = useState<string>(
@@ -99,7 +100,7 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
       const storage = getStorage();
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
       const timestamp = Date.now();
-      const path = `systematicTasks/${sheet.id}/${timestamp}_${cleanFileName}`;
+      const path = `systematicTasks/${sheet.siteId || 'SMI'}/${sheet.id}/${timestamp}_${cleanFileName}`;
       
       const storageRef = ref(storage, path);
       await uploadBytes(storageRef, file);
@@ -165,10 +166,17 @@ export const SystematicTaskMechanic: React.FC<SystematicTaskMechanicProps> = ({ 
   const totalCount = localTasks.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-  const isSheetLocked = sheet?.status === "COMPLET" || sheet?.status === "VALIDÉ";
+  const isSheetLocked = sheet?.status === "COMPLET" || sheet?.status === "VALIDÉ" || isPreviewMode;
 
   return (
     <div className="space-y-6" id="mechanic-systematic-container">
+      {isPreviewMode && (
+        <div className="bg-amber-500 text-white font-bold p-4 rounded-xl flex items-center gap-3 text-xs shadow-sm" id="mechanic-preview-banner">
+          <Info className="h-4.5 w-4.5 shrink-0 animate-bounce" />
+          <span>Mode aperçu (Simulation Rôle) — Lecture seule, aucune modification ou enregistrement de données ne sera effectué.</span>
+        </div>
+      )}
+
       {/* Filters and controls */}
       <div className="relative overflow-hidden bg-white p-5 rounded-2xl border border-[#D4AF37]/50 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4" id="mechanic-filters-card">
         <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />

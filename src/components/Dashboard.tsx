@@ -115,11 +115,12 @@ export function Dashboard() {
   const [selectedSeverity, setSelectedSeverity] = React.useState<string | null>(null);
 
   // Firestore real collections subscriptions
-  const { data: enginsLive, error: enginsError } = useCollection<any>('engins');
-  const { data: workOrdersLive, error: workOrdersError } = useCollection<any>('maintenanceTasks');
-  const { data: pannesLive, error: pannesError } = useCollection<any>('pannes');
+  const { data: enginsLive, error: enginsError } = useCollection<any>('engins', [], { unlimited: true });
+  const { data: workOrdersLive, error: workOrdersError } = useCollection<any>('maintenanceTasks', [], { unlimited: true });
+  const { data: pannesLive, error: pannesError } = useCollection<any>('pannes', [], { unlimited: true });
+  const { data: carburantsLive, error: carburantsError } = useCollection<any>('carburants', [], { unlimited: true });
 
-  const hasLoadError = !!(enginsError || workOrdersError || pannesError);
+  const hasLoadError = !!(enginsError || workOrdersError || pannesError || carburantsError);
 
   // Normalizer status
   const getNormalizedStatus = React.useCallback((e: any) => {
@@ -440,31 +441,103 @@ export function Dashboard() {
     });
   }, [enginsLive, workOrdersLive, pannesLive, mecaniciens, getNormalizedStatus]);
 
-  // Dataset 1: Monthly events (Pannes / Préventif / Correctif)
-  const simulatedAnnualData = React.useMemo(() => [
-    { name: "Jan", pannes: 4, preventif: 12, correctif: 8 },
-    { name: "Fév", pannes: 3, preventif: 16, correctif: 6 },
-    { name: "Mar", pannes: 7, preventif: 11, correctif: 10 },
-    { name: "Avr", pannes: 2, preventif: 19, correctif: 5 },
-    { name: "Mai", pannes: 5, preventif: 15, correctif: 9 },
-    { name: "Juin", pannes: 3, preventif: 18, correctif: 7 },
-    { name: "Juil", pannes: 4, preventif: 21, correctif: 8 },
-    { name: "Août", pannes: 6, preventif: 14, correctif: 12 },
-    { name: "Sept", pannes: 2, preventif: 17, correctif: 5 },
-    { name: "Oct", pannes: 5, preventif: 20, correctif: 9 },
-    { name: "Nov", pannes: 3, preventif: 22, correctif: 6 },
-    { name: "Déc", pannes: 4, preventif: 25, correctif: 8 },
-  ], []);
+  // Dataset 1: Monthly events (Pannes / Préventif / Correctif) computed dynamically over the last 12 sliding months
+  const evolutionAnnuelleData = React.useMemo(() => {
+    const list: Array<{ name: string; pannes: number; preventif: number; correctif: number }> = [];
+    const now = new Date();
+    
+    const monthLabels: Record<string, string> = {
+      "01": "Jan", "02": "Fév", "03": "Mar", "04": "Avr", "05": "Mai", "06": "Juin",
+      "07": "Juil", "08": "Août", "09": "Sept", "10": "Oct", "11": "Nov", "12": "Déc"
+    };
 
-  // Dataset 2: Monthly Fuel & Lubricant consumption
-  const simulatedFuelData = React.useMemo(() => [
-    { name: "Jan", carburant: 4800, lubrifiants: 240 },
-    { name: "Fév", carburant: 5100, lubrifiants: 280 },
-    { name: "Mar", carburant: 4600, lubrifiants: 220 },
-    { name: "Avr", carburant: 5300, lubrifiants: 310 },
-    { name: "Mai", carburant: 4900, lubrifiants: 250 },
-    { name: "Juin", carburant: 5500, lubrifiants: 340 },
-  ], []);
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = d.getFullYear();
+      const monthStr = String(d.getMonth() + 1).padStart(2, "0");
+      const key = `${year}-${monthStr}`; // YYYY-MM
+
+      const label = `${monthLabels[monthStr] || monthStr} ${String(year).slice(2)}`;
+
+      // Count pannes in filteredPannes (filtered by active site)
+      const pCount = filteredPannes.filter(p => !p.deleted && p.dateDeclaration && p.dateDeclaration.startsWith(key)).length;
+
+      // Count PREVENTIF tasks (status FAIT or VALIDE) in filteredOrders (filtered by active site)
+      const pMoisTasks = filteredOrders.filter(t => 
+        t.type === 'PREVENTIF' && 
+        (t.statut === 'FAIT' || t.statut === 'VALIDE') && 
+        t.datePlanifiee && 
+        t.datePlanifiee.startsWith(key)
+      ).length;
+
+      // Count CORRECTIF/CURATIF tasks (status FAIT or VALIDE) in filteredOrders (filtered by active site)
+      const cMoisTasks = filteredOrders.filter(t => 
+        (t.type === 'CORRECTIF' || t.type === 'CURATIF') && 
+        (t.statut === 'FAIT' || t.statut === 'VALIDE') && 
+        t.datePlanifiee && 
+        t.datePlanifiee.startsWith(key)
+      ).length;
+
+      list.push({
+        name: label,
+        pannes: pCount,
+        preventif: pMoisTasks,
+        correctif: cMoisTasks
+      });
+    }
+
+    return list;
+  }, [filteredPannes, filteredOrders]);
+
+  const hasNoAnnualData = React.useMemo(() => {
+    return evolutionAnnuelleData.every(d => d.pannes === 0 && d.preventif === 0 && d.correctif === 0);
+  }, [evolutionAnnuelleData]);
+
+  // Dataset 2: Monthly Fuel & Lubricant consumption computed dynamically over the last 6 sliding months
+  const filteredCarburants = React.useMemo(() => {
+    if (!carburantsLive) return [];
+    return carburantsLive.filter(c => activeSite === "TOUS" || c.site === activeSite || c.siteId === activeSite);
+  }, [carburantsLive, activeSite]);
+
+  const consommationCarburantData = React.useMemo(() => {
+    const list: Array<{ name: string; carburant: number; lubrifiants: number }> = [];
+    const now = new Date();
+
+    const monthLabels: Record<string, string> = {
+      "01": "Jan", "02": "Fév", "03": "Mar", "04": "Avr", "05": "Mai", "06": "Juin",
+      "07": "Juil", "08": "Août", "09": "Sept", "10": "Oct", "11": "Nov", "12": "Déc"
+    };
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = d.getFullYear();
+      const monthStr = String(d.getMonth() + 1).padStart(2, "0");
+      const key = `${year}-${monthStr}`; // YYYY-MM
+
+      const label = `${monthLabels[monthStr] || monthStr} ${String(year).slice(2)}`;
+
+      const monthRecords = filteredCarburants.filter(c => c.dateReleve && c.dateReleve.startsWith(key));
+      let carburantSum = 0;
+      let lubrifiantsSum = 0;
+
+      monthRecords.forEach(c => {
+        carburantSum += Number(c.consoGasoil) || 0;
+        lubrifiantsSum += (Number(c.consoHuileMoteur) || 0) + (Number(c.consoHuileHydraulique) || 0) + (Number(c.consoAutresLubrifiants) || 0);
+      });
+
+      list.push({
+        name: label,
+        carburant: Math.round(carburantSum),
+        lubrifiants: Math.round(lubrifiantsSum)
+      });
+    }
+
+    return list;
+  }, [filteredCarburants]);
+
+  const hasNoFuelData = React.useMemo(() => {
+    return consommationCarburantData.every(d => d.carburant === 0 && d.lubrifiants === 0);
+  }, [consommationCarburantData]);
 
   // Dataset 3: Dynamic at-risk engines computed from the collection!
   const enginsAtRisk = React.useMemo(() => {
@@ -1100,8 +1173,15 @@ export function Dashboard() {
             </div>
 
             <div className="h-[220px] w-full mt-2 font-mono text-[10px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={simulatedAnnualData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              {hasNoAnnualData ? (
+                <div className="h-full flex flex-col items-center justify-center border border-dashed border-[#D4AF37]/20 rounded-2xl bg-[#0d121d]/10 dark:bg-[#0d121d]/30 text-center p-4">
+                  <AlertTriangle className="h-8 w-8 text-[#D4AF37] mb-2 animate-pulse" />
+                  <p className="text-xs font-bold text-[#D4AF37] uppercase tracking-wider font-mono">Données insuffisantes</p>
+                  <p className="text-[10px] text-slate-500 uppercase mt-1">Aucune panne ou tâche de maintenance enregistrée sur les 12 derniers mois.</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={evolutionAnnuelleData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="goldLineGradient" x1="0" y1="0" x2="1" y2="0">
                       <stop offset="0%" stopColor="#A07810" />
@@ -1139,6 +1219,7 @@ export function Dashboard() {
                   <Area type="monotone" dataKey="pannes" stroke="#EF4444" strokeWidth={2.5} fill="url(#pannesAreaGradient)" activeDot={{ r: 5 }} dot={{ r: 3, fill: "#EF4444", stroke: "none" }} />
                 </AreaChart>
               </ResponsiveContainer>
+              )}
             </div>
             <div className={`text-[9px] ${textMutedClass} italic text-right font-mono`}>
               * Données consolidées mensuelles basées sur l'historique de la flotte locale.
@@ -1172,8 +1253,15 @@ export function Dashboard() {
             </div>
 
             <div className="h-[200px] w-full mt-2 font-mono text-[10px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={simulatedFuelData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              {hasNoFuelData ? (
+                <div className="h-full flex flex-col items-center justify-center border border-dashed border-[#D4AF37]/20 rounded-2xl bg-[#0d121d]/10 dark:bg-[#0d121d]/30 text-center p-4">
+                  <Droplets className="h-8 w-8 text-[#D4AF37] mb-2 animate-pulse" />
+                  <p className="text-xs font-bold text-[#D4AF37] uppercase tracking-wider font-mono">Données insuffisantes</p>
+                  <p className="text-[10px] text-slate-500 uppercase mt-1">Aucun relevé de consommation carburant ou lubrifiants sur les 6 derniers mois.</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={consommationCarburantData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#D4AF37" strokeOpacity={0.10} />
                   <XAxis dataKey="name" stroke={isDark ? "#A49F8D" : "#78350f"} strokeOpacity={0.6} fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis yAxisId="left" stroke={isDark ? "#A49F8D" : "#78350f"} strokeOpacity={0.6} fontSize={10} tickLine={false} axisLine={false} />
@@ -1191,6 +1279,7 @@ export function Dashboard() {
                   <Bar yAxisId="right" dataKey="lubrifiants" fill="#D4AF37" radius={[4, 4, 0, 0]} barSize={8} />
                 </BarChart>
               </ResponsiveContainer>
+              )}
             </div>
             <div className={`text-[9px] ${textMutedClass} italic text-right font-mono`}>
               * Consommation normalisée d'après les relevés de cuves et pompes mobiles.

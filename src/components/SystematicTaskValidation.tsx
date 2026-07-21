@@ -15,16 +15,18 @@ import {
   Camera,
   Search,
   CheckCircle,
-  FileCheck
+  FileCheck,
+  Info
 } from "lucide-react";
 import { toast } from "sonner";
 import { getLocalDateString } from "@/lib/utils";
 
 interface SystematicTaskValidationProps {
   user: User;
+  isPreviewMode?: boolean;
 }
 
-export const SystematicTaskValidation: React.FC<SystematicTaskValidationProps> = ({ user }) => {
+export const SystematicTaskValidation: React.FC<SystematicTaskValidationProps> = ({ user, isPreviewMode = false }) => {
   const { sheets, validateSheet, loading } = useSystematicTasks();
   const [selectedDate, setSelectedDate] = useState<string>(
     getLocalDateString()
@@ -124,6 +126,13 @@ export const SystematicTaskValidation: React.FC<SystematicTaskValidationProps> =
 
   return (
     <div className="space-y-6" id="validation-systematic-container">
+      {isPreviewMode && (
+        <div className="bg-amber-500 text-white font-bold p-4 rounded-xl flex items-center gap-3 text-xs shadow-sm" id="validation-preview-banner">
+          <Info className="h-4.5 w-4.5 shrink-0 animate-bounce" />
+          <span>Mode aperçu (Simulation Rôle) — Lecture seule, aucune modification ou enregistrement de données ne sera effectué.</span>
+        </div>
+      )}
+
       {/* Filter and Overview header */}
       <div className="relative overflow-hidden bg-white p-5 rounded-2xl border border-[#D4AF37]/50 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4" id="validation-filters-card">
         <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#38BDF8] via-purple-600 to-[#991B1B]" />
@@ -321,6 +330,7 @@ export const SystematicTaskValidation: React.FC<SystematicTaskValidationProps> =
                           <div className="flex items-center gap-2 shrink-0">
                             <button
                               type="button"
+                              disabled={isPreviewMode}
                               onClick={() => handleSetTaskValidation(t.id, true)}
                               className={`px-3 py-1 text-xs font-semibold rounded-lg border flex items-center gap-1.5 transition-all ${
                                 t.validated === true
@@ -335,6 +345,7 @@ export const SystematicTaskValidation: React.FC<SystematicTaskValidationProps> =
 
                             <button
                               type="button"
+                              disabled={isPreviewMode}
                               onClick={() => handleSetTaskValidation(t.id, false)}
                               className={`px-3 py-1 text-xs font-semibold rounded-lg border flex items-center gap-1.5 transition-all ${
                                 t.validated === false
@@ -358,6 +369,7 @@ export const SystematicTaskValidation: React.FC<SystematicTaskValidationProps> =
                             </label>
                             <input
                               type="text"
+                              disabled={isPreviewMode}
                               value={t.validationComment || ""}
                               onChange={(e) => handleTaskCommentChange(t.id, e.target.value)}
                               placeholder="Indiquez pourquoi cette tâche n'est pas validée..."
@@ -384,7 +396,7 @@ export const SystematicTaskValidation: React.FC<SystematicTaskValidationProps> =
 
                   <button
                     type="button"
-                    disabled={savingValidation}
+                    disabled={savingValidation || isPreviewMode}
                     onClick={handleSaveValidation}
                     className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-lg flex items-center gap-1.5 shadow-sm transition-all"
                     id="btn-save-val"

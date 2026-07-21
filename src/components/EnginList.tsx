@@ -90,9 +90,9 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
   const canAddEngin = ["ADMIN", "SECRETAIRE", "RESPONSABLE_MAINTENANCE", "RESPONSABLE_CHANTIER"].includes(user?.role || "");
 
   // Load equipements from Firestore
-  const { data: allEquipements, loading, error: enginsError } = useCollection<any>("engins");
-  const { data: allWorkorders, error: tasksError } = useCollection<any>("maintenanceTasks");
-  const { data: allPannes, error: pannesError } = useCollection<any>("pannes");
+  const { data: allEquipements, loading, error: enginsError } = useCollection<any>("engins", [], { unlimited: true });
+  const { data: allWorkorders, error: tasksError } = useCollection<any>("maintenanceTasks", [], { unlimited: true });
+  const { data: allPannes, error: pannesError } = useCollection<any>("pannes", [], { unlimited: true });
 
   const hasLoadError = !!(enginsError || tasksError || pannesError);
 
@@ -488,7 +488,12 @@ export function EnginList({ onOpenCarnet }: EnginListProps = {}) {
       setIsAddModalOpen(false);
     } catch (err: any) {
       console.error("Error adding equipment:", err);
-      toast.error("Erreur lors de l'enregistrement de l'équipement.");
+      const errMsg = err?.message || "";
+      if (errMsg.includes("Ce matricule existe déjà")) {
+        toast.error(`Le N° de Parc / Matricule ${matriculeUpper} existe déjà.`);
+      } else {
+        toast.error("Erreur lors de l'enregistrement de l'équipement.");
+      }
     } finally {
       setIsSubmitLoading(false);
     }

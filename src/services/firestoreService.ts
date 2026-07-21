@@ -252,10 +252,16 @@ export const dbService = {
     async create(id: string, data: any) {
       const ref = doc(db, 'engins', id);
       try {
-        await setDoc(ref, {
-          ...data,
-          createdAt: Timestamp.now(),
-          updatedAt: Timestamp.now()
+        await runTransaction(db, async (transaction) => {
+          const docSnap = await transaction.get(ref);
+          if (docSnap.exists()) {
+            throw new Error("Ce matricule existe déjà");
+          }
+          transaction.set(ref, {
+            ...data,
+            createdAt: Timestamp.now(),
+            updatedAt: Timestamp.now()
+          });
         });
       } catch (err) {
         handleFirestoreError(err, OperationType.CREATE, `engins/${id}`);
@@ -1281,6 +1287,30 @@ export const dbService = {
             });
           } catch (err) {
             handleFirestoreError(err, OperationType.WRITE, 'feedbacks');
+          }
+          break;
+        }
+
+        case 'ERROR_LOG': {
+          const newError = action.payload;
+          if (newError && newError.id) {
+            const q = query(collection(db, 'systemLogs'), where('id', '==', newError.id));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+              console.warn(`⚠️ dbService.offlineQueue: ERROR_LOG ${newError.id} déjà traité (idempotencyKey existante). Skip replay.`);
+              break;
+            }
+          }
+          const logRef = collection(db, 'systemLogs');
+          try {
+            await addDoc(logRef, {
+              ...newError,
+              createdAt: Timestamp.now(),
+              dbTimestamp: Timestamp.now()
+            });
+          } catch (err) {
+            console.error("Failed to replay ERROR_LOG offline action:", err);
+            handleFirestoreError(err, OperationType.WRITE, 'systemLogs');
           }
           break;
         }

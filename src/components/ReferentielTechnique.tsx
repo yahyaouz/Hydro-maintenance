@@ -11,7 +11,7 @@ import { PageBanner } from "@/components/ui/PageBanner";
 
 export function ReferentielTechnique() {
   const { activeSite } = useAuthStore();
-  const { data: engins, loading, error: enginsError } = useCollection<any>("engins");
+  const { data: engins, loading, error: enginsError } = useCollection<any>("engins", [], { unlimited: true });
   const hasLoadError = !!enginsError;
   const [selectedEnginId, setSelectedEnginId] = React.useState<string>("");
 

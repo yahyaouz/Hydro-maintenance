@@ -456,7 +456,7 @@
     },
     "objectifSite": {
       "title": "ObjectifSite",
-      "description": "Objectifs de performance définis pour un site",
+      "description": "Objectifs de performance définis pour un site ou objectif global de la direction",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -464,6 +464,7 @@
         "mttrTarget": { "type": "number" },
         "complianceTarget": { "type": "number" },
         "coutTarget": { "type": "number" },
+        "preventifCorrectifTarget": { "type": "number" },
         "updatedAt": { "type": "object" },
         "updatedBy": { "type": "string" }
       },

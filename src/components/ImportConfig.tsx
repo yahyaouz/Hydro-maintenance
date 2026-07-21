@@ -321,7 +321,10 @@ export function ImportConfig() {
                 <div className="text-[11px] bg-slate-50 text-slate-600 rounded-lg p-2.5 font-mono space-y-1">
                   <span className="font-bold text-slate-700 uppercase block mb-1">Structure attendue (pieces.csv) :</span>
                   <code>code_piece, designation, quantite, unite, engin_matricule, engin_type, site, date_conso, mecanicien_matricule, cout_unite_dh, cout_total_dh</code>
-                  <p className="text-[10px] text-amber-600 font-sans mt-1">
+                  <p className="text-[10px] text-sky-600 font-sans mt-1">
+                    📅 Formats de date acceptés pour <strong>date_conso</strong> : <code>AAAA-MM-JJ</code> ou <code>JJ/MM/AAAA</code>.
+                  </p>
+                  <p className="text-[10px] text-amber-600 font-sans mt-0.5">
                     💡 Note: Les séparateurs décimaux en format français (virgule, ex: 125,5) ou standard (point, ex: 125.5) sont acceptés pour les colonnes numériques.
                   </p>
                 </div>
@@ -406,7 +409,10 @@ export function ImportConfig() {
                 <div className="text-[11px] bg-slate-50 text-slate-600 rounded-lg p-2.5 font-mono space-y-1">
                   <span className="font-bold text-slate-700 uppercase block mb-1">Structure attendue (carburants.csv) :</span>
                   <code>matricule_engin, type_engin, site, date_releve, heures_moteur, conso_gasoil_litres, conso_huile_moteur_litres, conso_huile_hydraulique_litres, conso_autres_lubrifiants_litres</code>
-                  <p className="text-[10px] text-amber-600 font-sans mt-1">
+                  <p className="text-[10px] text-sky-600 font-sans mt-1">
+                    📅 Formats de date acceptés pour <strong>date_releve</strong> : <code>AAAA-MM-JJ</code> ou <code>JJ/MM/AAAA</code>.
+                  </p>
+                  <p className="text-[10px] text-amber-600 font-sans mt-0.5">
                     💡 Note: Les séparateurs décimaux en format français (virgule, ex: 125,5) ou standard (point, ex: 125.5) sont acceptés pour les colonnes numériques.
                   </p>
                 </div>
@@ -490,6 +496,9 @@ export function ImportConfig() {
                 <div className="text-[11px] bg-slate-50 text-slate-600 rounded-lg p-2.5 font-mono space-y-1">
                   <span className="font-bold text-slate-700 uppercase block mb-1">Structure attendue (planification.csv) :</span>
                   <code>mecanicien_matricule, mecanicien_nom, telephone, email, date, poste, site, engin_matricule, type_intervention, heure_debut_prevue, heure_fin_prevue</code>
+                  <p className="text-[10px] text-sky-600 font-sans mt-1">
+                    📅 Formats de date acceptés pour <strong>date</strong> : <code>AAAA-MM-JJ</code> ou <code>JJ/MM/AAAA</code>.
+                  </p>
                 </div>
 
                 <div
@@ -571,7 +580,10 @@ export function ImportConfig() {
                 <div className="text-[11px] bg-slate-50 text-slate-600 rounded-lg p-2.5 font-mono space-y-1">
                   <span className="font-bold text-slate-700 uppercase block mb-1">Structure attendue (realisation.csv) :</span>
                   <code>mecanicien_matricule, date, engin_matricule, type_intervention, heure_debut_reelle, heure_fin_reelle, duree_heures, description_travaux, statut, pieces_utilisees, categorie</code>
-                  <p className="text-[10px] text-amber-600 font-sans mt-1">
+                  <p className="text-[10px] text-sky-600 font-sans mt-1">
+                    📅 Formats de date acceptés pour <strong>date</strong> : <code>AAAA-MM-JJ</code> ou <code>JJ/MM/AAAA</code>.
+                  </p>
+                  <p className="text-[10px] text-amber-600 font-sans mt-0.5">
                     💡 Note: Les séparateurs décimaux en format français (virgule, ex: 125,5) ou standard (point, ex: 125.5) sont acceptés pour les colonnes numériques.
                   </p>
                   <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
@@ -675,6 +687,34 @@ export function ImportConfig() {
                         <span className="text-lg font-black text-rose-700">{lastReport.result.errorCount}</span>
                       </div>
                     </div>
+
+                    {(() => {
+                      const totalProcessed = lastReport.result.successCount + lastReport.result.ignoredCount + lastReport.result.errorCount;
+                      const errorPercentage = totalProcessed > 0 ? (lastReport.result.errorCount / totalProcessed) * 100 : 0;
+                      const hasHighErrorRate = errorPercentage >= 50 && lastReport.result.errorCount > 0;
+                      
+                      if (!hasHighErrorRate) return null;
+                      return (
+                        <div className="p-3 bg-rose-50 border-2 border-rose-500 rounded-xl space-y-2 text-rose-900 shadow-sm animate-pulse">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-xs font-black uppercase tracking-wider text-rose-800">
+                                Taux d'erreur critique ({errorPercentage.toFixed(0)}%)
+                              </p>
+                              <p className="text-[10px] text-slate-700 mt-1 leading-relaxed">
+                                Le taux d'échec est anormalement élevé. Veuillez vérifier que :
+                              </p>
+                              <ul className="list-disc pl-4 mt-1 text-[10px] text-slate-600 space-y-0.5">
+                                <li>Le format de vos dates respecte <strong>AAAA-MM-JJ</strong> (ISO) ou <strong>JJ/MM/AAAA</strong> (français).</li>
+                                <li>Les séparateurs de décimaux correspondent (virgule <code>,</code> ou point <code>.</code>).</li>
+                                <li>Les en-têtes de colonnes correspondent exactement à la structure attendue.</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {lastReport.result.errorCount > 0 ? (
                       <div className="space-y-2">

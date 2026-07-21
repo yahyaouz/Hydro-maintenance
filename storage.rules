@@ -1,14 +1,50 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    
+    // Helper to retrieve user data from Firestore
+    function getUserData() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Helper to check multi-site isolation
+    function matchesSite(siteId) {
+      return request.auth != null 
+        && getUserData().active == true 
+        && (
+          getUserData().siteId == 'TOUS' || 
+          getUserData().siteId == siteId || 
+          getUserData().role == 'ADMIN'
+        );
+    }
+
     match /mecaniciens/{matricule}/{allPaths=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow delete: if request.auth != null 
+        && getUserData().active == true 
+        && getUserData().role in ['ADMIN', 'RESPONSABLE_MAINTENANCE', 'DIRECTION', 'SECRETAIRE'];
+      allow create, update: if request.auth != null 
+        && getUserData().active == true 
+        && getUserData().role in ['ADMIN', 'RESPONSABLE_MAINTENANCE', 'DIRECTION', 'SECRETAIRE']
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType in ['image/jpeg', 'image/png', 'application/pdf'];
     }
+
+    // Backward compatibility for legacy systematic tasks (read-only)
     match /systematicTasks/{sheetId}/{allPaths=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
+
+    // New site-isolated systematic tasks path
+    match /systematicTasks/{siteId}/{sheetId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow delete: if matchesSite(siteId);
+      allow create, update: if matchesSite(siteId)
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType in ['image/jpeg', 'image/png', 'application/pdf'];
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

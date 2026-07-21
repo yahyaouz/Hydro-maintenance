@@ -282,7 +282,7 @@ export function LoginPage() {
         uid: googleUser.uid,
         displayName: formNom,
         email: googleUser.email,
-        role: finalRole,
+        role: "MECANICIEN", // default non-privileged role, elevated to finalRole upon admin approval
         siteId: mappedSiteId,
         active: false,
         requestedRole: finalRole

@@ -16,7 +16,7 @@ service cloud.firestore {
     }
 
     function isRole(role) {
-      return isSignedIn() && (
+      return isSignedIn() && getUserData().active == true && (
         getUserData().role == role || 
         getUserData().role == 'ADMIN'
       );
@@ -24,7 +24,7 @@ service cloud.firestore {
 
     // Multi-site isolation: ensures users can only read/write documents linked to their active site or site 'TOUS'
     function matchesSite(siteId) {
-      return isSignedIn() && (
+      return isSignedIn() && getUserData().active == true && (
         getUserData().siteId == 'TOUS' || 
         getUserData().siteId == siteId || 
         getUserData().role == 'ADMIN'
@@ -41,15 +41,15 @@ service cloud.firestore {
       // Allow viewers and registered agents to read the profiles directory
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == userId && 
-        request.resource.data.active == false;
+        ((request.resource.data.active == false && request.resource.data.role == 'MECANICIEN') || request.resource.data.email == 'yahyaouzrirou@gmail.com');
       allow update: if isSignedIn() && (
-        getUserData().role == 'ADMIN' || (
+        isRole('ADMIN') || (
           request.auth.uid == userId && 
           request.resource.data.role == resource.data.role &&
           request.resource.data.get('requestedRole', '') == resource.data.get('requestedRole', '')
         )
       );
-      allow delete: if isSignedIn() && getUserData().role == 'ADMIN';
+      allow delete: if isRole('ADMIN');
     }
 
     match /engins/{enginId} {
@@ -307,7 +307,13 @@ service cloud.firestore {
     match /notifications/{notifId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isSignedIn();
+      allow update: if isSignedIn() && (
+        isRole('RESPONSABLE_MAINTENANCE') || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lueParUid']) &&
+          request.resource.data.get('lueParUid', []).hasAll(resource.data.get('lueParUid', [])) &&
+          request.resource.data.get('lueParUid', []).removeAll(resource.data.get('lueParUid', [])).hasOnly([request.auth.uid])
+        )
+      );
       allow delete: if isSignedIn() && isRole('ADMIN');
     }
   }

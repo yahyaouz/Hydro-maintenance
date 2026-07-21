@@ -40,10 +40,12 @@ export function useMecaniciens() {
   const [mecaniciensRaw, setMecaniciensRaw] = useState<any[]>([]);
   const [tasksRaw, setTasksRaw] = useState<any[]>([]);
   const [pannesRaw, setPannesRaw] = useState<any[]>([]);
+  const [interventionsRaw, setInterventionsRaw] = useState<any[]>([]);
   
   const [loadingMeca, setLoadingMeca] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [loadingPannes, setLoadingPannes] = useState(true);
+  const [loadingInterventions, setLoadingInterventions] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   const { user } = useAuthStore();
@@ -53,6 +55,7 @@ export function useMecaniciens() {
       setLoadingMeca(false);
       setLoadingTasks(false);
       setLoadingPannes(false);
+      setLoadingInterventions(false);
       return;
     }
 
@@ -97,10 +100,24 @@ export function useMecaniciens() {
       setLoadingPannes(false);
     });
 
+    // 4. Read from 'interventions' Firestore collection
+    const unsubInterventions = onSnapshot(collection(db, "interventions"), (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      setInterventionsRaw(list);
+      setLoadingInterventions(false);
+    }, (err) => {
+      console.error("Error fetching interventions:", err);
+      setLoadingInterventions(false);
+    });
+
     return () => {
       unsubMeca();
       unsubTasks();
       unsubPannes();
+      unsubInterventions();
     };
   }, [user?.role, user?.uid, user?.active]);
 
@@ -141,6 +158,9 @@ export function useMecaniciens() {
       }
 
       // --- CRITÈRE 1: tauxTournéesCompletes ---
+      // NOTE: tauxTournéesCompletes reste calculé sur les fiches planifiées de 'maintenanceTasks'
+      // car les interventions importées représentent des évènements correctifs/curatifs réels déclarés a-posteriori
+      // et n'entrent pas dans l'évaluation de la conformité du plan préventif initial.
       const tasksMeca = tasksRaw.filter(t => 
         t.mecanicienId === data.id && 
         t.datePlanifiee?.startsWith(currentMonthStr) &&
@@ -151,6 +171,9 @@ export function useMecaniciens() {
       const tauxTournéesCompletes = totalTasks > 0 ? Math.round((faitesTasks / totalTasks) * 100) : null;
 
       // --- CRITÈRE 2: mttrMoyen ---
+      // NOTE: mttrMoyen reste calculé exclusivement sur la collection 'pannes'
+      // car les interventions importées ne comportent pas le lignage précis des jalons temporels
+      // de déclaration, prise en charge et clôture de pannes nécessaires au calcul du MTTR.
       const mecaPannes = pannesRaw.filter(p => 
         (p.mecanicienAssigne === data.id || p.mecanicienAssigne === docUid) &&
         p.statut === 'CLOS' &&
@@ -182,22 +205,70 @@ export function useMecaniciens() {
       // Toujours null car aucun champ 'reouverte: boolean' n'existe actuellement pour le tracer proprement.
       const tauxResolutionPremiereFois = null;
 
-      // Dynamic workload & intervention stats
+      // Dynamic workload & intervention stats (integrating both maintenanceTasks and imported interventions)
       const mecaTasksAll = tasksRaw.filter(t => t.mecanicienId === data.id && t.deleted !== true);
       const mecaTasksFaitAll = mecaTasksAll.filter(t => t.statut === 'FAIT' || t.statut === 'VALIDE');
 
+      const mecaInterventionsAll = interventionsRaw.filter(i => 
+        !i.deleted && 
+        (i.mecanicienMatricule === data.matricule || i.mecanicienMatricule === data.id) &&
+        (i.typeIntervention === 'CORRECTIF' || i.type === 'CORRECTIF' || i.type === 'CURATIF')
+      );
+
+      // 1. derniereIntervention
       let derniereIntervention = data.stats?.derniereIntervention || "";
+      const dates: string[] = [];
       if (mecaTasksFaitAll.length > 0) {
-        const sorted = [...mecaTasksFaitAll].sort((a, b) => (b.datePlanifiee || "").localeCompare(a.datePlanifiee || ""));
-        derniereIntervention = sorted[0].datePlanifiee || "";
+        mecaTasksFaitAll.forEach(t => {
+          if (t.datePlanifiee) dates.push(t.datePlanifiee);
+        });
+      }
+      mecaInterventionsAll.forEach(i => {
+        if (i.date) dates.push(i.date);
+      });
+      if (dates.length > 0) {
+        dates.sort((a, b) => b.localeCompare(a));
+        derniereIntervention = dates[0];
       }
 
-      const totalInterventions = mecaTasksFaitAll.length;
-      
-      const mecaTasksFaitCeMois = mecaTasksFaitAll.filter(t => t.datePlanifiee?.startsWith(currentMonthStr));
-      const interventionsCeMois = mecaTasksFaitCeMois.length;
+      // 2. totalInterventions (avoid duplicates)
+      const interventionsImporteesAll = interventionsRaw.filter(i => {
+        if (i.deleted) return false;
+        const matchesMeca = i.mecanicienMatricule === data.matricule || i.mecanicienMatricule === data.id;
+        const matchesType = i.typeIntervention === 'CORRECTIF' || i.type === 'CORRECTIF' || i.type === 'CURATIF';
+        if (!matchesMeca || !matchesType) return false;
 
-      const heuresInterventionCeMois = Math.round(mecaTasksFaitCeMois.reduce((sum, t) => sum + getHoursFromDuree(t.dureeEstimee || ''), 0) * 10) / 10;
+        const hasTaskLink = i.maintenanceTaskId || i.taskId;
+        if (hasTaskLink) {
+          const isAlreadyInTasks = mecaTasksFaitAll.some(t => t.id === i.maintenanceTaskId || t.id === i.taskId);
+          if (isAlreadyInTasks) return false;
+        }
+        return true;
+      });
+      const totalInterventions = mecaTasksFaitAll.length + interventionsImporteesAll.length;
+      
+      // 3. interventionsCeMois
+      const mecaTasksFaitCeMois = mecaTasksFaitAll.filter(t => t.datePlanifiee?.startsWith(currentMonthStr));
+      const interventionsImporteesCeMois = interventionsRaw.filter(i => {
+        if (i.deleted) return false;
+        const matchesMeca = i.mecanicienMatricule === data.matricule || i.mecanicienMatricule === data.id;
+        const matchesType = i.typeIntervention === 'CORRECTIF' || i.type === 'CORRECTIF' || i.type === 'CURATIF';
+        const matchesMonth = i.date && i.date.startsWith(currentMonthStr);
+        if (!matchesMeca || !matchesType || !matchesMonth) return false;
+
+        const hasTaskLink = i.maintenanceTaskId || i.taskId;
+        if (hasTaskLink) {
+          const isAlreadyInTasks = mecaTasksFaitCeMois.some(t => t.id === i.maintenanceTaskId || t.id === i.taskId);
+          if (isAlreadyInTasks) return false;
+        }
+        return true;
+      });
+      const interventionsCeMois = mecaTasksFaitCeMois.length + interventionsImporteesCeMois.length;
+
+      // 4. heuresInterventionCeMois
+      const hoursFromTasks = mecaTasksFaitCeMois.reduce((sum, t) => sum + getHoursFromDuree(t.dureeEstimee || ''), 0);
+      const hoursFromImports = interventionsImporteesCeMois.reduce((sum, i) => sum + (Number(i.dureeHeures) || 0), 0);
+      const heuresInterventionCeMois = Math.round((hoursFromTasks + hoursFromImports) * 10) / 10;
 
       // Compute general monthly performance score based on tauxTournéesCompletes
       const scoreMensuel = tauxTournéesCompletes !== null ? tauxTournéesCompletes : (data.stats?.scoreMensuel ?? null);
@@ -241,7 +312,7 @@ export function useMecaniciens() {
 
       return processed;
     });
-  }, [mecaniciensRaw, tasksRaw, pannesRaw]);
+  }, [mecaniciensRaw, tasksRaw, pannesRaw, interventionsRaw]);
 
   // Handle automatic schema migration in the background (loop-safe)
   useEffect(() => {

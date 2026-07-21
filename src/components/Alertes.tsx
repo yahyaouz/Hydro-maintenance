@@ -48,14 +48,14 @@ export function Alertes() {
   const { data: alerts, loading: alertsLoading, error: alertsError } = useCollection<AlertDocument>('alerts', [], {
     orderByField: 'updatedAt',
     orderByDirection: 'desc',
-    limitNum: 100
+    unlimited: true
   });
 
-  const { data: engins, loading: enginsLoading, error: enginsError } = useCollection<any>('engins');
-  const { data: pmIntervalles, loading: pmIntervallesLoading, error: pmIntervallesError } = useCollection<any>('pmIntervalles');
-  const { data: pannes, loading: pannesLoading, error: pannesError } = useCollection<any>('pannes');
-  const { data: pieces, loading: piecesLoading, error: piecesError } = useCollection<any>('pieces');
-  const { data: tasks, loading: tasksLoading, error: tasksError } = useCollection<any>('maintenanceTasks');
+  const { data: engins, loading: enginsLoading, error: enginsError } = useCollection<any>('engins', [], { unlimited: true });
+  const { data: pmIntervalles, loading: pmIntervallesLoading, error: pmIntervallesError } = useCollection<any>('pmIntervalles', [], { unlimited: true });
+  const { data: pannes, loading: pannesLoading, error: pannesError } = useCollection<any>('pannes', [], { unlimited: true });
+  const { data: pieces, loading: piecesLoading, error: piecesError } = useCollection<any>('pieces', [], { unlimited: true });
+  const { data: tasks, loading: tasksLoading, error: tasksError } = useCollection<any>('maintenanceTasks', [], { unlimited: true });
 
   const hasLoadError = !!(alertsError || enginsError || pmIntervallesError || pannesError || piecesError || tasksError);
 

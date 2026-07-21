@@ -1,16 +1,12 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, doc, setDoc } from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 import { dbService } from "@/services/firestoreService";
 import { toast } from "sonner";
 import { CarnetSanteProfile } from "@/components/types_gmao";
 
 // CALCUL DE SECOURS — Cette formule est une approximation déterministe pour 
-// permettre l'affichage hors ligne ou en l'absence de données historiques.
-// Elle sera remplacée par un calcul basé sur l'historique réel des pannes 
-// et des interventions au SPRINT 6 (Import + Intégration).
-// Les pondérations (moteur 35%, hydraulique 30%, etc.) sont arbitraires 
-// et devront être ajustées selon le type d'engin.
+// permettre l'affichage hors ligne ou en l'absence de données de collection.
 export function calculSecoursSante(engin: any): number {
   if (!engin) return 100;
   
@@ -73,23 +69,68 @@ export function useCarnetSante() {
     }
   };
 
-  // Helper to compute overall health score based on pannes and workorders
-  const computeHealthScore = (engin: any, pannes: any[], workorders: any[]): number => {
+  // Helper to compute overall health score based on pannes, workorders, and historical interventions
+  const computeHealthScore = (engin: any, pannes: any[], workorders: any[], interventions: any[] = []): number => {
     if (!engin) return 100;
 
-    // Filter pannes and workorders relevant to this engine
-    const activePannes = (pannes || []).filter(p => p.enginId === engin.id && p.statut !== "CLOS" && !p.deleted);
-    const activeBT = (workorders || []).filter(w => (w.enginId === engin.id || w.enginId === engin.matricule) && (w.statut === "NON_FAIT" || w.statut === "EN_COURS") && !w.deleted);
+    const nowMs = Date.now();
+    const limit90Ms = nowMs - (90 * 24 * 60 * 60 * 1000);
 
-    if (activePannes.length === 0 && activeBT.length === 0) {
-      // Use secours formula if no active/reported incidents
-      return calculSecoursSante(engin);
-    }
+    // Helper to parse multiple date/timestamp formats robustly
+    const parseDateToMillis = (dateVal: any): number | null => {
+      if (!dateVal) return null;
+      if (typeof dateVal === "object" && dateVal.seconds !== undefined) {
+        return dateVal.seconds * 1000;
+      }
+      if (typeof dateVal === "object" && typeof dateVal.toDate === "function") {
+        return dateVal.toDate().getTime();
+      }
+      try {
+        const parsed = new Date(dateVal).getTime();
+        if (!isNaN(parsed)) return parsed;
+      } catch (e) {}
+      return null;
+    };
+
+    // 1. Filter active pannes (unresolved breakdowns)
+    const activePannes = (pannes || []).filter(p => 
+      !p.deleted && 
+      p.enginId === engin.id && 
+      p.statut !== "CLOS"
+    );
+
+    // 2. Filter active work orders (unresolved)
+    const activeBT = (workorders || []).filter(w => 
+      !w.deleted && 
+      (w.enginId === engin.id || w.enginId === engin.matricule) && 
+      (w.statut === "NON_FAIT" || w.statut === "EN_COURS")
+    );
+
+    // 3. Filter historical closed pannes (resolved within last 90 days)
+    const closedPannes90 = (pannes || []).filter(p => {
+      if (p.deleted || p.statut !== "CLOS" || p.enginId !== engin.id) return false;
+      const dateVal = p.dateResolution || p.dateDeclaration || p.createdAt || p.timestamp;
+      const ms = parseDateToMillis(dateVal);
+      return ms !== null && ms >= limit90Ms;
+    });
+
+    // 4. Filter historical interventions (corrective or curative within last 90 days)
+    const historicalInterventions90 = (interventions || []).filter(i => {
+      if (i.deleted) return false;
+      const isMatchingEngine = (i.enginId === engin.id || i.enginMatricule === engin.matricule);
+      if (!isMatchingEngine) return false;
+      const isCorrective = (i.typeIntervention === 'CORRECTIF' || i.typeIntervention === 'CURATIF' || i.type === 'CORRECTIF' || i.type === 'CURATIF');
+      if (!isCorrective) return false;
+      
+      const dateVal = i.date || i.dateResolution || i.timestamp || i.createdAt;
+      const ms = parseDateToMillis(dateVal);
+      return ms !== null && ms >= limit90Ms;
+    });
 
     let score = 100;
 
-    // Active pannes impact:
-    // Moteur (35%), Hydraulique (30%), Transmission (15%), Electrique (10%), Structure (10%)
+    // --- COMPONENT A: ACTIVE INCIDENTS & WORK ORDERS ---
+    // Active pannes impact based on category and severity:
     activePannes.forEach(p => {
       const category = (p.categorie || p.category || "").toUpperCase();
       const severity = (p.gravite || p.severity || "Moyenne").toLowerCase();
@@ -98,17 +139,18 @@ export function useCarnetSante() {
       if (severity === "critique" || severity === "haute" || severity === "élevée") baseImpact = 25;
       else if (severity === "basse" || severity === "faible") baseImpact = 5;
 
+      let categoryWeight = 0.10;
       if (category.includes("MOTEUR")) {
-        score -= baseImpact * 0.35;
+        categoryWeight = 0.35;
       } else if (category.includes("HYDRAULIQUE")) {
-        score -= baseImpact * 0.30;
+        categoryWeight = 0.30;
       } else if (category.includes("TRANSMISSION")) {
-        score -= baseImpact * 0.15;
+        categoryWeight = 0.15;
       } else if (category.includes("ÉLECTRIQUE") || category.includes("ELECTRIQUE")) {
-        score -= baseImpact * 0.10;
-      } else {
-        score -= baseImpact * 0.10; // other sub-systems
+        categoryWeight = 0.10;
       }
+      
+      score -= baseImpact * categoryWeight;
     });
 
     // Active BTs impact (unresolved work orders)
@@ -123,11 +165,68 @@ export function useCarnetSante() {
       }
     });
 
-    // Age deduction (max 15 points)
+    // --- COMPONENT B: HISTORICAL INCIDENTS (90 DAYS) ---
+    // 1. Closed pannes in 90 days (adds historical reliability component)
+    closedPannes90.forEach(p => {
+      const severity = (p.gravite || p.severity || "Moyenne").toLowerCase();
+      let baseImpact = 3.5; // deduction per closed panne
+      if (severity === "critique" || severity === "haute" || severity === "élevée") baseImpact = 7.0;
+      else if (severity === "basse" || severity === "faible") baseImpact = 1.5;
+
+      // Recency decay factor (more recent has higher impact)
+      let recencyFactor = 0.3; // default for older than 45 days
+      const dateVal = p.dateResolution || p.dateDeclaration || p.createdAt || p.timestamp;
+      const ms = parseDateToMillis(dateVal);
+      if (ms) {
+        const diffDays = (nowMs - ms) / (1000 * 60 * 60 * 24);
+        if (diffDays <= 15) recencyFactor = 1.0;
+        else if (diffDays <= 45) recencyFactor = 0.6;
+      }
+
+      score -= baseImpact * recencyFactor;
+    });
+
+    // 2. Historical interventions in 90 days
+    historicalInterventions90.forEach(i => {
+      const category = (i.categorie || i.category || "").toUpperCase();
+      const severity = (i.gravite || i.severity || "Moyenne").toLowerCase();
+      
+      let baseImpact = 4.0; // deduction per corrective intervention
+      if (severity === "critique" || severity === "haute" || severity === "élevée") baseImpact = 8.0;
+      else if (severity === "basse" || severity === "faible") baseImpact = 2.0;
+
+      // Recency decay factor
+      let recencyFactor = 0.3;
+      const dateVal = i.date || i.dateResolution || i.timestamp || i.createdAt;
+      const ms = parseDateToMillis(dateVal);
+      if (ms) {
+        const diffDays = (nowMs - ms) / (1000 * 60 * 60 * 24);
+        if (diffDays <= 15) recencyFactor = 1.0;
+        else if (diffDays <= 45) recencyFactor = 0.6;
+      }
+
+      let categoryWeight = 0.10;
+      if (category.includes("MOTEUR")) {
+        categoryWeight = 0.35;
+      } else if (category.includes("HYDRAULIQUE")) {
+        categoryWeight = 0.30;
+      } else if (category.includes("TRANSMISSION")) {
+        categoryWeight = 0.15;
+      } else if (category.includes("ÉLECTRIQUE") || category.includes("ELECTRIQUE")) {
+        categoryWeight = 0.10;
+      }
+
+      score -= baseImpact * categoryWeight * recencyFactor;
+    });
+
+    // --- COMPONENT C: ENGINE AGE / HOURS ---
+    // Engine wear and tear based on operating hours is consistently applied to both cases.
+    // This represents natural wear over time, regardless of whether there are active incidents.
     const hours = Number(engin.heuresMarche) || Number(engin.heures) || Number(engin.hours) || Number(engin.km) || Number(engin.compteur) || 0;
     const ageDeduction = Math.min(15, (hours / 15000) * 15);
     score -= ageDeduction;
 
+    // Floor the health score at 10 to maintain positive indicators and prevent negative ranges.
     return Math.max(10, Math.round(score));
   };
 

@@ -75,14 +75,15 @@ export default function TachesPlanning() {
   const isModeDirecteur = ['ADMIN', 'DIRECTION', 'RESPONSABLE_MAINTENANCE'].includes(user?.role || '');
 
   // Firestore collections queries with real-time useCollection hook
-  const { data: engins, loading: enginsLoading, error: enginsError } = useCollection<Engin>('engins');
-  const { data: usersFirestore, loading: usersLoading, error: usersError } = useCollection<any>('users');
+  const { data: engins, loading: enginsLoading, error: enginsError } = useCollection<Engin>('engins', [], { unlimited: true });
+  const { data: usersFirestore, loading: usersLoading, error: usersError } = useCollection<any>('users', [], { unlimited: true });
   const { data: tasks, loading: tasksLoading, error: tasksError } = useCollection<MaintenanceTask>('maintenanceTasks', [], { 
     orderByField: 'datePlanifiee', 
-    orderByDirection: 'desc' 
+    orderByDirection: 'desc',
+    unlimited: true
   });
-  const { data: pmIntervalles, loading: pmIntervallesLoading, error: pmIntervallesError } = useCollection<PmIntervalle>('pmIntervalles');
-  const { data: pannes, loading: pannesLoading, error: pannesError } = useCollection<any>('pannes');
+  const { data: pmIntervalles, loading: pmIntervallesLoading, error: pmIntervallesError } = useCollection<PmIntervalle>('pmIntervalles', [], { unlimited: true });
+  const { data: pannes, loading: pannesLoading, error: pannesError } = useCollection<any>('pannes', [], { unlimited: true });
 
   const hasLoadError = !!(enginsError || usersError || tasksError || pmIntervallesError || pannesError);
 

@@ -476,7 +476,7 @@ export default function RapportMensuelPDF({
 
       const pmTotalList = targetTasks.filter(t => !t.deleted && t.type === "PREVENTIF" && matchesPeriod(t.datePlanifiee || "", key));
       const pmFaites = pmTotalList.filter(t => t.statut === "FAIT" || t.statut === "VALIDE").length;
-      const compliance = pmTotalList.length > 0 ? Math.round((pmFaites / pmTotalList.length) * 100) : 100;
+      const compliance = pmTotalList.length > 0 ? Math.round((pmFaites / pmTotalList.length) * 100) : null;
 
       return {
         totalPannes: pCount,
@@ -690,7 +690,7 @@ export default function RapportMensuelPDF({
         const rate = total > 0 ? Math.round((completed / total) * 100) : null;
         
         // Approximate MTTR if stored
-        const mttr = typeof m.stats?.mttrMoyen === "number" ? m.stats.mttrMoyen : 2.5;
+        const mttr = typeof m.stats?.mttrMoyen === "number" ? m.stats.mttrMoyen : null;
 
         return {
           name: m.nomComplet || m.id,
@@ -708,7 +708,13 @@ export default function RapportMensuelPDF({
 
   // 11. Historical monthly data for the last 6 months (safely computed for table)
   const historical6Months = React.useMemo(() => {
-    const list = [];
+    const list: Array<{
+      key: string;
+      label: string;
+      pannesCount: number;
+      dispoRate: number | null;
+      compliance: number | null;
+    }> = [];
     const now = new Date();
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -718,17 +724,17 @@ export default function RapportMensuelPDF({
       const pmCount = targetPannes.filter(p => !p.deleted && (p.dateDeclaration || "").startsWith(key)).length;
       const pmTotalList = targetTasks.filter(t => !t.deleted && t.type === "PREVENTIF" && (t.datePlanifiee || "").startsWith(key));
       const pmFaites = pmTotalList.filter(t => t.statut === "FAIT" || t.statut === "VALIDE").length;
-      const compRate = pmTotalList.length > 0 ? Math.round((pmFaites / pmTotalList.length) * 100) : 95;
+      const compRate = pmTotalList.length > 0 ? Math.round((pmFaites / pmTotalList.length) * 100) : null;
 
       const actEngins = targetEngins.filter(e => !e.deleted);
       const dispCount = actEngins.filter(e => getNormalizedStatus(e) === "DISPONIBLE").length;
-      const dRate = actEngins.length > 0 ? (dispCount / actEngins.length) * 100 : 92;
+      const dRate = actEngins.length > 0 ? (dispCount / actEngins.length) * 100 : null;
 
       list.push({
         key,
         label,
         pannesCount: pmCount,
-        dispoRate: Math.round(dRate),
+        dispoRate: dRate !== null ? Math.round(dRate) : null,
         compliance: compRate
       });
     }
@@ -750,7 +756,7 @@ export default function RapportMensuelPDF({
 
     // Rule 2: Low preventive compliance (< 75%)
     const globalComp = statsMois.current.compliance;
-    if (globalComp < 75) {
+    if (globalComp !== null && globalComp < 75) {
       list.push(
         `CONFORMITÉ PRÉVENTIVE INSUFFISANTE : Le taux de réalisation des entretiens préventifs est à ${globalComp}% ce mois. Les ordres de travaux préventifs doivent être planifiés en priorité absolue pour enrayer l'usure critique.`
       );
@@ -849,13 +855,13 @@ export default function RapportMensuelPDF({
 
   const svgPointsDispo = historical6Months.map((item, index) => {
     const x = 40 + index * 74;
-    const y = 25 + (100 - item.dispoRate) * 1.4;
+    const y = item.dispoRate !== null ? 25 + (100 - item.dispoRate) * 1.4 : null;
     return { x, y, rate: item.dispoRate, label: item.label };
   });
 
   const svgPointsCompliance = historical6Months.map((item, index) => {
     const x = 40 + index * 74;
-    const y = 25 + (100 - item.compliance) * 1.4;
+    const y = item.compliance !== null ? 25 + (100 - item.compliance) * 1.4 : null;
     return { x, y, rate: item.compliance };
   });
 
@@ -967,7 +973,9 @@ export default function RapportMensuelPDF({
           </View>
           <View style={styles.card}>
             <Text style={styles.cardLabel}>Conformité PM</Text>
-            <Text style={styles.cardValue}>{statsMois.current.compliance}%</Text>
+            <Text style={styles.cardValue}>
+              {statsMois.current.compliance !== null ? `${statsMois.current.compliance}%` : "Données insuffisantes"}
+            </Text>
             <Text style={[styles.cardSub, complianceVar.isImproving ? styles.successText : styles.dangerText]}>
               {complianceVar.text} vs mois prèc.
             </Text>
@@ -1075,10 +1083,14 @@ export default function RapportMensuelPDF({
                 <Text style={[styles.tableCell, styles.centerAlign]}>{item.pannesCount} pannes</Text>
               </View>
               <View style={{ flex: 1.5 }}>
-                <Text style={[styles.tableCell, styles.centerAlign, styles.bold]}>{item.dispoRate}%</Text>
+                <Text style={[styles.tableCell, styles.centerAlign, styles.bold]}>
+                  {item.dispoRate !== null ? `${item.dispoRate}%` : "Données insuffisantes"}
+                </Text>
               </View>
               <View style={{ flex: 1.5 }}>
-                <Text style={[styles.tableCell, styles.centerAlign]}>{item.compliance}%</Text>
+                <Text style={[styles.tableCell, styles.centerAlign]}>
+                  {item.compliance !== null ? `${item.compliance}%` : "Données insuffisantes"}
+                </Text>
               </View>
             </View>
           ))}
@@ -1111,6 +1123,7 @@ export default function RapportMensuelPDF({
             {svgPointsDispo.map((pt, i) => {
               if (i === 0) return null;
               const prev = svgPointsDispo[i - 1];
+              if (prev.y === null || pt.y === null) return null;
               return (
                 <Line 
                   key={`line-dispo-${i}`}
@@ -1128,6 +1141,7 @@ export default function RapportMensuelPDF({
             {svgPointsCompliance.map((pt, i) => {
               if (i === 0) return null;
               const prev = svgPointsCompliance[i - 1];
+              if (prev.y === null || pt.y === null) return null;
               return (
                 <Line 
                   key={`line-comp-${i}`}
@@ -1143,14 +1157,45 @@ export default function RapportMensuelPDF({
             })}
 
             {/* Draw dots on Availability points */}
-            {svgPointsDispo.map((pt) => (
-              <Circle key={`dot-dispo-${pt.x}`} cx={pt.x} cy={pt.y} r="3" fill="#0284C7" />
-            ))}
+            {svgPointsDispo.map((pt) => {
+              if (pt.y === null) return null;
+              return <Circle key={`dot-dispo-${pt.x}`} cx={pt.x} cy={pt.y} r="3" fill="#0284C7" />;
+            })}
 
             {/* Draw dots on Compliance points */}
-            {svgPointsCompliance.map((pt) => (
-              <Circle key={`dot-comp-${pt.x}`} cx={pt.x} cy={pt.y} r="2" fill="#D4AF37" />
-            ))}
+            {svgPointsCompliance.map((pt) => {
+              if (pt.y === null) return null;
+              return <Circle key={`dot-comp-${pt.x}`} cx={pt.x} cy={pt.y} r="2" fill="#D4AF37" />;
+            })}
+
+            {/* Draw N/A labels for empty data periods */}
+            {svgPointsDispo.map((pt, index) => {
+              const compPt = svgPointsCompliance[index];
+              if (pt.rate === null && compPt.rate === null) {
+                return (
+                  <Text key={`na-${pt.x}`} style={{ fontSize: 6, fill: "#94A3B8" }} {...{ x: pt.x - 15, y: 55 }}>
+                    Données insuff.
+                  </Text>
+                );
+              } else {
+                const elements: any[] = [];
+                if (pt.rate === null) {
+                  elements.push(
+                    <Text key={`na-dispo-${pt.x}`} style={{ fontSize: 6, fill: "#0284C7" }} {...{ x: pt.x - 6, y: 50 }}>
+                      D: N/A
+                    </Text>
+                  );
+                }
+                if (compPt.rate === null) {
+                  elements.push(
+                    <Text key={`na-comp-${pt.x}`} style={{ fontSize: 6, fill: "#D4AF37" }} {...{ x: pt.x - 6, y: 62 }}>
+                      C: N/A
+                    </Text>
+                  );
+                }
+                return elements;
+              }
+            })}
           </Svg>
           
           {/* Legend */}
@@ -1327,12 +1372,16 @@ export default function RapportMensuelPDF({
         {/* Horizontal bar meter representing preventive vs corrective */}
         <View style={{ marginVertical: 15, padding: 15, borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 6, backgroundColor: "#F8FAFC" }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
-            <Text style={[styles.bold, { color: "#D4AF37" }]}>Maintenance Préventive Planifiée : {statsMois.current.compliance}%</Text>
-            <Text style={[styles.bold, { color: "#64748B" }]}>Maintenance Corrective Curative : {100 - statsMois.current.compliance}%</Text>
+            <Text style={[styles.bold, { color: "#D4AF37" }]}>
+              Maintenance Préventive Planifiée : {statsMois.current.compliance !== null ? `${statsMois.current.compliance}%` : "Données insuffisantes"}
+            </Text>
+            <Text style={[styles.bold, { color: "#64748B" }]}>
+              Maintenance Corrective Curative : {statsMois.current.compliance !== null ? `${100 - statsMois.current.compliance}%` : "Données insuffisantes"}
+            </Text>
           </View>
           <View style={{ height: 14, width: "100%", backgroundColor: "#E2E8F0", borderRadius: 7, overflow: "hidden", flexDirection: "row" }}>
-            <View style={{ width: `${statsMois.current.compliance}%`, backgroundColor: "#D4AF37" }} />
-            <View style={{ width: `${100 - statsMois.current.compliance}%`, backgroundColor: "#64748B" }} />
+            <View style={{ width: `${statsMois.current.compliance !== null ? statsMois.current.compliance : 0}%`, backgroundColor: "#D4AF37" }} />
+            <View style={{ width: `${statsMois.current.compliance !== null ? 100 - statsMois.current.compliance : 0}%`, backgroundColor: "#64748B" }} />
           </View>
         </View>
 
@@ -1432,10 +1481,11 @@ export default function RapportMensuelPDF({
         <Text style={styles.sectionTitle}>Palmarès et Reconnaissance Équipe (Top Performers)</Text>
         <View style={styles.table}>
           <View style={[styles.tableRow, styles.tableRowHeader]}>
-            <View style={{ flex: 2 }}><Text style={styles.tableCellHeader}>Technicien</Text></View>
-            <View style={{ flex: 1.5 }}><Text style={[styles.tableCellHeader, styles.centerAlign]}>Affectation Site</Text></View>
-            <View style={{ flex: 1.5 }}><Text style={[styles.tableCellHeader, styles.centerAlign]}>Interventions Cloturées</Text></View>
-            <View style={{ flex: 1.5 }}><Text style={[styles.tableCellHeader, styles.rightAlign]}>Taux d'Éxécution</Text></View>
+            <View style={{ flex: 1.8 }}><Text style={styles.tableCellHeader}>Technicien</Text></View>
+            <View style={{ flex: 1.2 }}><Text style={[styles.tableCellHeader, styles.centerAlign]}>Affectation</Text></View>
+            <View style={{ flex: 1.2 }}><Text style={[styles.tableCellHeader, styles.centerAlign]}>Interventions</Text></View>
+            <View style={{ flex: 1.2 }}><Text style={[styles.tableCellHeader, styles.centerAlign]}>Taux Exéc.</Text></View>
+            <View style={{ flex: 1.1 }}><Text style={[styles.tableCellHeader, styles.rightAlign]}>MTTR Moyen</Text></View>
           </View>
 
           {felicitationsMecaniciens.length === 0 ? (
@@ -1447,18 +1497,23 @@ export default function RapportMensuelPDF({
           ) : (
             felicitationsMecaniciens.map((m) => (
               <View key={m.name} style={styles.tableRow}>
-                <View style={{ flex: 2 }}>
+                <View style={{ flex: 1.8 }}>
                   <Text style={[styles.tableCell, styles.bold]}>{m.name}</Text>
                 </View>
-                <View style={{ flex: 1.5 }}>
+                <View style={{ flex: 1.2 }}>
                   <Text style={[styles.tableCell, styles.centerAlign]}>{m.site}</Text>
                 </View>
-                <View style={{ flex: 1.5 }}>
+                <View style={{ flex: 1.2 }}>
                   <Text style={[styles.tableCell, styles.centerAlign]}>{m.completed} ordres</Text>
                 </View>
-                <View style={{ flex: 1.5 }}>
-                  <Text style={[styles.tableCell, styles.rightAlign, styles.bold, styles.successText]}>
+                <View style={{ flex: 1.2 }}>
+                  <Text style={[styles.tableCell, styles.centerAlign, styles.bold, styles.successText]}>
                     {m.rate !== null ? `${m.rate}%` : "100%"}
+                  </Text>
+                </View>
+                <View style={{ flex: 1.1 }}>
+                  <Text style={[styles.tableCell, styles.rightAlign]}>
+                    {m.mttr !== null ? `${m.mttr.toFixed(1)} h` : "N/A"}
                   </Text>
                 </View>
               </View>

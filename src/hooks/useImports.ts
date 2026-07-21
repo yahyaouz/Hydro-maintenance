@@ -12,7 +12,7 @@ import {
 import { dbService } from "@/services/firestoreService";
 import { useAuthStore } from "@/lib/store";
 import { toast } from "sonner";
-import { csvToObjects, normalizeSite, isValidDate } from "@/lib/csvParser";
+import { csvToObjects, normalizeSite, isValidDate, parseFlexibleDate } from "@/lib/csvParser";
 import { getLocalDateString } from "@/lib/utils";
 
 export interface ImportError {
@@ -173,9 +173,10 @@ export function useImports() {
           continue;
         }
 
-        if (!isValidDate(dateConso)) {
+        const parsedDate = parseFlexibleDate(dateConso);
+        if (!parsedDate) {
           result.errorCount++;
-          result.errors.push({ line: lineNum, message: `Date '${dateConso}' invalide ou format incorrect (attendu: YYYY-MM-DD).`, raw: rawLine });
+          result.errors.push({ line: lineNum, message: `Date '${dateConso}' invalide ou format incorrect (attendu: AAAA-MM-JJ ou JJ/MM/AAAA).`, raw: rawLine });
           continue;
         }
 
@@ -200,7 +201,7 @@ export function useImports() {
             enginMatricule,
             enginType,
             site,
-            dateConso,
+            dateConso: parsedDate,
             mecanicienMatricule,
             coutUnite,
             coutTotal: coutTotal || (quantite * (coutUnite || matchedPiece.prix || 0)),
@@ -339,9 +340,10 @@ export function useImports() {
           continue;
         }
 
-        if (!isValidDate(dateReleve)) {
+        const parsedDate = parseFlexibleDate(dateReleve);
+        if (!parsedDate) {
           result.errorCount++;
-          result.errors.push({ line: lineNum, message: `Date '${dateReleve}' invalide. Format attendu: YYYY-MM-DD.`, raw: rawLine });
+          result.errors.push({ line: lineNum, message: `Date '${dateReleve}' invalide. Format attendu: AAAA-MM-JJ ou JJ/MM/AAAA.`, raw: rawLine });
           continue;
         }
 
@@ -369,7 +371,7 @@ export function useImports() {
         if (!historyMap.has(matriculeEngin)) {
           historyMap.set(matriculeEngin, []);
         }
-        historyMap.get(matriculeEngin)!.push({ dateReleve, consoGasoil });
+        historyMap.get(matriculeEngin)!.push({ dateReleve: parsedDate, consoGasoil });
         historyMap.get(matriculeEngin)!.sort((a, b) => b.dateReleve.localeCompare(a.dateReleve));
 
         const carbId = `carb_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -382,7 +384,7 @@ export function useImports() {
             matriculeEngin,
             typeEngin,
             site,
-            dateReleve,
+            dateReleve: parsedDate,
             heuresMoteur,
             consoGasoil,
             consoHuileMoteur,
@@ -498,9 +500,10 @@ export function useImports() {
           continue;
         }
 
-        if (!isValidDate(dateStr)) {
+        const parsedDate = parseFlexibleDate(dateStr);
+        if (!parsedDate) {
           result.errorCount++;
-          result.errors.push({ line: lineNum, message: `Date '${dateStr}' invalide.`, raw: rawLine });
+          result.errors.push({ line: lineNum, message: `Date '${dateStr}' invalide. Format attendu: AAAA-MM-JJ ou JJ/MM/AAAA.`, raw: rawLine });
           continue;
         }
 
@@ -613,7 +616,7 @@ export function useImports() {
             category: typeIntervention,
             assignedTech: nomMec,
             assignedTechMatricule: matriculeMec,
-            date: dateStr,
+            date: parsedDate,
             poste,
             siteId: site,
             durationPlannedHours: 4,
@@ -733,9 +736,10 @@ export function useImports() {
           continue;
         }
 
-        if (!isValidDate(dateStr)) {
+        const parsedDate = parseFlexibleDate(dateStr);
+        if (!parsedDate) {
           result.errorCount++;
-          result.errors.push({ line: lineNum, message: `Date '${dateStr}' invalide.`, raw: rawLine });
+          result.errors.push({ line: lineNum, message: `Date '${dateStr}' invalide. Format attendu: AAAA-MM-JJ ou JJ/MM/AAAA.`, raw: rawLine });
           continue;
         }
 
@@ -767,7 +771,7 @@ export function useImports() {
             id: intervId,
             mecanicienMatricule: matriculeMec,
             mecanicienNom: matchedMec?.displayName || `Tech ${matriculeMec}`,
-            date: dateStr,
+            date: parsedDate,
             enginMatricule,
             enginId: matchedEngin.id,
             categorie,
@@ -791,7 +795,7 @@ export function useImports() {
             batch.update(mecRef, {
               totalInterventions: currentTotalInt + 1,
               totalHours: currentTotalHours + dureeHeures,
-              lastInterventionDate: dateStr,
+              lastInterventionDate: parsedDate,
               updatedAt: new Date().toISOString()
             });
 

@@ -22,7 +22,7 @@ interface SignalerPanneProps {
 
 export function SignalerPanne({ isOpen, onClose, enginIdPrefill, descriptionPrefill, gravitePrefill }: SignalerPanneProps) {
   const { user } = useAuthStore();
-  const { data: engins, error: enginsError } = useCollection<any>('engins');
+  const { data: engins, error: enginsError } = useCollection<any>('engins', [], { unlimited: true });
 
   const hasLoadError = !!enginsError;
 

@@ -40,14 +40,15 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
   const { user, activeSite } = useAuthStore();
   
   // Fetch engines if not provided as props
-  const { data: dbEngins, loading: loadingEngins, error: enginsError } = useCollection<any>("engins");
+  const { data: dbEngins, loading: loadingEngins, error: enginsError } = useCollection<any>("engins", [], { unlimited: true });
   const engins = propEngins || dbEngins || [];
 
   // Fetch active breakdowns and work orders
-  const { data: pannes, loading: loadingPannes, error: pannesError } = useCollection<any>("pannes");
-  const { data: workorders, loading: loadingWorkorders, error: tasksError } = useCollection<any>("maintenanceTasks");
+  const { data: pannes, loading: loadingPannes, error: pannesError } = useCollection<any>("pannes", [], { unlimited: true });
+  const { data: workorders, loading: loadingWorkorders, error: tasksError } = useCollection<any>("maintenanceTasks", [], { unlimited: true });
+  const { data: interventions, loading: loadingInterventions, error: interventionsError } = useCollection<any>("interventions", [], { unlimited: true });
 
-  const hasLoadError = !!(enginsError || pannesError || tasksError);
+  const hasLoadError = !!(enginsError || pannesError || tasksError || interventionsError);
 
   // Hook for carnet state
   const { profiles, saveProfile, computeHealthScore } = useCarnetSante();
@@ -113,7 +114,7 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
 
   // Get score with full context
   const getEnginScore = (engin: any) => {
-    return computeHealthScore(engin, pannes || [], workorders || []);
+    return computeHealthScore(engin, pannes || [], workorders || [], interventions || []);
   };
 
   const handleSaveNotes = async () => {
@@ -294,7 +295,13 @@ export function CarnetSante({ enginId: initialEnginId = null, allEngins: propEng
                           <div className="bg-white dark:bg-slate-900 border border-[#D4AF37]/40 p-2.5 rounded-xl shadow-xs relative overflow-hidden">
                             <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-[#D4AF37]" />
                             <span className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase block font-mono">Dispo</span>
-                            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono">{selectedEngin.dispo !== undefined ? selectedEngin.dispo : 100}%</span>
+                            <span className={`text-xs font-black font-mono ${
+                              selectedEngin.dispo !== undefined && selectedEngin.dispo !== null
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-slate-500 dark:text-slate-400"
+                            }`}>
+                              {selectedEngin.dispo !== undefined && selectedEngin.dispo !== null ? `${selectedEngin.dispo}%` : "N/A"}
+                            </span>
                           </div>
                           <div className="bg-white dark:bg-slate-900 border border-[#D4AF37]/40 p-2.5 rounded-xl shadow-xs relative overflow-hidden">
                             <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-[#991B1B]" />

@@ -79,8 +79,8 @@ export function Sidebar({
   textDensity,
   setTextDensity,
 }: SidebarProps) {
-  const { data: pannes, error: pannesError } = useCollection<any>('pannes');
-  const { data: engins, error: enginsError } = useCollection<any>('engins');
+  const { data: pannes, error: pannesError } = useCollection<any>('pannes', [], { unlimited: true });
+  const { data: engins, error: enginsError } = useCollection<any>('engins', [], { unlimited: true });
 
   const hasLoadError = !!(pannesError || enginsError);
 

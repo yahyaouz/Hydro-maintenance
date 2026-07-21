@@ -20,6 +20,7 @@ export interface CollectionOptions {
   orderByField?: string;
   orderByDirection?: 'asc' | 'desc';
   includeDeleted?: boolean;
+  unlimited?: boolean;
 }
 
 export function useCollection<T>(
@@ -35,7 +36,7 @@ export function useCollection<T>(
   
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
   const filtersRef = useRef(filters);
-  const limitCount = options.limitNum || 35;
+  const limitCount = options.unlimited ? undefined : (options.limitNum || 35);
   const orderByField = options.orderByField || 'updatedAt';
   const orderByDirection = options.orderByDirection || 'desc';
 
@@ -87,7 +88,9 @@ export function useCollection<T>(
     if (!hasExplicitOrderBy) {
       qConstraints.push(orderBy(orderByField, orderByDirection));
     }
-    qConstraints.push(limit(limitCount));
+    if (limitCount !== undefined) {
+      qConstraints.push(limit(limitCount));
+    }
 
     const q = query(collection(db, collectionName), ...qConstraints);
     
@@ -103,7 +106,7 @@ export function useCollection<T>(
         
         setData(result);
         lastDocRef.current = snapshot.docs[snapshot.docs.length - 1] || null;
-        setHasMore(snapshot.docs.length === limitCount);
+        setHasMore(limitCount !== undefined && snapshot.docs.length === limitCount);
         setLoading(false);
         setError(null);
       },
@@ -130,7 +133,9 @@ export function useCollection<T>(
         qConstraints.push(orderBy(orderByField, orderByDirection));
       }
       qConstraints.push(startAfter(lastDocRef.current));
-      qConstraints.push(limit(limitCount));
+      if (limitCount !== undefined) {
+        qConstraints.push(limit(limitCount));
+      }
 
       const q = query(collection(db, collectionName), ...qConstraints);
       const snapshot = await getDocs(q);
@@ -152,7 +157,7 @@ export function useCollection<T>(
         });
         
         lastDocRef.current = snapshot.docs[snapshot.docs.length - 1];
-        setHasMore(snapshot.docs.length === limitCount);
+        setHasMore(limitCount !== undefined && snapshot.docs.length === limitCount);
       } else {
         setHasMore(false);
       }

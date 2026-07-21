@@ -101,7 +101,7 @@ export function Admin() {
   const [logLevelFilter, setLogLevelFilter] = React.useState<string>("ALL");
 
   const SITES_LIST = ['SMI', 'OUMEJRANE', 'KOUDIA', 'OUANSIMI', 'BOU-AZZER'];
-  const { data: objectifsSitesRaw, loading: objectifsLoading, error: objectifsError } = useCollection<any>('objectifsSites');
+  const { data: objectifsSitesRaw, loading: objectifsLoading, error: objectifsError } = useCollection<any>('objectifsSites', [], { unlimited: true });
 
   const hasLoadError = !!objectifsError;
 
@@ -111,6 +111,8 @@ export function Admin() {
     complianceTarget: string;
     coutTarget: string;
   }>>({});
+
+  const [globalPreventifTarget, setGlobalPreventifTarget] = React.useState<string>("75");
 
   React.useEffect(() => {
     if (objectifsSitesRaw) {
@@ -125,6 +127,12 @@ export function Admin() {
         };
       });
       setEditedTargets(initial);
+
+      // Load global target
+      const globalDoc = objectifsSitesRaw.find(o => o.id === 'GLOBAL');
+      if (globalDoc && globalDoc.preventifCorrectifTarget !== undefined) {
+        setGlobalPreventifTarget(String(globalDoc.preventifCorrectifTarget));
+      }
     }
   }, [objectifsSitesRaw]);
 
@@ -246,6 +254,25 @@ export function Admin() {
       toast.success(`Objectifs pour le site ${siteId} enregistrés avec succès !`);
     } catch (err: any) {
       console.error("Error saving site objectives: ", err);
+      toast.error(`Erreur d'enregistrement : ${err.message}`);
+    }
+  };
+
+  const handleSaveGlobalTarget = async () => {
+    try {
+      const targetNum = parseFloat(globalPreventifTarget);
+      if (isNaN(targetNum) || targetNum < 0 || targetNum > 100) {
+        toast.error("L'objectif de ratio préventif doit être un nombre entre 0 et 100.");
+        return;
+      }
+      await dbService.objectifsSites.set('GLOBAL', {
+        preventifCorrectifTarget: targetNum,
+        updatedAt: Timestamp.now(),
+        updatedBy: user?.displayName || user?.email || "Responsable Maintenance"
+      });
+      toast.success("Objectif global préventif enregistré avec succès !");
+    } catch (err: any) {
+      console.error("Error saving global target: ", err);
       toast.error(`Erreur d'enregistrement : ${err.message}`);
     }
   };
@@ -1730,6 +1757,49 @@ export function Admin() {
   const renderObjectifs = () => {
     return (
       <div className="space-y-6">
+        {/* OBJECTIFS GLOBAUX DE LA DIRECTION */}
+        <Card className="bg-white border-2 border-amber-500/20 shadow-md rounded-xl overflow-hidden animate-fade-in" id="card-objectifs-globaux">
+          <CardHeader className="bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent border-b border-slate-100 p-5">
+            <div>
+              <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Target className="h-5 w-5 text-amber-500" />
+                Objectif Global de la Direction (Flotte entière)
+              </CardTitle>
+              <p className="text-xs text-slate-500 mt-1">
+                Définissez l'objectif global fixé par la Direction pour toute la flotte. Cet objectif sert de référence pour le KPI prioritaire "Préventif vs Correctif" du Centre de Commandement.
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row items-end gap-6 max-w-2xl">
+              <div className="flex-1 space-y-2">
+                <label className="text-xs font-black uppercase font-mono tracking-wide text-slate-600 block">
+                  Ratio Préventif vs Correctif Cible (%)
+                </label>
+                <div className="relative">
+                  <Input
+                    type="text"
+                    value={globalPreventifTarget}
+                    disabled={user?.role !== "ADMIN" && user?.role !== "DIRECTION"}
+                    onChange={(e) => setGlobalPreventifTarget(e.target.value)}
+                    placeholder="75"
+                    className="h-10 text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-lg pl-3 pr-8 focus:ring-1 focus:ring-[#D4A017]"
+                  />
+                  <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-mono font-bold">%</span>
+                </div>
+              </div>
+              {(user?.role === "ADMIN" || user?.role === "DIRECTION") && (
+                <Button
+                  onClick={handleSaveGlobalTarget}
+                  className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black uppercase font-mono text-xs tracking-wider h-10 px-6 rounded-lg shadow-sm transition-all shrink-0 cursor-pointer"
+                >
+                  Enregistrer l'Objectif Global
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="bg-white border-2 border-amber-500/20 shadow-md rounded-xl overflow-hidden animate-fade-in" id="card-objectifs-performance">
           <CardHeader className="bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent border-b border-slate-100 p-5">
             <div>

@@ -1,5 +1,6 @@
 import { db } from '@/lib/firebase';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { OfflineQueueManager } from './offlineQueueManager';
 
 export interface AppError {
   id: string;
@@ -119,6 +120,19 @@ export class ErrorMonitoringService {
       }).catch((err) => {
         console.warn('Silent fallback: failure logging telemetry error to cloud Firestore', err);
       });
+    } else if (!navigator.onLine && (params.level === 'CRITICAL' || params.level === 'FATAL')) {
+      try {
+        OfflineQueueManager.enqueue({
+          idempotencyKey: newError.id,
+          actionType: 'ERROR_LOG',
+          payload: newError,
+          label: `Erreur ${params.level} (${params.source})`,
+          siteId: siteId as any,
+          userId: userId
+        });
+      } catch (err) {
+        console.warn('Failed to enqueue offline error log:', err);
+      }
     }
 
     // Print standard console tracking for debuggers

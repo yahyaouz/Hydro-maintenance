@@ -37,8 +37,8 @@ export function RootCauseAnalysis() {
   const { rcas, loading, saveRCA, deleteRCA } = useRCA();
 
   // Load existing workorders & engines to link
-  const { data: workorders, error: tasksError } = useCollection<any>("maintenanceTasks");
-  const { data: engins, error: enginsError } = useCollection<any>("engins");
+  const { data: workorders, error: tasksError } = useCollection<any>("maintenanceTasks", [], { unlimited: true });
+  const { data: engins, error: enginsError } = useCollection<any>("engins", [], { unlimited: true });
 
   const hasLoadError = !!(tasksError || enginsError);
 

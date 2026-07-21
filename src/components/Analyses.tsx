@@ -79,7 +79,7 @@ export default function Analyses() {
   const { user, activeSite } = useAuthStore();
 
   // Load annotations in real-time
-  const { data: rawAnnotations, loading: annotationsLoading, error: annotationsError } = useCollection<any>('annotationsEvenements');
+  const { data: rawAnnotations, loading: annotationsLoading, error: annotationsError } = useCollection<any>('annotationsEvenements', [], { unlimited: true });
 
   // Filter annotations by activeSite
   const annotations = useMemo(() => {
@@ -114,12 +114,12 @@ export default function Analyses() {
   const [isSubmittingAnnotation, setIsSubmittingAnnotation] = useState<boolean>(false);
 
   // 5 Firestore collections read in real-time
-  const { data: rawEngins, loading: enginsLoading, error: enginsError } = useCollection<any>('engins');
-  const { data: rawTasks, loading: tasksLoading, error: tasksError } = useCollection<any>('maintenanceTasks');
-  const { data: rawPannes, loading: pannesLoading, error: pannesError } = useCollection<any>('pannes');
-  const { data: rawMecaniciens, loading: mecaniciensLoading, error: mecaniciensError } = useCollection<any>('mecaniciens');
-  const { data: rawInterventions, loading: interventionsLoading, error: interventionsError } = useCollection<any>('interventions');
-  const { data: objectifsSitesRaw, loading: objectifsLoading, error: objectifsError } = useCollection<any>('objectifsSites');
+  const { data: rawEngins, loading: enginsLoading, error: enginsError } = useCollection<any>('engins', [], { unlimited: true });
+  const { data: rawTasks, loading: tasksLoading, error: tasksError } = useCollection<any>('maintenanceTasks', [], { unlimited: true });
+  const { data: rawPannes, loading: pannesLoading, error: pannesError } = useCollection<any>('pannes', [], { unlimited: true });
+  const { data: rawMecaniciens, loading: mecaniciensLoading, error: mecaniciensError } = useCollection<any>('mecaniciens', [], { unlimited: true });
+  const { data: rawInterventions, loading: interventionsLoading, error: interventionsError } = useCollection<any>('interventions', [], { unlimited: true });
+  const { data: objectifsSitesRaw, loading: objectifsLoading, error: objectifsError } = useCollection<any>('objectifsSites', [], { unlimited: true });
 
   const hasLoadError = !!(annotationsError || enginsError || tasksError || pannesError || mecaniciensError || interventionsError || objectifsError);
 

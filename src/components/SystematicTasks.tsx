@@ -98,8 +98,8 @@ export const SystematicTasks: React.FC<SystematicTasksProps> = () => {
 
       {/* Render selected view */}
       <div id="systematic-subview-wrapper">
-        {currentView === "mecanicien" && <SystematicTaskMechanic user={user} />}
-        {currentView === "secretaire" && <SystematicTaskValidation user={user} />}
+        {currentView === "mecanicien" && <SystematicTaskMechanic user={user} isPreviewMode={user.role !== "MECANICIEN"} />}
+        {currentView === "secretaire" && <SystematicTaskValidation user={user} isPreviewMode={user.role !== "SECRETAIRE"} />}
         {currentView === "supervision" && <SystematicTaskOverview user={user} />}
       </div>
     </div>

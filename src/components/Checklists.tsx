@@ -163,9 +163,9 @@ export default function Checklists() {
 
   // Read collections from Firestore
   const { user, activeSite } = useAuthStore();
-  const { data: rawEngins, loading: enginsLoading, error: enginsError } = useCollection<any>('engins');
-  const { data: rawMecaniciens, loading: mecaniciensLoading, error: mecaniciensError } = useCollection<any>('mecaniciens');
-  const { data: rawSubmissions, loading: submissionsLoading, error: submissionsError } = useCollection<any>('checklists', [], { orderByField: 'timestamp', orderByDirection: 'desc' });
+  const { data: rawEngins, loading: enginsLoading, error: enginsError } = useCollection<any>('engins', [], { unlimited: true });
+  const { data: rawMecaniciens, loading: mecaniciensLoading, error: mecaniciensError } = useCollection<any>('mecaniciens', [], { unlimited: true });
+  const { data: rawSubmissions, loading: submissionsLoading, error: submissionsError } = useCollection<any>('checklists', [], { orderByField: 'timestamp', orderByDirection: 'desc', unlimited: true });
 
   const hasLoadError = !!(enginsError || mecaniciensError || submissionsError);
 
