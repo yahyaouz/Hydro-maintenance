@@ -357,20 +357,22 @@ export default function App() {
     const initialTab = KNOWN_TABS.includes(initialPath) ? initialPath : "dashboard";
     
     const currentUser = useAuthStore.getState().user;
-    let resolvedTab = initialTab;
     if (currentUser) {
+      let resolvedTab = initialTab;
       const allowed = TAB_ALLOWED_ROLES[initialTab];
       if (allowed && !allowed.includes(currentUser.role)) {
         resolvedTab = "dashboard";
       }
+      setActiveTab(resolvedTab);
+      window.history.replaceState({ tabId: resolvedTab }, '', `/${resolvedTab}`);
+    } else {
+      window.history.replaceState({ tabId: "" }, '', '/');
     }
-    
-    window.history.replaceState({ tabId: resolvedTab }, '', `/${resolvedTab}`);
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, [navigateToTab]);
+  }, [navigateToTab, user]);
 
   // Network heartbeat and offline queue monitoring
   React.useEffect(() => {

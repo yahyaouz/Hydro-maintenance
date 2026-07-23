@@ -60,7 +60,7 @@ interface Mecanicien {
   statut?: string;
 }
 
-interface ChecklistItem {
+export interface ChecklistItem {
   id: string;
   label: string;
   section: string;
@@ -130,6 +130,86 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
+
+export const itemsConducteur: ChecklistItem[] = [
+  // SECTION A — VÉRIFICATIONS VISUELLES
+  { id: "C_A1", label: "A1. Niveau huile moteur visible et correct (jauge)", section: "SECTION A — VÉRIFICATIONS VISUELLES" },
+  { id: "C_A2", label: "A2. Niveau liquide de refroidissement (vase d'expansion)", section: "SECTION A — VÉRIFICATIONS VISUELLES" },
+  { id: "C_A3", label: "A3. Fuites visibles sous l'engin (huile, hydraulique, carburant)", section: "SECTION A — VÉRIFICATIONS VISUELLES", critique: true },
+  // SECTION B — SÉCURITÉ CABINE
+  { id: "C_B1", label: "B1. Ceinture de sécurité fonctionnelle et non effilochée", section: "SECTION B — SÉCURITÉ CABINE", critique: true },
+  { id: "C_B2", label: "B2. ROPS/FOPS intact (pas de fissures, pas de déformation)", section: "SECTION B — SÉCURITÉ CABINE", critique: true },
+  { id: "C_B3", label: "B3. Extincteur présent et manomètre dans la zone verte", section: "SECTION B — SÉCURITÉ CABINE", critique: true },
+  // SECTION C — FREINS & COMMANDES
+  { id: "C_C1", label: "C1. Frein de service répond correctement (pédale ferme)", section: "SECTION C — FREINS & COMMANDES", critique: true },
+  { id: "C_C2", label: "C2. Frein de parking tient sur pente (test à l'arrêt)", section: "SECTION C — FREINS & COMMANDES", critique: true },
+  { id: "C_C3", label: "C3. Direction répond sans jeu excessif (volant/levier)", section: "SECTION C — FREINS & COMMANDES", critique: true },
+  // SECTION D — VOYANTS & ÉCLAIRAGE
+  { id: "C_D1", label: "D1. Voyants tableau de bord s'allument au contact (pas d'alarme rouge)", section: "SECTION D — VOYANTS & ÉCLAIRAGE" },
+  { id: "C_D2", label: "D2. Phares avant/arrière fonctionnels (haut et bas)", section: "SECTION D — VOYANTS & ÉCLAIRAGE" },
+  { id: "C_D3", label: "D3. Klaxon et alarme de recul fonctionnels", section: "SECTION D — VOYANTS & ÉCLAIRAGE" },
+  // SECTION E — HYDRAULIQUE & CHARGE
+  { id: "C_E1", label: "E1. Bras de levage fonctionne sans à-coup (montée/descente)", section: "SECTION E — HYDRAULIQUE & CHARGE" },
+  { id: "C_E2", label: "E2. Godet bascule correctement (chargement/déchargement)", section: "SECTION E — HYDRAULIQUE & CHARGE" },
+  { id: "C_E3", label: "E3. Pas de fuite hydraulique visible sur vérins/tuyaux", section: "SECTION E — HYDRAULIQUE & CHARGE", critique: true }
+];
+
+export const itemsMaintenance: ChecklistItem[] = [
+  // SECTION A — MOTEUR & REFROIDISSEMENT
+  { id: "M_A1", label: "A1. Niveau huile moteur correct (jauge, entre min et max)", section: "SECTION A — MOTEUR & REFROIDISSEMENT" },
+  { id: "M_A2", label: "A2. Couleur huile moteur normale (pas blanchâtre, pas noire extrême)", section: "SECTION A — MOTEUR & REFROIDISSEMENT" },
+  { id: "M_A3", label: "A3. Niveau liquide refroidissement correct (vase d'expansion)", section: "SECTION A — MOTEUR & REFROIDISSEMENT" },
+  { id: "M_A4", label: "A4. Courroies moteur non usées/craquelées (visuel)", section: "SECTION A — MOTEUR & REFROIDISSEMENT" },
+  { id: "M_A5", label: "A5. Filtre air propre (indicateur vert, pas rouge)", section: "SECTION A — MOTEUR & REFROIDISSEMENT" },
+  // SECTION B — TRANSMISSION & PONT
+  { id: "M_B1", label: "B1. Niveau huile transmission/boîte correct (bouchon de niveau)", section: "SECTION B — TRANSMISSION & PONT" },
+  { id: "M_B2", label: "B2. Niveau huile réducteurs (ponts avant/arrière) correct", section: "SECTION B — TRANSMISSION & PONT" },
+  { id: "M_B3", label: "B3. Pas de fuite d'huile sur joints de ponts", section: "SECTION B — TRANSMISSION & PONT" },
+  { id: "M_B4", label: "B4. Chaînes/maillons de chenilles pas excessivement usés (jeu < 20mm)", section: "SECTION B — TRANSMISSION & PONT" },
+  // SECTION C — HYDRAULIQUE
+  { id: "M_C1", label: "C1. Niveau huile hydraulique correct (voyant ou jauge)", section: "SECTION C — HYDRAULIQUE" },
+  { id: "M_C2", label: "C2. Filtre hydraulique propre (indicateur de restriction)", section: "SECTION C — HYDRAULIQUE" },
+  { id: "M_C3", label: "C3. Tuyaux hydrauliques non craquelés/boursouflés", section: "SECTION C — HYDRAULIQUE", critique: true },
+  { id: "M_C4", label: "C4. Vérins de levage sans fuite au niveau des joints de tige", section: "SECTION C — HYDRAULIQUE", critique: true },
+  { id: "M_C5", label: "M_C5. Pompe hydraulique pas bruyante anormalement", section: "SECTION C — HYDRAULIQUE" },
+  // SECTION D — FREINS & ROUES
+  { id: "M_D1", label: "D1. Épaisseur garnitures/disques frein > minimum (visuel ou jauge)", section: "SECTION D — FREINS & ROUES", critique: true },
+  { id: "M_D2", label: "D2. Câbles de frein non effilochés/détendus (frein mécanique)", section: "SECTION D — FREINS & ROUES", critique: true },
+  { id: "M_D3", label: "D3. Pneus non entaillés, pression correcte (visuel + testeur si dispo)", section: "SECTION D — FREINS & ROUES" },
+  { id: "M_D4", label: "D4. Jantes/boulons de roues pas fissurés, serrage OK", section: "SECTION D — FREINS & ROUES" },
+  // SECTION E — ÉLECTRIQUE & ÉCLAIRAGE
+  { id: "M_E1", label: "E1. Battery bornes propres et serrées (pas de sulfate blanc)", section: "SECTION E — ÉLECTRIQUE & ÉCLAIRAGE" },
+  { id: "M_E2", label: "E2. Alternateur charge correcte (voyant éteint en marche)", section: "SECTION E — ÉLECTRIQUE & ÉCLAIRAGE" },
+  { id: "M_E3", label: "E3. Phares/éclairage fonctionnels (test à l'arrêt)", section: "SECTION E — ÉLECTRIQUE & ÉCLAIRAGE" },
+  { id: "M_E4", label: "E4. Faisceau électrique non usé/coupé sous gaine", section: "SECTION E — ÉLECTRIQUE & ÉCLAIRAGE" },
+  // SECTION F — GRAISSAGE & STRUCTURE
+  { id: "M_F1", label: "F1. Graisseurs de pivots fonctionnels (débordement de graisse visible)", section: "SECTION F — GRAISSAGE & STRUCTURE" },
+  { id: "M_F2", label: "F2. Châssis/articulation pas de fissure visible (inspection visuelle)", section: "SECTION F — GRAISSAGE & STRUCTURE", critique: true },
+  { id: "M_F3", label: "F3. Godet/dents pas de fissure au niveau des soudures", section: "SECTION F — GRAISSAGE & STRUCTURE" },
+  { id: "M_F4", label: "F4. Cabine/portes pas de jeu excessif, charnières OK", section: "SECTION F — GRAISSAGE & STRUCTURE" }
+];
+
+export const itemsSecurite: ChecklistItem[] = [
+  // SECTION A — ÉQUIPEMENTS DE PROTECTION
+  { id: "S_A1", label: "A1. ROPS/FOPS certifié, pas de déformation, pas de fissure", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION", critique: true },
+  { id: "S_A2", label: "A2. Siège avec ceinture 2 points ou 3 points fonctionnel", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION", critique: true },
+  { id: "S_A3", label: "A3. Extincteur manuel présent, manomètre OK, date de contrôle < 1 an", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION", critique: true },
+  { id: "S_A4", label: "A4. Extincteur automatique (Ansul) pression OK, fusibles intacts", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION", critique: true },
+  // SECTION B — SIGNALISATION & ÉVACUATION
+  { id: "S_B1", label: "B1. Gyrophare/flash fonctionnel (test à l'arrêt)", section: "SECTION B — SIGNALISATION & ÉVACUATION" },
+  { id: "S_B2", label: "B2. Alarme de recul fonctionnelle (volume audible)", section: "SECTION B — SIGNALISATION & ÉVACUATION" },
+  { id: "S_B3", label: "B3. Panneau d'arrêt d'urgence accessible et testé", section: "SECTION B — SIGNALISATION & ÉVACUATION", critique: true },
+  { id: "S_B4", label: "B4. Signalisation réfléchissante visible et non délavée", section: "SECTION B — SIGNALISATION & ÉVACUATION" },
+  // SECTION C — CONTRÔLE ATMOSPHÈRE
+  { id: "S_C1", label: "C1. Détecteur de gaz calibré et fonctionnel (test avec gaz test)", section: "SECTION C — CONTRÔLE ATMOSPHÈRE", critique: true },
+  { id: "S_C2", label: "C2. Auto-sauveteur présent et dans la date de validité", section: "SECTION C — CONTRÔLE ATMOSPHÈRE", critique: true },
+  { id: "S_C3", label: "C3. Ventilation cabine fonctionnelle (pas d'odeur d'échappement)", section: "SECTION C — CONTRÔLE ATMOSPHÈRE" },
+  // SECTION D — DOCUMENTATION
+  { id: "S_D1", label: "D1. Carnet de suivi de l'engin à jour (dernières interventions notées)", section: "SECTION D — DOCUMENTATION" },
+  { id: "S_D2", label: "D2. Certificat d'inspection ROPS/FOPS en cours de validité", section: "SECTION D — DOCUMENTATION" },
+  { id: "S_D3", label: "D3. Formation conducteur à jour (carte de formation valide)", section: "SECTION D — DOCUMENTATION" },
+  { id: "S_D4", label: "D4. Permis de conduire interne valide (si requis par la mine)", section: "SECTION D — DOCUMENTATION" }
+];
 
 export default function Checklists() {
   // Onglet actif : conducteur, maintenance, securite, historique
@@ -235,89 +315,7 @@ export default function Checklists() {
   };
 
   // ============================================================
-  // DEFINITION DES ITEMS DE SÉCURITÉ ET CHECKLISTS
-  // ============================================  // CHECKLIST : Structure des items pour l'onglet CONDUCTEUR
-  const itemsConducteur: ChecklistItem[] = [
-    // SECTION A — VÉRIFICATIONS VISUELLES
-    { id: "C_A1", label: "A1. Niveau huile moteur visible et correct (jauge)", section: "SECTION A — VÉRIFICATIONS VISUELLES" },
-    { id: "C_A2", label: "A2. Niveau liquide de refroidissement (vase d'expansion)", section: "SECTION A — VÉRIFICATIONS VISUELLES" },
-    { id: "C_A3", label: "A3. Fuites visibles sous l'engin (huile, hydraulique, carburant)", section: "SECTION A — VÉRIFICATIONS VISUELLES", critique: true },
-    // SECTION B — SÉCURITÉ CABINE
-    { id: "C_B1", label: "B1. Ceinture de sécurité fonctionnelle et non effilochée", section: "SECTION B — SÉCURITÉ CABINE", critique: true },
-    { id: "C_B2", label: "B2. ROPS/FOPS intact (pas de fissures, pas de déformation)", section: "SECTION B — SÉCURITÉ CABINE", critique: true },
-    { id: "C_B3", label: "B3. Extincteur présent et manomètre dans la zone verte", section: "SECTION B — SÉCURITÉ CABINE", critique: true },
-    // SECTION C — FREINS & COMMANDES
-    { id: "C_C1", label: "C1. Frein de service répond correctement (pédale ferme)", section: "SECTION C — FREINS & COMMANDES", critique: true },
-    { id: "C_C2", label: "C2. Frein de parking tient sur pente (test à l'arrêt)", section: "SECTION C — FREINS & COMMANDES", critique: true },
-    { id: "C_C3", label: "C3. Direction répond sans jeu excessif (volant/levier)", section: "SECTION C — FREINS & COMMANDES", critique: true },
-    // SECTION D — VOYANTS & ÉCLAIRAGE
-    { id: "C_D1", label: "D1. Voyants tableau de bord s'allument au contact (pas d'alarme rouge)", section: "SECTION D — VOYANTS & ÉCLAIRAGE" },
-    { id: "C_D2", label: "D2. Phares avant/arrière fonctionnels (haut et bas)", section: "SECTION D — VOYANTS & ÉCLAIRAGE" },
-    { id: "C_D3", label: "D3. Klaxon et alarme de recul fonctionnels", section: "SECTION D — VOYANTS & ÉCLAIRAGE" },
-    // SECTION E — HYDRAULIQUE & CHARGE
-    { id: "C_E1", label: "E1. Bras de levage fonctionne sans à-coup (montée/descente)", section: "SECTION E — HYDRAULIQUE & CHARGE" },
-    { id: "C_E2", label: "E2. Godet bascule correctement (chargement/déchargement)", section: "SECTION E — HYDRAULIQUE & CHARGE" },
-    { id: "C_E3", label: "E3. Pas de fuite hydraulique visible sur vérins/tuyaux", section: "SECTION E — HYDRAULIQUE & CHARGE", critique: true }
-  ];
-
-  // CHECKLIST : Structure des items pour l'onglet MAINTENANCE
-  const itemsMaintenance: ChecklistItem[] = [
-    // SECTION A — MOTEUR & REFROIDISSEMENT
-    { id: "M_A1", label: "A1. Niveau huile moteur correct (jauge, entre min et max)", section: "SECTION A — MOTEUR & REFROIDISSEMENT" },
-    { id: "M_A2", label: "A2. Couleur huile moteur normale (pas blanchâtre, pas noire extrême)", section: "SECTION A — MOTEUR & REFROIDISSEMENT" },
-    { id: "M_A3", label: "A3. Niveau liquide refroidissement correct (vase d'expansion)", section: "SECTION A — MOTEUR & REFROIDISSEMENT" },
-    { id: "M_A4", label: "A4. Courroies moteur non usées/craquelées (visuel)", section: "SECTION A — MOTEUR & REFROIDISSEMENT" },
-    { id: "M_A5", label: "A5. Filtre air propre (indicateur vert, pas rouge)", section: "SECTION A — MOTEUR & REFROIDISSEMENT" },
-    // SECTION B — TRANSMISSION & PONT
-    { id: "M_B1", label: "B1. Niveau huile transmission/boîte correct (bouchon de niveau)", section: "SECTION B — TRANSMISSION & PONT" },
-    { id: "M_B2", label: "B2. Niveau huile réducteurs (ponts avant/arrière) correct", section: "SECTION B — TRANSMISSION & PONT" },
-    { id: "M_B3", label: "B3. Pas de fuite d'huile sur joints de ponts", section: "SECTION B — TRANSMISSION & PONT" },
-    { id: "M_B4", label: "B4. Chaînes/maillons de chenilles pas excessivement usés (jeu < 20mm)", section: "SECTION B — TRANSMISSION & PONT" },
-    // SECTION C — HYDRAULIQUE
-    { id: "M_C1", label: "C1. Niveau huile hydraulique correct (voyant ou jauge)", section: "SECTION C — HYDRAULIQUE" },
-    { id: "M_C2", label: "C2. Filtre hydraulique propre (indicateur de restriction)", section: "SECTION C — HYDRAULIQUE" },
-    { id: "M_C3", label: "C3. Tuyaux hydrauliques non craquelés/boursouflés", section: "SECTION C — HYDRAULIQUE", critique: true },
-    { id: "M_C4", label: "C4. Vérins de levage sans fuite au niveau des joints de tige", section: "SECTION C — HYDRAULIQUE", critique: true },
-    { id: "M_C5", label: "M_C5. Pompe hydraulique pas bruyante anormalement", section: "SECTION C — HYDRAULIQUE" },
-    // SECTION D — FREINS & ROUES
-    { id: "M_D1", label: "D1. Épaisseur garnitures/disques frein > minimum (visuel ou jauge)", section: "SECTION D — FREINS & ROUES", critique: true },
-    { id: "M_D2", label: "D2. Câbles de frein non effilochés/détendus (frein mécanique)", section: "SECTION D — FREINS & ROUES", critique: true },
-    { id: "M_D3", label: "D3. Pneus non entaillés, pression correcte (visuel + testeur si dispo)", section: "SECTION D — FREINS & ROUES" },
-    { id: "M_D4", label: "D4. Jantes/boulons de roues pas fissurés, serrage OK", section: "SECTION D — FREINS & ROUES" },
-    // SECTION E — ÉLECTRIQUE & ÉCLAIRAGE
-    { id: "M_E1", label: "E1. Battery bornes propres et serrées (pas de sulfate blanc)", section: "SECTION E — ÉLECTRIQUE & ÉCLAIRAGE" },
-    { id: "M_E2", label: "E2. Alternateur charge correcte (voyant éteint en marche)", section: "SECTION E — ÉLECTRIQUE & ÉCLAIRAGE" },
-    { id: "M_E3", label: "E3. Phares/éclairage fonctionnels (test à l'arrêt)", section: "SECTION E — ÉLECTRIQUE & ÉCLAIRAGE" },
-    { id: "M_E4", label: "E4. Faisceau électrique non usé/coupé sous gaine", section: "SECTION E — ÉLECTRIQUE & ÉCLAIRAGE" },
-    // SECTION F — GRAISSAGE & STRUCTURE
-    { id: "M_F1", label: "F1. Graisseurs de pivots fonctionnels (débordement de graisse visible)", section: "SECTION F — GRAISSAGE & STRUCTURE" },
-    { id: "M_F2", label: "F2. Châssis/articulation pas de fissure visible (inspection visuelle)", section: "SECTION F — GRAISSAGE & STRUCTURE", critique: true },
-    { id: "M_F3", label: "F3. Godet/dents pas de fissure au niveau des soudures", section: "SECTION F — GRAISSAGE & STRUCTURE" },
-    { id: "M_F4", label: "F4. Cabine/portes pas de jeu excessif, charnières OK", section: "SECTION F — GRAISSAGE & STRUCTURE" }
-  ];
-
-  // CHECKLIST : Structure des items pour l'onglet SÉCURITÉ
-  const itemsSecurite: ChecklistItem[] = [
-    // SECTION A — ÉQUIPEMENTS DE PROTECTION
-    { id: "S_A1", label: "A1. ROPS/FOPS certifié, pas de déformation, pas de fissure", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION", critique: true },
-    { id: "S_A2", label: "A2. Siège avec ceinture 2 points ou 3 points fonctionnel", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION", critique: true },
-    { id: "S_A3", label: "A3. Extincteur manuel présent, manomètre OK, date de contrôle < 1 an", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION", critique: true },
-    { id: "S_A4", label: "A4. Extincteur automatique (Ansul) pression OK, fusibles intacts", section: "SECTION A — ÉQUIPEMENTS DE PROTECTION", critique: true },
-    // SECTION B — SIGNALISATION & ÉVACUATION
-    { id: "S_B1", label: "B1. Gyrophare/flash fonctionnel (test à l'arrêt)", section: "SECTION B — SIGNALISATION & ÉVACUATION" },
-    { id: "S_B2", label: "B2. Alarme de recul fonctionnelle (volume audible)", section: "SECTION B — SIGNALISATION & ÉVACUATION" },
-    { id: "S_B3", label: "B3. Panneau d'arrêt d'urgence accessible et testé", section: "SECTION B — SIGNALISATION & ÉVACUATION", critique: true },
-    { id: "S_B4", label: "B4. Signalisation réfléchissante visible et non délavée", section: "SECTION B — SIGNALISATION & ÉVACUATION" },
-    // SECTION C — CONTRÔLE ATMOSPHÈRE
-    { id: "S_C1", label: "C1. Détecteur de gaz calibré et fonctionnel (test avec gaz test)", section: "SECTION C — CONTRÔLE ATMOSPHÈRE", critique: true },
-    { id: "S_C2", label: "C2. Auto-sauveteur présent et dans la date de validité", section: "SECTION C — CONTRÔLE ATMOSPHÈRE", critique: true },
-    { id: "S_C3", label: "C3. Ventilation cabine fonctionnelle (pas d'odeur d'échappement)", section: "SECTION C — CONTRÔLE ATMOSPHÈRE" },
-    // SECTION D — DOCUMENTATION
-    { id: "S_D1", label: "D1. Carnet de suivi de l'engin à jour (dernières interventions notées)", section: "SECTION D — DOCUMENTATION" },
-    { id: "S_D2", label: "D2. Certificat d'inspection ROPS/FOPS en cours de validité", section: "SECTION D — DOCUMENTATION" },
-    { id: "S_D3", label: "D3. Formation conducteur à jour (carte de formation valide)", section: "SECTION D — DOCUMENTATION" },
-    { id: "S_D4", label: "D4. Permis de conduire interne valide (si requis par la mine)", section: "SECTION D — DOCUMENTATION" }
-  ];
+  // DEFINITION DES ITEMS DE SÉCURITÉ ET CHECKLISTS DÉPLACÉES AU NIVEAU MODULE
 
   // ÉTAT DE SÉLECTION DU FORMULAIRE EN COURS
   const [formStates, setFormStates] = React.useState<{ [itemId: string]: "OK" | "KO" | "NONE" }>({});

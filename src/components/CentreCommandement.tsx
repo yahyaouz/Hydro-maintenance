@@ -64,6 +64,7 @@ import { useMecaniciens } from "@/hooks/useMecaniciens";
 import { DataLoadError } from "@/components/shared/DataLoadError";
 import { SiteID } from "@/types";
 import { getLocalMonthString } from "@/lib/utils";
+import { itemsConducteur, itemsMaintenance, itemsSecurite } from "./Checklists";
 
 // @ts-ignore
 import goldTexture from "@/assets/images/texture-or.webp";
@@ -808,8 +809,8 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
         list.push({
           id: `panne-${p.id || p.uid || ms}`,
           type: "panne",
-          title: `Panne : ${p.organ || p.titre || "Inconnu"}`,
-          description: `Machine ${p.matricule || p.enginId || "N/A"} (${p.criticite || "N/A"}) - Signalé par : ${p.declarant || p.rapporteur || "Opérateur"}`,
+          title: `Panne : ${p.description ? p.description.substring(0, 40) : "Signalement"}`,
+          description: `Machine ${p.enginId || "N/A"} (${p.gravite || "N/A"}) - Signalé par : ${p.declareParNom || "Opérateur"}`,
           timestamp: ms,
           site: p.siteId || p.site || "SMI",
         });
@@ -832,8 +833,8 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
         list.push({
           id: `task-cloture-${t.id || t.uid || ms}`,
           type: "task_cloture",
-          title: `BT Clôturé : ${t.titre || t.type || "Tâche"}`,
-          description: `Pour ${t.enginId || t.matricule || "Machine"} (${t.type || "PREVENTIF"}) - Clôturé par : ${t.mecanicienNom || "Mécanicien"}`,
+          title: `BT Clôturé : ${t.titre || t.title || t.category || t.type || "Tâche"}`,
+          description: `Pour ${t.machineCode || t.enginId || t.matricule || "Machine"} (${t.category || t.type || "PREVENTIF"}) — Intervenant : ${t.assignedTech || t.mecanicienNom || t.mecanicien || "Mécanicien"}`,
           timestamp: ms,
           site: t.siteId || t.site || "SMI",
         });
@@ -878,11 +879,12 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
     }
 
     // 4. Process checklists (échec critique KO on critical items)
-    const criticalItemIds = new Set([
-      "C_A3", "C_B1", "C_B2", "C_B3", "C_C1", "C_C2", "C_C3", "C_E3", 
-      "M_C3", "M_C4", "M_D1", "M_D2", "M_F2", 
-      "S_A1", "S_A2", "S_A3", "S_A4", "S_B3", "S_C1", "S_C2"
-    ]);
+    const allChecklistItems = [...itemsConducteur, ...itemsMaintenance, ...itemsSecurite];
+    const criticalItemIds = new Set(
+      allChecklistItems
+        .filter(item => item.critique === true)
+        .map(item => item.id)
+    );
 
     if (checklistsLive) {
       const failedChecklists = [...checklistsLive]
@@ -1935,8 +1937,11 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
 
   // --- RENDU BLOCS REELS: ALERTES SYSTEME & PIECES BLOQUANTES ---
   const renderSystemAlertsAndBlockingPiecesGrid = (currentSite: string | "ensemble") => {
-    // 1. DATA FILTERING: Alertes Système
-    const activeAlerts = (alertsLive || []).filter(a => a.status === 'ACTIVE');
+    // 1. DATA FILTERING: Alertes Système (Filtered by active site)
+    const activeAlerts = (alertsLive || []).filter(a => 
+      a.status === 'ACTIVE' && 
+      (currentSite === "ensemble" || a.siteId === currentSite || a.site === currentSite)
+    );
     
     // Group active alerts by code
     const alertGroups: Record<string, any[]> = {};
@@ -1950,9 +1955,18 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
 
     const totalActiveAlertsCount = activeAlerts.length;
 
-    // 2. DATA FILTERING: Pièces Bloquantes (Rupture stock + liées à un BT ouvert)
-    const openPannesRef = (pannesLive || []).filter(p => !p.deleted && p.statut !== "CLOS");
-    const openTasksRef = (workOrdersLive || []).filter(t => !t.deleted && !["FAIT", "VALIDE"].includes(t.statut));
+    // 2. DATA FILTERING: Pièces Bloquantes (Rupture stock + liées à un BT ouvert - Filtered by active site)
+    const openPannesRef = (pannesLive || []).filter(p => 
+      !p.deleted && 
+      p.statut !== "CLOS" && 
+      (currentSite === "ensemble" || p.siteId === currentSite || p.site === currentSite)
+    );
+    
+    const openTasksRef = (workOrdersLive || []).filter(t => 
+      !t.deleted && 
+      !["FAIT", "VALIDE"].includes(t.statut) && 
+      (currentSite === "ensemble" || t.siteId === currentSite || t.site === currentSite)
+    );
 
     const allBlockingPieces = (pieces || []).filter(piece => {
       if (piece.deleted) return false;
@@ -1962,6 +1976,14 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       
       // Stock must be below or equal to threshold
       if (stock > min) return false;
+
+      // Filter piece by site (allowing Central/Central shared warehouse with empty siteId)
+      if (currentSite !== "ensemble") {
+        const pieceSite = piece.siteId || piece.site || "";
+        if (pieceSite && pieceSite.toUpperCase() !== currentSite.toUpperCase()) {
+          return false;
+        }
+      }
       
       const refUpper = (piece.ref || "").trim().toUpperCase();
       const nomUpper = (piece.nom || "").trim().toUpperCase();
@@ -2043,7 +2065,7 @@ export default function CentreCommandement({ setActiveTab }: CentreCommandementP
       if (currentSite === "ensemble") return true;
       // Piece belongs to site OR at least one waiting BT is on this site
       const pieceSite = p.siteId || p.site || "";
-      const matchesPieceSite = pieceSite.toUpperCase() === currentSite.toUpperCase();
+      const matchesPieceSite = !pieceSite || pieceSite.toUpperCase() === currentSite.toUpperCase();
       const hasWaitingBTOnSite = p.waitingBTs.some(bt => (bt.siteId || bt.site || "").toUpperCase() === currentSite.toUpperCase());
       return matchesPieceSite || hasWaitingBTOnSite;
     });

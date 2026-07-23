@@ -31,6 +31,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({ notifications });
   },
   addNotification: async (item) => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.warn("Skipping notification Firestore write since user is not signed in:", item.title);
+      return;
+    }
     try {
       await addDoc(collection(db, "notifications"), {
         type: item.type,
@@ -46,18 +51,20 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       });
     } catch (err) {
       console.error("Failed to add notification to Firestore:", err);
-      addDoc(collection(db, "systemLogs"), {
-        level: "ERROR",
-        message: `Échec d'envoi de notification : ${item.title}`,
-        source: "NotificationStore",
-        createdAt: serverTimestamp(),
-        dbTimestamp: serverTimestamp(),
-        timestamp: Date.now(),
-        siteId: item.siteId || null,
-        stack: err instanceof Error ? err.stack : String(err)
-      }).catch((logErr) => {
-        console.warn("Failed to log notification error to systemLogs:", logErr);
-      });
+      if (auth.currentUser) {
+        addDoc(collection(db, "systemLogs"), {
+          level: "ERROR",
+          message: `Échec d'envoi de notification : ${item.title}`,
+          source: "NotificationStore",
+          createdAt: serverTimestamp(),
+          dbTimestamp: serverTimestamp(),
+          timestamp: Date.now(),
+          siteId: item.siteId || null,
+          stack: err instanceof Error ? err.stack : String(err)
+        }).catch((logErr) => {
+          console.warn("Failed to log notification error to systemLogs:", logErr);
+        });
+      }
     }
   },
   markAsRead: async (id) => {

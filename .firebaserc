@@ -1,9 +1,9 @@
 {
   "projects": {
-    "default": "commanding-rune-v07pf"
+    "default": "hydromines-maintenance"
   },
   "targets": {
-    "commanding-rune-v07pf": {
+    "hydromines-maintenance": {
       "hosting": {
         "hydromines-maintenance": [
           "hydromines-maintenance"
